@@ -87,6 +87,16 @@ _KIM_INLINE_NAV = re.compile(
 _KIM_CONDITION_MARK = re.compile(r"\{\s*if\s+[^{}]*\}", re.I)
 _KIM_POSITION_MARK = re.compile(r"\{P\d+\}", re.I)
 
+# Titres de section qui délimitent une conversation KIM (``###``/``####`` …) :
+#   ``### Conversation 1 (Tell me about yourself / ...)``
+_KIM_SECTION_TITLE = re.compile(r"^#{3,}\s*(?P<title>.+?)\s*$")
+# En-tête de rang qui précède les conversations : ``## Rank 1 - Neutral``
+# (souvent ``= Rank 1 - =`` côté wiki -> rendu ``##`` par le cleaner).
+_KIM_RANK_TITLE = re.compile(
+    r"^#{1,3}\s+Rank\s+(?P<n>\d+)\s*[-–—:]\s*(?P<label>.+)$", re.I)
+# Numéro d'une conversation dans son titre : ``Conversation 3 (...)``.
+_KIM_CONVO_NUMBER = re.compile(r"^Conversation\s+(\d+)\b", re.I)
+
 
 class LoreStore:
     """Cache en mémoire des megafiles ``out/*.json`` + recherche."""
@@ -211,9 +221,37 @@ class LoreStore:
                 "page_title": e["page_title"],
                 "canon_status": e.get("canon_status"),
                 "line_count": content.count("\n") + 1,
+                "conversations": len(_split_kim_conversations(
+                    e["page_title"], content)),
                 "speakers": self._speakers(content),
             })
         return sorted(out, key=lambda x: x["page_title"].lower())
+
+    def kim_conversations(self, title: str) -> list[dict]:
+        """Conversations d'une page KIM : ``[{id, title, rank, body}]``.
+
+        Léger (aucun parse de messages) : sert à la liste de sélection.
+        Les pages sans titre de section ``### …`` sont ramenées à une unique
+        conversation couvrant tout le contenu (ex: blocs de citations).
+        Retourne ``[]`` si la page n'existe pas ou ne ressemble pas à un
+        dialogue.
+        """
+        page = self.get_dialogue_page(title)
+        if not page:
+            return []
+        content = page.get("content_markdown", "")
+        conversations = _split_kim_conversations(title, content)
+        if conversations:
+            return conversations
+        character = title.rsplit("/", 1)[-1].strip()
+        if self._looks_like_dialogue(content):
+            return [{
+                "id": f"{_slug_for_id(character)}Conversation",
+                "title": character or title,
+                "rank": "",
+                "body": content,
+            }]
+        return []
 
     def kim_dialogue(self, title: str) -> list[dict] | None:
         """Dialogue structuré : liste de ``{speaker, text}``."""
@@ -230,17 +268,25 @@ class LoreStore:
                 return e
         return None
 
-    def kim_graph(self, title: str) -> dict | None:
+    def kim_graph(self, title: str, conv: str | None = None) -> dict | None:
         """Graphe de conversation (``{nodes, edges}``) d'une page de dialogue.
 
-        Utilisé par la vue flowchart.  Retourne ``None`` si la page n'existe
-        pas ou ne ressemble pas à un dialogue.
+        Utilisé par la vue flowchart.  Si ``conv`` est fourni, seuls les
+        nœuds/arêtes de cette conversation (découpée par ``_split_kim_conversations``)
+        sont renvoyés ; sinon le graphe de la page entière (comportement
+        historique).  Retourne ``None`` si la page n'existe pas, ne ressemble
+        pas à un dialogue, ou si ``conv`` est introuvable.
         """
         page = self.get_dialogue_page(title)
         if not page:
             return None
         content = page.get("content_markdown", "")
         if not self._looks_like_dialogue(content):
+            return None
+        if conv:
+            for conversation in _split_kim_conversations(title, content):
+                if conversation["id"] == conv:
+                    return _build_dialogue_graph(conversation["body"])
             return None
         return _build_dialogue_graph(content)
 
@@ -666,6 +712,85 @@ _JUMP_VAGUE = re.compile(
     re.I)
 
 
+def _slug_for_id(text: str) -> str:
+    """Chaîne identifiant ASCII simple (alphabétique) depuis un texte."""
+    return re.sub(r"[^A-Za-z0-9]+", "", text)
+
+
+def _split_kim_conversations(page_title: str, content: str) -> list[dict]:
+    """Découpe une page KIM en conversations distinctes.
+
+    Chaque conversation est délimitée par un titre de section ``### …``
+    (Wiki = ``=== … ===``), typiquement ``### Conversation 1 (sujet)``,
+    éventuellement sous un en-tête de rang ``## Rank N - X``.  À l'instar de
+    ``browse.wf``, on obtient ainsi des branches de dialogue indépendantes
+    (id + titre) au lieu d'un seul graphe plat pour toute la page.
+
+    Returns:
+        Liste ordonnée de dicts ``{id, title, rank, body}`` où ``body`` est
+        le Markdown de la conversation (titre de section inclus : les parseurs
+        ``_build_dialogue_graph``/``_parse_dialogue`` s'en servent pour
+        franchir leur préambule).
+    """
+    character = page_title.rsplit("/", 1)[-1].strip()
+    head = _slug_for_id(character)
+    lines = content.splitlines()
+
+    segments: list[dict] = []
+    pending: dict | None = None
+    pending_start = 0
+    rank_n: str = ""
+    rank_display: str = ""
+
+    def flush(end: int) -> None:
+        nonlocal pending, pending_start
+        if pending is None:
+            return
+        pending["body"] = "\n".join(lines[pending_start:end]).rstrip()
+        segments.append(pending)
+        pending = None
+        pending_start = end
+
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        rank_match = _KIM_RANK_TITLE.match(stripped)
+        if rank_match:
+            flush(index)
+            rank_n = rank_match.group("n")
+            rank_display = (f"Rank {rank_n} - "
+                            f"{rank_match.group('label').strip()}")
+            continue
+        section_match = _KIM_SECTION_TITLE.match(stripped)
+        if section_match:
+            flush(index)
+            section_title = section_match.group("title").strip()
+            base_id = f"{head}Rank{rank_n}" if rank_n else head
+            convo = _KIM_CONVO_NUMBER.match(section_title)
+            if convo:
+                base_id += f"Convo{convo.group(1)}"
+            else:
+                base_id += _slug_for_id(section_title)
+            pending = {
+                "id": base_id,
+                "title": section_title,
+                "rank": rank_display,
+            }
+            pending_start = index
+    flush(len(lines))
+
+    # Garantit l'unicité des identifiants (titres/toute numérotation répétés).
+    seen: set[str] = set()
+    for segment in segments:
+        base = segment["id"]
+        if base in seen:
+            suffix = 2
+            while f"{base}-{suffix}" in seen:
+                suffix += 1
+            segment["id"] = f"{base}-{suffix}"
+        seen.add(segment["id"])
+    return segments
+
+
 def _build_dialogue_graph(content: str) -> dict:
     """Construit le graphe de conversation (nœuds + arêtes) d'une page KIM.
 
@@ -839,7 +964,8 @@ class ApiHandler(BaseHTTPRequestHandler):
                 self._send_json(self._kim_for_query(query))
             elif path == "/api/graph":
                 title = unquote((query.get("title") or [""])[0])
-                self._send_json(self.store.kim_graph(title) or {})
+                conv = unquote((query.get("conv") or [""])[0])
+                self._send_json(self.store.kim_graph(title, conv) or {})
             elif path == "/api/recent":
                 limit = _int_from_query(query, "limit", 20)
                 self._send_json(self.store.recent(limit=limit))
@@ -884,22 +1010,41 @@ class ApiHandler(BaseHTTPRequestHandler):
 
     def _kim_for_query(self, query) -> list[dict] | dict:
         title = unquote((query.get("title") or [""])[0])
+        conv = unquote((query.get("conv") or [""])[0])
         mode = (query.get("mode") or [""])[0]
-        if title:
-            page = self.store.get_dialogue_page(title)
-            content = (page or {}).get("content_markdown", "")
-            if not page or not self.store._looks_like_dialogue(content):
-                return {"messages": [], "spoiler": None, "script": []}
-            if mode == "sim":
-                return {
-                    "spoiler": self.store.spoiler_warning(content),
-                    "script": self.store._build_kim_script(content),
-                }
+        if not title:
+            return self.store.kim_pages()
+        page = self.store.get_dialogue_page(title)
+        content = (page or {}).get("content_markdown", "")
+        if not page or not self.store._looks_like_dialogue(content):
+            return {"character": None, "spoiler": None, "conversations": []}
+        if not conv:
+            conversations = self.store.kim_conversations(title)
             return {
-                "messages": self.store._parse_dialogue(content),
+                "character": title.rsplit("/", 1)[-1],
                 "spoiler": self.store.spoiler_warning(content),
+                "conversations": [
+                    {"id": c["id"], "title": c["title"], "rank": c["rank"]}
+                    for c in conversations
+                ],
             }
-        return self.store.kim_pages()
+        for conversation in self.store.kim_conversations(title):
+            if conversation["id"] != conv:
+                continue
+            result = {
+                "id": conversation["id"],
+                "title": conversation["title"],
+                "rank": conversation["rank"],
+            }
+            if mode == "sim":
+                result["script"] = self.store._build_kim_script(
+                    conversation["body"])
+                result["spoiler"] = self.store.spoiler_warning(content)
+            else:
+                result["messages"] = self.store._parse_dialogue(
+                    conversation["body"])
+            return result
+        return {"id": None, "title": None, "rank": None, "messages": []}
 
     def _send_static(self, filename: str, content_type: str = "text/html") -> None:
         static_file = (self.root / filename) if self.root else Path(filename)

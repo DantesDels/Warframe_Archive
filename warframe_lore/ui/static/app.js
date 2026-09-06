@@ -26,16 +26,17 @@ const elHtml = (tag, cls, html) => {
  *
  * Ne touche QUE le rendu visuel : le titre brut reste utilisé pour le
  * routage (URL) et les requêtes API.  Supprime les suffixes/prefixes
- * techniques du wiki : ``/Transcript``, ``/Quotes`` et ``Fragment/``.
+ * techniques du wiki : ``/Transcript``, ``/Quotes`` et ``Fragment(s)/``.
  *  Ex. "Angels of the Zariman/Transcript" -> "Angels of the Zariman",
- *  "Hunhow/Quotes" -> "Hunhow", "Fragment/Buried Debts" -> "Buried Debts".
+ *  "Hunhow/Quotes" -> "Hunhow", "Fragments/Cephalon" -> "Cephalon",
+ *  "Fragment/Buried Debts" -> "Buried Debts".
  */
 function formatDisplayName(title) {
   if (!title) return title;
   return String(title)
     .replace(/\/Transcript/gi, "")
     .replace(/\/Quotes/gi, "")
-    .replace(/Fragment\//gi, "")
+    .replace(/Fragments?\//gi, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -448,7 +449,7 @@ function handleRoute() {
       break;
     case "page":
       renderPage(p0, p1);
-      showView("page", { bucketId: p0, labels: [bucketTitle(p0), p1] });
+      showView("page", { bucketId: p0, labels: [bucketTitle(p0), formatDisplayName(p1)] });
       break;
     case "kim": renderKim(); showView("kim", { labels: ["Terminal KIM"] }); break;
     case "kim-chat":
@@ -596,6 +597,9 @@ async function renderPage(bucketId, title) {
  *   * Citations         -> pages .../Quotes (répliques de campagne)
  */
 let kimSegment = "all";
+let kimChatTitle = null;
+let kimConvList = [];
+let kimConvActive = null;
 
 function kimSegmentOf(page) {
   if (/Fables & Frontiers/i.test(page.page_title)) return "fnf";
@@ -645,7 +649,8 @@ async function renderKim() {
     const thumb = media && media.titles[d.page_title];
     if (thumb) item.prepend(mediaImg(thumb, "media-thumb", d.page_title));
     const name = el("span", "name", formatDisplayName(d.page_title));
-    const meta = el("span", "meta", `${d.line_count} lignes`);
+    const meta = el("span", "meta",
+      `${d.conversations ? d.conversations + " conversations · " : ""}${d.line_count} lignes`);
     item.appendChild(name);
     item.appendChild(meta);
     item.addEventListener("click", () => navigate(`kim-chat?${encodeURIComponent(d.page_title)}`));
@@ -655,8 +660,17 @@ async function renderKim() {
 }
 
 /* -------------------------------------------------------------- kim chat */
+/* Vue détail d'un personnage KIM : les conversations (branches découpées
+ * par ``_split_kim_conversations`` côté serveur) sont sélectionnables une à
+ * une, à l'instar de browse.wf.  Chaque conversation alimente la messagerie,
+ * le simulateur et le flowchart. */
 async function renderKimChat(title) {
   const epoch = routeEpoch;
+  kimChatTitle = title;
+  kimConvActive = null;
+  window.__flowchartInstance = null;
+  window.__flowchartOpen = title;
+  window.__flowchartConv = null;
   $("#kim-title").textContent = title;
   document.querySelector("#view-kim-chat .kim-header-thumb")?.remove();
   const media = await ensureMedia();
@@ -667,12 +681,74 @@ async function renderKimChat(title) {
   }
   const container = $("#kim-chat");
   container.innerHTML = skeletonRows(8);
+  $("#kim-convs").innerHTML = "";
   const data = await api(`/api/kim?title=${encodeURIComponent(title)}`);
   if (epoch !== routeEpoch) return;
-  const messages = Array.isArray(data) ? data : data.messages;
-  const spoiler = Array.isArray(data) ? null : data.spoiler;
-  container.innerHTML = "";
+  kimConvList = data.conversations || [];
+  renderKimConversations();
+  setKimTabs("chat");
+  if (kimConvList.length) {
+    await selectKimConversation(kimConvList[0].id);
+  } else {
+    container.innerHTML = "";
+    container.appendChild(emptyState("Aucune conversation détectée dans cette page."));
+    kimSimCache.title = null;
+  }
+}
 
+function kimRankShort(rank) {
+  return (rank || "").replace(/^\s*rank\s*/i, "").trim();
+}
+
+function renderKimConversations() {
+  const host = $("#kim-convs");
+  host.innerHTML = "";
+  if (!kimConvList.length) {
+    host.classList.add("hidden");
+    return;
+  }
+  host.classList.remove("hidden");
+  for (const conversation of kimConvList) {
+    const short = kimRankShort(conversation.rank);
+    const label = short ? `${short} · ${conversation.title}` : conversation.title;
+    const btn = el("button", "segment-btn" + (kimConvActive === conversation.id ? " active" : ""));
+    btn.appendChild(document.createTextNode(label));
+    btn.title = conversation.rank
+      ? `${conversation.rank} — ${conversation.title}` : conversation.title;
+    btn.addEventListener("click", () => selectKimConversation(conversation.id));
+    host.appendChild(btn);
+  }
+}
+
+async function selectKimConversation(convId) {
+  const epoch = routeEpoch;
+  const conversation = kimConvList.find((c) => c.id === convId);
+  if (!conversation || conversation.id === kimConvActive) return;
+  kimConvActive = conversation.id;
+  window.__flowchartConv = conversation.id;
+  // Les onglets Flowchart et Simulateur dépendent de la conversation courante.
+  kimSimCache.title = null;
+  kimSimFetchedTitle = null;
+  stopSimAuto();
+  simResetUi();
+  document.querySelectorAll("#kim-sim .spoiler-hint").forEach((h) => h.remove());
+  if (window.__flowchartInstance) {
+    try { window.__flowchartInstance.unmount(); } catch (_) { /* déjà détruit */ }
+    window.__flowchartInstance = null;
+  }
+  $("#kim-chart").innerHTML = "";
+  renderKimConversations();
+  const container = $("#kim-chat");
+  container.innerHTML = skeletonRows(6);
+  const data = await api(`/api/kim?title=${encodeURIComponent(kimChatTitle)}&conv=${encodeURIComponent(convId)}`);
+  if (epoch !== routeEpoch) return;
+  renderKimChatMessages(data.messages || [], data.spoiler || null);
+}
+
+async function renderKimChatMessages(messages, spoiler) {
+  const container = $("#kim-chat");
+  container.innerHTML = "";
+  const media = await ensureMedia();
   const body = el("div", "chat-stack");
   messages.forEach((message, index) => {
     const player = !!message.player;
@@ -681,42 +757,39 @@ async function renderKimChat(title) {
     cell.appendChild(el("div", "who", player ? "Vous" : (message.speaker || "")));
     cell.appendChild(elHtml("div", "text", renderInline(message.text || "")));
     if (!player && media) {
-      const f = mediaFor(media, message.speaker, title);
+      const f = mediaFor(media, message.speaker, kimChatTitle);
       if (f) line.appendChild(mediaImg(f, "chat-avatar", message.speaker));
     }
     line.appendChild(cell);
     body.appendChild(line);
   });
   if (!messages.length) body.appendChild(el("div", "snippet", "Aucun message."));
-
   if (spoiler) body.prepend(makeSpoilerHint(spoiler));
   container.appendChild(body);
-
-  // Onglets Messagerie / Simulateur / Flowchart
-  const chartHost = $("#kim-chart");
-  chartHost.classList.add("hidden");
-  $("#kim-sim").classList.add("hidden");
-  document.querySelectorAll(".view-tab").forEach((tab) => {
-    tab.classList.toggle("active", tab.dataset.tab === "chat");
-  });
-  window.__flowchartInstance = null;
-  window.__flowchartOpen = title;
-  if (kimSimCache.title !== title) kimSimCache.title = null;
 }
 
-function switchKimTab(tab) {
-  if (tab !== "sim") stopSimAuto();
+function setKimTabs(tab) {
   document.querySelectorAll(".view-tab").forEach((t) =>
     t.classList.toggle("active", t.dataset.tab === tab));
   $("#kim-chat").classList.toggle("hidden", tab !== "chat");
   const chartHost = $("#kim-chart");
   chartHost.classList.toggle("hidden", tab !== "chart");
-  const simHost = $("#kim-sim");
-  simHost.classList.toggle("hidden", tab !== "sim");
+  $("#kim-sim").classList.toggle("hidden", tab !== "sim");
+}
+
+function switchKimTab(tab) {
+  if (tab !== "sim") stopSimAuto();
+  setKimTabs(tab);
   if (tab === "chart") {
     const title = window.__flowchartOpen || $("#kim-title").textContent;
+    const conv = window.__flowchartConv || kimConvActive || "";
+    const epoch = routeEpoch;
+    const chartHost = $("#kim-chart");
     chartHost.innerHTML = skeletonRows(5);
-    api(`/api/graph?title=${encodeURIComponent(title)}`).then((graph) => {
+    const route = `/api/graph?title=${encodeURIComponent(title)}` +
+      (conv ? `&conv=${encodeURIComponent(conv)}` : "");
+    api(route).then((graph) => {
+      if (epoch !== routeEpoch) return;
       chartHost.innerHTML = "";
       if (window.mountFlowchart) {
         window.__flowchartInstance = mountFlowchart(chartHost, {
@@ -852,11 +925,14 @@ function toggleSimAuto() {
 async function openSimulator() {
   const epoch = routeEpoch;
   const title = window.__flowchartOpen || $("#kim-title").textContent;
+  const conv = window.__flowchartConv || kimConvActive || "";
   kimSimMedia = await ensureMedia();
   if (kimSimCache.title !== title) {
     simResetUi();
     simSetStatus("Chargement du script…");
-    const data = await api(`/api/kim?mode=sim&title=${encodeURIComponent(title)}`);
+    const route = `/api/kim?mode=sim&title=${encodeURIComponent(title)}` +
+      (conv ? `&conv=${encodeURIComponent(conv)}` : "");
+    const data = await api(route);
     if (epoch !== routeEpoch) return;
     kimSimCache = { title, script: data.script || [], spoiler: data.spoiler || null, revealed: false };
     kimSimFetchedTitle = title;

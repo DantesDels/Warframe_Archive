@@ -934,6 +934,34 @@ table.raw-table td:empty { background: transparent; border-color: transparent; }
   text-align: center;
 }
 
+/* Nœuds-système d'état (popups du jeu : booléens, compteurs). */
+.fc-nsystem {
+  min-height: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.10);
+  border: 1px dashed rgba(139, 92, 246, 0.55);
+  cursor: default;
+}
+.fc-nsystem .fc-nhead { display: none; }
+.fc-nsystem .fc-nbody {
+  font-size: 10.5px;
+  color: var(--text);
+  max-height: none;
+  overflow: visible;
+  text-align: center;
+}
+/* Chemistry : bordure dorée (rarement affichée hors popup). */
+.fc-nsystem-chem {
+  background: rgba(212, 175, 55, 0.10);
+  border-style: solid;
+  border-color: #d4af37;
+}
+.fc-nsystem-chem .fc-nbody {
+  color: #e9d48b;
+  font-weight: 600;
+}
+
 /* ----------------------------------------------------------- responsive */
 /* Tablette : rail d'icônes compact (768–900 px). */
 @media (min-width: 768px) and (max-width: 900px) {

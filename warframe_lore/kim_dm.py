@@ -182,7 +182,29 @@ def _node_kind(node: dict) -> str | None:
         return "choice"
     if node_type.endswith("EndDialogueNode"):
         return "end"
+    # Nœuds d'ÉTAT (écritures d'état vues comme des popups dans le jeu) :
+    # +10 Chemistry, « NameFuture is now true », reset de booléen.  Ils font
+    # le PONT entre deux répliques et restent dans l'arbre (nœuds-système).
+    if node_type.endswith(("ChemistryDialogueNode", "SetBooleanDialogueNode",
+                           "ResetBooleanDialogueNode")):
+        return "system"
     return None
+
+
+def _system_text(node: dict) -> str:
+    """Libellé court d'un nœud d'état (Chemical/Bool), façon popup du jeu."""
+    node_type = node.get("type", "")
+    if node_type.endswith("ChemistryDialogueNode"):
+        delta = node.get("ChemistryDelta")
+        if isinstance(delta, int):
+            return f"{delta:+d} Chemistry"
+        return "Chemistry"
+    content = str(node.get("Content") or "").strip()
+    if node_type.endswith("SetBooleanDialogueNode"):
+        return f"{content} is now true" if content else "Boolean set"
+    if node_type.endswith("ResetBooleanDialogueNode"):
+        return f"{content} reset" if content else "Boolean reset"
+    return "System"
 
 
 def _iter_exit_ids(node: dict) -> list[int]:
@@ -283,6 +305,13 @@ class _DialogueFile:
         if kind == "end":
             return {"id": f"dm{node['Id']}", "kind": "end", "speaker": "",
                     "text": "", "player": False, "terminal": True}
+        if kind == "system":
+            node_type = node.get("type", "")
+            return {"id": f"dm{node['Id']}", "kind": "system", "speaker": "",
+                    "text": _system_text(node), "player": False,
+                    "terminal": False,
+                    "km": "chem" if node_type.endswith("ChemistryDialogueNode")
+                    else "bool"}
         if kind in ("npc", "choice"):
             loc = node.get("LocTag", "") or ""
             return {

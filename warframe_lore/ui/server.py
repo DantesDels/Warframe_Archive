@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, unquote
 
+from ..kim_dm import KimDM
 from ..media import MediaIndex
 
 # --------------------------------------------------------------------------
@@ -105,6 +106,10 @@ class LoreStore:
 
     def __init__(self, output_dir: Path) -> None:
         self.output_dir = Path(output_dir)
+        self.kim_dm = KimDM(
+            self.output_dir / "kim_dm" / "data",
+            self.output_dir / "kim_dm" / "dicts",
+        )
         self._buckets: dict[str, dict[str, Any]] = {}
         self._pages: dict[str, dict[str, dict]] = {}
         self._last_reload = 0.0
@@ -149,6 +154,7 @@ class LoreStore:
                                     if e.get("page_title")}
         self._buckets = buckets
         self._pages = pages
+        self.kim_dm.load()
         self._last_reload = time.time()
 
     # ---------------------------------------------------------------- média
@@ -221,8 +227,7 @@ class LoreStore:
                 "page_title": e["page_title"],
                 "canon_status": e.get("canon_status"),
                 "line_count": content.count("\n") + 1,
-                "conversations": len(_split_kim_conversations(
-                    e["page_title"], content)),
+                "conversations": len(self.kim_conversations(e["page_title"])),
                 "speakers": self._speakers(content),
             })
         return sorted(out, key=lambda x: x["page_title"].lower())
@@ -230,9 +235,11 @@ class LoreStore:
     def kim_conversations(self, title: str) -> list[dict]:
         """Conversations d'une page KIM : ``[{id, title, rank, body}]``.
 
-        Léger (aucun parse de messages) : sert à la liste de sélection.
-        Les pages sans titre de section ``### …`` sont ramenées à une unique
-        conversation couvrant tout le contenu (ex: blocs de citations).
+        Priorité au miroir de datamine (données du jeu, section 1) quand le
+        personnage y est couvert : les conversations sont alors exactes
+        (ids ``ArthurRank1Convo1``, ``ArthurAmirHack``…) et ``body`` est
+        absente (les messages/script/graphe viennent de ``kim_dm``).
+        Sinon, découpage par sections wiki (fallback historique).
         Retourne ``[]`` si la page n'existe pas ou ne ressemble pas à un
         dialogue.
         """
@@ -240,10 +247,13 @@ class LoreStore:
         if not page:
             return []
         content = page.get("content_markdown", "")
+        character = title.rsplit("/", 1)[-1].strip()
+        dm = self.kim_dm.conversations_for(character)
+        if dm is not None:
+            return dm
         conversations = _split_kim_conversations(title, content)
         if conversations:
             return conversations
-        character = title.rsplit("/", 1)[-1].strip()
         if self._looks_like_dialogue(content):
             return [{
                 "id": f"{_slug_for_id(character)}Conversation",
@@ -277,6 +287,10 @@ class LoreStore:
         historique).  Retourne ``None`` si la page n'existe pas, ne ressemble
         pas à un dialogue, ou si ``conv`` est introuvable.
         """
+        character = title.rsplit("/", 1)[-1].strip()
+        dm_graph = self.kim_dm.graph(character, conv)
+        if dm_graph is not None:
+            return dm_graph
         page = self.get_dialogue_page(title)
         if not page:
             return None
@@ -1024,7 +1038,8 @@ class ApiHandler(BaseHTTPRequestHandler):
                 "character": title.rsplit("/", 1)[-1],
                 "spoiler": self.store.spoiler_warning(content),
                 "conversations": [
-                    {"id": c["id"], "title": c["title"], "rank": c["rank"]}
+                    {"id": c["id"], "title": c["title"],
+                     "rank": c["rank"], "source": c.get("source", "wiki")}
                     for c in conversations
                 ],
             }
@@ -1036,13 +1051,22 @@ class ApiHandler(BaseHTTPRequestHandler):
                 "title": conversation["title"],
                 "rank": conversation["rank"],
             }
+            character = title.rsplit("/", 1)[-1].strip()
+            dm_detail = self.store.kim_dm.conversation(character, conv)
             if mode == "sim":
-                result["script"] = self.store._build_kim_script(
-                    conversation["body"])
+                if dm_detail is not None:
+                    result["script"] = dm_detail["script"]
+                else:
+                    result["script"] = self.store._build_kim_script(
+                        conversation["body"])
                 result["spoiler"] = self.store.spoiler_warning(content)
             else:
-                result["messages"] = self.store._parse_dialogue(
-                    conversation["body"])
+                if dm_detail is not None:
+                    result["messages"] = dm_detail["messages"]
+                else:
+                    result["messages"] = self.store._parse_dialogue(
+                        conversation["body"])
+                result["source"] = dm_detail["source"] if dm_detail else "wiki"
             return result
         return {"id": None, "title": None, "rank": None, "messages": []}
 

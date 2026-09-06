@@ -12,6 +12,8 @@ Commandes disponibles (préfixe ``cephalon``) :
                               matérialiser dans ``buckets.json``).
     * ``cephalon init-db``  : crée le schéma PostgreSQL (``init_db.sql``).
     * ``cephalon ui``       : lance l'interface web locale (navigateur).
+    * ``cephalon export-entities`` : synchronise les entités du jeu.
+    * ``cephalon kim-dm``      : télécharge le miroir KIM (datamine).
     * ``cephalon-ui``       : entry point autonome de l'interface (exe).
     * ``cephalon version``  : affiche la version du paquet.
     * ``cephalon help``     : aide générale.
@@ -300,6 +302,26 @@ def _cmd_ui(args) -> int:
     return 0
 
 
+# --------------------------------------------------------- command: kim-dm
+def _cmd_kim_dm(args) -> int:
+    from .kim_dm import mirror_kim_dm
+
+    config, _ = _build_config(args)
+    output_dir = args.out or config.output_dir
+    langs = tuple(args.lang) if args.lang else ("en", "fr")
+    downloaded, failed = mirror_kim_dm(output_dir, langs=langs, force=args.force)
+    if downloaded:
+        print(f"Téléchargés dans {output_dir / 'kim_dm'} : {', '.join(downloaded)}")
+    else:
+        print("Rien à télécharger (cache déjà à jour — utilisez --force).")
+    if failed:
+        print("Échecs :")
+        for err in failed:
+            print(f"  • {err}")
+        return 1
+    return 0
+
+
 # ------------------------------------------------------------------ assembly
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -386,6 +408,20 @@ def _build_parser() -> argparse.ArgumentParser:
     p_export.add_argument("--database-url", type=str, default=None)
     p_export.set_defaults(func=_cmd_export_entities)
 
+    # --- kim-dm
+    p_kim_dm = sub.add_parser(
+        "kim-dm",
+        help="Télécharge/cache le miroir KIM (graphes de dialogue du jeu + "
+             "dictionnaires de localisation) dans out/kim_dm/.")
+    p_kim_dm.add_argument("--out", type=Path, default=None,
+                          help="Dossier des megafiles (défaut: out/).")
+    p_kim_dm.add_argument("--lang", action="append", choices=sorted(_SUPPORTED_LANGS),
+                          help="Langues du dictionnaire à télécharger "
+                               "(défaut: en fr).")
+    p_kim_dm.add_argument("--force", action="store_true",
+                          help="Re-télécharge tout (ignore le cache local).")
+    p_kim_dm.set_defaults(func=_cmd_kim_dm)
+
     # --- version
     p_version = sub.add_parser("version", help="Affiche la version.")
     p_version.set_defaults(func=_cmd_version)
@@ -398,7 +434,8 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 _KNOWN_COMMANDS = {"run", "diff", "status", "recent", "buckets",
-                   "init-db", "ui", "export-entities", "version", "help"}
+                   "init-db", "ui", "export-entities", "kim-dm",
+                   "version", "help"}
 
 _SUPPORTED_LANGS = {"de", "en", "es", "fr", "it", "ja", "ko", "pl", "pt",
                     "ru", "tc", "th", "tr", "uk", "zh"}

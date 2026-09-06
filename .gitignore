@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Sorties du scraper
+out/
+sync_state.json
+
+# Logs d'exécution locale
+runtime_*.log
+
+# Cache média / Public Export (téléchargeable)
+cache/
+
+# Config locale
+buckets.json.local
+
+# Env
+.env
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cephalon Archive — Interface</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/vendor/vue-flow.bundle.css" />
+</head>
+<body>
+  <div id="top-progress" class="hidden"></div>
+  <div id="app">
+    <aside id="sidebar">
+      <div class="brand">
+        <div class="brand-logo">CA</div>
+        <div class="brand-text">
+          <div class="brand-title">Cephalon Archive</div>
+          <div class="brand-sub">Warframe Lore</div>
+        </div>
+      </div>
+
+      <nav>
+        <button class="nav-item" data-view="dashboard">
+          <span class="nav-icon">◈</span> Vue d'ensemble
+        </button>
+        <button class="nav-item" data-view="kim">
+          <span class="nav-icon">💬</span> Terminal KIM
+        </button>
+        <button class="nav-item" data-view="recent">
+          <span class="nav-icon">🕒</span> Récents
+        </button>
+        <div class="nav-section">Buckets</div>
+        <div id="bucket-nav"></div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="nav-item" id="btn-reload" title="Recharger les données">
+          <span class="nav-icon">⟳</span> Recharger
+        </button>
+      </div>
+    </aside>
+
+    <main id="content">
+      <header id="topbar">
+        <button id="btn-menu" class="icon-btn" type="button" aria-label="Menu" aria-expanded="false">☰</button>
+        <div id="breadcrumb"></div>
+        <div class="search-box" id="omnibox">
+          <div class="search-row">
+            <span class="search-icon">🔍</span>
+            <div id="omnibox-tags"></div>
+            <input id="search-input" type="search"
+                   placeholder="Rechercher…"
+                   autocomplete="off" spellcheck="false" />
+            <button id="search-cancel" class="icon-btn" type="button">Annuler</button>
+          </div>
+          <div id="omnibox-dropdown" class="hidden"></div>
+        </div>
+      </header>
+
+      <section id="view-dashboard" class="view">
+        <div id="stats-cards"></div>
+        <div id="bucket-cards"></div>
+      </section>
+
+      <section id="view-bucket" class="view hidden">
+        <div class="view-head">
+          <button class="back-btn" data-back="dashboard">←</button>
+          <h2 id="bucket-title"></h2>
+        </div>
+        <div id="bucket-pages"></div>
+      </section>
+
+      <section id="view-page" class="view hidden">
+        <div class="view-head">
+          <button class="back-btn" id="page-back" data-back="bucket">←</button>
+          <h2 id="page-title"></h2>
+          <div id="page-badges"></div>
+        </div>
+        <article id="page-content" class="markdown"></article>
+      </section>
+
+      <section id="view-kim" class="view hidden">
+        <div class="view-head">
+          <button class="back-btn" data-back="dashboard">←</button>
+          <h2>Terminal KIM (Messagerie & JDR)</h2>
+        </div>
+        <div id="kim-segments" class="kim-segments scrollbar-hide"></div>
+        <div id="kim-list"></div>
+      </section>
+
+      <section id="view-kim-chat" class="view hidden">
+        <div class="view-head">
+          <button class="back-btn" id="kim-back" data-back="kim">←</button>
+          <h2 id="kim-title"></h2>
+        </div>
+        <div class="view-tabs scrollbar-hide">
+          <button class="view-tab active" data-tab="chat">Messagerie</button>
+          <button class="view-tab" data-tab="sim">Simulateur</button>
+          <button class="view-tab" data-tab="chart">Flowchart</button>
+        </div>
+        <div id="kim-chat"></div>
+        <div id="kim-sim" class="hidden">
+          <div class="sim-toolbar">
+            <button id="sim-advance">Suivant ›</button>
+            <button id="sim-auto">Lecture</button>
+            <button id="sim-restart">Rejouer</button>
+            <span id="sim-status" class="sim-status"></span>
+          </div>
+          <div id="sim-history"></div>
+          <div id="sim-prompt" class="hidden"></div>
+          <div id="sim-end" class="hidden">
+            <p class="sim-end-text">Conversation terminée.</p>
+            <button id="sim-replay">Rejouer</button>
+          </div>
+        </div>
+        <div id="kim-chart" class="hidden"></div>
+      </section>
+
+      <section id="view-recent" class="view hidden">
+        <div class="view-head">
+          <button class="back-btn" data-back="dashboard">←</button>
+          <h2>Derniers éléments ajoutés</h2>
+        </div>
+        <div id="recent-list"></div>
+      </section>
+
+      <section id="view-search" class="view hidden">
+        <div class="view-head">
+          <button class="back-btn" id="search-back" data-back="dashboard">←</button>
+          <h2>Résultats pour <span id="search-term"></span></h2>
+        </div>
+        <div id="search-results"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="sidebar-backdrop"></div>
+
+  <nav id="bottom-nav" aria-label="Navigation principale">
+    <button class="bnav-item" data-view="dashboard">
+      <span class="bnav-icon">◈</span><span>Vue d'ensemble</span>
+    </button>
+    <button class="bnav-item" data-view="kim">
+      <span class="bnav-icon">💬</span><span>Terminal KIM</span>
+    </button>
+    <button class="bnav-item" data-view="search">
+      <span class="bnav-icon">🔍</span><span>Recherche</span>
+    </button>
+  </nav>
+
+  <script src="/vendor/vue-flow.bundle.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

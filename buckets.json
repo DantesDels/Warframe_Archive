@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "buckets": [
+    {
+      "id": "Lore_Quetes",
+      "title": "Quêtes",
+      "filename": "Lore_Quetes.json",
+      "categories": [
+        "Quest"
+      ],
+      "title_include": [],
+      "title_exclude": [
+        "/Transcript"
+      ]
+    },
+    {
+      "id": "Lore_Dialogues_Quetes",
+      "title": "Dialogues de quêtes (transcripts)",
+      "filename": "Lore_Dialogues_Quetes.json",
+      "categories": [
+        "Quotes"
+      ],
+      "title_include": [
+        "/Transcript"
+      ],
+      "title_exclude": []
+    },
+    {
+      "id": "Lore_Dialogues_KIM",
+      "title": "Discussions KIM & Fables & Frontiers",
+      "filename": "Lore_Dialogues_KIM.json",
+      "categories": [
+        "Quotes"
+      ],
+      "prefix": [
+        "Kinemantik Instant Messenger/"
+      ],
+      "title_include": [
+        "Kinemantik Instant Messenger",
+        "Fables & Frontiers"
+      ],
+      "title_exclude": [
+        "Lettie",
+        "The Hex",
+        "SectionList"
+      ]
+    },
+    {
+      "id": "Lore_Characters",
+      "title": "Personnages",
+      "filename": "Lore_Characters.json",
+      "categories": [
+        "Characters"
+      ],
+      "title_include": [],
+      "title_exclude": [
+        "/Quotes",
+        "/Transcript",
+        "/KIM"
+      ]
+    },
+    {
+      "id": "Lore_Dialogues_Quotes",
+      "title": "Lignes de dialogue (voix)",
+      "filename": "Lore_Dialogues_Quotes.json",
+      "categories": [
+        "Quotes"
+      ],
+      "title_include": [
+        "/Quotes"
+      ],
+      "title_exclude": []
+    },
+    {
+      "id": "Lore_Cosmologie_Factions",
+      "title": "Codex",
+      "filename": "Lore_Cosmologie_Factions.json",
+      "categories": [
+        "Factions"
+      ],
+      "title_include": [],
+      "title_exclude": []
+    },
+    {
+      "id": "Lore_Fragments",
+      "title": "Fragments",
+      "filename": "Lore_Fragments.json",
+      "categories": [
+        "Lore"
+      ],
+      "title_include": [
+        "Fragment"
+      ],
+      "title_exclude": []
+    },
+    {
+      "id": "Lore_Univers_Histoire",
+      "title": "Univers",
+      "filename": "Lore_Univers_Histoire.json",
+      "categories": [
+        "Lore"
+      ],
+      "title_include": [],
+      "title_exclude": [
+        "/Quotes",
+        "/Transcript",
+        "/KIM",
+        "Kinemantik",
+        "Fables & Frontiers",
+        "Fragment"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "warframe-archives"
+version = "1.0.0"
+description = "Cephalon Archive — pipeline de collecte du lore Warframe (scraping MediaWiki, nettoyage Markdown, canon, chunking RAG, PostgreSQL/pgvector)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+dependencies = [
+    "requests>=2.31.0",
+    "mwparserfromhell>=0.6.5",
+    "SQLAlchemy>=2.0",
+    "asyncpg>=0.29",
+    "pgvector>=0.3",
+]
+
+[project.scripts]
+cephalon = "warframe_lore.cli:main"
+cephalon-ui = "warframe_lore.ui.server:main"
+
+[tool.setuptools]
+packages = [
+    "warframe_lore",
+    "warframe_lore.api",
+    "warframe_lore.cleaner",
+    "warframe_lore.db",
+    "warframe_lore.output",
+    "warframe_lore.sync",
+    "warframe_lore.ui",
+]
+
+[tool.setuptools.package-data]
+warframe_lore = ["**/*.md", "**/*.json", "**/*.html", "**/*.css", "**/*.js"]

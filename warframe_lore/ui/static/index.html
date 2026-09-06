@@ -93,7 +93,10 @@
           <button class="back-btn" id="kim-back" data-back="kim">←</button>
           <h2 id="kim-title"></h2>
         </div>
-        <div id="kim-convs" class="kim-convs scrollbar-hide"></div>
+        <div id="kim-convs" class="kim-convs">
+          <span class="kim-convs-label">Discussion :</span>
+          <select id="kim-convs-select" class="kim-convs-select" aria-label="Choisir une discussion"></select>
+        </div>
         <div class="view-tabs scrollbar-hide">
           <button class="view-tab active" data-tab="chat">Messagerie</button>
           <button class="view-tab" data-tab="sim">Simulateur</button>

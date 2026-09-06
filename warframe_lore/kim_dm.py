@@ -216,6 +216,29 @@ def _dedupe_edges(graph: dict) -> dict:
     return {"nodes": graph["nodes"], "edges": edges}
 
 
+def _anchor_graph(nodes: list, edges: list, root_label: str,
+                  force: bool = True) -> dict:
+    """Fait du graphe un arbre à racine (ancre système) unique.
+
+    Injecte un nœud-système ``root`` (l'« ancre » typique du SVG de référence,
+    ex. ``AmirRank1Convo1 begins``) et y rattache TOUS les nœuds qui n'ont
+    aucune arête entrante : c'est ainsi le seul nœud sans ``target``.
+    ``force=False`` n'ajoute l'ancre que s'il existe au moins deux racines
+    (cas des unions de conversations) ; par défaut l'ancre est toujours posée.
+    """
+    if not nodes:
+        return {"nodes": [], "edges": edges}
+    roots = {n["id"] for n in nodes} - {e["target"] for e in edges}
+    if not force and len(roots) <= 1:
+        return {"nodes": nodes, "edges": edges}
+    root_node = {"id": "root", "kind": "start", "speaker": "",
+                 "text": root_label, "player": False, "terminal": False}
+    extra = [{"source": "root", "target": nid, "label": ""}
+             for nid in sorted(roots) if nid != "root"]
+    return _dedupe_edges({"nodes": [root_node] + nodes,
+                          "edges": edges + extra})
+
+
 def _merge_graphs(graphs: list[dict]) -> dict:
     """Union des graphes d'une page (ids de nœuds uniques par fichier)."""
     nodes: list[dict] = []
@@ -254,8 +277,9 @@ class _DialogueFile:
     def _visible(self, node: dict, start_label: str) -> dict:
         kind = _node_kind(node)
         if kind == "start":
+            begin_label = f"{start_label} begins" if start_label else ""
             return {"id": f"dm{node['Id']}", "kind": "start", "speaker": "",
-                    "text": start_label, "player": False, "terminal": False}
+                    "text": begin_label, "player": False, "terminal": False}
         if kind == "end":
             return {"id": f"dm{node['Id']}", "kind": "end", "speaker": "",
                     "text": "", "player": False, "terminal": True}
@@ -570,7 +594,9 @@ class KimDM:
         if conv:
             found = self.conversation(wiki_character, conv)
             return found["graph"] if found else None
-        return _merge_graphs([c["graph"] for c in data["conversations"]])
+        merged = _merge_graphs([c["graph"] for c in data["conversations"]])
+        return _anchor_graph(merged["nodes"], merged["edges"],
+                             f"{wiki_character} — conversations")
 
     # -------------------------------------------------------------- disque
     def load(self) -> None:

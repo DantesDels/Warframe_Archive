@@ -681,7 +681,6 @@ async function renderKimChat(title) {
   }
   const container = $("#kim-chat");
   container.innerHTML = skeletonRows(8);
-  $("#kim-convs").innerHTML = "";
   const data = await api(`/api/kim?title=${encodeURIComponent(title)}`);
   if (epoch !== routeEpoch) return;
   kimConvList = data.conversations || [];
@@ -702,22 +701,37 @@ function kimRankShort(rank) {
 
 function renderKimConversations() {
   const host = $("#kim-convs");
-  host.innerHTML = "";
   if (!kimConvList.length) {
     host.classList.add("hidden");
     return;
   }
   host.classList.remove("hidden");
+  // Le <select> peut avoir été écrasé (ex: innerHTML="") : on le recrée.
+  let select = $("#kim-convs-select");
+  if (!select) {
+    host.innerHTML = "";
+    host.appendChild(el("span", "kim-convs-label", "Discussion :"));
+    select = el("select", "kim-convs-select");
+    select.id = "kim-convs-select";
+    select.setAttribute("aria-label", "Choisir une discussion");
+    select.addEventListener("change", (event) => {
+      const convId = event.target.value;
+      if (convId) selectKimConversation(convId);
+    });
+    host.appendChild(select);
+  }
+  select.innerHTML = "";
   for (const conversation of kimConvList) {
     const short = kimRankShort(conversation.rank);
     const label = short ? `${short} · ${conversation.title}` : conversation.title;
-    const btn = el("button", "segment-btn" + (kimConvActive === conversation.id ? " active" : ""));
-    btn.appendChild(document.createTextNode(label));
-    btn.title = conversation.rank
+    const option = el("option", "", label);
+    option.value = conversation.id;
+    option.title = conversation.rank
       ? `${conversation.rank} — ${conversation.title}` : conversation.title;
-    btn.addEventListener("click", () => selectKimConversation(conversation.id));
-    host.appendChild(btn);
+    if (kimConvActive === conversation.id) option.selected = true;
+    select.appendChild(option);
   }
+  select.value = kimConvActive || "";
 }
 
 async function selectKimConversation(convId) {
@@ -1275,6 +1289,12 @@ async function init() {
   // Onglets (Messagerie / Simulateur / Flowchart) dans la vue KIM
   document.querySelectorAll(".view-tab").forEach((tab) => {
     tab.addEventListener("click", () => switchKimTab(tab.dataset.tab));
+  });
+
+  // Sélecteur de discussion KIM (dropdown)
+  $("#kim-convs-select")?.addEventListener("change", (event) => {
+    const convId = event.target.value;
+    if (convId) selectKimConversation(convId);
   });
 
   // Contrôles du simulateur KIM

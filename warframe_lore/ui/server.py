@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, unquote
 
-from ..kim_dm import KimDM
+from ..kim_dm import KimDM, _anchor_graph
 from ..media import MediaIndex
 
 # --------------------------------------------------------------------------
@@ -300,9 +300,12 @@ class LoreStore:
         if conv:
             for conversation in _split_kim_conversations(title, content):
                 if conversation["id"] == conv:
-                    return _build_dialogue_graph(conversation["body"])
+                    return _build_dialogue_graph(
+                        conversation["body"],
+                        root_label=f"{conversation['id']} begins")
             return None
-        return _build_dialogue_graph(content)
+        return _build_dialogue_graph(
+            content, root_label=f"{character} · toutes les conversations")
 
     def _all_pages(self):
         for entries in self._pages.values():
@@ -805,17 +808,21 @@ def _split_kim_conversations(page_title: str, content: str) -> list[dict]:
     return segments
 
 
-def _build_dialogue_graph(content: str) -> dict:
+def _build_dialogue_graph(content: str, root_label: str | None = None) -> dict:
     """Construit le graphe de conversation (nœuds + arêtes) d'une page KIM.
 
     Sémantique des nœuds :
         * nœud PNJ   -> ``speaker`` = nom du personnage (bordure bleue).
         * nœud joueur-> ``player`` = True (choix ``> >``, bordure rouge).
         * nœud mixte (``> texte`` anonyme, continuation) -> pas de locuteur.
+        * ``root_label`` (optionnel) -> un nœud-système unique est injecté en
+          tête (``_anchor_graph``) : tous les nœuds sans arête entrante y sont
+          rattachés, garantissant une racine unique (pyramide TB).
 
     Sémantique des arêtes :
         * flux séquentiel normal d'un nœud vers le suivant ;
-        * chaque choix ``> >`` est une OPTION qui part du dernier nœud PNJ ;
+        * chaque choix ``> >`` est une OPTION qui part du dernier nœud PNJ
+          (même si ce dernier est marqué ``{Convo. ends}``) ;
         * ``{Convo. ends}`` marque un nœud terminal (plus d'arête sortante) ;
         * annotations ``[Continues/Same as above...]`` / ``[Goes the same as
           below choice]`` ajoutent des arêtes de saut vers le nœud référencé.
@@ -845,11 +852,14 @@ def _build_dialogue_graph(content: str) -> dict:
             by_text[key] = nid
         return nid
 
-    def link(source: str, target: str, label: str = "") -> None:
+    def link(source: str, target: str, label: str = "", force: bool = False) -> None:
         if not source or not target or source == target:
             return
-        # Un nœud terminal (``{Convo. ends}``) n'a jamais d'arête sortante.
-        if nodes_id_last_terminal(nodes, source):
+        # Un nœud terminal (``{Convo. ends}``) n'a jamais d'arête sortante,
+        # SAUF vers les options du joueur qui le suivent (``force=True``) :
+        # sans ça, ces choix deviennent des racines orphelines dans le layou
+        # (propulsés tout en haut, côte à côte).
+        if not force and nodes_id_last_terminal(nodes, source):
             return
         edges.append({"source": source, "target": target, "label": label})
 
@@ -904,7 +914,7 @@ def _build_dialogue_graph(content: str) -> dict:
             nid = add_node("choice", "", nested.group("text").strip(), player=True)
             origin = last_npc
             if origin:
-                link(origin, nid)
+                link(origin, nid, force=True)
             elif pending_choices:
                 link(pending_choices[-1], nid)
             pending_choices.append(nid)
@@ -924,7 +934,10 @@ def _build_dialogue_graph(content: str) -> dict:
                     link(last_npc, nid)
                 last_npc = nid
 
-    return {"nodes": nodes, "edges": edges}
+    graph = {"nodes": nodes, "edges": edges}
+    if root_label:
+        graph = _anchor_graph(nodes, edges, root_label)
+    return graph
 
 
 def nodes_id_last_terminal(nodes: list[dict], nid: str) -> bool:

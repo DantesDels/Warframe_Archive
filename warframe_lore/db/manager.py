@@ -155,20 +155,41 @@ class SQLDatabaseManager:
                     content_markdown=content_markdown,
                 ))
 
-                # --- 2. Remplacement des chunks : DELETE + INSERT.
-                await session.execute(
-                    delete(LoreChunk).where(LoreChunk.wiki_page_id == page_id))
+                # --- 2. Chunks : mise à jour en PRÉSERVANT les embeddings.
+                # Un DELETE+INSERT détruirait les vecteurs déjà calculés
+                # (Phase RAG).  On conserve les chunks inchangés (même
+                # contenu + métadonnées), on met à jour ceux dont le texte
+                # a changé (embedding invalidé), et on ne supprime que les
+                # indices disparus.
                 rag_chunks = self.chunker.split(
                     content_markdown,
                     is_dialogue=detect_kim_dialogues,
                 )
+                existing_chunks = (await session.execute(
+                    select(LoreChunk).where(
+                        LoreChunk.wiki_page_id == page_id))).scalars().all()
+                existing_by_index = {chunk.chunk_index: chunk
+                                     for chunk in existing_chunks}
+                new_chunk_indices = {chunk.chunk_index for chunk in rag_chunks}
+                for stale_index in set(existing_by_index) - new_chunk_indices:
+                    await session.delete(existing_by_index[stale_index])
                 for chunk in rag_chunks:
-                    session.add(LoreChunk(
-                        wiki_page_id=page_id,
-                        chunk_index=chunk.chunk_index,
-                        content_markdown=chunk.content_markdown,
-                        chunk_metadata=chunk.metadata,
-                    ))
+                    existing = existing_by_index.get(chunk.chunk_index)
+                    if existing is None:
+                        session.add(LoreChunk(
+                            wiki_page_id=page_id,
+                            chunk_index=chunk.chunk_index,
+                            content_markdown=chunk.content_markdown,
+                            chunk_metadata=chunk.metadata,
+                        ))
+                    elif (existing.content_markdown != chunk.content_markdown
+                          or existing.chunk_metadata != chunk.metadata):
+                        existing.content_markdown = chunk.content_markdown
+                        existing.chunk_metadata = chunk.metadata
+                        # Le vecteur de l'ancien texte ne correspond plus au
+                        # nouveau contenu : mieux vaut l'invalider que laisser
+                        # l'embedding pointer vers un texte décalé.
+                        existing.embedding = None
 
                 # --- 3. Dialogues KIM (si détectés).
                 kim_message_count = 0

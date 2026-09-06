@@ -85,6 +85,23 @@ def decompress_lzma(data: bytes) -> str:
     return out.decode("utf-8", errors="replace")
 
 
+def _is_valid_asset_payload(payload: bytes, category: str) -> bool:
+    """Vrai si ``payload`` est un actif JSON exploitable.
+
+    Miroir de ce que ``iter_entities_for`` accepte : soit un objet dont la
+    clé ``category`` mène à une liste, soit une liste à la racine.  Une
+    réponse tronquée, vide ou d'une structure inattendue est considérée
+    invalide (à ne pas mettre en cache).
+    """
+    try:
+        data = json.loads(payload.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        log.warning("JSON illisible (%s)", error)
+        return False
+    entries = data.get(category) if isinstance(data, dict) else data
+    return isinstance(entries, list)
+
+
 def _as_text(value, *, default: str | None = None) -> str | None:
     """Normalise un champ localisé (``str``, ``list[str]``, ``dict``, ``None``).
 
@@ -142,7 +159,19 @@ class PublicExportClient:
         log.info("Index %s : %s", lang, url)
         raw = self._http_get(url)
         text = decompress_lzma(raw)
-        assets = [line.strip() for line in text.splitlines() if line.strip()]
+        assets: list[str] = []
+        for line in text.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            # Nom d'actif attendu : ``Export<Cat>_<lang>.json!00_<hash>``.
+            # Une ligne sans digest (ex: flux LZMA tronqué en plein nom) ne
+            # désigne aucun contenu exploitable -> ignorée.
+            name, marker, digest = line.partition("!00_")
+            if not marker or not digest or not name:
+                log.warning("Ligne d'index invalide ignorée : '%s'.", line)
+                continue
+            assets.append(line)
         log.info("Index %s : %d manifests découverts.", lang, len(assets))
         return assets
 
@@ -158,9 +187,14 @@ class PublicExportClient:
         """
         filename = _sanitize_asset_filename(asset)
         cache_path = self.cache_dir / lang / filename
+        category = asset.split("_", 1)[0]
         if cache_path.exists() and not force:
-            log.debug("Cache %s : %s réutilisé.", lang, asset)
-            return cache_path.read_bytes()
+            cached = cache_path.read_bytes()
+            if _is_valid_asset_payload(cached, category):
+                log.debug("Cache %s : %s réutilisé.", lang, asset)
+                return cached
+            log.warning("Cache corrompu pour %s/%s : re-téléchargement.",
+                        lang, asset)
         url = self.asset_url(asset)
         try:
             payload = self._http_get(url)
@@ -172,8 +206,18 @@ class PublicExportClient:
             log.warning("Actif injoignable %s (%s) : %s", asset, url,
                         error.reason)
             return None
+        # On ne met JAMAIS en cache un payload invalide (il serait réutilisé
+        # à l'infini par hash-addressing en masquant la corruption).
+        if not _is_valid_asset_payload(payload, category):
+            log.warning("Payload invalide pour %s (%s) : non mis en cache.",
+                        asset, url)
+            return payload
         cache_path.parent.mkdir(parents=True, exist_ok=True)
-        cache_path.write_bytes(payload)
+        # Écriture atomique : un crash en plein write ne laisse pas un cache
+        # tronqué qui passerait la validation au prochain run.
+        temporary_path = cache_path.with_suffix(cache_path.suffix + ".tmp")
+        temporary_path.write_bytes(payload)
+        temporary_path.replace(cache_path)
         return payload
 
     # -------------------------------------------------------- extraction

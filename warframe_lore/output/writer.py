@@ -46,14 +46,25 @@ class MegafileManager:
 
     def merge_and_write(self, filename: str, bucket_title: str,
                         new_entries: list[OutputEntry],
-                        metadata_note: str = "") -> dict[str, Any]:
+                        metadata_note: str = "",
+                        live_titles: set[str] | None = None) -> dict[str, Any]:
         """Fusionne les nouvelles entrées dans le megafile du bucket.
 
-        Returns:
-            Le dict complet du megafile (également écrit sur disque).
+        ``live_titles`` : ensemble des titres actuellement résolus pour ce
+        bucket.  S'il est fourni, les pages du megafile qui n'y figurent pas
+        (disparues des catégories du wiki) sont retirées, pour éviter de
+        garder indéfiniment des entrées obsolètes au côté des fraîches.
         """
         megafile_path = self.output_dir / filename
         existing_entries = _read_existing_entries(megafile_path)
+
+        if live_titles is not None:
+            vanished = [t for t in existing_entries if t not in live_titles]
+            if vanished:
+                log.info("%s : %d page(s) disparue(s) retirée(s) du megafile",
+                         megafile_path.name, len(vanished))
+            for title in vanished:
+                existing_entries.pop(title, None)
 
         for entry in new_entries:
             if entry.page_title:

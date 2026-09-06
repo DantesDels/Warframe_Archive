@@ -47,7 +47,7 @@ def merge_canon_status(*statuses: CanonStatus | None) -> CanonStatus:
     present = [s for s in statuses if s is not None]
     if not present:
         return CanonStatus.CANON
-    return min(present, key=lambda s: _CANON_PRIORITY[s])
+    return max(present, key=lambda s: _CANON_PRIORITY[s])
 
 
 @dataclass

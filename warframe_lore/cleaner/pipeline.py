@@ -86,7 +86,7 @@ class CleanOutput:
 # l'accolade n'est pas exigée.  ``{If ...}`` et ``{Convo. ends.}`` ne
 # contiennent pas ces mots-clés -> non concernés.
 _KIM_POINTER_LINE = re.compile(
-    r"(?im)^>\s*\*{0,3}\s*>?\s*(?:"
+    r"(?im)^>[ \t]*(?:\*{1,3}[ \t]*)?(?:>[ \t]*)?(?:"
     r"\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*"
     r"|(?:\{[^{}:\n]*?\}\s*)+?\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*"
     r")")
@@ -189,13 +189,25 @@ class WikitextCleaner:
         # Étape 1 — assainissement pré-parse (purges destructives).
         text = wikitext
         text = strip_wikitext_comments(text)
+        text = strip_tables_and_code_blocks(text)
         text = convert_html_tags(text)
         text = remove_transclusion_tags(text)
         text = strip_file_and_image_references(text)
-        text = strip_tables_and_code_blocks(text)
         parsed = mwparserfromhell.parse(text)
 
         # Étape 2 — gestion des templates d'intérêt narratif.
+        # Détection canon/non-canon AVANT tout remplacement/aplatissement :
+        # un template de signal peut être imbriqué dans un autre template ou
+        # un nœud de liste ; filter_templates(recursive=True) le trouve alors
+        # qu'une boucle sur parsed.nodes (surface) ne descend pas.
+        all_templates = parsed.filter_templates(recursive=True)
+        for node in all_templates:
+            if must_flag_non_canon(node, self.cleaner_config):
+                non_canon_detected = True
+                continue
+            if must_flag_canon(node, self.cleaner_config):
+                canon_detected = True
+
         for node in list(parsed.nodes):
             if not isinstance(node, Template):
                 continue
@@ -206,10 +218,8 @@ class WikitextCleaner:
             elif template_name == "spoiler":
                 parsed.replace(node, render_spoiler_template(node))
             elif must_flag_non_canon(node, self.cleaner_config):
-                non_canon_detected = True
                 parsed.replace(node, render_non_canon_template(node, self.cleaner_config))
             elif must_flag_canon(node, self.cleaner_config):
-                canon_detected = True
                 parsed.replace(node, render_canon_template(node, self.cleaner_config))
             elif is_noise_template(template_name, self.cleaner_config) or \
                     is_pure_noise(template_name, self.cleaner_config):

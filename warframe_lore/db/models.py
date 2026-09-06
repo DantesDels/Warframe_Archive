@@ -19,6 +19,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     JSON,
     Text,
@@ -39,7 +40,8 @@ class WikiPage(Base):
 
     __tablename__ = "wiki_pages"
 
-    page_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    page_id: Mapped[int] = mapped_column(
+        BigInteger, primary_key=True, autoincrement=False)
     page_title: Mapped[str] = mapped_column(Text, nullable=False)
     category: Mapped[str] = mapped_column(Text, nullable=False)
     namespace: Mapped[int] = mapped_column(
@@ -62,6 +64,11 @@ class WikiPage(Base):
         CheckConstraint(
             "canon_status IN ('canon', 'speculation', 'community_theory')",
             name="ck_wiki_pages_canon_status"),
+        # Parité avec init_db.sql : retrouver une page par titre (+ filtre
+        # bucket/statut) doit passer par des index déclarés dans l'ORM.
+        Index("idx_wiki_pages_title", "page_title", unique=True),
+        Index("idx_wiki_pages_bucket", "category"),
+        Index("idx_wiki_pages_canon", "canon_status"),
     )
 
     lore_chunks: Mapped[list["LoreChunk"]] = relationship(
@@ -106,6 +113,12 @@ class LoreChunk(Base):
     __table_args__ = (
         UniqueConstraint("wiki_page_id", "chunk_index",
                          name="uq_lore_chunks_page_index"),
+        # Parité avec init_db.sql.
+        Index("idx_chunks_page", "wiki_page_id"),
+        Index("idx_chunks_metadata", "metadata", postgresql_using="gin"),
+        Index("idx_chunks_embedding", "embedding",
+              postgresql_using="hnsw",
+              postgresql_ops={"embedding": "vector_cosine_ops"}),
     )
 
 
@@ -133,6 +146,7 @@ class KimDialogue(Base):
     __table_args__ = (
         UniqueConstraint("wiki_page_id", "message_order",
                          name="uq_kim_page_order"),
+        Index("idx_kim_page", "wiki_page_id"),
     )
 
 
@@ -160,6 +174,8 @@ class GameEntityI18n(Base):
 
     __table_args__ = (
         UniqueConstraint("entity_id", "lang", name="uq_entities_id_lang"),
+        Index("idx_entities_lang", "lang"),
+        Index("idx_entities_type", "entity_type"),
     )
 
 
@@ -178,3 +194,7 @@ class SyncStateRecord(Base):
     touched: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    __table_args__ = (
+        Index("idx_sync_bucket", "bucket_id"),
+    )

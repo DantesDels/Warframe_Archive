@@ -105,13 +105,18 @@ class Scraper:
         """
         page_level_speculative = page_title in self._speculation_titles
         inline_non_canon = non_canon_detected_in_body
-        inline_canon = canon_detected_in_body
 
-        if page_level_speculative:
-            return CanonStatus.SPECULATION
-        if inline_non_canon and not inline_canon:
-            return CanonStatus.SPECULATION
-        return CanonStatus.CANON
+        page_status = (
+            CanonStatus.SPECULATION if page_level_speculative
+            else CanonStatus.CANON
+        )
+        body_status = (
+            CanonStatus.SPECULATION if inline_non_canon
+            else CanonStatus.CANON
+        )
+        # merge_canon_status retient le statut le plus faible (priorité la
+        # plus haute) : un seul signal spéculatif suffit à classer en spec.
+        return merge_canon_status(page_status, body_status)
 
     # ------------------------------------------------------------ pipeline
     async def _sync_buckets(self, force: bool) -> None:
@@ -179,6 +184,7 @@ class Scraper:
 
             # Megafile JSON du bucket (fusion incrémentale).
             if new_entries:
+                live_titles = set(pages_by_bucket.get(spec.id, []))
                 self.output.merge_and_write(
                     filename=spec.filename,
                     bucket_title=spec.title,
@@ -188,7 +194,22 @@ class Scraper:
                         "Statut canon/non-canon inclus. "
                         "Prêt pour ingestion LLM / NotebookLM."
                     ),
+                    live_titles=live_titles,
                 )
+                # Acquittement delta SEULEMENT après publication JSON réussie
+                # (si le megafile a échoué, il ne faut pas marquer la page
+                # comme synchronisée : la base et le JSON divergeraient).
+                if self.db is not None:
+                    for entry in new_entries:
+                        page = fetched_by_title.get(entry.page_title)
+                        if page is None:
+                            continue
+                        await self.db.record_fetch(
+                            bucket_id=spec.id,
+                            page_title=entry.page_title,
+                            page_id=getattr(page, "pageid", 0),
+                            touched=getattr(page, "touched", None),
+                        )
             else:
                 log.warning("Bucket '%s' : aucune page nettoyée à écrire.",
                             spec.id)
@@ -291,10 +312,6 @@ class Scraper:
                 source_url=source_url,
                 detect_kim_dialogues=(bucket_id == "Lore_Dialogues_KIM"),
             )
-
-            # — Marque la page comme synchronisée (delta).
-            await self.db.record_fetch(bucket_id=bucket_id, page_title=page_title,
-                                       page_id=page_id, touched=touched)
 
         log.debug("Page '%s' traitée (canon=%s).",
                   page_title, canon_status.value)

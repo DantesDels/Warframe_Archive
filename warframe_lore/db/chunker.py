@@ -30,7 +30,7 @@ from typing import Any
 # ``> >``) et pointeurs embarqués (fermés) : artefacts à purger des chunks.
 # ``{Convo. ends.}`` est volontairement conservé (marqueur terminal du sim).
 _KIM_POINTER_LINE_CHUNK = re.compile(
-    r"(?im)^>\s*\*{0,3}\s*>?\s*(?:"
+    r"(?im)^>[ \t]*(?:\*{1,3}[ \t]*)?(?:>[ \t]*)?(?:"
     r"\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*"
     r"|(?:\{[^{}:\n]*?\}\s*)+?\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*"
     r")")
@@ -207,7 +207,6 @@ class ChunkManager:
 
         max_characters = self.dialogue_chunk_max_characters
         overlap_characters = self.dialogue_chunk_overlap_characters
-        step_size = max(1, max_characters - overlap_characters)
 
         current_size = 0
         for line in lines:
@@ -215,6 +214,32 @@ class ChunkManager:
                 continue
             speaker = _line_speaker(line)
             line_size = len(line) + 1  # +1 pour le saut de ligne.
+
+            # Une ligne de dialogue devenue trop grande (rare) : coupe dure.
+            # On vide d'abord le buffer courant, puis la ligne est découpée
+            # en morceaux strictement ≤ max_characters (jamais de chunk
+            # oversize, jamais de doublon avec la ligne entière), en
+            # préservant le locuteur dans les métadonnées.
+            if line_size > max_characters:
+                if chunk_lines:
+                    chunks.append(RAGChunk(
+                        chunk_index=len(chunks),
+                        content_markdown="\n".join(chunk_lines),
+                        metadata=_speakers_metadata(per_chunk_speakers),
+                    ))
+                long_line_speakers = [speaker] if speaker else []
+                for piece in _hard_split(
+                        line, max_characters, overlap_characters):
+                    chunks.append(RAGChunk(
+                        chunk_index=len(chunks),
+                        content_markdown=piece,
+                        metadata=_speakers_metadata(long_line_speakers),
+                    ))
+                chunk_lines = []
+                per_chunk_speakers = []
+                current_size = 0
+                continue
+
             if current_size + line_size > max_characters and chunk_lines:
                 chunks.append(RAGChunk(
                     chunk_index=len(chunks),
@@ -236,17 +261,6 @@ class ChunkManager:
             if speaker:
                 per_chunk_speakers.append(speaker)
             current_size += line_size
-
-            # Fallback : une ligne de dialogue devenue trop grande (rare)
-            # est coupée en morceaux durs sans détruire la métadonnée.
-            if line_size > max_characters:
-                for piece_start in range(0, len(line), step_size):
-                    piece = line[piece_start:piece_start + max_characters]
-                    chunks.append(RAGChunk(
-                        chunk_index=len(chunks),
-                        content_markdown=piece,
-                        metadata=_speakers_metadata(per_chunk_speakers),
-                    ))
 
         if chunk_lines:
             chunks.append(RAGChunk(

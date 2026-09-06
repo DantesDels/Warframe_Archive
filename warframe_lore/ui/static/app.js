@@ -44,6 +44,7 @@ function formatDisplayName(title) {
 let pendingRequests = 0;
 let busyTimer = null;
 const apiCache = new Map();
+const API_CACHE_TTL_MS = 5000;
 
 function setBusy(busy) {
   pendingRequests = Math.max(0, pendingRequests + (busy ? 1 : -1));
@@ -60,14 +61,20 @@ function setBusy(busy) {
 }
 
 async function api(path, { cache = true } = {}) {
-  if (cache && apiCache.has(path)) return apiCache.get(path);
+  if (cache && apiCache.has(path)) {
+    const hit = apiCache.get(path);
+    if (Date.now() < hit.expiresAt) return hit.data;
+    apiCache.delete(path);
+  }
   setBusy(true);
   try {
     const response = await fetch(path);
     if (!response.ok) throw new Error(`${path} -> ${response.status}`);
     const data = await response.json();
     if (data && data.error) throw new Error(data.error);
-    if (cache) apiCache.set(path, data);
+    if (cache) {
+      apiCache.set(path, { data, expiresAt: Date.now() + API_CACHE_TTL_MS });
+    }
     return data;
   } finally {
     setBusy(false);
@@ -138,7 +145,7 @@ const MEDIAWIKI_MAGIC = /^_{2}[A-Z_]{2,}_{2}$/;
 // Lignes-pointeurs de navigation KIM (``{Continues/Same/Jump ...}``, préfixés
 // ``{If ...}``, ``> **>``, ``> >``) : la réplique est déjà montrée dans la
 // branche référencée -> ligne ignorée.
-const KIM_POINTER_LINE = /^>\s*\*{0,3}\s*>?\s*(?:\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*|(?:\{[^{}:\n]*?\}\s*)+?\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*)/i;
+const KIM_POINTER_LINE = /^>[ \t]*(?:\*{1,3}[ \t]*)?(?:>[ \t]*)?(?:\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*|(?:\{[^{}:\n]*?\}\s*)+?\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*)/i;
 
 /* ---------------------------------------------------- blocs wikitext bruts */
 const RAW_END = /^customcollapsible/i;
@@ -398,6 +405,11 @@ function showView(name, opts = {}) {
 /* --------------------------------------------------------------- routing */
 const navStack = [];
 
+// Compteur de génération de route : chaque navigation l'incrémente.  Les
+// rendus asynchrones capturent la valeur au démarrage et abandonnent si une
+// navigation plus récente a eu lieu entre-temps (guarde anti-course).
+let routeEpoch = 0;
+
 function navigate(path, { push = true } = {}) {
   if (push) navStack.push(path);
   const prev = window.location.hash;
@@ -416,6 +428,7 @@ function goBack() {
 }
 
 function handleRoute() {
+  routeEpoch++;
   const hash = window.location.hash.replace(/^#/, "") || "dashboard";
   // Resynchronise la pile quand l'utilisateur utilise les boutons ← / → du navigateur.
   if (navStack[navStack.length - 1] !== hash) {
@@ -450,11 +463,13 @@ function handleRoute() {
 
 /* -------------------------------------------------------------- dashboard */
 async function renderDashboard() {
+  const epoch = routeEpoch;
   const cards = $("#stats-cards");
   if (!state.stats) {
     cards.innerHTML = skeletonRows(4);
     state.stats = await api("/api/stats");
   }
+  if (epoch !== routeEpoch) return;
   const stats = state.stats;
 
   cards.innerHTML = "";
@@ -497,11 +512,13 @@ async function renderDashboard() {
 
 /* ------------------------------------------------------------------ bucket */
 async function renderBucket(bucketId) {
+  const epoch = routeEpoch;
   const bucket = state.buckets.find((b) => b.id === bucketId);
   $("#bucket-title").textContent = bucket ? bucket.title : bucketId;
   const container = $("#bucket-pages");
   container.innerHTML = skeletonRows(6);
   const pages = await api(`/api/pages?bucket=${encodeURIComponent(bucketId)}`);
+  if (epoch !== routeEpoch) return;
   container.innerHTML = "";
   for (const page of pages) {
     const item = el("div", "page-list-item");
@@ -552,10 +569,12 @@ function makeSpoilerHint(reason) {
 }
 
 async function renderPage(bucketId, title) {
+  const epoch = routeEpoch;
   $("#page-title").textContent = formatDisplayName(title);
   const host = $("#page-content");
   host.innerHTML = skeletonRows(8);
   const page = await api(`/api/page?bucket=${encodeURIComponent(bucketId)}&title=${encodeURIComponent(title)}`);
+  if (epoch !== routeEpoch) return;
   host.innerHTML = "";
   if (!page) { host.appendChild(emptyState("Page introuvable dans l'archive.")); return; }
   $("#page-badges").innerHTML = canonBadge(page.canon_status);
@@ -610,10 +629,12 @@ function renderKimSegments(dialogues) {
 }
 
 async function renderKim() {
+  const epoch = routeEpoch;
   const media = await ensureMedia();
   const container = $("#kim-list");
   container.innerHTML = skeletonRows(8);
   const dialogues = await api("/api/kim");
+  if (epoch !== routeEpoch) return;
   renderKimSegments(dialogues);
   container.innerHTML = "";
   const shown = kimSegment === "all"
@@ -635,6 +656,7 @@ async function renderKim() {
 
 /* -------------------------------------------------------------- kim chat */
 async function renderKimChat(title) {
+  const epoch = routeEpoch;
   $("#kim-title").textContent = title;
   document.querySelector("#view-kim-chat .kim-header-thumb")?.remove();
   const media = await ensureMedia();
@@ -646,6 +668,7 @@ async function renderKimChat(title) {
   const container = $("#kim-chat");
   container.innerHTML = skeletonRows(8);
   const data = await api(`/api/kim?title=${encodeURIComponent(title)}`);
+  if (epoch !== routeEpoch) return;
   const messages = Array.isArray(data) ? data : data.messages;
   const spoiler = Array.isArray(data) ? null : data.spoiler;
   container.innerHTML = "";
@@ -776,9 +799,11 @@ function renderSimPrompt() {
     const btn = el("button", "sim-option", option.text);
     btn.addEventListener("click", () => {
       kimSimState.waiting = false;
-      appendSimBubble({ speaker: "", text: option.text, player: true, ends: false });
-      prompt.innerHTML = "";
       prompt.classList.add("hidden");
+      prompt.innerHTML = "";
+      const chosen = { speaker: "", text: option.text, player: true, ends: !!option.ends };
+      appendSimBubble(chosen);
+      if (option.ends) { simEnd(); return; }
       kimSimState.cursor++;
       simNext();
     });
@@ -788,24 +813,25 @@ function renderSimPrompt() {
   kimSimState.waiting = true;
 }
 
-/* Avance jusqu'à la prochaine interruption (prompt / fin / boucle). */
+/* Avance d'UNE réplique par appel (fin / prompt suivant / saut) : la lecture
+ * automatique défile réplique par réplique, le bouton « Suivant » itère à la
+ * main.  Un saut ``jump_to`` est exécuté comme une seule étape, sans
+ * enchaîner sur la cible dans la foulée. */
 function simNext() {
   if (kimSimState.done || kimSimState.waiting) return;
   const script = kimSimCache.script;
-  while (true) {
-    if (kimSimState.cursor >= script.length) { simEnd(); return; }
-    const step = script[kimSimState.cursor];
-    if (step.jump_to != null) {
-      if (kimSimState.seen.has(kimSimState.cursor)) { simEnd(); return; }
-      kimSimState.seen.add(kimSimState.cursor);
-      kimSimState.cursor = step.jump_to;
-      continue;
-    }
-    if (step.kind === "prompt") { renderSimPrompt(); return; }
-    kimSimState.cursor++;
-    appendSimBubble(step);
-    if (step.ends) { simEnd(); return; }
+  if (kimSimState.cursor >= script.length) { simEnd(); return; }
+  const step = script[kimSimState.cursor];
+  if (step.jump_to != null) {
+    if (kimSimState.seen.has(kimSimState.cursor)) { simEnd(); return; }
+    kimSimState.seen.add(kimSimState.cursor);
+    kimSimState.cursor = step.jump_to;
+    return;
   }
+  if (step.kind === "prompt") { renderSimPrompt(); return; }
+  kimSimState.cursor++;
+  appendSimBubble(step);
+  if (step.ends) { simEnd(); return; }
 }
 
 function stopSimAuto() {
@@ -824,12 +850,14 @@ function toggleSimAuto() {
 }
 
 async function openSimulator() {
+  const epoch = routeEpoch;
   const title = window.__flowchartOpen || $("#kim-title").textContent;
   kimSimMedia = await ensureMedia();
   if (kimSimCache.title !== title) {
     simResetUi();
     simSetStatus("Chargement du script…");
     const data = await api(`/api/kim?mode=sim&title=${encodeURIComponent(title)}`);
+    if (epoch !== routeEpoch) return;
     kimSimCache = { title, script: data.script || [], spoiler: data.spoiler || null, revealed: false };
     kimSimFetchedTitle = title;
     simResetUi();
@@ -848,9 +876,11 @@ async function openSimulator() {
 
 /* ------------------------------------------------------------------ recent */
 async function renderRecent() {
+  const epoch = routeEpoch;
   const container = $("#recent-list");
   container.innerHTML = skeletonRows(8);
   const recent = await api("/api/recent?limit=30");
+  if (epoch !== routeEpoch) return;
   container.innerHTML = "";
   for (const page of recent) {
     const item = el("div", "page-list-item");
@@ -953,6 +983,7 @@ function renderTagChips() {
 
 /* Applique les filtres actifs + requête -> navigation vers les résultats. */
 async function runSearch() {
+  const epoch = routeEpoch;
   const input = $("#search-input");
   const parsed = parseTagTokens(input.value);
   const q = parsed.query;
@@ -964,6 +995,7 @@ async function runSearch() {
   if (canon) params.set("canon", canon.id);
   $("#search-results").innerHTML = skeletonRows(10);
   const results = await api(`/api/search?${params}`);
+  if (epoch !== routeEpoch) return;
   const container = $("#search-results");
   container.innerHTML = "";
   let lastGroup = null;
@@ -1175,14 +1207,11 @@ async function init() {
   $("#sim-restart").addEventListener("click", () => { simResetUi(); simNext(); });
   $("#sim-replay").addEventListener("click", () => { simResetUi(); simNext(); });
 
-  // Reload
-  $("#btn-reload").addEventListener("click", async () => {
-    state = { buckets: [], currentBucket: null, currentPageTitle: null, stats: null };
-    mediaCache = null;
-    kimSimMedia = null;
-    apiCache.clear();
-    await init();
-    handleRoute();
+  // Reload : purger tous les caches applicatifs (api, médias, état interne)
+  // puis recharge r la page : le plus fiable pour réinitialiser listeners,
+  // state et DOM (évite les doubles bindings après un "init" en doublon).
+  $("#btn-reload").addEventListener("click", () => {
+    window.location.reload();
   });
 
   // Omnibox : saisie + tags + autocomplétion
@@ -1228,7 +1257,10 @@ async function init() {
     if (event.key === "ArrowDown") { moveDropdown(1); event.preventDefault(); return; }
     if (event.key === "ArrowUp") { moveDropdown(-1); event.preventDefault(); return; }
     if (event.key === "Enter") {
-      if (dropdownItems.length) { activateDropdown(); return; }
+      event.preventDefault();
+      // Choix actif dans le dropdown (navigué aux flèches) -> activation.
+      // Sinon : recherche complète sur le libellé courant.
+      if (dropdownIndex >= 0) { activateDropdown(); return; }
       hideDropdown();
       navigate("search");
       runSearch();

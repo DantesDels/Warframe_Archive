@@ -70,7 +70,7 @@ _SPOILER_WARNING = re.compile(
 # (le wiki ne la pose pas toujours).  ``{If ...} Name:`` et ``{Convo. ends.}``
 # ne contiennent pas ces mots-clés -> non concernés.
 _KIM_POINTER_LINE = re.compile(
-    r"(?im)^>\s*\*{0,3}\s*>?\s*(?:"
+    r"(?im)^>[ \t]*(?:\*{1,3}[ \t]*)?(?:>[ \t]*)?(?:"
     r"\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*"
     r"|(?:\{[^{}:\n]*?\}\s*)+?\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*"
     r")")
@@ -709,6 +709,9 @@ def _build_dialogue_graph(content: str) -> dict:
     def link(source: str, target: str, label: str = "") -> None:
         if not source or not target or source == target:
             return
+        # Un nœud terminal (``{Convo. ends}``) n'a jamais d'arête sortante.
+        if nodes_id_last_terminal(nodes, source):
+            return
         edges.append({"source": source, "target": target, "label": label})
 
     for raw in lines:
@@ -747,8 +750,12 @@ def _build_dialogue_graph(content: str) -> dict:
             # Les options en attente se rejoignent sur cette nouvelle réplique PNJ.
             for opt in pending_choices:
                 link(opt, nid)
+            had_choices = bool(pending_choices)
             pending_choices = []
-            if last_npc and not nodes_id_last_terminal(nodes, last_npc):
+            # Pas d'arête directe quand des options étaient en attente : la
+            # continuité passe par les choix (sinon arête de contournement).
+            if (last_npc and not had_choices
+                    and not nodes_id_last_terminal(nodes, last_npc)):
                 link(last_npc, nid)
             last_npc = nid
             continue
@@ -770,8 +777,11 @@ def _build_dialogue_graph(content: str) -> dict:
                 nid = add_node("npc", "", text, player=False)
                 for opt in pending_choices:
                     link(opt, nid)
+                had_choices = bool(pending_choices)
                 pending_choices = []
-                if last_npc and not nodes_id_last_terminal(nodes, last_npc):
+                # Pas d'arête directe quand des options étaient en attente.
+                if (last_npc and not had_choices
+                        and not nodes_id_last_terminal(nodes, last_npc)):
                     link(last_npc, nid)
                 last_npc = nid
 

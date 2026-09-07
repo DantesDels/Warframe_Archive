@@ -7,10 +7,14 @@ résoudre le **scope** du scraping (buckets de catégories).
 
 | Fichier | Rôle |
 |---|---|
-| `base.py` | Interface abstraite `BaseSource` + types `CategorySpec`, `PageData`, `TouchedInfo` |
-| `client.py` | `MediaWikiSource` : client HTTP vers `api.php` (retries, backoff, politesse) |
-| `categories.py` | `BucketConfig`, `CategoryCatalog`, `ResolvedBucket`, `assign_pages` : résolution des buckets/catégories en pages |
-| `models.py` | Types de transport des données API |
+| `base.py` | Interface abstraite `BaseSource` (contrat des sources) |
+| `http.py` | `RetryableHttp` : client HTTP avec retries, backoff, politesse ; `MediaWikiSourceError` |
+| `mediawiki.py` | `MediaWikiSource` : composition (catégories + requêtes) |
+| `mediawiki_categories.py` | `MediaWikiCategoryMixin` : `resolve_categories` (récursif), `resolve_prefix` |
+| `mediawiki_queries.py` | `MediaWikiQueryMixin` : `fetch_pages`, `check_updates` (champ `touched`) |
+| `buckets/` | `BucketConfig` (`config.py`), `CategoryCatalog`/`ResolvedBucket`/`assign_pages` (`catalog.py`), `defaults.py` (8 buckets par défaut) |
+| `client.py`, `categories.py` | **façades** de compatibilité (ré-exportent les API publiques) |
+| `models/` | Types de transport, un fichier par classe : `page_data.py`, `touched_info.py`, `category_spec.py` |
 
 ## Concepts
 
@@ -21,7 +25,7 @@ résoudre le **scope** du scraping (buckets de catégories).
 - **Résolution** : les catégories sont parcourues de façon récursive (sous-
   catégories jusqu'à `max_category_depth`). Les pages sont assignées au premier
   bucket qui correspond.
-- **Delta** : chaque `PageData` porte `last_updated` pour décider, en amont de
+- **Delta** : chaque `PageData` porte `touched` pour décider, en amont de
   l'extraction, si la page nécessite un re-téléchargement (mode incrémental).
 
 ## Facile à étendre

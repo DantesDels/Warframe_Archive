@@ -1,13 +1,17 @@
-# Couche `sync` — Synchronisation / Delta
+# Couche `sync` — Synchronisation (legacy)
 
-Responsabilité : assurer le **mode incrémental** (ne télécharger et ne
-ré-écrire que les nouveautés et les modifications).
+Responsabilité historique : assurer le **mode incrémental** (ne télécharger et
+ne ré-écrire que les nouveautés et les modifications) via un fichier local.
+
+> **Légacy** : le delta est désormais géré **en base SQL** (table `sync_state`,
+> paquet `db/manager/`). Cette couche est conservée pour compatibilité, plus
+> rien dans le pipeline ne l'importe.
 
 ## Contenu
 
 | Fichier | Rôle |
 |---|---|
-| `state.py` | `SyncState` : journalise les pages à traiter |
+| `state.py` | `SyncState` : journalise les pages à traiter (fichier `sync_state.json`) |
 
 ## Principe
 
@@ -17,12 +21,10 @@ ré-écrire que les nouveautés et les modifications).
   extraction → nettoyage → export.
 - `--force` court-circuite le delta : tout est re-traîté.
 
-## Évolution prévue
+## Remplacement
 
-L'état de synchronisation est en cours de migration vers la base SQL : table
-`sync_state_records` dans PostgreSQL (couche `db`). Le delta sera alors
-prouvé par requête SQL (colonnes de `wiki_pages`) plutôt que par un fichier
-local, ce qui rendra le pipeline distribué (CI/CD, plusieurs machines).
+Le delta effectif vit dans `db/manager/delta.py` et `db/models/sync_state_record.py`
+(table `sync_state`). La version "file" n'est plus utilisée par le scraper.
 
 ## Usage
 

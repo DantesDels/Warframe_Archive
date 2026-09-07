@@ -7,27 +7,30 @@ Stack : SQLAlchemy 2.0 async + asyncpg + pgvector.
 
 ## Contenu
 
-| Fichier | Rôle |
+| Fichier / paquet | Rôle |
 |---|---|
-| `models.py` | ORM : `WikiPage`, `LoreChunk`, `KimDialogue`, `SyncStateRecord`, `Base` |
-| `manager.py` | `SQLDatabaseManager` : connexion, upsert transactionnel, delta, `run_ddl_script` |
-| `chunker.py` | `ChunkManager` / `RAGChunk` : découpage Markdown en chunks RAG |
+| `models/` | ORM, un fichier par classe : `base.py`, `wiki_page.py`, `lore_chunk.py`, `kim_dialogue.py`, `game_entity_i18n.py`, `sync_state_record.py` |
+| `manager/` | `SQLDatabaseManager` : composition de mixins `base.py` (connexion, `run_ddl_script`), `ingest.py` (upsert page/chunks/dialogues), `entities.py` (upsert `game_entities_i18n`), `delta.py` (état de sync), `queries.py` (stats, récents), `sql_helpers.py` |
+| `chunks/` | `ChunkManager` / `RAGChunk` / `chunk_markdown` : découpage Markdown en chunks RAG (`patterns.py` règles KIM, `splitters.py`, `split.py`) |
 | `kim_parser.py` | `extract_kim_messages` : extraction des messages KIM depuis les blocs dialogues |
 
 ## Schéma (`init_db.sql`)
 
 ```
-wiki_pages     (page_id PK, namespace, title UNIQUE, last_updated → delta)
-lore_chunks    (chunk_id, wiki_page_id FK, chunk_index,
-                content_markdown, embedding vector(384), metadata JSONB)
-kim_dialogues  (dialogue_id, wiki_page_id FK, speakers, content)
-sync_state_records (état de synchronisation des pages)
+wiki_pages     (page_id PK, namespace, page_title UNIQUE, touched → delta,
+                canon_status, content_markdown)
+lore_chunks    (id, wiki_page_id FK, chunk_index, content_markdown,
+                metadata JSONB, embedding vector(384))
+kim_dialogues  (id, wiki_page_id FK, message_order, speaker, message_text,
+                player_choice)
+game_entities_i18n (id, entity_id, entity_type, lang, name, description)
+sync_state     (bucket_id, page_title PK composite, page_id, touched → delta)
 ```
 
 Index : `vector(384)` (pgvector, HNSW), `metadata JSONB` (GIN) pour les filtres
 `@>`.
 
-## Chunking RAG (`chunker.py`)
+## Chunking RAG (`chunks/`)
 
 Sans dépendance externe (équivalent natif de *langchain-text-splitters*).
 
@@ -68,7 +71,7 @@ WHERE metadata->'speakers' @> '["Amir"]';
 
 ## Robustesse de l'upsert
 
-- **Delta en base** : comparaison via `last_updated` de `wiki_pages`.
+- **Delta en base** : comparaison via `touched` de `wiki_pages` / `sync_state`.
 - **Page recréée (nouvel id, même titre)** : les anciens chunks/dialogues sont
   nettoyés et la page ré-assignée pour éviter la violation d'unicité sur le
   titre.

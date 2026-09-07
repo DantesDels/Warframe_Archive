@@ -7,17 +7,19 @@ notebooks, RAG) sous forme de **megafiles JSON** par bucket.
 
 | Fichier | Rôle |
 |---|---|
-| `models.py` | `OutputEntry`, `MegafileMetadata`, `CanonStatus`, `build_output_entry`, `merge_canon_status` |
-| `writer.py` | `MegafileManager` : écrit un fichier JSON par bucket dans `out/` |
+| `models/` | Modèles, un fichier par classe : `canon_status.py` (`CanonStatus` + `merge_canon_status`), `output_entry.py` (`OutputEntry`), `megafile_metadata.py` (`MegafileMetadata`) |
+| `entries.py` | `build_output_entry` : factory conforme au schéma JSON documenté |
+| `fusion.py` | `read_existing_entries`, `build_megafile`, `atomic_write_json`, `now_iso_utc` : fusion incrémentale + écriture atomique |
+| `writer.py` | `MegafileManager.merge_and_write` : fusion d'un bucket et écriture du megafile dans `out/` |
 
 ## Modèle de sortie
 
 Chaque entrée expose (entre autres) :
 
-- `title` — titre de la page wiki
+- `page_title` — titre de la page wiki
 - `content_markdown` — contenu nettoyé (Markdown prêt pour LLM)
 - `canon_status` — `canon` / `speculation` / `community_theory`
-- `source_url` — URL de la page source
+- `source` — URL de la page source
 - `last_updated` — date de dernière modification (utile au delta)
 
 ## Canon
@@ -34,8 +36,15 @@ canon strictement officiel.
 ```python
 from warframe_lore.output import MegafileManager, build_output_entry, CanonStatus
 
-entry = build_output_entry(title=..., content_markdown=...,
-                           canon_status=CanonStatus.CANON, ...)
+entry = build_output_entry(
+    page_title="Excalibur", category="Warframes",
+    touched="2026-09-05T12:00:00Z", content_markdown="# Excalibur\n…",
+    canon_status=CanonStatus.CANON, pageid=123,
+    source_wiki_url="https://wiki.warframe.com/wiki/",
+)
 manager = MegafileManager(output_dir="out")
-manager.write_bucket(bucket_id="Lore_Quetes", entries=[entry])
+manager.merge_and_write(
+    filename="Lore_Warframes.json", bucket_title="Warframes",
+    new_entries=[entry], metadata_note="…", live_titles={"Excalibur"},
+)
 ```

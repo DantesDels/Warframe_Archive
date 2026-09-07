@@ -5,13 +5,19 @@ LLM** (bruit supprimé, canon détecté, dialogues normalisés).
 
 ## Contenu
 
-| Fichier | Rôle |
+Le paquet est organisé par thème (un module = une responsabilité) :
+
+| Module | Rôle |
 |---|---|
-| `preprocessing.py` | strip HTML, commentaires, tables, Lua, transclusion |
-| `templates.py` | suppression/rendu des templates MediaWiki (bruit, voir `config/cleaner_config.json`) |
-| `sections.py` | filtrage des sections gameplay vs lore (`gameplay_exclude` / `lore_keep`) |
-| `formatting.py` | normalisation des liens, markdown, dialogues, headings |
-| `pipeline.py` | `WikitextCleaner` : orchestre le tout (un seul point d'entrée) |
+| `config.py` | `CleanerConfig` : charge les règles depuis `config/cleaner_config.json` |
+| `preprocessing.py` | purge destinée du brut (commentaires, tables, code) + parse `mwparserfromhell` |
+| `html.py`, `blocks.py` | assainissement : conversion HTML, fichiers/images, transclusion |
+| `templates/` | sous-paquet templates MediaWiki : `noise.py` (bruit + fallback), `render.py` (quote, spoiler, canon), `signal.py` (détection canon/non-canon inline) |
+| `links.py`, `markup.py` | normalisation des liens et du markdown (gras/italique…) |
+| `dialogue_lines.py`, `bullets.py`, `headings.py` | dialogues (`> **Nom:** …`), listes, titres Markdown |
+| `footers.py`, `audio.py`, `kim_instructions.py` | suppression du bruit de pied de page, fichiers audio, instructions de dialogue KIM |
+| `sections.py`, `sections_classify.py`, `polish.py` | filtrage des blocs gameplay vs lore, galeries vides, lignes blanches |
+| `pipeline.py` | `WikitextCleaner` : orchestre le tout (un seul point d'entrée) + `CleanOutput` |
 
 ## Règles externalisées
 
@@ -30,9 +36,10 @@ règles sans toucher au code.
 
 ## Canon
 
-- Détection de la page dans `Category:Speculation` → `speculation`.
-- Marqueurs inline `[NON-CANON / SPECULATION JOUEUR]` / `[CANON OFFICIEL]`.
-- `merge_canon_status()` (couche `output`) retient le statut le plus prudent.
+- Détection inline via `templates/signal.py` (`{{Speculation}}`, `{{Canon}}`…) ;
+  le statut final au niveau page est calculé par le scraper (croisement avec
+  `Category:Speculation`) et fusionné par `merge_canon_status()` (couche
+  `output`), qui retient le statut le plus prudent.
 
 ## Dialogues
 
@@ -45,5 +52,6 @@ format attendu par la couche `db` (chunking mode dialogue + `kim_parser`).
 from warframe_lore.cleaner import WikitextCleaner
 
 cleaner = WikitextCleaner()
-markdown = cleaner.clean(wikitext_raw)
+result = cleaner.clean(wikitext_raw)     # CleanOutput(markdown, …)
+markdown = result.markdown
 ```

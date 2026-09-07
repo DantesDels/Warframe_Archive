@@ -8,7 +8,7 @@ Phase 2.5 : découpage intelligent (``ChunkManager``) en deux passes
 et mode dédié aux dialogues (``speakers`` en métadonnées).
 """
 
-from .chunker import (
+from .chunks import (
     DEFAULT_CHUNK_MAX_CHARACTERS,
     DEFAULT_CHUNK_OVERLAP_CHARACTERS,
     ChunkManager,

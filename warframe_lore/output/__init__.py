@@ -8,9 +8,9 @@ from .models import (
     CanonStatus,
     MegafileMetadata,
     OutputEntry,
-    build_output_entry,
     merge_canon_status,
 )
+from .entries import build_output_entry
 from .writer import MegafileManager
 
 __all__ = [

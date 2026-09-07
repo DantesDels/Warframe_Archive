@@ -296,7 +296,10 @@ function quoteBlockHtml(block) {
     // Fidélité KIM : répliques ``**locuteur:**`` -> une bulle par ligne.
     return paragraphs.map((l) => renderBlockquote("> " + l)).join("");
   }
-  const body = paragraphs.map((s) => `<p class="cite-text">${renderInline(s)}</p>`).join("");
+  const items = paragraphs
+    .map((s) => `<li class="cite-line"><span class="cite-text">${renderInline(s)}</span></li>`)
+    .join("");
+  const body = `<ul class="cite-lines">${items}</ul>`;
   const author = block.author
     ? `<div class="cite-author">${renderInline(block.author)}</div>`
     : "";
@@ -638,6 +641,25 @@ function makeSpoilerHint(reason) {
     `<div><strong>Spoiler</strong>&nbsp;: <span class="spoiler-reason">${text}</span></div>`);
 }
 
+// Notes de mise à jour : rendu structuré des ``[{version, notes[]}]`` servis
+// par l'API (équivalent du ``v-for``) — un en-tête de version + sa liste.
+function renderPatchNotes(patchNotes) {
+  const section = el("section", "patch-history");
+  section.appendChild(el("h2", "patch-title", "Notes de mise à jour"));
+  for (const patch of patchNotes) {
+    const header = el("h3", "patch-version", `Mise à jour ${patch.version}`);
+    const list = el("ul", "patch-notes-list");
+    for (const note of patch.notes || []) {
+      const item = el("li", "patch-note");
+      item.innerHTML = renderInline(note);
+      list.appendChild(item);
+    }
+    section.appendChild(header);
+    section.appendChild(list);
+  }
+  return section;
+}
+
 async function renderPage(bucketId, title) {
   const epoch = routeEpoch;
   $("#page-title").textContent = formatDisplayName(title);
@@ -657,6 +679,9 @@ async function renderPage(bucketId, title) {
   const body = el("div", "markdown");
   body.innerHTML = markdownToHtml(content);
   host.appendChild(body);
+  if (page.patch_notes && page.patch_notes.length) {
+    host.appendChild(renderPatchNotes(page.patch_notes));
+  }
 }
 
 /* -------------------------------------------------------------------- kim */
@@ -839,7 +864,17 @@ async function renderKimChatMessages(messages, spoiler) {
     const line = el("div", `chat-line${index % 2 ? " alt" : ""}${player ? " player" : ""}`);
     const cell = el("div", "chat-body");
     cell.appendChild(el("div", "who", player ? "Vous" : (message.speaker || "")));
-    cell.appendChild(elHtml("div", "text", renderInline(message.text || "")));
+    const textLines = (message.lines && message.lines.length)
+      ? message.lines
+      : [message.text || ""];
+    const lineList = el("ul", "chat-lines");
+    for (const lineText of textLines) {
+      if (!lineText.trim()) continue;
+      const item = el("li", "chat-line-item");
+      item.innerHTML = renderInline(lineText);
+      lineList.appendChild(item);
+    }
+    cell.appendChild(lineList);
     if (!player && media) {
       const f = mediaFor(media, message.speaker, kimChatTitle);
       if (f) line.appendChild(mediaImg(f, "chat-avatar", message.speaker));

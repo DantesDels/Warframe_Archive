@@ -339,8 +339,14 @@ class NativeDialogueTests(unittest.TestCase):
         ])
         self.assertEqual([n["text"] for n in conversation["messages"]],
                          ["Hello\nthere", "First", "Reply", "Other branch", "Second"])
+        # Contrat : chaque message porte aussi ``lines`` (une entrée par
+        # réplique, découpée du texte multi-lignes pour l'affichage en liste).
+        self.assertEqual([m["lines"] for m in conversation["messages"]],
+                         [["Hello", "there"], ["First"], ["Reply"],
+                          ["Other branch"], ["Second"]])
         for message in conversation["messages"]:
-            self.assertEqual(set(message), {"index", "speaker", "text", "player"})
+            self.assertEqual(set(message),
+                             {"index", "speaker", "text", "player", "lines"})
 
     def test_start_choices_are_prompts_and_dead_ends_finish_the_linear_script(self):
         native = [node(0, "StartDialogueNode", Content="Choices", Outgoing=[1, 2]),
@@ -394,8 +400,10 @@ class KimDMLoadTests(unittest.TestCase):
              "source": "dm"}])
         conversation = dm.conversation("Amir", "AmirRank1Convo1")
         self.assertEqual(conversation["messages"], [
-            {"index": 1, "speaker": "Amir", "text": "English\nline", "player": False},
-            {"index": 2, "speaker": "English name", "text": "English\nline", "player": False}])
+            {"index": 1, "speaker": "Amir", "text": "English\nline", "player": False,
+             "lines": ["English", "line"]},
+            {"index": 2, "speaker": "English name", "text": "English\nline", "player": False,
+             "lines": ["English", "line"]}])
         self.assertEqual(dm.graph("Amir", "AmirRank1Convo1"), conversation["graph"])
         self.assertIsNone(dm.conversations_for("Jabir"))
         self.assertIsNone(dm.graph("Amir", "missing"))

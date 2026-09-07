@@ -429,6 +429,26 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   color: var(--text-dim);
 }
 .chat-line .text { font-size: 16px; line-height: 1.6; white-space: pre-wrap; color: var(--text); }
+/* Chat aéré : une réplique = un ``<li>`` isolé (équivalent ``ul space-y-2``
+   + ``li`` à bordure gauche et fond alterné). */
+.chat-line .chat-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.chat-line .chat-line-item {
+  border-left: 2px solid rgba(34, 211, 238, 0.65);
+  border-radius: 0 8px 8px 0;
+  background: rgba(30, 41, 59, 0.35);
+  padding: 4px 12px;
+  margin: 0 0 6px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.chat-line .chat-line-item:nth-child(even) {
+  background: rgba(30, 41, 59, 0.55);
+}
 .chat-line.player {
   background: rgba(34, 211, 238, 0.08);
   margin-left: 28px;
@@ -645,6 +665,28 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   opacity: 0.75;
   color: var(--text-dim);
 }
+/* Aération des citations : chaque réplique isolée sur une ligne (équivalent
+   ``ul space-y-2``), bordure gauche + fond alterné (équivalent Tailwind
+   ``border-l-2 border-cyan-500 py-1.5 bg-slate-800/30 rounded-r``). */
+.markdown blockquote.quote-block ul.cite-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.markdown blockquote.quote-block li.cite-line {
+  border-left: 2px solid rgba(34, 211, 238, 0.65);
+  border-radius: 0 8px 8px 0;
+  background: rgba(30, 41, 59, 0.35);
+  padding: 4px 12px;
+  margin: 0 0 6px;
+}
+.markdown blockquote.quote-block li.cite-line:nth-child(even) {
+  background: rgba(30, 41, 59, 0.55);
+}
+.markdown blockquote.quote-block li.cite-line .cite-text {
+  display: block;
+  color: var(--text);
+}
 .stage {
   display: inline-block;
   color: var(--text-dim);
@@ -663,6 +705,32 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 }
 .markdown a { color: var(--accent); text-decoration: none; }
 .markdown a:hover { text-decoration: underline; }
+
+/* ------------------------------------------------------- notes de mise à jour */
+.patch-history { margin-top: 28px; }
+.patch-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-strong);
+  margin: 22px 0 4px;
+}
+.patch-version {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 18px;
+  margin: 24px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+}
+.patch-notes-list {
+  list-style: disc;
+  list-style-position: inside;
+  color: var(--text);
+}
+.patch-note {
+  margin: 0 0 8px;
+  padding-left: 6px;
+}
 
 /* ----------------------------------------------------------------- raw */
 details.raw-block {

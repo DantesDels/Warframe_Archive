@@ -7,7 +7,7 @@ Expose :
 """
 
 from .base import BaseSource, CategorySpec, PageData, TouchedInfo
-from .categories import (
+from .buckets import (
     DEFAULT_BUCKETS,
     BucketConfig,
     CategoryCatalog,

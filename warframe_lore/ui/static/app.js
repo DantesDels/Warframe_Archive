@@ -33,12 +33,15 @@ const elHtml = (tag, cls, html) => {
  */
 function formatDisplayName(title) {
   if (!title) return title;
-  return String(title)
+  const raw = String(title).trim();
+  const out = raw
     .replace(/\/Transcript/gi, "")
     .replace(/\/Quotes/gi, "")
     .replace(/Fragments?\//gi, "")
+    .replace(/Kinemantik Instant Messenger\//gi, "")
     .replace(/\s+/g, " ")
     .trim();
+  return out || raw;
 }
 
 /* ------------------------------------------------------------ api helpers */
@@ -235,6 +238,71 @@ function rawBlockHtml(run) {
   );
 }
 
+const CITE_AUTHOR_RE = /^[—–]\s*/;
+const CITE_SPEAKER_RE = /^\s*\*\*[^*:]+:\*\*/;
+const CITE_CONTINUATION_RE = /^(#{1,6}\s+\S|\|)|[{}]/;
+
+// Parseur de citations : accumule tout le texte d'une citation (lignes ``>``,
+// lignes de continuation, ``>`` vides) jusqu'au délimiteur d'auteur (ligne
+// débutant par ``—``/``–``, préfixée ``>`` ou non). Renvoie un tableau de
+// blocs propres : ``[{ text, author }]`` (un seul bloc parent par citation).
+function collectQuoteBlocks(lines, start) {
+  const blocks = [];
+  let cur = null;
+  let prevBlank = false;
+  let i = start;
+  while (i < lines.length) {
+    const raw = lines[i];
+    const body = raw.startsWith(">")
+      ? raw.replace(/^>\s?/, "").trim()
+      : raw.trim();
+    if (CITE_AUTHOR_RE.test(body)) {
+      if (cur) { cur.author = body; blocks.push(cur); cur = null; }
+      else if (body) { blocks.push({ text: "", author: body }); }
+      prevBlank = false;
+      i++;
+      continue;
+    }
+    if (raw.startsWith(">")) {
+      if (!body) { prevBlank = true; i++; continue; }
+      if (cur && cur.author) cur = null;
+      if (!cur) cur = { text: "", author: null };
+      if (cur.text) cur.text += "\n";
+      cur.text += body;
+      prevBlank = false;
+      i++;
+      continue;
+    }
+    if (!body) {
+      if (cur) { blocks.push(cur); cur = null; }
+      prevBlank = true; i++; continue;
+    }
+    if (cur && !cur.author && !prevBlank && !CITE_CONTINUATION_RE.test(body)) {
+      if (cur.text) cur.text += "\n";
+      cur.text += body;
+      prevBlank = false;
+      i++;
+      continue;
+    }
+    break;
+  }
+  if (cur) blocks.push(cur);
+  return { blocks, end: i };
+}
+
+function quoteBlockHtml(block) {
+  const paragraphs = block.text.split("\n").filter(Boolean);
+  if (!block.author && paragraphs.length && paragraphs.every((l) => CITE_SPEAKER_RE.test(l))) {
+    // Fidélité KIM : répliques ``**locuteur:**`` -> une bulle par ligne.
+    return paragraphs.map((l) => renderBlockquote("> " + l)).join("");
+  }
+  const body = paragraphs.map((s) => `<p class="cite-text">${renderInline(s)}</p>`).join("");
+  const author = block.author
+    ? `<div class="cite-author">${renderInline(block.author)}</div>`
+    : "";
+  return `<blockquote class="quote-block">${body}${author}</blockquote>`;
+}
+
 function renderBlockquote(line) {
   const body = line.replace(/^>\s?/, "");
   const m = body.match(/^\*\*(?<speaker>[^*:]+):\*\*(?<rest>.*)$/s);
@@ -293,8 +361,9 @@ function markdownToHtml(markdown) {
     }
     if (line.startsWith(">")) {
       closeList();
-      html.push(renderBlockquote(line));
-      i++;
+      const { blocks, end } = collectQuoteBlocks(lines, i);
+      for (const block of blocks) html.push(quoteBlockHtml(block));
+      i = end;
       continue;
     }
     if (line.startsWith("### ")) { closeList(); html.push(`<h3>${renderInline(line.slice(4))}</h3>`); i++; continue; }
@@ -639,11 +708,12 @@ async function renderKim() {
   container.innerHTML = skeletonRows(8);
   const dialogues = await api("/api/kim");
   if (epoch !== routeEpoch) return;
-  renderKimSegments(dialogues);
+  const useful = dialogues.filter((d) => (d.conversations || 0) > 0);
+  renderKimSegments(useful);
   container.innerHTML = "";
   const shown = kimSegment === "all"
-    ? dialogues
-    : dialogues.filter((d) => kimSegmentOf(d) === kimSegment);
+    ? useful
+    : useful.filter((d) => kimSegmentOf(d) === kimSegment);
   for (const d of shown) {
     const item = el("div", "page-list-item kim-item");
     const thumb = media && media.titles[d.page_title];

@@ -11,7 +11,8 @@ venv/
 out/
 sync_state.json
 
-# Logs d'exécution locale
+# Logs d'exécution locale (dossier dédié)
+logs/
 runtime_*.log
 
 # Cache média / Public Export (téléchargeable)

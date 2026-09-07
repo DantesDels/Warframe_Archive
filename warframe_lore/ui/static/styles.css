@@ -635,6 +635,16 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   border-radius: 12px;
   background: rgba(34, 211, 238, 0.06);
 }
+/* Citations : texte + auteur regroupés dans un seul bloc unifié. */
+.markdown blockquote.quote-block p { margin: 2px 0; }
+.markdown blockquote.quote-block .cite-text { margin: 2px 0; }
+.markdown blockquote.quote-block .cite-author {
+  margin-top: 6px;
+  font-size: 12.5px;
+  font-style: italic;
+  opacity: 0.75;
+  color: var(--text-dim);
+}
 .stage {
   display: inline-block;
   color: var(--text-dim);
@@ -908,8 +918,11 @@ table.raw-table td:empty { background: transparent; border-color: transparent; }
   font-size: 11.5px;
   line-height: 1.35;
   color: var(--text);
-  max-height: 78px;
-  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-height: none;
+  height: auto;
 }
 .fc-nbody.fc-term { color: var(--canon); }
 

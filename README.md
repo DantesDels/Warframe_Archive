@@ -22,7 +22,8 @@ cli           (interface cephalon : run, diff, status, export-entities, kim-dm, 
  ├─► media   (ExportManifest + images content-addressed → out/media/)
  ├─► kim_dm  (datamine KIM : miroir des conversations KIM/Fables)
  ├─► ui      (serveur HTTP local de lecture des megafiles — "cephalon ui")
- └─► engram  (backend IA : FastAPI RAG + Roleplay WebSocket via LM Studio local)
+ ├─► engram  (backend IA : FastAPI RAG + Roleplay WebSocket via LM Studio local)
+ └─► discord (bot Loremaster : terminal Oracle dans Discord) ──► engram (WS)
 ```
 
 Chaque couche a une responsabilité unique (SOLID) et vit dans un paquet dédié
@@ -37,6 +38,7 @@ avec son propre README (voir [Documentation](#documentation)). Voir
 | `cleaner` | Wikitext → Markdown propre pour LLM (+ canon) | [cleaner](warframe_lore/cleaner) |
 | `cli` | commande `cephalon` (dispatch des sous-commandes) | [cli](warframe_lore/cli) |
 | `db` | PostgreSQL 3NF + pgvector + chunking RAG + delta en base | [db](warframe_lore/db) |
+| `discord` | bot Loremaster : terminal Oracle dans Discord (WS ENGRAM) | [discord](warframe_lore/discord) |
 | `engram` | backend IA : RAG vectoriel + terminal Roleplay (FastAPI, WS, LM Studio) | [engram](warframe_lore/engram) |
 | `export` | entités localisées du jeu (Public Export) → SQL | [export](warframe_lore/export) |
 | `kim_dm` | datamine KIM (conversations structurées) | [kim_dm](warframe_lore/kim_dm) |

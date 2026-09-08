@@ -20,11 +20,18 @@ class RAGPrompt:
     user_question: str
 
     def to_messages(self) -> list[dict]:
-        """Messages OpenAI-compatibles (system + user)."""
+        """Messages OpenAI-compatibles.
+
+        Réorganisation spécifique aux petits modèles (3B) : le contexte
+        documentaire est inséré en premier, et le persona Oracle est placé en
+        *dernier*, juste avant le message utilisateur — ainsi les instructions
+        de rôle/tòn ne sont pas noyées par un long contexte factuel.
+        """
         return [
+            {"role": "system",
+             "content": f"Contexte documentaire :\n{self.context}"},
             {"role": "system", "content": self.system},
-            {"role": "user",
-             "content": f"Contexte :\n{self.context}\n\nQuestion : {self.user_question}"},
+            {"role": "user", "content": self.user_question},
         ]
 
 

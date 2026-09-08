@@ -37,8 +37,15 @@ autre stockage vectoriel (FAISS, Qdrant…) ou un autre LLM sans toucher au cœu
 1. La question est vectorisée (`bge-m3`, 1024d) via LM Studio ;
 2. `CosinusSearch` interroge `lore_chunks.embedding` par similarité cosinus
    pgvector (opérateur `<=>`, index HNSW), limité par `top_k` + `min_score` ;
-3. `PromptBuilder` assemble le contexte + la question ;
+3. `PromptBuilder` assemble le contexte + la question — **ordonnancement petit
+   modèle** : contexte documentaire en premier, persona Oracle en dernier juste
+   avant la question (les instructions de rôle ne sont pas noyées par le
+   contexte). Borné à `top_k=3` passages et ~4500 caractères (≤1500 tokens) ;
 4. L'LLM génère la réponse, streamée ou en une fois, avec les sources.
+
+Modèles 3B (ex: `Llama-3.2-3B-Instruct`) : streaming `stream=True`, filtre du
+contenu visible uniquement (`delta.content`), **température basse** (0.3) pour
+des réponses fidèles et un TTFT quasi instantané.
 
 ## Terminal Roleplay (WebSocket)
 

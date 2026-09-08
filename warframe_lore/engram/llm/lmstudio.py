@@ -1,9 +1,13 @@
 """Fournisseur LLM/embedding local via LM Studio (API compatible OpenAI).
 
 LM Studio sert un endpoint ``/v1`` compatible OpenAI : ``/chat/completions``
-(streaming) et ``/embeddings``.  Les modèles chargés localement
-(``BAAI/bge-m3`` GGUF pour l'embedding, `qwen3.8-27b` pour le chat) sont
-appelés sans clé réelle (clé factice ``lm-studio``).
+(streaming) et ``/embeddings``.  Les modèles chargés localement (embedding
+``BAAI/bge-m3`` GGUF, chat ``Llama-3.2-3B-Instruct``) sont appelés sans clé
+réelle (clé factice ``lm-studio``).
+
+Pour les modèles de raisonnement (ex: Qwen3), seuls les tokens de *contenu
+visible* (``delta.content``) sont relayés — le raisonnement interne
+(``delta.reasoning_content``) est ignoré.
 """
 
 from __future__ import annotations
@@ -18,13 +22,14 @@ from .base import EmbeddingProvider, LLMProvider
 
 
 def _payload(messages: list[ChatMessage], model: str,
-             stream: bool, temperature: float) -> dict:
+             stream: bool, temperature: float, max_tokens: int) -> dict:
     return {
         "model": model,
         "messages": [{"role": m.role, "content": m.content}
                      for m in messages],
         "stream": stream,
         "temperature": temperature,
+        "max_tokens": max_tokens,
     }
 
 
@@ -33,10 +38,11 @@ class LMStudioProvider(LLMProvider, EmbeddingProvider):
 
     def __init__(self, base_url: str, chat_model: str,
                  embedding_model: str, api_key: str = "lm-studio",
-                 timeout: float = 180.0) -> None:
+                 timeout: float = 180.0, max_tokens: int = 2048) -> None:
         self.base_url = base_url.rstrip("/")
         self.chat_model = chat_model
         self.embedding_model = embedding_model
+        self.max_tokens = max_tokens
         self._client = httpx.AsyncClient(
             base_url=self.base_url,
             headers={"Authorization": f"Bearer {api_key}"},
@@ -51,9 +57,10 @@ class LMStudioProvider(LLMProvider, EmbeddingProvider):
         messages: list[ChatMessage],
         temperature: float = 0.7,
     ) -> AsyncIterator[str]:
+        payload = _payload(messages, self.chat_model, True, temperature,
+                           self.max_tokens)
         async with self._client.stream(
-            "POST", "/chat/completions",
-            json=_payload(messages, self.chat_model, True, temperature),
+            "POST", "/chat/completions", json=payload,
         ) as response:
             response.raise_for_status()
             async for line in response.aiter_lines():

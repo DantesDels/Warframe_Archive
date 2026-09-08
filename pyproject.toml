@@ -23,6 +23,10 @@ dependencies = [
 [project.scripts]
 cephalon = "warframe_lore.cli:main"
 cephalon-ui = "warframe_lore.ui.server:main"
+loremaster = "warframe_lore.discord.main:main"
+
+[project.optional-dependencies]
+discord = ["discord.py>=2.0"]
 
 [tool.setuptools]
 packages = [
@@ -30,6 +34,7 @@ packages = [
     "warframe_lore.api",
     "warframe_lore.cleaner",
     "warframe_lore.db",
+    "warframe_lore.discord",
     "warframe_lore.engram",
     "warframe_lore.engram.api",
     "warframe_lore.engram.api.routers",

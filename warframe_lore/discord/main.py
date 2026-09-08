@@ -27,6 +27,9 @@ def build_parser() -> argparse.ArgumentParser:
                         help="URL WebSocket ENGRAM (défaut: ws://localhost:8000/v1/roleplay)")
     parser.add_argument("--prefix", default=None,
                         help="Préfixe des commandes (défaut: !)")
+    parser.add_argument("--channels", default=None,
+                        help="IDs de canaux autorisés, séparés par des virgules "
+                             "(défaut: tous)")
     parser.add_argument("--verbose", action="store_true")
     return parser
 
@@ -44,10 +47,13 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)
         return 2
 
+    channels = tuple(
+        int(x) for x in (args.channels or "").split(",") if x.strip().isdigit())
     bot = LoreMasterBot(
         gateway_url=args.ws or config.engram_ws_url,
         prefix=args.prefix or config.prefix,
         typing_interval=config.typing_interval,
+        allowed_channels=channels or config.allowed_channels,
     )
     try:
         bot.run(token, log_handler=None)

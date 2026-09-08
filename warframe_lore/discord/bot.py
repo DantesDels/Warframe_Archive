@@ -13,6 +13,7 @@ import logging
 import discord
 
 from .gateway import RoleplayGateway
+from .streamer import MessageStreamer
 
 log = logging.getLogger("warframe_lore.discord.bot")
 
@@ -21,21 +22,29 @@ class LoreMasterBot(discord.Client):
     """Discute avec Oracle via une connexion WS par canal."""
 
     def __init__(self, gateway_url: str, prefix: str,
-                 typing_interval: float = 5.0, **kwargs) -> None:
+                 typing_interval: float = 5.0,
+                 allowed_channels: tuple[int, ...] = (), **kwargs) -> None:
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, **kwargs)
         self.gateway_url = gateway_url
         self.prefix = prefix
         self.typing_interval = typing_interval
+        self.allowed_channels = set(allowed_channels)
         self._gateways: dict[int, RoleplayGateway] = {}
 
     async def on_ready(self) -> None:
         log.info("Loremaster Oracle en ligne : %s (%s)",
                  self.user, self.user.id)
+        for guild in self.guilds:
+            channels = [f"{c.name} ({c.id})" for c in guild.text_channels]
+            log.info("Serveur %s (%s) — canaux texte : %s",
+                     guild.name, guild.id, ", ".join(channels))
 
     async def on_message(self, message: discord.Message) -> None:
         if message.author.bot or not message.content:
+            return
+        if self.allowed_channels and message.channel.id not in self.allowed_channels:
             return
         if message.content.startswith(self.prefix):
             await self._handle_command(message)
@@ -61,28 +70,20 @@ class LoreMasterBot(discord.Client):
             await gateway.open()
             self._gateways[channel_id] = gateway
         placeholder = await message.channel.send("*Oracle réfléchit…*")
+        streamer = MessageStreamer(placeholder)
         typing_task = asyncio.create_task(self._keep_typing(message))
         try:
-            await gateway.send(message.content,
-                               on_token=lambda t: self._append(
-                                   placeholder, t),
-                               on_end=lambda _: None)
+            await gateway.send(message.content, on_token=streamer.add)
         finally:
             typing_task.cancel()
-        if placeholder.content == "*Oracle réfléchit…*":
+        await streamer.finish()
+        if not streamer._parts and placeholder.content == "*Oracle réfléchit…*":
             await placeholder.delete()
 
     async def _keep_typing(self, message: discord.Message) -> None:
         while True:
             await message.channel.typing()
             await asyncio.sleep(self.typing_interval)
-
-    async def _append(self, placeholder: discord.Message, token: str) -> None:
-        new_text = placeholder.content + token
-        try:
-            await placeholder.edit(content=new_text)
-        except discord.HTTPException as exc:
-            log.debug("Edit tronqué par Discord : %s", exc)
 
     async def close(self) -> None:
         for gateway in self._gateways.values():

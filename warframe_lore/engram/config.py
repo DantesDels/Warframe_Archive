@@ -5,6 +5,10 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 
+from ..envfile import load_dotenv
+
+load_dotenv()
+
 
 def _env(name: str, default: str) -> str:
     return os.getenv(name, default)

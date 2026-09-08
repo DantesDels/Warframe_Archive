@@ -27,7 +27,9 @@ fenêtre glissante du serveur).
 
 ## 2. Configuration
 
-Surcharges par variables d'environnement ou arguments CLI :
+Surcharges par variables d'environnement, fichier `.env` à la racine du projet
+(lu automatiquement, sans dépendance — uniquement si la variable n'existe pas
+déjà dans le shell) ou arguments CLI :
 
 | Paramètre | Env | CLI | Défaut |
 |---|---|---|---|
@@ -39,13 +41,17 @@ Surcharges par variables d'environnement ou arguments CLI :
 Commandes du bot : `!reset` (nouvelle session Oracle sur le canal),
 `!help`.
 
-## 3. Lancer
+## Lancer
 
 ```bash
-# depuis la racine du projet (ENGRAM tourne sur :8000)
-$env:DISCORD_TOKEN = "VOTRE_TOKEN"         # PowerShell
-set DISCORD_TOKEN=VOTRE_TOKEN              # cmd
-python -m warframe_lore.discord.main        # --token ...   ou   --ws ws://...
+# 1) racine du projet : créer .env (secret, non versionné)
+#    DISCORD_TOKEN=MTE...  (token du bot depuis le portail Discord)
+
+# 2) depuis la racine du projet (ENGRAM tourne sur :8000)
+python -m warframe_lore.discord.main
+# ou, si un token doit primer sur .env :
+$env:DISCORD_TOKEN = "VOTRE_TOKEN"    # PowerShell
+python -m warframe_lore.discord.main
 ```
 
 Imported via console script (si installé) : `loremaster`.
@@ -68,7 +74,8 @@ Imported via console script (si installé) : `loremaster`.
 
 | Fichier | Rôle |
 |---|---|
-| `config.py` | `DiscordConfig` (token, WS, préfixe) |
+| `config.py` | `DiscordConfig` (token, WS, préfixe, canaux autorisés) |
 | `gateway.py` | `RoleplayGateway` — connexion WS par canal, diffusion des tokens |
+| `streamer.py` | `MessageStreamer` — édition du message avec buffering (anti 429) |
 | `bot.py` | `LoreMasterBot` — `discord.Client`, routing des messages |
 | `main.py` | entry point console |

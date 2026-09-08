@@ -1,7 +1,9 @@
 """Construction du prompt documentaire RAG.
 
 Ordonne les passages pertinents dans un contexte compact qui sera injecté
-au modèle avec la question de l'utilisateur.
+au modèle avec la question de l'utilisateur.  Comporte deux garde-fous
+anti-hallucination : un marqueur de contexte vide (short-circuit) et une
+directive stricte de repli verrouillée dans le prompt système.
 """
 
 from __future__ import annotations
@@ -9,6 +11,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .search import RAGHit
+
+# Contexte injecté quand aucun passage pertinent n'est remonté. Le modèle est
+# censé répondre "je ne sais pas" plutôt que d'inventer.
+NO_DATA_MARKER = "[AUCUNE DONNÉE RÉCUPÉRÉE]"
+
+# Verrouillage absolu : ajouté en dur au prompt système, quel que soit le
+# persona éditable (ne peut pas être désactivé en modifiant persona/oracle).
+HALLUCINATION_GUARD = (
+    "DIRECTIVE CRITIQUE : Tu dois répondre en utilisant EXCLUSIVEMENT le "
+    "contexte fourni. Si le contexte indique [AUCUNE DONNÉE RÉCUPÉRÉE] ou ne "
+    "contient pas la réponse exacte, il t'est STRICTEMENT INTERDIT "
+    "d'inventer des informations. Tu dois répondre UNIQUEMENT par la phrase : "
+    "\"Mes archives mnémoniques sont corrompues ou incomplètes concernant ce "
+    "sujet.\"")
 
 
 @dataclass
@@ -40,7 +56,9 @@ class PromptBuilder:
 
     def __init__(self, system_prompt: str,
                  max_context_chars: int = 6000) -> None:
-        self.system_prompt = system_prompt
+        # La directive anti-hallucination est verrouillée ici (en dur), après
+        # le persona, pour garantir sa présence sur tous les prompts RAG.
+        self.system_prompt = f"{system_prompt}\n\n{HALLUCINATION_GUARD}"
         self.max_context_chars = max_context_chars
 
     def build(self, question: str, hits: list[RAGHit]) -> RAGPrompt:
@@ -54,6 +72,8 @@ class PromptBuilder:
             blocks.append(block)
         return RAGPrompt(
             system=self.system_prompt,
-            context="\n\n".join(blocks) or "(aucun passage pertinent)",
+            # Short-circuit : aucun passage pertinent → marqueur explicite
+            # plutôt qu'un contexte vide ou ambigu.
+            context="\n\n".join(blocks) or NO_DATA_MARKER,
             user_question=question,
         )

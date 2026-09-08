@@ -20,14 +20,14 @@ Stack : SQLAlchemy 2.0 async + asyncpg + pgvector.
 wiki_pages     (page_id PK, namespace, page_title UNIQUE, touched → delta,
                 canon_status, content_markdown)
 lore_chunks    (id, wiki_page_id FK, chunk_index, content_markdown,
-                metadata JSONB, embedding vector(384))
+                metadata JSONB, embedding vector(1024))
 kim_dialogues  (id, wiki_page_id FK, message_order, speaker, message_text,
                 player_choice)
 game_entities_i18n (id, entity_id, entity_type, lang, name, description)
 sync_state     (bucket_id, page_title PK composite, page_id, touched → delta)
 ```
 
-Index : `vector(384)` (pgvector, HNSW), `metadata JSONB` (GIN) pour les filtres
+Index : `vector(1024)` (pgvector, HNSW), `metadata JSONB` (GIN) pour les filtres
 `@>`.
 
 ## Chunking RAG (`chunks/`)

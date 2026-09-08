@@ -47,11 +47,13 @@ class LoreChunk(Base):
         "metadata",
         JSON().with_variant(JSONB, "postgresql"),
         nullable=False, default=dict, server_default="{}")
-    # Colonne vector(384) — nullable jusqu'à ce qu'un modèle d'embedding la
-    # remplisse.  Le type pgvector (via le paquet 'pgvector') permet de faire
-    # des recherches de similarité (cosine ops) directement en SQL.
+    # Colonne vector(1024) — nullable jusqu'à ce qu'un modèle d'embedding la
+    # remplisse.  1024 = dimension réelle du modèle BGE-M3 GGUF servi par
+    # LM Studio ("baai-bge-m3-568m"), alignée sur init_db.sql.  Le type
+    # pgvector (via le paquet 'pgvector') permet les recherches de similarité
+    # (cosine ops) directement en SQL.
     embedding: Mapped[Optional[object]] = mapped_column(
-        Vector(384), nullable=True)
+        Vector(1024), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now())
 

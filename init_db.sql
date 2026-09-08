@@ -64,7 +64,9 @@ CREATE TABLE IF NOT EXISTS lore_chunks (
     -- recherche vectorielle (ex: tous les chunks d'un même chapitre, ou
     -- d'une scène précise).
     metadata          JSONB       NOT NULL DEFAULT '{}'::jsonb,
-    embedding         vector(384),                    -- vecteur sémantique (nullable)
+    -- Dimension 1024 = vecteur réel renvoyé par le modèle d'embedding
+    -- BGE-M3 GGUF ("baai-bge-m3-568m", servi par LM Studio).
+    embedding         vector(1024),                   -- vecteur sémantique (nullable)
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (wiki_page_id, chunk_index)
 );

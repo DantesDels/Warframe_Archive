@@ -21,7 +21,8 @@ cli           (interface cephalon : run, diff, status, export-entities, kim-dm, 
  ├─► export  (Warframe Public Export : entités localisées du jeu → game_entities_i18n)
  ├─► media   (ExportManifest + images content-addressed → out/media/)
  ├─► kim_dm  (datamine KIM : miroir des conversations KIM/Fables)
- └─► ui      (serveur HTTP local de lecture des megafiles — "cephalon ui")
+ ├─► ui      (serveur HTTP local de lecture des megafiles — "cephalon ui")
+ └─► engram  (backend IA : FastAPI RAG + Roleplay WebSocket via LM Studio local)
 ```
 
 Chaque couche a une responsabilité unique (SOLID) et vit dans un paquet dédié
@@ -36,6 +37,7 @@ avec son propre README (voir [Documentation](#documentation)). Voir
 | `cleaner` | Wikitext → Markdown propre pour LLM (+ canon) | [cleaner](warframe_lore/cleaner) |
 | `cli` | commande `cephalon` (dispatch des sous-commandes) | [cli](warframe_lore/cli) |
 | `db` | PostgreSQL 3NF + pgvector + chunking RAG + delta en base | [db](warframe_lore/db) |
+| `engram` | backend IA : RAG vectoriel + terminal Roleplay (FastAPI, WS, LM Studio) | [engram](warframe_lore/engram) |
 | `export` | entités localisées du jeu (Public Export) → SQL | [export](warframe_lore/export) |
 | `kim_dm` | datamine KIM (conversations structurées) | [kim_dm](warframe_lore/kim_dm) |
 | `media` | index média + images à la demande | [media](warframe_lore/media) |
@@ -54,8 +56,8 @@ pip install -e .
 ```
 
 Dépendances : `requests`, `mwparserfromhell`, `SQLAlchemy>=2.0`, `asyncpg`,
-`pgvector`. (Chunking RAG et serveur HTTP implémentés nativement, sans
-dépendance langchain.)
+`pgvector`, `fastapi`, `uvicorn`, `httpx`. (Chunking RAG et serveur HTTP
+implémentés nativement, sans dépendance langchain.)
 
 ## Interface `cephalon`
 
@@ -203,13 +205,48 @@ Le résultat (`dist/cephalon-ui.exe`) lit le dossier `out/` du répertoire
 courant, puis tout dossier passé via `--out`. Relancer le build après ajout
 de buckets (le contenu est relu à chaque requête, pas d'index embarqué).
 
+## Backend ENGRAM — IA & RAG (`warframe_lore/engram`)
+
+ENGRAM est le backend d'inférence du projet : il expose une API FastAPI qui
+sert la base de connaissances vectorisée et un terminal Roleplay temps réel,
+adossé à LM Studio local (modèle chat Qwen et modèle d'embedding BGE-M3 GGUF).
+
+**Implantation** :
+* RAG documentaire : similarité cosinus pgvector (`<=>` HNSW) sur
+  `lore_chunks.embedding` (1024d), construction d'un prompt contextuel, réponse
+  générée par LM Studio.
+* Terminal Roleplay : connexion WebSocket (`/v1/roleplay`) avec streaming token
+  par token et fenêtre glissante (sliding window) pour la mémoire conversationnelle.
+* Persona configurable : le prompt système est lu depuis `persona/oracle`
+  (éditable à la volée, sans toucher au code).
+
+**Ingestion des embeddings** : les megafiles `out/Lore_*.json` sont injectés
+dans `lore_chunks` (réutilise `SQLDatabaseManager`) puis vectorisés.
+
+```bash
+# Lancer la base PostgreSQL + pgvector (docker-compose à la racine)
+docker compose up -d
+
+# Appliquer le schéma (init_db.sql) — une seule fois
+# (via : psql -U warframe -d warframe_lore -f init_db.sql)
+# puis peupler + vectoriser les chunks :
+python -m warframe_lore.engram.scripts.ingest --glob "out/Lore_*.json"
+
+# Démarrer l'API ENGRAM
+uvicorn warframe_lore.engram.api.main:app --port 8000
+```
+
+Endpoints : `GET /health`, `POST /v1/rag` (documentaire), `WS /v1/roleplay`
+(terminal Oracle), `GET /docs` (Swagger). Voir
+[`warframe_lore/engram/README.md`](warframe_lore/engram/README.md).
+
 ## Sorties
 
 - **JSON** : un megafile par bucket dans `out/` (ex: `out/Lore_Dialogues_KIM.json`),
   chaque entrée avec `canon_status` ; datamine KIM dans `out/kim_dm/` ; images
   mises en cache à la demande dans `out/media/`.
 - **PostgreSQL** : `wiki_pages`, `lore_chunks` (avec `metadata` JSONB + embedding
-  `vector(384)`), `kim_dialogues`, `game_entities_i18n`, `sync_state` (état du
+  `vector(1024)`), `kim_dialogues`, `game_entities_i18n`, `sync_state` (état du
   delta). Le delta est détecté en base (comparaison du `touched` stocké).
 
 ## Sources de données
@@ -258,5 +295,8 @@ plus prudent lors d'un conflit.
 - [`docs/architecture.md`](docs/architecture.md) — architecture détaillée,
   couches, schéma SQL, canon, CLI, variables d'environnement.
 - [`docs/idea.md`](docs/idea.md) — vision produit et cas d'usage (MVP → futur).
+- [`docs/project_Engram.md`](docs/project_Engram.md) — architecture du backend
+  IA ENGRAM (ETL, FastAPI & RAG, terminal Roleplay WebSocket).
 - README de chaque couche (voir [Packages](#packages)) : `api`, `cleaner`,
-  `cli`, `db`, `export`, `kim_dm`, `media`, `output`, `scraper`, `sync`, `ui`.
+  `cli`, `db`, `engram`, `export`, `kim_dm`, `media`, `output`, `scraper`,
+  `sync`, `ui`.

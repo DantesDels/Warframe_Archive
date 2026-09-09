@@ -30,6 +30,23 @@ Chaque couche a une responsabilité unique (SOLID) et vit dans un paquet dédié
 avec son propre README (voir [Documentation](#documentation)). Voir
 [`docs/architecture.md`](docs/architecture.md) pour les détails.
 
+## État actuel (septembre 2026)
+
+- **Pipeline ETL opérationnel** : scrape du wiki officiel → cleaner
+  Wikitext/Markdown → megafiles JSON + PostgreSQL/pgvector ; 9 159 chunks
+  vectorisés (`bge-m3`, 1024d), entités du Public Export, miroir KIM,
+  interface web locale `cephalon ui`.
+- **Backend IA ENGRAM** : FastAPI sur `:8000` — RAG documentaire + terminal
+  Roleplay en WebSocket, inférence **LM Studio local** (chat + embedding).
+- **Bot Discord « Loremaster Oracle »** : en ligne sur le serveur AETERNUM,
+  restreint au canal `#oracle`, relié à ENGRAM par WebSocket et ancré sur le
+  RAG (flag `rag`, heuristique de déclenchement sur le lore).
+- **Modèle chat** : `Gemma-2-9b-it` (gguf Q4_K_M) choisi pour l'obéissance au
+  formatage XML et le budget VRAM (8 Go) ; backends LLM interchangeables
+  (llm_studio, abstractions injectées).
+- **Branche active** : `feature/discord-gemma-2-9b` (migration depuis
+  `Llama-3.2-3B-Instruct`, voir le [Journal du projet](#journal)).
+
 ## Packages
 
 | Paquet | Rôle | README |
@@ -211,7 +228,9 @@ de buckets (le contenu est relu à chaque requête, pas d'index embarqué).
 
 ENGRAM est le backend d'inférence du projet : il expose une API FastAPI qui
 sert la base de connaissances vectorisée et un terminal Roleplay temps réel,
-adossé à LM Studio local (modèle chat Qwen et modèle d'embedding BGE-M3 GGUF).
+adossé à LM Studio local (défaut : chat `Gemma-2-9b-it` Q4_K_M et embedding
+`BGE-m3` GGUF ; tout est surchargeable via `ENGRAM_CHAT_MODEL` /
+`ENGRAM_EMBED_MODEL`, voir la couche [engram](warframe_lore/engram/README.md)).
 
 **Implantation** :
 * RAG documentaire : similarité cosinus pgvector (`<=>` HNSW) sur
@@ -291,6 +310,153 @@ Chaque entrée porte `canon_status` (`canon` / `speculation` /
 `community_theory`), détecté via `Category:Speculation` et les templates inline
 (`{{Speculation}}`, `{{Canon}}`) ; `merge_canon_status()` retient le statut le
 plus prudent lors d'un conflit.
+
+<a name="journal"></a>
+
+## Journal du projet — essais, échecs, changements, réussites
+
+Ce chapitre retrace la vie du projet : ce qui a été tenté, ce qui a cassé,
+ce qui a été changé et ce qui a fonctionné. La lecture n'est pas linéaire :
+le projet est passé du scraping d'archive au **RAG durci anti-hallucination**
+et à un **bot Discord ancré sur le lore**, avec une série d'essais techniques
+documentés ci-dessous.
+
+### Chronologie des phases
+
+| Phase | Commit(s) de référence | Objet | Verdict |
+|---|---|---|---|
+| 0 · MVP scrape + interface web | `a0f7040` · `28baaab` · `1939858` | corpus du wiki officiel + interface de lecture (« Texte passerelle »), correctifs issus de l'audit `Rapport.md` | Réussite — corpus local de ~3 175 pages |
+| 0·b · Audit technique | `Rapport.md` (sur `28baaab`) | audit externe : fidélité des données avant tout | Échecs documentés → vague de correctifs |
+| 1 · Miroir KIM | `77fcb36` · `8e93f09` · `f8d1187` · `0b568d3` | datamine des conversations, graphe arborescent strict, ancrage racine, simulateur, citations | Réussite — graphe validé (arêtes terminales corrigées) |
+| 2 · Refactor + tests | `679be66` · `02490ae` · `2b1c2d1` | modularisation en paquets + dossiers `models`, tests unitaires KIM | Réussite — 16 tests verts |
+| 3 · Backend ENGRAM | `e307923` | RAG documentaire + terminal Roleplay (FastAPI, WS, LM Studio) | Essai → Réussite (voir optimisations 3B) |
+| 4 · Bot Discord | `4b493ad` · `7d2e832` · `d326e12` | bot Oracle (WS), buffering des réponses, anti-hallucination + audit, résilience du gateway | Réussite — failover testé (< 1 s) |
+| 5 · Durcissement RAG | `db3a9bf` · `b4ed7d7` · `85336fc` | alias, désambiguïsation, court-circuit LLM, température bridée, ancrage bot↔RAG | Réussite — tests live probants |
+| 6 · Migration Gemma | `76d204a` | `Gemma-2-9b-it` Q4_K_M, prompt XML + bypass fiction, budget VRAM 8 Go | En cours — modèle à charger dans LM Studio |
+
+### Essais, échecs et décisions (détail)
+
+1. **Ordonnancement du prompt sur petit modèle (Llama-3.2-3B).**
+   *Essai :* placer le contexte documentaire en premier, le persona en dernier
+   (les instructions de rôle ne sont pas noyées par le contexte). *Résultat :*
+   meilleure obéissance et taux de réponse ancrées. *Changement ultérieur :*
+   remplacé par un **message système unique balisé XML** (voir n°6).
+2. **Hallucination « Xylour » (sujet inexistant).**
+   *Échec constaté :* en saisissant « Qui est Magnifique Xylour ? », le modèle
+   répondait au sujet d'**Eleanor**, fondée sur des voisins faibles
+   (`score 0.47` > `min_score 0.35`). *Changement :* seuil de confiance
+   `suggestion_min_score = 0.5` **et** purge du contexte (`used_hits = []` :
+   aucun voisin hors-sujet fourni au modèle). *Résultat :* réponse honnête
+   (avouer « pas d'information ») au lieu d'une confabulation.
+3. **Base vectorielle « vide » = mauvais nom canonique.**
+   *Faux négatif :* l'audit RAG montrait « Lettie → 0 résultat » alors que les
+   megafiles **contiennent** son lore, mais sous le nom canonique wiki
+   **Leticia** (Lettie n'est qu'un surnom Hex). *Changement :* module d'aliases
+   (`lettie → Leticia`) + réintégration des buckets (le `title_exclude`
+   excluait « Lettie »). *Résultat :* hits `Leticia` à 0.598 / 0.581 / 0.577.
+4. **Court-circuit RAG (bypass du LLM).**
+   Avant : même sans passage de confiance, LM Studio était invoqué — coût
+   inutile et risque de dérive. *Changement :* si aucun passage (ou score trop
+   faible), **le LLM n'est plus appelé du tout** : réponse/stream exacts de
+   `"[Erreur] Mes archives mnémoniques sont corrompues ou incomplètes
+   concernant ce sujet."` (HTTP et WebSocket), sources vides, connexion
+   maintenue. *Résultat :* réponse en ~0,5 s (simple embedding), hallucination
+   devenue impossible.
+5. **Température d'inférence.**
+   Chat libre `0.3` ; tours RAG bridés : rôleplay ancré ≤ `0.1`, route
+   documentaire `0.0` → **`0.1`** (analytique, « extractif sans bloquer le
+   moteur »). Les réponses factuelles sont déterministes, la créativité reste
+   pour le jeu de rôle pur.
+6. **Plusieurs messages système → un seul système balisé XML.**
+   *Problème :* le 3B se contredisait entre persona, contexte, garde-fou placés
+   en messages système séparés. *Changement :* **un unique message système** où
+   le contexte vit dans `<archives>…</archives>` suivi de directives fixes
+   (`RAG_SYSTEM_TEMPLATE`). *Résultat :* séparation nette connaissances
+   internes / données RAG / protocole d'erreur.
+7. **Filtres éthiques de Gemma-2.**
+   Gemma refuse par défaut le lore sombre (clonage, expériences biologiques…).
+   *Changement :* bloc **« CONTEXTE SÉCURITÉ »** explicitant la fiction dans le
+   prompt système. *Vérifié en live :* « clonage et expériences biologiques des
+   Orokin » → réponse détaillée, sans refus.
+8. **Choix du LLM (contrainte VRAM 8 Go).**
+   Parcours : `Llama-3.2-3B-Instruct` (rapide, mais obéissance moyenne) →
+   tests `Qwen3.8-27B` (lourd pour la VRAM) → **`Gemma-2-9b-it` Q4_K_M**
+   (~5 Go, bonne obéissance XML/instructions). *Précautions anti-OOM :*
+   `top_k = 3` (~1000-1500 tokens), `max_context_chars = 4500`,
+   `max_tokens = 2048`.
+9. **Streaming et modèles « raisonnants ».**
+   Ne relayer que les tokens de *contenu visible* (`delta.content`), jamais le
+   raisonnement intermédiaire (`delta.reasoning_content`). Côté Discord, les
+   réponses sont **mises en tampon** pour respecter les limites de message
+   (et éviter les embeds tronqués au milieu d'un bloc Markdown).
+10. **Résilience du gateway Discord.**
+    *Échec :* flux mort (Cloudflare) → bot bloqué sans reconnexion.
+    *Changement :* détection de flux mort + reconnexion automatique.
+    *Test de validation :* serveur tué pendant une session → erreur de
+    connexion immédiate et ré-établissement en moins d'une seconde.
+11. **Désambiguïsation « Voulez-vous dire … ? »**
+    Une requête proche d'un titre existant (ex. « Magus Replica ») ne doit pas
+    fabriquer une réponse : suggestion du nom exact + directive au modèle pour
+    demander confirmation (marqueur `[SUGGESTION]` dans `<archives>`).
+12. **Outils d'audit pour distinguer « base vide » vs « ETL cassé ».**
+    `engram/scripts/audit_rag.py` (comptes par nom) et `dump_scraper.py`
+    (dump des sondages vers `data/raw/`) — indispensables pour poser un
+    diagnostic avant de toucher au prompt.
+13. **Audit `Rapport.md` (fidélité des données).**
+    Échecs documentés et corrigés en partie : divergence SQL/JSON (ack
+    conditionné à la publication), canon prioritaire (`merge_canon_status`
+    `min` → `max`), graphe KIM (arêtes terminales, `option.ends`),
+    chunking dialogue (réplique synthétique 6 012 c → `[2500, 2500, 1512,
+    6012]`, bornes non respectées), regex au coût cubique
+    (`^>\s*\*{0,3}\s*>?\s*`), Export LZMA tronqué accepté, vérification de
+    hash non faite. *Statut :* série de correctifs dédiés, les plus critiques
+    (KIM, canon) intégrés aux phases 1 et 2.
+
+### Chiffres et validations
+
+| Mesure | Valeur |
+|---|---|
+| Corpus local (audit) | ~3 175 pages |
+| Chunks vectorisés en base | 9 159 (`bge-m3`, 1024d) |
+| Chunking KIM vérifié | 843 chunks, aucun dépassement 2 500 car. |
+| Tests unitaires | 16 passed |
+| Retrieval « Lettie » (live) | 0.598 / 0.581 / 0.577 (Leticia) |
+| Retrieval « Orokin » (live) | 0.611 / 0.600 / 0.595 |
+| Court-circuit RAG | ~0,5 s (aucun appel LLM) |
+| Failover Discord | reconnexion < 1 s (testée en direct) |
+| Réplique de choix terminale KIM | corrigée (`option.ends` → fin de simulation) |
+
+### Leçons retenues
+
+- **Ne jamais fonder une réponse sur des voisins hors-sujet** : si le meilleur
+  score est sous le seuil de confiance → suggestion, ou court-circuit. Un
+  prompt seul ne suffit pas à empêcher une hallucination ; le *data-gating*
+  la rend structurellement impossible.
+- **Un seul message système balisé XML (`<archives>`) bat plusieurs messages
+  système** pour la séparation contexte / connaissances internes.
+- **Température basse sans bloquer : 0.1.** Et toujours `stream=True`.
+- **Multilingue gratuit** : l'embedding `bge-m3` accepte des requêtes FR sur un
+  corpus EN (questionnement en français, rappel correct).
+- **Contrainte VRAM d'abord** : borner `top_k` + `max_tokens` avant d'acheter
+  du GPU ; viser un quant Q4 sur 8 Go.
+- **Vérifier avant de croire** : schémas ORM/DDL, embeddings réellement peuplés,
+  intégrité LZMA/hash (audit `Rapport.md`), cohérence SQL/JSON. Une promesse de
+  stockage n'est pas une garantie de fidélité.
+- **Un « trou de données » est souvent un problème de nom** (alias canonique),
+  pas un vide réel — d'où l'utilité des outils d'audit avant tout réglage de
+  prompt.
+
+### Pistes ouvertes
+
+- Évaluation systématique du RAG : jeu de questions FR/EN, Recall@k, fidélité
+  des citations, latence p95 (voir `Rapport.md`).
+- PostgreSQL comme source de vérité, megafiles comme projection régénérable
+  (constat n°1 de l'audit).
+- Ingestion rejouable avec provenance (`derivation_key` : source, révision,
+  versions cleaner/chunker/embedding).
+- Docker Compose pour l'API ENGRAM + le bot (base seule aujourd'hui).
+- Après chargement de `Gemma-2-9b-it` dans LM Studio : mesures p95 et
+  vérification du bypass fiction.
 
 ## Documentation
 

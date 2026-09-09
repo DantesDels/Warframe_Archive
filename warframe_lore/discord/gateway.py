@@ -27,12 +27,19 @@ class RoleplayGateway:
     def __init__(self, url: str) -> None:
         self.url = url
         self._conn = None
+        self._closed = False
         self._queue: asyncio.Queue = asyncio.Queue(maxsize=64)
         self._worker: asyncio.Task | None = None
         self._send_lock = asyncio.Lock()
 
+    @property
+    def active(self) -> bool:
+        """Vrai si la connexion est ouverte et que le lecteur de flux vit."""
+        return self._conn is not None and not self._closed
+
     async def open(self) -> None:
         """Établit la connexion et lance le lecteur de flux."""
+        self._closed = False
         self._conn = await connect(self.url)
         log.info("Connexion WS établie : %s", self.url)
         self._worker = asyncio.create_task(self._read_loop())
@@ -40,6 +47,8 @@ class RoleplayGateway:
     async def send(self, text: str, on_token: TokenHandler,
                    on_end: EndHandler | None = None) -> None:
         """Envoie un message et traite le flux de tokens jusqu'à ``end``."""
+        if not self.active:
+            raise ConnectionError("connexion WS fermée — redémarrer le gateway")
         await self._conn.send(json.dumps({"type": "message", "text": text}))
         while True:
             async with self._send_lock:
@@ -61,9 +70,13 @@ class RoleplayGateway:
                 await self._queue.put(json.loads(raw))
         except Exception as exc:  # noqa: BLE001
             log.warning("Flux WS interrompu : %s", exc)
+        finally:
+            # Marque le flux mort : la file n'émettra plus de trames.
+            self._closed = True
 
     async def close(self) -> None:
         """Ferme la connexion et le lecteur."""
+        self._closed = True
         if self._worker:
             self._worker.cancel()
         if self._conn:

@@ -65,7 +65,9 @@ class LoreMasterBot(discord.Client):
     async def _route_to_oracle(self, message: discord.Message) -> None:
         channel_id = message.channel.id
         gateway = self._gateways.get(channel_id)
-        if gateway is None or gateway._conn is None:
+        if gateway is None or not gateway.active:
+            if gateway is not None:
+                await gateway.close()
             gateway = RoleplayGateway(self.gateway_url)
             await gateway.open()
             self._gateways[channel_id] = gateway
@@ -73,12 +75,25 @@ class LoreMasterBot(discord.Client):
         streamer = MessageStreamer(placeholder)
         typing_task = asyncio.create_task(self._keep_typing(message))
         try:
-            await gateway.send(message.content, on_token=streamer.add)
+            try:
+                await gateway.send(message.content, on_token=streamer.add)
+            except ConnectionError as exc:
+                # Flux mort (ex: serveur ENGRAM redémarré) → reconnexion.
+                log.warning("Connexion Oracle perdue (%s) — reconnexion", exc)
+                await gateway.close()
+                gateway = RoleplayGateway(self.gateway_url)
+                await gateway.open()
+                self._gateways[channel_id] = gateway
+                await gateway.send(message.content, on_token=streamer.add)
         finally:
             typing_task.cancel()
         await streamer.finish()
         if not streamer._parts and placeholder.content == "*Oracle réfléchit…*":
-            await placeholder.delete()
+            if not gateway.active:
+                await placeholder.edit(
+                    content="*Oracle est injoignable — serveur ENGRAM éteint.*")
+            else:
+                await placeholder.delete()
 
     async def _keep_typing(self, message: discord.Message) -> None:
         while True:

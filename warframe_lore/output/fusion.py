@@ -1,7 +1,7 @@
-"""Helpers de fusion/écriture des megafiles JSON (purs).
+"""Pure helpers for JSON megafile merging/writing.
 
-Lecture des entrées existantes, assemblage du dict conforme au schéma et
-écriture atomique — sans état, testables isolément.
+Reading existing entries, assembling the schema-compliant dict, and
+atomic writing -- stateless, independently testable.
 """
 
 from __future__ import annotations
@@ -18,18 +18,18 @@ log = logging.getLogger("warframe_lore.output")
 
 
 def now_iso_utc() -> str:
-    """Horodatage ISO UTC (secondes) pour la métadonnée ``generated_at``."""
+    """ISO UTC timestamp (seconds) for the ``generated_at`` metadata."""
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def read_existing_entries(megafile_path: Path) -> dict[str, dict]:
-    """Lit un megafile et retourne ``{page_title: entry}`` (vide si absent)."""
+    """Reads a megafile and returns ``{page_title: entry}`` (empty if absent)."""
     if not megafile_path.exists():
         return {}
     try:
         raw_data = json.loads(megafile_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
-        log.warning("Impossible de lire %s (%s); reconstruction à vide",
+        log.warning("Cannot read %s (%s); rebuilding from scratch",
                     megafile_path, exc)
         return {}
     pages_list = raw_data.get("pages", []) if isinstance(raw_data, dict) else raw_data
@@ -39,7 +39,7 @@ def read_existing_entries(megafile_path: Path) -> dict[str, dict]:
 
 def build_megafile(metadata: MegafileMetadata,
                    ordered_entries: list[dict]) -> dict[str, Any]:
-    """Assemble le dict conforme au schéma ``{"metadata": ..., "pages": [...]}``."""
+    """Assembles the schema-compliant dict ``{"metadata": ..., "pages": [...]}``."""
     return {
         "metadata": {
             "bucket_title": metadata.bucket_title,
@@ -53,7 +53,7 @@ def build_megafile(metadata: MegafileMetadata,
 
 
 def atomic_write_json(megafile_path: Path, payload: dict[str, Any]) -> None:
-    """Écrit le JSON de façon atomique (fichier temp + rename)."""
+    """Writes JSON atomically (temp file + rename)."""
     temporary_path = megafile_path.with_suffix(megafile_path.suffix + ".tmp")
     temporary_path.write_text(
         json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")

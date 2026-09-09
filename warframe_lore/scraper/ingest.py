@@ -1,4 +1,4 @@
-"""Nettoyage d'une page + écriture JSON/SQL en une passe."""
+"""Page cleaning + JSON/SQL writing in a single pass."""
 
 from __future__ import annotations
 
@@ -10,20 +10,20 @@ log = logging.getLogger("warframe_lore.scraper")
 
 
 class ScraperIngestMixin:
-    """Nettoie une page et la publie dans le megafile JSON et la base SQL."""
+    """Cleans a page and publishes it to the JSON megafile and SQL database."""
 
     async def _clean_and_store(self, *, bucket_spec, page_title: str,
                                page_obj, bucket_id: str):
-        """Nettoie une page et l'écrit en JSON + SQL. Retourne l'entry JSON."""
+        """Cleans a page and writes it to JSON + SQL. Returns the JSON entry."""
         content_wikitext = getattr(page_obj, "content", "") or ""
         if not content_wikitext.strip():
-            log.warning("Contenu vide pour '%s' — ignorée.", page_title)
+            log.warning("Empty content for '%s' -- skipping.", page_title)
             return None
 
         clean_output = self.cleaner.clean(content_wikitext)
         markdown_text = clean_output.markdown.strip()
         if len(markdown_text) < 20:
-            log.warning("Page '%s' nettoyée en <20 caractères — ignorée.",
+            log.warning("Page '%s' cleaned to <20 characters -- skipping.",
                         page_title)
             return None
 
@@ -38,7 +38,7 @@ class ScraperIngestMixin:
         source_url = getattr(page_obj, "url", "") or (
             self.config.source_url_base + page_title.replace(" ", "_"))
 
-        # — Écriture JSON (megafile).
+        # -- JSON writing (megafile).
         output_entry = build_output_entry(
             page_title=page_title,
             category=bucket_spec.title,
@@ -49,7 +49,7 @@ class ScraperIngestMixin:
             source_wiki_url=self.config.source_url_base,
         )
 
-        # — Écriture SQL (upsert transactionnel) si la base est active.
+        # -- SQL writing (transactional upsert) if the database is active.
         if self.db is not None:
             await self.db.upsert_cleaned_page(
                 page_title=page_title,
@@ -63,6 +63,6 @@ class ScraperIngestMixin:
                 detect_kim_dialogues=(bucket_id == "Lore_Dialogues_KIM"),
             )
 
-        log.debug("Page '%s' traitée (canon=%s).",
+        log.debug("Page '%s' processed (canon=%s).",
                   page_title, canon_status.value)
         return output_entry

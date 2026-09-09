@@ -1,10 +1,9 @@
-"""Garde-fou anti-abuse du bot Discord (cooldown + plafonds + escalade).
+"""Anti-abuse guard rail for the Discord bot (cooldown + caps + escalation).
 
-Défenses pures (aucune dépendance Discord, horloge injectable) pour
-neutraliser un utilisateur qui spammerait le bot — quasi-DDoS au niveau du
-canal : cooldown par utilisateur, plafond de messages par canal (fenêtre
-glissante), et escalade vers un blocage temporaire dès que l'utilisateur
-continue lourdement après plusieurs refus.
+Pure defences (no Discord dependency, injectable clock) to neutralise a user
+who would spam the bot — a quasi-DDoS at channel level: per-user cooldown,
+per-channel message cap (sliding window), and escalation to a temporary
+block as soon as the user keeps hammering after several refusals.
 """
 
 from __future__ import annotations
@@ -14,7 +13,7 @@ from collections import deque
 
 
 class BurstGuard:
-    """Décide si un message peut être traité… ou doit être ignoré silencieusement."""
+    """Decides whether a message may be processed… or silently ignored."""
 
     def __init__(self, user_cooldown: float = 2.5,
                  channel_limit: int = 8, channel_window: float = 30.0,
@@ -32,7 +31,7 @@ class BurstGuard:
         self._blocked_until: dict[int, float] = {}
 
     def check(self, user_id: int, channel_id: int) -> bool:
-        """``True`` si le message peut être traité ; sinon le bot s'abstient."""
+        """``True`` if the message may be processed; otherwise the bot stays silent."""
         now = self._clock()
         if self._blocked_until.get(user_id, 0.0) > now:
             return False
@@ -51,11 +50,11 @@ class BurstGuard:
         return True
 
     def is_blocked(self, user_id: int) -> bool:
-        """Vrai si l'utilisateur est actuellement bloqué temporairement."""
+        """True if the user is currently temporarily blocked."""
         return self._clock() < self._blocked_until.get(user_id, 0.0)
 
     def _penalize(self, user_id: int, now: float) -> None:
-        """Compte un refus ; au-delà du seuil → blocage temporaire du user."""
+        """Counts a refusal; beyond the threshold → temporary user block."""
         burst = self._user_burst.setdefault(user_id, [])
         burst.append(now)
         while burst and now - burst[0] > 60.0:

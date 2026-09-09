@@ -1,9 +1,8 @@
-"""Interface du fournisseur LLM d'ENGRAM.
+"""ENGRAM LLM provider interface.
 
-Abstraction derrière laquelle vivent les backends (LM Studio local,
-OpenAI, Ollama…).  Le reste d'ENGRAM ne dépend que de cette interface
-(dependency inversion) : il est possible de brancher un autre fournisseur
-sans toucher au RAG ni au Roleplay.
+Abstraction behind which backends live (local LM Studio, OpenAI, Ollama...).
+The rest of ENGRAM depends only on this interface (dependency inversion): it
+is possible to plug in another provider without touching RAG or Roleplay.
 """
 
 from __future__ import annotations
@@ -15,7 +14,7 @@ from ..models import ChatMessage
 
 
 class LLMProvider(ABC):
-    """Génère des réponses (streaming token) à partir de messages chat."""
+    """Generates responses (token streaming) from chat messages."""
 
     @abstractmethod
     async def chat_stream(
@@ -23,15 +22,15 @@ class LLMProvider(ABC):
         messages: list[ChatMessage],
         temperature: float = 0.7,
     ) -> AsyncIterator[str]:
-        """Itère les tokens de la réponse du modèle (flux asynchrone)."""
+        """Iterates over model response tokens (async stream)."""
 
 
 class EmbeddingProvider(ABC):
-    """Calcule des vecteurs de plongement (embeddings)."""
+    """Computes embedding vectors."""
 
     @abstractmethod
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        """Retourne un vecteur par texte (dimension configurée)."""
+        """Returns one vector per text (configured dimension)."""
 
 
 __all__ = ["EmbeddingProvider", "LLMProvider"]

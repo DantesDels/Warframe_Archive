@@ -1,41 +1,41 @@
-# Couche `media` — Images & index média
+# `media` Layer — Images & Media Index
 
-Responsabilité : exposer les **images in-game** du jeu (Warframe Public Export)
-et mapper un titre de page / locuteur KIM vers un fichier image, avec mise en
-cache locale (téléchargement à la demande).
+Responsibility: expose **in-game images** from the Warframe Public Export
+and map a page title / KIM speaker to an image file, with local caching
+(on-demand download).
 
-## Pipeline officiel
+## Official Pipeline
 
-1. `ExportManifest.json` (miroir `calamity-inc/warframe-public-export`, car non
-   listé dans l'index officiel depuis 2026) associe chaque `uniqueName` à une
-   `textureLocation` **content-addressed** (`…/Lato.png!00_<hash>`).
-2. L'image se télécharge sur `https://content.warframe.com/PublicExport/` +
+1. `ExportManifest.json` (mirror `calamity-inc/warframe-public-export`, since
+   no longer listed in the official index since 2026) maps each `uniqueName`
+   to a **content-addressed** `textureLocation` (`…/Lato.png!00_<hash>`).
+2. The image is downloaded from `https://content.warframe.com/PublicExport/` +
    `textureLocation`.
-3. Les manifests de catégories (`ExportWarframes_en.json`…) portent `name`
-   (localisé) + `uniqueName` → index des **noms publics** pour le mapping
-   titre/« locuteur » → image.
+3. Category manifests (`ExportWarframes_en.json`…) carry `name` (localized) +
+   `uniqueName` → index of **public names** for the mapping
+   title / "speaker" → image.
 
-## Contenu
+## Contents
 
-| Fichier | Rôle |
+| File | Role |
 |---|---|
-| `__init__.py` | `MediaIndex` (construction paresseuse + thread-safe, `ensure`) |
+| `__init__.py` | `MediaIndex` (lazy construction + thread-safe, `ensure`) |
 | `const.py` | `CONTENT_IMAGE_BASE`, `MANIFEST_MIRROR_URL`, `MANIFEST_FAMILIES` |
-| `names.py` | `sanitize_filename`, `normalize_key` (clé insensible casse/accents) |
-| `network.py` | `http_get`, `download_to` (urllib, User-Agent navigateur) |
+| `names.py` | `sanitize_filename`, `normalize_key` (case/diacritics-insensitive key) |
+| `network.py` | `http_get`, `download_to` (urllib, browser User-Agent) |
 | `manifest.py` | `load_and_cache_manifest`, `load_and_cache_names`, `iter_entities` |
-| `lookup.py` | `MediaLookupMixin` : `texture_map`, `filename_for_unique`, `filename_for_title`, `lookup` |
-| `serve.py` | `MediaServeMixin` : `fetch_image` (cache `out/media/`), `media_payload` (`/api/media`) |
+| `lookup.py` | `MediaLookupMixin`: `texture_map`, `filename_for_unique`, `filename_for_title`, `lookup` |
+| `serve.py` | `MediaServeMixin`: `fetch_image` (cache `out/media/`), `media_payload` (`/api/media`) |
 
-## Contrats
+## Contracts
 
-- `ui` importe `from ..media import MediaIndex` : `MediaIndex.ensure(force)`,
+- `ui` imports `from ..media import MediaIndex`: `MediaIndex.ensure(force)`,
   `lookup(key)`, `filename_for_unique(uuid)`, `fetch_image(filename)`,
   `media_payload(pages_by_bucket, speakers)`.
-- Index **best-effort** : sans réseau l'interface continue (simplement sans
+- **Best-effort** index: without network the interface continues (just without
   images).
-- Cache : manifest + noms dans `cache/public_export/media/`, PNG dans
-  `<output_dir>/media/` (consultables hors-ligne ensuite).
+- Cache: manifest + names in `cache/public_export/media/`, PNGs in
+  `<output_dir>/media/` (browsable offline afterwards).
 
 ## Usage
 

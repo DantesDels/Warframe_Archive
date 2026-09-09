@@ -1,7 +1,7 @@
-"""Fournisseurs LLM/embedding d'ENGRAM.
+"""ENGRAM LLM/embedding providers.
 
-    * ``base``     -> interfaces :class:`LLMProvider` / :class:`EmbeddingProvider` ;
-    * ``lmstudio`` -> :class:`LMStudioProvider` (LM Studio, compatible OpenAI).
+    * ``base``     -> interfaces :class:`LLMProvider` / :class:`EmbeddingProvider`;
+    * ``lmstudio`` -> :class:`LMStudioProvider` (LM Studio, OpenAI-compatible).
 """
 
 from __future__ import annotations

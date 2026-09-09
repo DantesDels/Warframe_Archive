@@ -1,33 +1,34 @@
-"""Résolution des catégories et préfixes wiki (mixin de MediaWikiSource).
+"""Wiki category and prefix resolution (MediaWikiSource mixin).
 
-La logique de catalogage HTTP des familles de pages Vitripedia : expansion
-récursive des sous-catégories et découverte par ``list=allpages`` (préfixes).
+HTTP cataloguing logic for the Vitripedia page families: recursive
+expansion of the subcategories and prefix-based discovery via
+``list=allpages``.
 """
 
 from __future__ import annotations
 
 
 class MediaWikiCategoryMixin:
-    """Résolution de catégories / préfixes (dépend de ``self.http``)."""
+    """Category / prefix resolution (depends on ``self.http``)."""
 
     def resolve_categories(
         self,
         category_names: list[str],
     ) -> dict[str, set[str]]:
-        """Développe des catégories wiki en titres de pages (avec sous-catégories)."""
+        """Expands wiki categories into page titles (including subcategories)."""
         out: dict[str, set[str]] = {}
         for name in category_names:
             out[name] = self._category_members_recursive(name)
         return out
 
     def resolve_prefix(self, prefix: str) -> set[str]:
-        """Tous les titres (ns=0) commençant par ``prefix``.
+        """All titles (ns=0) starting with ``prefix``.
 
-        Complémentaire aux catégories : certaines familles de pages (ex:
-        ``Kinemantik Instant Messenger/Flare``) ne sont pas listées dans une
-        catégorie résolue par :meth:`resolve_categories`.  On les découvre
-        alors via ``list=allpages&apprefix=``, en écartant les pages
-        structurelles (racines vides ``titre/``, fichiers ``/File:``).
+        Complementary to categories: some page families (e.g.
+        ``Kinemantik Instant Messenger/Flare``) are not listed in a
+        category resolved by :meth:`resolve_categories`.  They are then
+        discovered via ``list=allpages&apprefix=``, discarding structural
+        pages (empty roots ``title/``, files ``/File:``).
         """
         pages: set[str] = set()
         for data in self.http.paged({
@@ -48,7 +49,7 @@ class MediaWikiCategoryMixin:
 
     # ------------------------------------------------- internal helpers
     def _category_members(self, category: str) -> list[tuple[int, str]]:
-        """Tous les membres ``(namespace, titre)`` d'une catégorie."""
+        """All members ``(namespace, title)`` of a category."""
         cleantitle = (category if category.lower().startswith("category:")
                       else "Category:" + category)
         members: list[tuple[int, str]] = []
@@ -63,13 +64,13 @@ class MediaWikiCategoryMixin:
 
     def _category_members_recursive(self, category: str,
                                     _depth: int = 0) -> set[str]:
-        """Retourne les pages (ns=0) d'une catégorie en parcourant les
-        sous-catégories."""
+        """Returns the pages (ns=0) of a category by walking through the
+        subcategories."""
         if _depth > self.config.max_category_depth:
             return set()
         pages: set[str] = set()
         for ns, title in self._category_members(category):
-            if ns == 14:  # sous-catégorie
+            if ns == 14:  # sub-category
                 if self.config.follow_subcategories:
                     pages |= self._category_members_recursive(
                         title.removeprefix("Category:"), _depth + 1)

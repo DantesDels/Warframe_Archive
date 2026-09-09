@@ -1,8 +1,8 @@
-"""Route RAG documentaire (HTTP POST).
+"""Document RAG route (HTTP POST).
 
-Couche purement transport (principe S + D) : aucune logique métier ni accès
-aux données ici — la route délègue à :class:`RAGService` injecté via le
-``Container`` de l'application (``app.state.engram``).
+Purely transport layer (S + D principle): no business logic or data access
+here — the route delegates to :class:`RAGService` injected via the
+application ``Container`` (``app.state.engram``).
 """
 
 from __future__ import annotations

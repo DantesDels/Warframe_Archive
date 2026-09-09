@@ -1,8 +1,8 @@
-"""Ingestion d'une page nettoyée : upsert transactionnel + chunks + dialogues.
+"""Ingestion of a cleaned page: transactional upsert + chunks + dialogues.
 
-Mixin de ``SQLDatabaseManager``.  La page racine ``wiki_pages``, ses chunks
-``lore_chunks`` (en préservant les embeddings) et les lignes ``kim_dialogues``
-sont persistés dans une seule transaction.
+Mixin of ``SQLDatabaseManager``.  The root page ``wiki_pages``, its chunks
+``lore_chunks`` (preserving the embeddings) and the ``kim_dialogues`` rows
+are persisted in a single transaction.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ log = logging.getLogger("warframe_lore.db")
 
 
 class SQLIngestMixin:
-    """Upsert d'une page wiki + ses chunks + ses dialogues KIM."""
+    """Upsert of a wiki page + its chunks + its KIM dialogues."""
 
     async def upsert_cleaned_page(
         self,
@@ -38,23 +38,23 @@ class SQLIngestMixin:
         namespace: int = 0,
         detect_kim_dialogues: bool = True,
     ) -> None:
-        """Upsert transactionnel d'une page nettoyée + ses chunks.
+        """Transactional upsert of a cleaned page + its chunks.
 
-        Une page à l'état ``PageData`` nettoyé devient :
-          * 1 ligne ``wiki_pages`` (Insert ou Update selon existence) ;
-          * N lignes ``lore_chunks`` (remplacées atomiquement) ;
-          * M lignes ``kim_dialogues`` si la page contient du dialogue KIM.
+        A page in cleaned ``PageData`` state becomes:
+          * 1 ``wiki_pages`` row (Insert or Update depending on existence);
+          * N ``lore_chunks`` rows (atomically replaced);
+          * M ``kim_dialogues`` rows if the page contains KIM dialogue.
 
-        Le tout dans une seule transaction : en cas d'échec, rien n'est
-        partiellement persisté.
+        All in a single transaction: on failure, nothing is partially
+        persisted.
         """
         session_factory = self._require_session_factory()
         async with session_factory() as session:
             async with session.begin():
-                # --- 1. Upsert de la page racine.
-                # PostgreSQL : INSERT ... ON CONFLICT DO UPDATE (requis par le
-                # cahier des charges).  Autre dialecte (SQLite/tests) : repli
-                # "read-then-write" portatif.
+                # --- 1. Upsert of the root page.
+                # PostgreSQL: INSERT ... ON CONFLICT DO UPDATE (required by
+                # the specification).  Other dialects (SQLite/tests): a
+                # portable "read-then-write" fallback.
                 await self._upsert_wiki_page(session, WikiPage(
                     page_id=page_id,
                     page_title=page_title,
@@ -67,12 +67,11 @@ class SQLIngestMixin:
                     content_markdown=content_markdown,
                 ))
 
-                # --- 2. Chunks : mise à jour en PRÉSERVANT les embeddings.
-                # Un DELETE+INSERT détruirait les vecteurs déjà calculés
-                # (Phase RAG).  On conserve les chunks inchangés (même
-                # contenu + métadonnées), on met à jour ceux dont le texte
-                # a changé (embedding invalidé), et on ne supprime que les
-                # indices disparus.
+                # --- 2. Chunks: update while PRESERVING the embeddings.
+                # A DELETE+INSERT would destroy the already computed vectors
+                # (RAG phase).  Unchanged chunks are kept (same content +
+                # metadata), those whose text changed are updated (embedding
+                # invalidated), and only the vanished indices are deleted.
                 rag_chunks = self.chunker.split(
                     content_markdown,
                     is_dialogue=detect_kim_dialogues,
@@ -98,12 +97,12 @@ class SQLIngestMixin:
                           or existing.chunk_metadata != chunk.metadata):
                         existing.content_markdown = chunk.content_markdown
                         existing.chunk_metadata = chunk.metadata
-                        # Le vecteur de l'ancien texte ne correspond plus au
-                        # nouveau contenu : mieux vaut l'invalider que laisser
-                        # l'embedding pointer vers un texte décalé.
+                        # The vector of the old text no longer matches the
+                        # new content: better to invalidate it than to leave
+                        # the embedding pointing at a shifted text.
                         existing.embedding = None
 
-                # --- 3. Dialogues KIM (si détectés).
+                # --- 3. KIM dialogues (if detected).
                 kim_message_count = 0
                 if detect_kim_dialogues:
                     await session.execute(
@@ -121,29 +120,29 @@ class SQLIngestMixin:
                             timestamp=message.timestamp,
                         ))
 
-            log.debug("Upsert terminé pour '%s' (page_id=%d, %d chunks, %d KIM)",
+            log.debug("Upsert done for '%s' (page_id=%d, %d chunks, %d KIM)",
                       page_title, page_id, len(rag_chunks), kim_message_count)
-        # NB: afin de rendre le log lisible en cas de page sans dialogue.
+        # NB: to keep the log readable when the page has no dialogue.
         if not content_markdown.strip():
-            log.debug("Page '%s' sans contenu nettoyé (ignorée).", page_title)
+            log.debug("Page '%s' with no cleaned content (ignored).", page_title)
 
     async def _upsert_wiki_page(self, session: AsyncSession,
                                 page_record: WikiPage) -> None:
-        """Upsert d'une page ``wiki_pages`` adapté au dialecte SQL.
+        """Upsert of a ``wiki_pages`` row adapted to the SQL dialect.
 
-        PostgreSQL : ``INSERT ... ON CONFLICT (page_id) DO UPDATE``.
-        Autres dialectes (SQLite pour tests) : lecture puis insert/update.
+        PostgreSQL: ``INSERT ... ON CONFLICT (page_id) DO UPDATE``.
+        Other dialects (SQLite for tests): read then insert/update.
 
-        Robuste aux pages recréées sur le wiki (même ``page_title`` mais
-        nouveau ``page_id``) : l'ancienne occurrence est d'abord écartée
-        (cascade : chunks + dialogues) pour ne pas violer l'index unique
-        ``idx_wiki_pages_title``.
+        Robust to pages recreated on the wiki (same ``page_title`` but new
+        ``page_id``): the former occurrence is first removed (cascade:
+        chunks + dialogues) so the unique index ``idx_wiki_pages_title`` is
+        not violated.
         """
         dialect_name = session.bind.dialect.name if session.bind else "sqlite"
         if dialect_name == "postgresql":
             from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-            # --- 0. Réassignation de sécurité (page recréée sur le wiki).
+            # --- 0. Safety reassignment (page recreated on the wiki).
             same_title_ids = (await session.execute(
                 select(WikiPage.page_id).where(
                     WikiPage.page_title == page_record.page_title))).scalars().all()

@@ -1,12 +1,12 @@
-"""Service RAG documentaire : embedding -> récupération -> prompt -> LLM.
+"""Document RAG service: embedding -> retrieval -> prompt -> LLM.
 
-Haut niveau : ne dépend que d'abstractions injectées (``EmbeddingProvider``,
-``Retriever``, ``LLMProvider``) — jamais d'un stockage ou d'un client concret
-(principe D).  Le point d'accès aux données vit derrière :class:`Retriever`.
-Audit : chaque requête journalise le contexte extrait de pgvector avant son
-envoi au LLM, pour isoler un manque de données (ETL) d'une désobéissance
-du modèle.  Short-circuit : sans passage de confiance, le LLM n'est jamais
-appelé — la chaîne exacte :const:`RAG_ERROR` est retournée directement.
+High level: depends only on injected abstractions (``EmbeddingProvider``,
+``Retriever``, ``LLMProvider``) — never on concrete storage or a concrete
+client (D principle). The data access point lives behind :class:`Retriever`.
+Audit: each request logs the context extracted from pgvector before sending
+to the LLM, to isolate missing data (ETL) from model disobedience.
+Short-circuit: without a trusted passage, the LLM is never called — the
+exact string :const:`RAG_ERROR` is returned directly.
 """
 
 from __future__ import annotations
@@ -25,15 +25,15 @@ from .retriever import RAGHit, Retriever
 
 log = logging.getLogger("warframe_lore.engram.rag")
 
-# Température d'inférence RAG : 0.1 -> analytique/déterministe sans bloquer
-# le moteur (Gemma-2-9b-it Q4_K_M sur 8 Go de VRAM).
+# RAG inference temperature: 0.1 -> analytical/deterministic without
+# blocking the engine (Gemma-2-9b-it Q4_K_M on 8 GB VRAM).
 RAG_TEMPERATURE = 0.1
 
-# Repères anaphoriques : une question qui renvoie au message précédent
-# (« …cette histoire de PS5 dit juste avant ? ») récupère mal en vectoriel car
-# elle ne nomme aucune entité.  On réutilise alors la dernière requête pour
-# enrichir la RECHERCHE (jamais le texte vu par le modèle, qui reste le
-# message de l'utilisateur).
+# Anaphoric markers: a question referring to the previous message
+# ("...that PS5 story mentioned earlier?") retrieves poorly in vector
+# because it names no entity. The last query is then reused to enrich
+# the SEARCH (never the text seen by the model, which remains the
+# user's message).
 _ANAPHORIC = re.compile(
     r"^(et\s+|d'ailleurs\s+)?(cette\b|cet\b|cette histoire\b|cette chose\b|"
     r"ce sujet\b|celui[- ]ci|celui[- ]là|celles?[- ]ci|celles?[- ]là|"
@@ -45,25 +45,24 @@ _ANAPHORIC_MARKERS = (
     "parlé de", "dit juste", "comme je disais", "comme tu disais",
 )
 
-# Caractères de contrôle (hors tabulation/sauts légitimes après split) :
-# aucune injection de contrôle dans les embeddings ni dans les logs.
+# Control characters (outside legitimate tab/newline after split):
+# no control injection in embeddings nor in logs.
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 _MAX_QUERY_LEN = 2000
 
-# Jetons Discord (@utilisateur, #canal, emojis personnalisés) : neutralisés
-# en amont pour qu'aucun snowflake ne soit jamais reflété par le LLM dans sa
-# réponse (anti echo-ping d'un utilisateur tiers).
+# Discord tokens (@user, #channel, custom emojis): neutralized upstream
+# so that no snowflake is ever reflected by the LLM in its response
+# (anti echo-ping of a third-party user).
 _MENTION_TOKENS = re.compile(r"<@!?\d+>|<#\d+>|<a?:[a-z0-9_]+:\d+>",
                              re.IGNORECASE)
 
 
 def sanitize_query(text: str) -> str:
-    """Assainit une entrée utilisateur avant recherche/vectorisation :
-    retire les caractères de contrôle, normalise les espaces et borne la
-    longueur.  Les mentions Discord sont remplacées par un libellé neutre.
-    Ne sert AUCUNE interpolation SQL — toutes les requêtes passent par
-    SQLAlchemy paramétré (anti-SQLi par construction).
+    """Sanitizes user input before search/vectorization: strips control
+    characters, normalizes whitespace and caps length. Discord mentions
+    are replaced with a neutral label. Serves NO SQL interpolation — all
+    queries go through parameterized SQLAlchemy (anti-SQLi by construction).
     """
     cleaned = _CONTROL_CHARS.sub(" ", str(text))
     cleaned = _MENTION_TOKENS.sub("un utilisateur", cleaned)
@@ -71,7 +70,7 @@ def sanitize_query(text: str) -> str:
 
 
 def _is_anaphoric(question: str) -> bool:
-    """Vrai si la question pointe vers le message précédent sans entité."""
+    """True if the question points to the previous message without an entity."""
     q = question.strip().lower()
     if not q or len(q) > 120:
         return False
@@ -81,7 +80,7 @@ def _is_anaphoric(question: str) -> bool:
 
 
 class RAGService:
-    """Orchestre une requête RAG documentaire de bout en bout."""
+    """Orchestrates an end-to-end document RAG query."""
 
     def __init__(self, embeddings: EmbeddingProvider, retriever: Retriever,
                  llm: LLMProvider, prompt_builder: PromptBuilder,
@@ -92,26 +91,26 @@ class RAGService:
         self.llm = llm
         self.prompt_builder = prompt_builder
         self.suggestion_min_score = suggestion_min_score
-        # Seuil critique de réponse : sous ce score (typo, sujet hors-corpus),
-        # le LLM n'est JAMAIS appelé avec un passage faible.  Calibré sur le
-        # corpus réel (Lettie 0.55-0.63, Orokin 0.59-0.61, Albrecht 0.52-0.53).
-        # Par défaut : identique au seuil de désambiguïsation.
+        # Critical response threshold: below this score (typo, out-of-corpus
+        # topic), the LLM is NEVER called with a weak passage. Calibrated on
+        # real corpus (Lettie 0.55-0.63, Orokin 0.59-0.61, Albrecht 0.52-0.53).
+        # Default: identical to the disambiguation threshold.
         self.critical_min_score = critical_min_score
         self._last_query: str | None = None
 
     async def retrieve(self, question: str
                        ) -> tuple[list[RAGHit], RAGPrompt, bool]:
-        """Assemble le prompt et décide du short-circuit, avec journalisation.
+        """Assembles the prompt and decides on short-circuit, with logging.
 
-        La requête est d'abord enrichie par ``resolve_alias`` (surnom -> nom
-        canonique) pour fiabiliser l'embedding.  ``bypass`` signale l'absence
-        de passage de confiance ET de désambiguïsation : le LLM ne doit pas
-        être appelé (short-circuit).
+        The query is first enriched by ``resolve_alias`` (nickname -> canonical
+        name) to make embedding more reliable. ``bypass`` signals the absence
+        of a trusted passage AND disambiguation: the LLM must not be called
+        (short-circuit).
         """
         question = sanitize_query(question)
         if not question:
-            # Entrée vide/non-significative : abstention immédiate ?→ le LLM
-            # n'est jamais appelé.
+            # Empty/non-significant input: immediate abstention → the LLM
+            # is never called.
             prompt = self.prompt_builder.build("", [], alias_note="",
                                                suggestion=None)
             log.info("Audit RAG question=%r hit=0 suggestion=None bypass=True "
@@ -119,10 +118,10 @@ class RAGService:
                      prompt.context[:180].replace("\n", " "))
             return [], prompt, True
         if detect_probe(question):
-            # Sondage hostile (injection SQL, escalade de privilèges, mention
-            # tiers) : rejet DÉTERMINISTE, sans embedding, sans pgvector, sans
-            # LLM.  La même charge utile ne consume donc AUCUN coût et n'entre
-            # jamais dans la mémoire de requête.
+            # Hostile probe (SQL injection, privilege escalation, third-party
+            # mention): DETERMINISTIC rejection, no embedding, no pgvector, no
+            # LLM. The same payload incurs zero cost and never enters query
+            # memory.
             prompt = self.prompt_builder.build(question, [], alias_note="",
                                                suggestion=None)
             prompt.rejected = True
@@ -130,9 +129,9 @@ class RAGService:
                         "rejected=True (aucun appel modèle)", question)
             return [], prompt, True
         expanded, alias_note, canon = resolve_alias(question)
-        # Mémoire de requête : une question anaphorique (« cette histoire… dit
-        # juste avant ? ») ne nomme aucune entité -> on réutilise la dernière
-        # question pour enrichir la recherche vectorielle uniquement.
+        # Query memory: an anaphoric question ("that story... mentioned
+        # earlier?") names no entity → the last question is reused to enrich
+        # vector search only.
         search_question = question
         if self._last_query and _is_anaphoric(question):
             search_question = f"{self._last_query} {question}"
@@ -140,27 +139,27 @@ class RAGService:
         hits = await self.retriever.search(query_vector)
         floor = (self.suggestion_min_score if self.critical_min_score is None
                  else max(self.critical_min_score, self.suggestion_min_score))
-        # Seuil de pertinence : aucun passage sous ``floor`` (ex : fautes de
-        # frappe, sujets hors-corpus) ne doit atteindre le LLM. On filtre
-        # d'abord, donc ``top`` reflète la force du meilleur passage conservé.
+        # Relevance threshold: no passage below ``floor`` (e.g. typos,
+        # out-of-corpus topics) must reach the LLM. We filter first, so
+        # ``top`` reflects the strength of the best retained passage.
         used_hits = [h for h in hits if h.score >= floor]
         top = used_hits[0].score if used_hits else 0.0
         suggestion = None
         if top < floor:
-            # Recherche trop faible (sujet absent, typo…) : ne jamais fonder
-            # une réponse sur des voisins hors-sujet.  Le contexte est VIDÉ ;
-            # on tente la désambiguïsation (alias canonique ou titre voisin),
-            # sinon on coupe court sans jamais appeler le LLM.
+            # Search too weak (absent topic, typo...): never ground a
+            # response on off-topic neighbors. Context is CLEARED;
+            # disambiguation is attempted (canonical alias or neighboring
+            # title), otherwise short-circuit without ever calling the LLM.
             suggestion = (canon if alias_note
                           else await self._suggest_title(question))
-            # Contexte privé de contenu : pas de voisin hors-sujet au LLM.
+            # Context stripped of content: no off-topic neighbor to the LLM.
             used_hits = []
         bypass = not used_hits and suggestion is None
         if not bypass:
-            # Sujet réellement établi : seule base légitime d'enrichissement
-            # pour une future question anaphorique.  Une requête court-circuitée
-            # (bypass) ne mémorise RIEN — sinon le sujet absent polluerait la
-            # suivante (« cette histoire… » reprenant « souris verte »).
+            # Truly established topic: sole legitimate enrichment basis for
+            # a future anaphoric question. A short-circuited query (bypass)
+            # memorizes NOTHING — otherwise the absent topic would pollute the
+            # next one ("that story..." resuming "green mouse").
             self._last_query = question
         prompt = self.prompt_builder.build(
             question, used_hits, alias_note=alias_note, suggestion=suggestion)
@@ -173,12 +172,12 @@ class RAGService:
 
     async def resolve(self, question: str
                       ) -> tuple[str | None, str | None]:
-        """Contexte/suggestion pour un tour Roleplay (WS).
+        """Context/suggestion for a Roleplay turn (WS).
 
-        ``bypass`` -> ``(None, None)`` : le client WS doit alors short-circuiter
-        avec la chaîne d'erreur exacte.  Sinon ``(contexte, suggestion)`` : le
-        contexte est sûr (jamais de marqueur vide) ; une ``suggestion`` non nulle
-        indique au routeur qu'il concerne la désambiguïsation.
+        ``bypass`` -> ``(None, None)``: the WS client must then short-circuit
+        with the exact error string. Otherwise ``(context, suggestion)``: the
+        context is safe (never an empty marker); a non-null ``suggestion``
+        indicates to the router that it concerns disambiguation.
         """
         _, prompt, bypass = await self.retrieve(question)
         if bypass:
@@ -187,7 +186,7 @@ class RAGService:
 
     async def answer_with_sources(self, question: str
                                   ) -> tuple[str, list[RAGHit]]:
-        """Réponse du modèle + passages pertinents (short-circuit sinon)."""
+        """Model answer + relevant passages (short-circuit otherwise)."""
         hits, prompt, bypass = await self.retrieve(question)
         if prompt.rejected:
             return JAILBREAK_REJECT, []
@@ -201,7 +200,7 @@ class RAGService:
         return "".join(chunks), hits
 
     async def stream_answer(self, question: str) -> AsyncIterator[str]:
-        """Itère les tokens de la réponse (erreur exacte si short-circuit)."""
+        """Iterates over response tokens (exact error if short-circuit)."""
         _, prompt, bypass = await self.retrieve(question)
         if prompt.rejected:
             yield JAILBREAK_REJECT
@@ -215,7 +214,7 @@ class RAGService:
             yield token
 
     async def _suggest_title(self, question: str) -> str | None:
-        """Nom de page proche du lexique de la question, ou None."""
+        """Page name close to the question's lexicon, or None."""
         suggest = getattr(self.retriever, "suggest_title", None)
         if suggest is None:
             return None

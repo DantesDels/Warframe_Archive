@@ -1,4 +1,4 @@
-"""Scripts d'ingestion ENGRAM (ETL)."""
+"""ENGRAM ingestion scripts (ETL)."""
 
 from __future__ import annotations
 

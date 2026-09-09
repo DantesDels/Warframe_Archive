@@ -1,16 +1,16 @@
-"""Orchestrateur : résout les buckets, calcule le delta, récupère, nettoie,
-écrit (JSON megafiles + base SQL).
+"""Orchestrator: resolves buckets, computes the delta, fetches, cleans,
+writes (JSON megafiles + SQL database).
 
-Le paquet coordonne les couches :
-    * ``canon``  -> signaux canon (Category:Speculation + signaux inline) ;
-    * ``delta``  -> plan de delta / fraîcheur des pages ;
-    * ``sync``   -> orchestration par bucket ;
-    * ``ingest`` -> nettoyage + écriture d'une page.
+The package coordinates the layers:
+    * ``canon``  -> canon signals (Category:Speculation + inline signals);
+    * ``delta``  -> delta plan / page freshness;
+    * ``sync``   -> per-bucket orchestration;
+    * ``ingest`` -> cleaning + writing of a page.
 
-Écriture **double**: chaque page nettoyée est à la fois inscrite dans son
-megafile JSON (lecture humaine / NotebookLM) et dans la base relationnelle
-(préparée pour le RAG vectoriel).  Le mode delta s'appuie sur la base SQL
-(``sync_state`` en source de vérité).
+**Dual** write: each cleaned page is both written to its JSON megafile
+(human reading / NotebookLM) and to the relational database (prepared
+for vector RAG).  Delta mode relies on the SQL database
+(``sync_state`` as source of truth).
 """
 
 from __future__ import annotations
@@ -37,15 +37,15 @@ log = logging.getLogger("warframe_lore.scraper")
 
 class Scraper(CanonSignalsMixin, ScraperDeltaMixin,
               ScraperIngestMixin, ScraperSyncMixin):
-    """Pipeline complet d'extraction/nettoyage/écriture.
+    """Full extraction/cleaning/writing pipeline.
 
-    Mélange (mro) : doté des mixins ``canon``, ``delta``, ``ingest``,
-    ``sync``.  La classe expose ``run``/``arun`` comme point d'entrée.
+    MRO (mro): equipped with ``canon``, ``delta``, ``ingest``,
+    ``sync`` mixins.  The class exposes ``run``/``arun`` as entry points.
 
     Args:
-        config: configuration runtime (API, répertoires, base de données).
-        bucket_config: définition des buckets logiques.
-        database_url: URL de connexion PostgreSQL (async).
+        config: runtime configuration (API, directories, database).
+        bucket_config: logical bucket definitions.
+        database_url: async PostgreSQL connection URL.
     """
 
     def __init__(self, config: Config | None = None,
@@ -57,23 +57,23 @@ class Scraper(CanonSignalsMixin, ScraperDeltaMixin,
         self.catalog = CategoryCatalog(self.source)
         self.cleaner = WikitextCleaner(cleaner_config=CleanerConfig.load())
         self.output = MegafileManager(self.config.output_dir)
-        # ``database_url=None`` -> mode JSON only (--skip-sql).
+        # ``database_url=None`` -> JSON-only mode (--skip-sql).
         self.database_url = database_url or (
             self.config.database_url if database_url is not None else None)
         self.db: SQLDatabaseManager | None = None
         if self.database_url:
             self.db = SQLDatabaseManager(self.database_url)
-        # Résolution de la catégorie Speculation (pour le canon_status au
-        # niveau page) : ensemble des titres de pages spéculatifs.
+        # Speculation category resolution (for page-level canon_status):
+        # set of speculative page titles.
         self._speculation_titles: set[str] = set()
 
     # ------------------------------------------------------------------ runs
     def run(self, force: bool = False) -> None:
-        """Exécute un cycle complet de synchro (point d'entrée synchrone)."""
+        """Runs a full sync cycle (synchronous entry point)."""
         asyncio.run(self.arun(force=force))
 
     async def arun(self, force: bool = False) -> None:
-        """Version asynchrone du pipeline principal."""
+        """Async version of the main pipeline."""
         if self.db is not None:
             await self.db.connect()
         try:

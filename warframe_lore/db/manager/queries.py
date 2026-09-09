@@ -1,6 +1,6 @@
-"""Requêtes de diagnostic : compteurs, stats globales, pages récentes.
+"""Diagnostic queries: counters, global stats, recent pages.
 
-Mixin de ``SQLDatabaseManager`` — alimente ``cephalon status`` et
+Mixin of ``SQLDatabaseManager`` — feeds ``cephalon status`` and
 ``cephalon recent``.
 """
 
@@ -17,19 +17,19 @@ log = logging.getLogger("warframe_lore.db")
 
 
 class SQLQueryMixin:
-    """Lecture / diagnostics de la base."""
+    """Reads / diagnostics of the database."""
 
     async def count_pages(self) -> int:
-        """Nombre total de pages en base (diagnostic / tests)."""
+        """Total number of pages in the database (diagnostic / tests)."""
         session_factory = self._require_session_factory()
         async with session_factory() as session:
             result = await session.execute(select(WikiPage))
             return len(result.scalars().all())
 
     async def db_stats(self) -> dict[str, Any]:
-        """Indicateurs de l'état de la base (diagnostic ``cephalon status``).
+        """Database state indicators (``cephalon status`` diagnostic).
 
-        Retourne :
+        Returns:
             ``total_pages``, ``total_chunks``, ``total_kim_dialogues``,
             ``total_sync_records``, ``total_by_canon``, ``pages_by_bucket``,
             ``last_page_updated``, ``last_sync_at``.
@@ -75,10 +75,10 @@ class SQLQueryMixin:
         }
 
     async def recent_pages(self, limit: int = 10) -> list[dict[str, Any]]:
-        """Dernières pages modifiées (``cephalon recent``).
+        """Most recently modified pages (``cephalon recent``).
 
-        Tri par ``updated_at`` décroissant ; inclut titre, catégorie,
-        statut canon, dates.
+        Sorted by ``updated_at`` descending; includes title, category,
+        canon status, timestamps.
         """
         session_factory = self._require_session_factory()
         async with session_factory() as session:

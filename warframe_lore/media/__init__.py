@@ -1,18 +1,18 @@
-"""Warframe Public Export — index média + images à la demande.
+"""Warframe Public Export — media index + on-demand images.
 
-Pipeline officiel (cf. https://wiki.warframe.com/w/Public_Export) :
-  * ``ExportManifest.json`` associe chaque ``uniqueName`` à une
-    ``textureLocation`` (URI content-addressed) ;
-  * L'image se télécharge à ``https://content.warframe.com/PublicExport/`` ;
-  * Depuis 2026 le manifest se récupère depuis le miroir maintenu
-    automatiquement (calamity-inc/warframe-public-export).
+Official pipeline (see https://wiki.warframe.com/w/Public_Export):
+  * ``ExportManifest.json`` maps each ``uniqueName`` to a
+    ``textureLocation`` (content-addressed URI);
+  * Images are downloaded from ``https://content.warframe.com/PublicExport/``;
+  * Since 2026 the manifest is fetched from the automatically maintained
+    mirror (calamity-inc/warframe-public-export).
 
-Noms publics : les manifests de catégories (``ExportWarframes_en.json``…)
-portent ``name`` (localisé) + ``uniqueName`` ; on les utilise pour mapper un
-titre de page wiki / un locuteur KIM vers une image.
+Public names: category manifests (``ExportWarframes_en.json``…) carry a
+localised ``name`` + ``uniqueName``; they are used to map a wiki page title
+/ KIM speaker to an image.
 
-Mise en cache : manifest + noms dans ``cache/public_export/media/`` ; les PNG
-téléchargés à la demande dans ``<output_dir>/media/`` (hors-ligne ensuite).
+Caching: manifest + names stored in ``cache/public_export/media/``; PNGs
+downloaded on demand into ``<output_dir>/media/`` (served offline afterwards).
 """
 
 from __future__ import annotations
@@ -29,11 +29,11 @@ log = logging.getLogger(__name__)
 
 
 class MediaIndex(MediaLookupMixin, MediaServeMixin):
-    """Index média (uniqueName->texture, titre->image) + cache PNG local.
+    """Media index (uniqueName->texture, title->image) + local PNG cache.
 
-    Construction paresseuse et thread-safe : le premier accès réseau
-    (manifest 4,7 Mo + manifests de catégories) est tolérant à l'échec —
-    sans réseau l'interface continue (simplement sans images).
+    Lazy, thread-safe construction: the first network fetch (4.7 MB manifest
+    + category manifests) is fault-tolerant — without a network the UI
+    keeps working (just without images).
     """
 
     def __init__(self, output_dir, cache_dir="cache/public_export/media",
@@ -45,14 +45,14 @@ class MediaIndex(MediaLookupMixin, MediaServeMixin):
         self._lock = threading.RLock()
         self._ready = False
         self._attempted = False
-        # uniqueName -> textureLocation ; filename -> textureLocation
+        # uniqueName -> textureLocation; filename -> textureLocation
         self._texture: dict[str, str] = {}
         self._by_file: dict[str, str] = {}
-        # clé normalisée (titre / locuteur) -> uniqueName
+        # normalised key (title / speaker) -> uniqueName
         self._names: dict[str, str] = {}
 
     def ensure(self, force: bool = False) -> bool:
-        """Charge (ou télécharge) l'index média. Idempotent, thread-safe."""
+        """Load (or download) the media index. Idempotent, thread-safe."""
         with self._lock:
             if self._ready and not force:
                 return True
@@ -65,10 +65,10 @@ class MediaIndex(MediaLookupMixin, MediaServeMixin):
                 self._names = load_and_cache_names(
                     self.cache_dir, force, self.timeout)
                 self._ready = True
-                log.info("Index média prêt : %d textures, %d noms.",
+                log.info("Media index ready: %d textures, %d names.",
                          len(self.texture_map()), len(self._names))
             except Exception as exc:  # noqa: BLE001 (mode best-effort)
-                log.warning("Index média indisponible : %s", exc)
+                log.warning("Media index unavailable: %s", exc)
                 self._ready = False
             return self._ready
 

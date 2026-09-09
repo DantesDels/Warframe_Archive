@@ -1,27 +1,28 @@
-"""Warframe Public Export — ingestion des entités localisées du jeu.
+"""Warframe Public Export -- ingestion of localized game entities.
 
-Pipeline officiel (cf. wiki.warframe.com/w/Public_Export) :
-  1. ``https://origin.warframe.com/PublicExport/index_<lang>.txt.lzma``  -> un
-     flux LZMA **brut** contenant les noms hachés des manifests (1 par ligne,
+Official pipeline (see wiki.warframe.com/w/Public_Export):
+  1. ``https://origin.warframe.com/PublicExport/index_<lang>.txt.lzma``  -> a
+     **raw** LZMA stream containing hashed manifest names (one per line,
      format ``Export<Category>_<lang>.json!00_<hash>``).
-  2. Pour chaque nom haché, l'actif est servi par le serveur de contenu :
-     ``http://content.warframe.com/PublicExport/Manifest/<nom_haché>``.
-     L'actif est un JSON du type ``{"Export<Category>": [ {uniqueName, name,
+  2. For each hashed name, the asset is served by the content server:
+     ``http://content.warframe.com/PublicExport/Manifest/<hashed_name>``.
+     The asset is a JSON like ``{"Export<Category>": [ {uniqueName, name,
      description, ...}, ... ]}``.
 
-Le cache est **incrémental et sûr** : le hash ``!00_<hash>`` (content-addressed)
-change uniquement quand le contenu change — un actif déjà téléchargé peut être
-conservé indéfiniment et on re-synchronise en comparant les hashs de l'index.
+The cache is **incremental and safe**: the ``!00_<hash>`` hash
+(content-addressed) changes only when the content changes -- an asset
+already downloaded can be kept indefinitely and we re-sync by comparing
+index hashes.
 
-Organisation du paquet :
-    * ``const``    -> constantes (origines, langues, catégories retenues) ;
-    * ``lzma``     -> décompression tolérante aux flux tronqués ;
-    * ``assets``   -> validation d'actifs + normalisation des champs ;
-    * ``extract``  -> extraction des entités localisées ;
-    * ``fetch``    -> index + actifs hachés (cache incrémental) ;
-    * ``sync``     -> boucle async de synchronisation en base ;
-    * ``client``   -> :class:`PublicExportClient` (façade) ;
-    * ``models``   -> :class:`GameEntity` (un fichier par classe).
+Package layout:
+    * ``const``    -> constants (origins, languages, selected categories);
+    * ``lzma``     -> LZMA decompression tolerant of truncated streams;
+    * ``assets``   -> asset validation + field normalization;
+    * ``extract``  -> localized entity extraction;
+    * ``fetch``    -> hashed index + assets (incremental cache);
+    * ``sync``     -> async database synchronization loop;
+    * ``client``   -> :class:`PublicExportClient` (facade);
+    * ``models``   -> :class:`GameEntity` (one file per class).
 """
 
 from __future__ import annotations

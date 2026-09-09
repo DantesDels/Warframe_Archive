@@ -1,4 +1,4 @@
-"""Pipeline par bucket : résolution, delta, récupération, écriture."""
+"""Per-bucket pipeline: resolution, delta, fetching, writing."""
 
 from __future__ import annotations
 
@@ -11,12 +11,12 @@ log = logging.getLogger("warframe_lore.scraper")
 
 
 class ScraperSyncMixin:
-    """Coordonne les buckets : du catalogue à la publication des megafiles."""
+    """Coordinates buckets: from catalog to megafile publication."""
 
     async def _sync_buckets(self, force: bool) -> None:
-        # 1. Résolution + delta (sans écriture) — logique partagée (DRY)
-        #    avec ``delta_plan`` utilisé par ``cephalon diff``.
-        log.info("Résolution de %d bucket(s)...", len(self.buckets.specs))
+        # 1. Resolution + delta (no writes) -- shared logic (DRY)
+        #    with ``delta_plan`` used by ``cephalon diff``.
+        log.info("Resolving %d bucket(s)...", len(self.buckets.specs))
         resolved_buckets = [
             self.catalog.resolve(spec) for spec in self.buckets.specs
         ]
@@ -26,29 +26,29 @@ class ScraperSyncMixin:
         for page_title, bucket_spec in assigned_pages.items():
             pages_by_bucket[bucket_spec.id].append(page_title)
 
-        # Purge des pages disparues de toutes les catégories résolues.
+        # Purge pages that disappeared from all resolved categories.
         for spec in self.buckets.specs:
             live_titles = set(pages_by_bucket.get(spec.id, []))
             if self.db is not None:
                 await self.db.purge_vanished_pages(spec.id, live_titles)
 
         unique_titles = list(assigned_pages.keys())
-        log.info("Résolution terminée : %d page(s) unique(s) à considérer.",
+        log.info("Resolution complete: %d unique page(s) to consider.",
                  len(unique_titles))
         if not unique_titles:
-            log.warning("Aucune page résolue — rien à faire.")
+            log.warning("No pages resolved -- nothing to do.")
             return
 
-        # 2. Delta (pages réellement à récupérer/mettre à jour).
+        # 2. Delta (pages that actually need fetching/updating).
         needs_fetch_per_bucket = await self.delta_plan(force=force)
         total_todo = sum(len(titles) for titles in needs_fetch_per_bucket.values())
-        log.info("Delta : %d page(s) à récupérer/mettre à jour (force=%s).",
+        log.info("Delta: %d page(s) to fetch/update (force=%s).",
                  total_todo, force)
         if total_todo == 0:
-            log.info("Rien n'a changé — megafiles et base à jour.")
+            log.info("Nothing changed -- megafiles and database up to date.")
             return
 
-        # 4. Téléchargement du contenu complet pour les pages modifiées.
+        # 4. Full content download for modified pages.
         fetched_by_title: dict[str, object] = {}
         for spec in self.buckets.specs:
             titles_to_fetch = needs_fetch_per_bucket.get(spec.id, [])
@@ -56,10 +56,10 @@ class ScraperSyncMixin:
                 continue
             fetched_pages = self.source.fetch_pages(titles_to_fetch)
             fetched_by_title.update(fetched_pages)
-            log.info("Récupéré %d page(s) pour le bucket '%s'.",
+            log.info("Fetched %d page(s) for bucket '%s'.",
                      len(fetched_pages), spec.id)
 
-        # 5. Nettoyage + écriture (JSON + SQL) par bucket.
+        # 5. Cleaning + writing (JSON + SQL) per bucket.
         for spec in self.buckets.specs:
             titles_to_clean = needs_fetch_per_bucket.get(spec.id, [])
             if not titles_to_clean:
@@ -76,7 +76,7 @@ class ScraperSyncMixin:
                 if cleaned is not None:
                     new_entries.append(cleaned)
 
-            # Megafile JSON du bucket (fusion incrémentale).
+            # JSON megafile for the bucket (incremental merge).
             if new_entries:
                 live_titles = set(pages_by_bucket.get(spec.id, []))
                 self.output.merge_and_write(
@@ -84,15 +84,15 @@ class ScraperSyncMixin:
                     bucket_title=spec.title,
                     new_entries=new_entries,
                     metadata_note=(
-                        "Contenu nettoyé depuis le wiki WARFRAME (MediaWiki). "
-                        "Statut canon/non-canon inclus. "
-                        "Prêt pour ingestion LLM / NotebookLM."
+                        "Content cleaned from the WARFRAME wiki (MediaWiki). "
+                        "Canon/non-canon status included. "
+                        "Ready for LLM / NotebookLM ingestion."
                     ),
                     live_titles=live_titles,
                 )
-                # Acquittement delta SEULEMENT après publication JSON réussie
-                # (si le megafile a échoué, il ne faut pas marquer la page
-                # comme synchronisée : la base et le JSON divergeraient).
+                # Delta acknowledgment ONLY after successful JSON publication
+                # (if the megafile failed, pages must not be marked as synced:
+                # the database and JSON would diverge).
                 if self.db is not None:
                     for entry in new_entries:
                         page = fetched_by_title.get(entry.page_title)
@@ -105,7 +105,7 @@ class ScraperSyncMixin:
                             touched=getattr(page, "touched", None),
                         )
             else:
-                log.warning("Bucket '%s' : aucune page nettoyée à écrire.",
+                log.warning("Bucket '%s': no cleaned pages to write.",
                             spec.id)
 
-        log.info("Synchronisation terminée.")
+        log.info("Synchronization complete.")

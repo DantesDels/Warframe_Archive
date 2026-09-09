@@ -1,8 +1,8 @@
-"""Requêtes de contenu MediaWiki : fetch complet + métadonnées delta.
+"""MediaWiki content queries: full fetch + delta metadata.
 
-Mixin de ``MediaWikiSource``.  Récupération par lots de ``per_request_limit``
-(50) avec pagination via le jeton ``continue`` ; ne fait QUE de la
-communication (aucun nettoyage).
+Mixin of ``MediaWikiSource``.  Fetches in batches of ``per_request_limit``
+(50) with pagination via the ``continue`` token; does NOTHING but
+communication (no cleaning).
 """
 
 from __future__ import annotations
@@ -11,10 +11,10 @@ from .models import PageData, TouchedInfo
 
 
 class MediaWikiQueryMixin:
-    """Récupération des pages (contenu complet) et des ``touched``."""
+    """Fetches pages (full content) and ``touched`` metadata."""
 
     def fetch_pages(self, titles: list[str]) -> dict[str, PageData]:
-        """Récupère le contenu complet des pages demandées (par lot de 50)."""
+        """Fetches the full content of the requested pages (in batches of 50)."""
         result: dict[str, PageData] = {}
         for i in range(0, len(titles), self.http.per_request_limit):
             chunk = titles[i:i + self.http.per_request_limit]
@@ -48,7 +48,7 @@ class MediaWikiQueryMixin:
         return result
 
     def check_updates(self, titles: list[str]) -> dict[str, TouchedInfo]:
-        """Métadonnées légères (touched) pour le calcul du delta."""
+        """Light metadata (touched) used for delta computation."""
         result: dict[str, TouchedInfo] = {}
         for i in range(0, len(titles), self.http.per_request_limit):
             chunk = titles[i:i + self.http.per_request_limit]

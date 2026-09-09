@@ -1,4 +1,4 @@
-"""Description d'un bucket logique de sortie."""
+"""Description of a logical output bucket."""
 
 from __future__ import annotations
 
@@ -7,18 +7,18 @@ from dataclasses import dataclass, field
 
 @dataclass
 class CategorySpec:
-    """Description d'un bucket logique de sortie.
+    """Description of a logical output bucket.
 
     Attributes:
-        id: identifiant unique du bucket (sert au suivi d'état).
-        title: libellé humain (devient le champ ``category`` des entrées).
-        filename: nom du megafile de sortie (ex: ``Lore_Quetes.json``).
-        categories: noms de catégories réels de la source à résoudre.
-        prefix: préfixes de titre à développer via ``list=allpages`` (source
-            complémentaire aux catégories, utile quand le wiki ne catégorise
-            pas toutes les pages, ex: ``Kinemantik Instant Messenger/``).
-        title_include: ne garder que les titres contenant UN de ces sous-chaînes.
-        title_exclude: exclure les titres contenant UN de ces sous-chaînes.
+        id: unique bucket identifier (used for state tracking).
+        title: human-readable label (becomes the ``category`` field of entries).
+        filename: output megafile name (e.g. ``Lore_Quetes.json``).
+        categories: actual source category names to resolve.
+        prefix: title prefixes to expand via ``list=allpages`` (source
+            complementary to categories, useful when the wiki does not
+            categorize all pages, e.g. ``Kinemantik Instant Messenger/``).
+        title_include: keep only titles containing ANY of these substrings.
+        title_exclude: exclude titles containing ANY of these substrings.
     """
 
     id: str

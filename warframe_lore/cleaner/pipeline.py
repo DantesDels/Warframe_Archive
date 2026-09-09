@@ -1,21 +1,21 @@
-"""Orchestrateur du nettoyage : la classe :class:`WikitextCleaner`.
+"""Cleaning orchestrator: the :class:`WikitextCleaner` class.
 
-Coordonne les sous-modules de la couche cleaner dans un ordre précis :
-  1. preprocessing/html+blocks -> assainissement du brut (commentaires,
-     HTML, fichiers, tableaux, code) ;
-  2. parse          -> analyse structurelle (mwparserfromhell) ;
-  3. templates      -> gestion des templates (bruit, quote, spoiler,
-                       marqueurs canon/non-canon) ;
-  4. formatting     -> liens, gras/italique, titres, dialogues ;
-  5. audio/KIM      -> métadonnées audio et instructions de dialogue ;
-  6. sections       -> suppression des blocs gameplay ;
-  7. polish         -> galeries vides et lignes blanches en excès.
+Coordinates the cleaner sub-modules in a specific order:
+  1. preprocessing/html+blocks -> raw sanitization (comments,
+     HTML, files, tables, code);
+  2. parse          -> structural analysis (mwparserfromhell);
+  3. templates      -> template handling (noise, quote, spoiler,
+                       canon/non-canon markers);
+  4. formatting     -> links, bold/italic, headings, dialogue;
+  5. audio/KIM      -> audio metadata and dialogue instructions;
+  6. sections       -> gameplay block removal;
+  7. polish         -> empty galleries and excess blank lines.
 
-La sortie est un objet :class:`CleanOutput` qui transporte, en plus du
-Markdown, les signaux canon détectés *dans le corps* de la page
-(speculation en ligne / confirmation en ligne).  Le statut canon au niveau
-page (croisement avec ``Category:Speculation``) est calculé par
-l'orchestrateur, pas ici.
+The output is a :class:`CleanOutput` object carrying, besides the
+Markdown, canon signals detected *in the body* of the page
+(inline speculation / inline confirmation).  The page-level canon
+status (crossed with ``Category:Speculation``) is computed by the
+orchestrator, not here.
 """
 
 from __future__ import annotations
@@ -73,14 +73,14 @@ from warframe_lore.cleaner.templates.signal import (
 
 @dataclass
 class CleanOutput:
-    """Résultat du nettoyage d'une page.
+    """Result of cleaning a page.
 
     Attributes:
-        markdown: texte final propre, prêt pour la sortie JSON.
-        non_canon_detected_in_body: un template ``{{Speculation}}`` ou
-            équivalent est apparu dans le corps de la page.
-        canon_detected_in_body: un template de confirmation (``{{Canon}}``...)
-            est apparu dans le corps de la page.
+        markdown: final clean text, ready for JSON output.
+        non_canon_detected_in_body: a ``{{Speculation}}`` template or
+            equivalent appeared in the page body.
+        canon_detected_in_body: a confirmation template (``{{Canon}}``...)
+            appeared in the page body.
     """
 
     markdown: str
@@ -88,13 +88,13 @@ class CleanOutput:
     canon_detected_in_body: bool = False
 
 
-# Nom de classe gardé pour compatibilité avec l'ancien module ``cleaner.py``.
+# Class name kept for compatibility with the legacy ``cleaner.py`` module.
 class WikitextCleaner:
-    """Convertit le Wikitext d'une page en Markdown propre pour LLM.
+    """Converts a page's Wikitext into clean Markdown for LLMs.
 
         Args:
-            title: titre de la page (libellé humain, utilisé en debug).
-            cleaner_config: constantes de nettoyage (injectées depuis
+            title: page title (human-readable label, used for debugging).
+            cleaner_config: cleaning constants (injected from
                 ``config/cleaner_config.json``).
         """
 
@@ -104,14 +104,14 @@ class WikitextCleaner:
 
     # ------------------------------------------------------------------ API
     def clean(self, wikitext: str) -> CleanOutput:
-        """Nettoye le Wikitext et retourne le Markdown enrichi de signaux canon."""
+        """Cleans the Wikitext and returns Markdown enriched with canon signals."""
         non_canon_detected = False
         canon_detected = False
 
         if not wikitext:
             return CleanOutput(markdown="")
 
-        # Étape 1 — assainissement pré-parse (purges destructives).
+        # Step 1 -- pre-parse sanitization (destructive purges).
         text = wikitext
         text = strip_wikitext_comments(text)
         text = strip_tables_and_code_blocks(text)
@@ -120,11 +120,11 @@ class WikitextCleaner:
         text = strip_file_and_image_references(text)
         parsed = mwparserfromhell.parse(text)
 
-        # Étape 2 — gestion des templates d'intérêt narratif.
-        # Détection canon/non-canon AVANT tout remplacement/aplatissement :
-        # un template de signal peut être imbriqué dans un autre template ou
-        # un nœud de liste ; filter_templates(recursive=True) le trouve alors
-        # qu'une boucle sur parsed.nodes (surface) ne descend pas.
+        # Step 2 -- narrative-interest template handling.
+        # Canon/non-canon detection BEFORE any replacement/flattening:
+        # a signal template may be nested inside another template or
+        # list node; filter_templates(recursive=True) finds it whereas
+        # a surface-level loop over parsed.nodes does not descend.
         all_templates = parsed.filter_templates(recursive=True)
         for node in all_templates:
             if must_flag_non_canon(node, self.cleaner_config):
@@ -152,10 +152,10 @@ class WikitextCleaner:
 
         text = str(parsed)
 
-        # Étape 3 — templates résiduels -> premier argument pipe (fallback).
+        # Step 3 -- residual templates -> first pipe argument (fallback).
         text = strip_templates_to_text(text, self.cleaner_config)
 
-        # Étape 4 — mise en forme Markdown.
+        # Step 4 -- Markdown formatting.
         text = protect_bullets(text)
         text = convert_markup_to_markdown(text)
         text = normalise_links(text)

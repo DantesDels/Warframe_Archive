@@ -1,13 +1,13 @@
-"""Fournisseur LLM/embedding local via LM Studio (API compatible OpenAI).
+"""Local LLM/embedding provider via LM Studio (OpenAI-compatible API).
 
-LM Studio sert un endpoint ``/v1`` compatible OpenAI : ``/chat/completions``
-(streaming) et ``/embeddings``.  Les modèles chargés localement (embedding
-``BAAI/bge-m3`` GGUF, chat ``Llama-3.2-3B-Instruct``) sont appelés sans clé
-réelle (clé factice ``lm-studio``).
+LM Studio serves an OpenAI-compatible ``/v1`` endpoint: ``/chat/completions``
+(streaming) and ``/embeddings``. Locally loaded models (embedding
+``BAAI/bge-m3`` GGUF, chat ``Llama-3.2-3B-Instruct``) are called without a
+real key (dummy key ``lm-studio``).
 
-Pour les modèles de raisonnement (ex: Qwen3), seuls les tokens de *contenu
-visible* (``delta.content``) sont relayés — le raisonnement interne
-(``delta.reasoning_content``) est ignoré.
+For reasoning models (e.g. Qwen3), only *visible content* tokens
+(``delta.content``) are relayed — internal reasoning
+(``delta.reasoning_content``) is ignored.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ def _payload(messages: list[ChatMessage], model: str,
 
 
 class LMStudioProvider(LLMProvider, EmbeddingProvider):
-    """Appelle les modèles chargés dans LM Studio (chat + embeddings)."""
+    """Calls models loaded in LM Studio (chat + embeddings)."""
 
     def __init__(self, base_url: str, chat_model: str,
                  embedding_model: str, api_key: str = "lm-studio",
@@ -84,7 +84,7 @@ class LMStudioProvider(LLMProvider, EmbeddingProvider):
         })
         response.raise_for_status()
         payload = response.json()["data"]
-        # L'ordre peut varier ; on se cale sur la position d'origine.
+        # Order may vary; we align on the original position.
         by_index = {item["index"]: item["embedding"] for item in payload}
         return [by_index[i] for i in range(len(texts))]
 

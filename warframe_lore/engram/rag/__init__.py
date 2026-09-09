@@ -1,9 +1,9 @@
-"""RAG documentaire : récupération vectorielle, prompt et orchestration.
+"""Document RAG: vector retrieval, prompt and orchestration.
 
-    * ``retriever``-> :class:`RAGHit` + :class:`Retriever` (contrat) ;
-    * ``search``   -> :class:`CosinusSearch` (implémentation pgvector) ;
-    * ``prompt``   -> :class:`PromptBuilder` / :class:`RAGPrompt` ;
-    * ``service``  -> :class:`RAGService` (orchestration, dépend des abstraits).
+    * ``retriever`` -> :class:`RAGHit` + :class:`Retriever` (contract);
+    * ``search``    -> :class:`CosinusSearch` (pgvector implementation);
+    * ``prompt``    -> :class:`PromptBuilder` / :class:`RAGPrompt`;
+    * ``service``   -> :class:`RAGService` (orchestration, depends on abstractions).
 """
 
 from __future__ import annotations

@@ -1,14 +1,13 @@
-"""Point d'entrée du bot Discord Oracle.
+"""Entry point of the Oracle Discord bot.
 
-Lance ``LoreMasterBot`` (discord.Client) branché sur l'API ENGRAM en
-WebSocket.  Lancement :
+Launches ``LoreMasterBot`` (discord.Client) wired to the ENGRAM API over
+WebSocket.  Launch:
     python -m warframe_lore.discord.main [--token ...] [--ws URL]
 """
 
 from __future__ import annotations
 
 import argparse
-import asyncio
 import logging
 import sys
 
@@ -19,17 +18,17 @@ from .config import DiscordConfig
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="loremaster",
-        description="Bot Discord Oracle (terminal Roleplay via ENGRAM WebSocket).",
+        description="Oracle Discord bot (Roleplay terminal via ENGRAM WebSocket).",
     )
     parser.add_argument("--token", default=None,
-                        help="Token du bot (ou env DISCORD_TOKEN)")
+                        help="Bot token (or env DISCORD_TOKEN)")
     parser.add_argument("--ws", default=None,
-                        help="URL WebSocket ENGRAM (d́faut: ws://localhost:8000/v1/roleplay)")
+                        help="ENGRAM WebSocket URL (default: "
+                             "ws://localhost:8000/v1/roleplay)")
     parser.add_argument("--prefix", default=None,
-                        help="Pŕfixe des commandes (d́faut: !)")
+                        help="Commands prefix (default: !)")
     parser.add_argument("--channels", default=None,
-                        help="IDs de canaux autoriśs, śpaŕs par des virgules "
-                             "(d́faut: tous)")
+                        help="Allowed channel IDs, comma-separated (default: all)")
     parser.add_argument("--verbose", action="store_true")
     return parser
 
@@ -38,8 +37,8 @@ def launch_bot(token: str | None, ws: str | None = None,
                prefix: str | None = None, channels: tuple[int, ...] = (),
                typing_interval: float | None = None,
                verbose: bool = False) -> int:
-    """Démarre le bot (bloquant) : partagé entre ``python -m
-    warframe_lore.discord.main`` et ``cephalon bot run``.
+    """Starts the bot (blocking): shared between ``python -m
+    warframe_lore.discord.main`` and ``cephalon bot run``.
     """
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.INFO,
@@ -48,7 +47,7 @@ def launch_bot(token: str | None, ws: str | None = None,
     config = DiscordConfig.load()
     token = token or config.token
     if not token:
-        print("Token Discord manquant : passer --token ou DISCORD_TOKEN.",
+        print("Missing Discord token: pass --token or DISCORD_TOKEN.",
               file=sys.stderr)
         return 2
 

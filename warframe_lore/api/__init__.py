@@ -1,9 +1,9 @@
-"""Couche API : accès aux sources de données (extraction).
+"""API layer: access to data sources (extraction).
 
-Expose :
-    * :class:`BaseSource` — interface abstraite pour toute source ;
-    * :class:`MediaWikiSource` — implémentation du wiki Warframe ;
-    * :class:`BucketConfig` / :class:`CategoryCatalog` — résolution des buckets.
+Exposes:
+    * :class:`BaseSource` — abstract interface for any source;
+    * :class:`MediaWikiSource` — Warframe wiki implementation;
+    * :class:`BucketConfig` / :class:`CategoryCatalog` — bucket resolution.
 """
 
 from .base import BaseSource, CategorySpec, PageData, TouchedInfo

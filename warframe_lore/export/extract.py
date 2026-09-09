@@ -1,4 +1,4 @@
-"""Extraction d'entités localisées depuis un actif JSON."""
+"""Localized entity extraction from a JSON asset."""
 
 from __future__ import annotations
 
@@ -17,21 +17,21 @@ def extract_entities(
     category: str,
     payload: bytes,
 ) -> list[GameEntity]:
-    """Extrait :class:`GameEntity` d'un manifest.
+    """Extracts :class:`GameEntity` instances from a manifest.
 
-    Le fichier JSON est ``{"Export<Category>": [ ... ]}`` ; chaque entrée
-    porte ``uniqueName``, ``name`` (localisé) et ``description`` (localisé).
-    Les entrées sans ``uniqueName`` sont ignorées.
+    The JSON file is ``{"Export<Category>": [ ... ]}``; each entry
+    carries ``uniqueName``, ``name`` (localized), and ``description``
+    (localized).  Entries without ``uniqueName`` are skipped.
     """
     entity_type = categories[category]
     try:
         data = json.loads(payload.decode("utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError) as error:
-        log.warning("JSON illisible pour %s/%s : %s", category, lang, error)
+        log.warning("Unreadable JSON for %s/%s: %s", category, lang, error)
         return []
     entries = data.get(category) if isinstance(data, dict) else data
     if not isinstance(entries, list):
-        log.warning("Structure inattendue pour %s/%s (type %s).",
+        log.warning("Unexpected structure for %s/%s (type %s).",
                     category, lang, type(entries).__name__)
         return []
     entities = []

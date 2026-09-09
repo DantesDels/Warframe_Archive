@@ -1,9 +1,9 @@
-"""Pointeurs de navigation KIM à purger avant découpage en chunks.
+"""KIM navigation pointers to purge before chunking.
 
-Pointeurs en tête de ligne de dialogue (``> **{Continues/Same/Jump ...}``,
-préfixés ``{If ...}``, ``> **>``, ``> >``) et pointeurs embarqués (fermés) :
-artefacts du datamine à ne pas chunker.  ``{Convo. ends.}`` est volontairement
-conservé (marqueur terminal du sim).
+Pointers at the start of a dialogue line (``> **{Continues/Same/Jump ...}``,
+prefixed with ``{If ...}``, ``> **>``, ``> >``) and embedded (closed)
+pointers: datamine artifacts that must not be chunked.  ``{Convo. ends.}``
+is intentionally kept (terminal marker of the sim).
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ _KIM_CONDITION_CHUNK = re.compile(r"\{\s*if\s+[^{}]*\}", re.I)
 
 
 def strip_kim_chunk_meta(markdown: str) -> str:
-    """Purge les instructions de continuité/condition KIM du texte à découper."""
+    """Purges the KIM continuity/condition instructions from the text to split."""
     text = _KIM_POINTER_LINE_CHUNK.sub("", markdown or "")
     text = _KIM_INLINE_NAV_CHUNK.sub("", text)
     text = _KIM_CONDITION_CHUNK.sub("", text)

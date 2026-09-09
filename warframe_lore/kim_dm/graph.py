@@ -1,14 +1,14 @@
-"""Opérations de graphe : ancre synthétique et union par personnage."""
+"""Graph operations: synthetic anchor and union per character."""
 
 from __future__ import annotations
 
 
 def _anchor_graph(nodes: list, edges: list, root_label: str,
                   force: bool = True) -> dict:
-    """Ancre synthétique des pages agrégées et du fallback wiki existant.
+    """Synthetic anchor for aggregated pages and the existing wiki fallback.
 
-    Les starts natifs restent rattachés même avec une arête de retour.
-    Cette fonction n'est pas utilisée pour une conversation native isolée.
+    Native starts stay attached even with a back edge.
+    This function is not used for an isolated native conversation.
     """
     if not nodes:
         return {"rootId": None, "nodes": [], "edges": edges}
@@ -27,7 +27,7 @@ def _anchor_graph(nodes: list, edges: list, root_label: str,
 
 
 def _merge_graphs(graphs: list[dict]) -> dict:
-    """Union des graphes d'une page (ids de nœuds uniques par fichier)."""
+    """Union of a page's graphs (unique node ids per file)."""
     nodes: list[dict] = []
     edges: list[dict] = []
     seen_nodes: set[str] = set()

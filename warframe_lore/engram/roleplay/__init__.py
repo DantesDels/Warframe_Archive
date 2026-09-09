@@ -1,4 +1,4 @@
-"""Roleplay KIM : sessions, fenêtre glissante et streaming."""
+"""KIM Roleplay: sessions, sliding window and streaming."""
 
 from __future__ import annotations
 

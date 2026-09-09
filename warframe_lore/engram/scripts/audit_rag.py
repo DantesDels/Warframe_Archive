@@ -1,6 +1,6 @@
-"""Audit BDD RAG : décompte des ``lore_chunks`` + aperçu par page.
+"""RAG database audit: ``lore_chunks`` count + per-page preview.
 
-Utilisation (racine du projet) :
+Usage (project root):
     python -m warframe_lore.engram.scripts.audit_rag [--limit 3] [--name Leticia]
 """
 
@@ -27,14 +27,14 @@ async def run(cfg: EngramConfig, limit: int, name: str | None) -> None:
                 filters.append(WikiPage.page_title.ilike(f"%{name}%"))
                 rows = (await session.execute(
                     select(WikiPage.page_title).where(*filters))).scalars().all()
-                print(f"Pages correspondant à '{name}' : {len(rows)}")
+                print(f"Pages matching '{name}': {len(rows)}")
                 for title in rows[:20]:
                     print(f"  - {title}")
             total = (await session.execute(
                 select(func.count()).select_from(LoreChunk))).scalar_one()
-            print(f"LoreChunk (lore_chunks) : {total} ligne(s)")
+            print(f"LoreChunk (lore_chunks): {total} row(s)")
             if not total:
-                print("Base vide : relancer l'ingestion (ingest.py).")
+                print("Empty database: re-run ingestion (ingest.py).")
                 return
             query = (select(LoreChunk)
                      .options(selectinload(LoreChunk.wiki_page))
@@ -48,18 +48,18 @@ async def run(cfg: EngramConfig, limit: int, name: str | None) -> None:
                 excerpt = " ".join((chunk.content_markdown or "").split())[:200]
                 print(f"\n--- chunk {i} id={chunk.id} page_id={chunk.wiki_page_id} "
                       f"idx={chunk.chunk_index} page={chunk.wiki_page.page_title} ---")
-                print(f"métadonnées : {chunk.chunk_metadata}")
-                print(f"extrait : {excerpt}...")
+                print(f"metadata: {chunk.chunk_metadata}")
+                print(f"excerpt: {excerpt}...")
     finally:
         await manager.close()
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Audit BDD RAG (lore_chunks).")
+    parser = argparse.ArgumentParser(description="RAG database audit (lore_chunks).")
     parser.add_argument("--limit", type=int, default=3,
-                        help="Nombre de chunks à afficher (défaut: 3)")
+                        help="Number of chunks to display (default: 3)")
     parser.add_argument("--name", type=str, default=None,
-                        help="Filtre sur le titre de page (ex: Leticia)")
+                        help="Filter by page title (e.g. Leticia)")
     args = parser.parse_args()
     asyncio.run(run(EngramConfig.load(), args.limit, args.name))
 

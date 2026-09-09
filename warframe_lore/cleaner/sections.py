@@ -1,13 +1,14 @@
-"""Machine à états de suppression des blocs gameplay (lore imbriqué gardé)."""
+"""State machine for dropping gameplay blocks (nested lore kept).
 
-# But : une page de quête contient des sections "Acquisition", "Stats',
-# "Patch history" (gameplay, bruit) et des sections "Lore", "Summary",
-# "Dialogue" (essentielles). On supprime les blocs gameplay, SAUF si un bloc
-# gameplay contient une sous-section lore imbriquée (cas de ``Trivia``
-# contenant du lore).
-#
-# La logique travaille ligne à ligne sur le texte déjà transformé en Markdown
-# (titres ``## ...``) pour préserver la structure finale.
+Goal: a quest page contains "Acquisition", "Stats",
+"Patch history" sections (gameplay, noise) and "Lore", "Summary",
+"Dialogue" sections (essential).  We drop gameplay blocks, UNLESS a
+gameplay block contains a nested lore subsection (case of ``Trivia``
+containing lore).
+
+The logic works line-by-line on text already converted to Markdown
+(``## ...`` headings) to preserve the final structure.
+"""
 
 from __future__ import annotations
 
@@ -24,10 +25,10 @@ _HEADING_PATTERN = re.compile(r"^(={2,6}|#{1,6})\s*(.*?)\s*(?:={0,2}|#*)\s*$")
 
 def drop_gameplay_sections(markdown_text: str,
                            cleaner_config: CleanerConfig) -> str:
-    """Supprime les sections gameplay tout en conservant le lore imbriqué.
+    """Drops gameplay sections while preserving nested lore.
 
-    Uses a state machine : tant qu'on est dans un bloc gameplay, on ignore
-    les lignes ; une sous-section lore ouvre la sortie prématurée du bloc.
+    Uses a state machine: as long as we are inside a gameplay block,
+    lines are ignored; a lore subsection triggers early exit from the block.
     """
     lines = markdown_text.split("\n")
     output_lines: list[str] = []
@@ -44,8 +45,8 @@ def drop_gameplay_sections(markdown_text: str,
             is_gameplay_heading = is_gameplay_section(heading_title, cleaner_config)
 
             if suppression_active_at_level:
-                # On est sous un bloc gameplay : on ressort si lore imbriqué
-                # ou si on remonte au niveau du bloc supprimé.
+                # We are inside a gameplay block: exit if nested lore
+                # or if we rise back to the suppressed block's level.
                 if is_lore_heading:
                     suppression_active_at_level = 0
                 elif heading_level <= suppression_active_at_level:
@@ -57,7 +58,7 @@ def drop_gameplay_sections(markdown_text: str,
             if not suppression_active_at_level and is_gameplay_heading \
                     and not is_lore_heading:
                 suppression_active_at_level = heading_level
-                continue  # on jette l'en-tête gameplay
+                continue  # discard the gameplay heading
 
             output_lines.append(line)
         elif not suppression_active_at_level:

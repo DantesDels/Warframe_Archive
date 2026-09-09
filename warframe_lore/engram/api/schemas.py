@@ -1,4 +1,4 @@
-"""Schémas HTTP de l'API ENGRAM (couche transport uniquement)."""
+"""ENGRAM API HTTP schemas (transport layer only)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class RAGRequest:
-    """Corps de la route documentaire."""
+    """Document route request body."""
 
     question: str
     stream: bool = False
@@ -15,7 +15,7 @@ class RAGRequest:
 
 @dataclass
 class SourceDocument:
-    """Passage pertinent, exposé comme source au client."""
+    """Relevant passage, exposed as a source to the client."""
 
     page_title: str
     content: str
@@ -24,7 +24,7 @@ class SourceDocument:
 
 @dataclass
 class RAGResponse:
-    """Réponse documentaire : réponse du modèle + sources."""
+    """Document response: model answer + sources."""
 
     answer: str
     sources: list[SourceDocument] = field(default_factory=list)

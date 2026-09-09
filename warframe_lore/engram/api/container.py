@@ -1,7 +1,7 @@
-"""Composition des services ENGRAM à partir de la configuration.
+"""ENGRAM service composition from configuration.
 
-Prépare (uniquement à l'import du process API) l'engine SQLAlchemy async,
-le fournisseur LLM/embedding LM Studio, puis les services RAG et Roleplay.
+Prepares (only on API process import) the SQLAlchemy async engine,
+the LM Studio LLM/embedding provider, then the RAG and Roleplay services.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from .ratelimit import SlidingWindowLimiter
 
 
 class Container:
-    """Graphe d'objets de l'application (engine, LLM, services)."""
+    """Application object graph (engine, LLM, services)."""
 
     def __init__(self, config: EngramConfig | None = None) -> None:
         self.config = config or EngramConfig.load()
@@ -57,7 +57,7 @@ class Container:
                 .system_prompt(mode="hostile"),
             temperature=self.config.chat_temperature,
         )
-        # Anti-DDoS / anti-abuse : débit maximal par IP (HTTP RAG + WS Roleplay).
+        # Anti-DDoS / anti-abuse: max rate per IP (HTTP RAG + WS Roleplay).
         self.rag_limiter = SlidingWindowLimiter(
             max_events=self.config.rate_limit_rag,
             window_seconds=self.config.rate_limit_rag_window)
@@ -66,10 +66,10 @@ class Container:
             window_seconds=self.config.rate_limit_ws_window)
 
     def _system_prompt(self) -> str:
-        """Prompt du persona : fichier éditable ``persona/oracle`` sinon défaut."""
+        """Persona prompt: editable ``persona/oracle`` file, otherwise default."""
         return Persona(self.config.system_prompt).system_prompt()
 
     async def aclose(self) -> None:
-        """Libère le pool SQL et la session HTTP du LLM."""
+        """Releases the SQL pool and the LLM HTTP session."""
         await self.llm.close()
         await self.engine.dispose()

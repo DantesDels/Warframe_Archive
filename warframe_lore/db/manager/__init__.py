@@ -1,15 +1,15 @@
-"""Gestionnaire de base de données SQL — composition des mixins.
+"""SQL database manager — mixin composition.
 
-``SQLDatabaseManager`` remplace la logique purement JSON pour la persistance
-relationnelle : il écrit les pages nettoyées dans PostgreSQL (upsert
-transactionnel), en parallèle des megafiles JSON.
+``SQLDatabaseManager`` replaces the purely JSON logic for relational
+persistence: it writes the cleaned pages into PostgreSQL (transactional
+upsert), in parallel with the JSON megafiles.
 
-La classe est composée par héritage multiple depuis les mixins ciblés :
-    * ``base``      — cycle de vie (engine, session, DDL) ;
-    * ``ingest``    — upsert page + chunks + dialogues ;
-    * ``entities``  — entités localisées du jeu ;
-    * ``delta``     — suivi du mode delta (``sync_state``) ;
-    * ``queries``   — diagnostics (stats, pages récentes).
+The class is composed by multiple inheritance from the targeted mixins:
+    * ``base``      — lifecycle (engine, session, DDL);
+    * ``ingest``    — page + chunks + dialogues upsert;
+    * ``entities``  — localized game entities;
+    * ``delta``     — delta mode tracking (``sync_state``);
+    * ``queries``   — diagnostics (stats, recent pages).
 """
 
 from __future__ import annotations
@@ -25,4 +25,4 @@ __all__ = ["SQLDatabaseManager"]
 
 class SQLDatabaseManager(SQLSessionBase, SQLIngestMixin, SQLEntitiesMixin,
                          SQLDeltaMixin, SQLQueryMixin):
-    """Point d'entrée public de la couche SQL (voir les mixins)."""
+    """Public entry point of the SQL layer (see the mixins)."""

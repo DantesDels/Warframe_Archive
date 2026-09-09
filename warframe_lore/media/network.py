@@ -1,4 +1,4 @@
-"""Accès réseau minimal pour les ressources média."""
+"""Minimal network access for media resources."""
 
 from __future__ import annotations
 

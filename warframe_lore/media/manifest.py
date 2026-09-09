@@ -1,4 +1,4 @@
-"""Construction de l'index média : manifest + noms publics (avec cache)."""
+"""Media index construction: manifest + public names (with caching)."""
 
 from __future__ import annotations
 
@@ -15,10 +15,10 @@ log = logging.getLogger(__name__)
 
 def load_and_cache_manifest(cache_dir: Path, force: bool,
                             timeout: int) -> tuple[dict, dict]:
-    """Retourne ``(uniqueName->textureLocation, filename->textureLocation)``."""
+    """Return ``(uniqueName->textureLocation, filename->textureLocation)``."""
     manifest_path = cache_dir / "ExportManifest.json"
     if not manifest_path.exists() or force:
-        log.info("Téléchargement d'ExportManifest.json (%s)",
+        log.info("Downloading ExportManifest.json (%s)",
                  MANIFEST_MIRROR_URL)
         download_to(MANIFEST_MIRROR_URL, manifest_path, timeout)
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -35,12 +35,12 @@ def load_and_cache_manifest(cache_dir: Path, force: bool,
             continue
         texture[uid] = location
         by_file[sanitize_filename(location)] = location
-    log.debug("ExportManifest : %d entrées.", len(texture))
+    log.debug("ExportManifest: %d entries.", len(texture))
     return texture, by_file
 
 
 def load_and_cache_names(cache_dir: Path, force: bool, timeout: int) -> dict:
-    """Index ``clé normalisée -> uniqueName`` pour titres de page / locuteurs."""
+    """Index ``normalised key -> uniqueName`` for page titles / speakers."""
     names_path = cache_dir / "entity_names.json"
     if names_path.exists() and not force:
         data = json.loads(names_path.read_text(encoding="utf-8"))
@@ -48,8 +48,8 @@ def load_and_cache_names(cache_dir: Path, force: bool, timeout: int) -> dict:
     names: dict[str, str] = {}
     try:
         from ..export import PublicExportClient
-    except ImportError:  # boutique : au pire, index sans noms
-        log.warning("PublicExportClient indisponible (noms ignorés).")
+    except ImportError:  # boutique: at worst, index without names
+        log.warning("PublicExportClient unavailable (names ignored).")
         return names
     client = PublicExportClient(cache_dir=cache_dir.parent, langs=("en",))
     client.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -72,11 +72,11 @@ def load_and_cache_names(cache_dir: Path, force: bool, timeout: int) -> dict:
 
 
 def iter_entities(client, family: str, payload: bytes) -> list[tuple[str, str]]:
-    """``(uniqueName, name)`` pour une famille de manifest.
+    """``(uniqueName, name)`` for a manifest family.
 
-    Les familles connues de ``PublicExportClient`` passent par son
-    extracteur ; les autres (Sentinels, Drones, …) sont lues directement
-    (format ``{"Export<Family>": [{"uniqueName", "name", ...}]}``)."""
+    Known families go through ``PublicExportClient``'s extractor; others
+    (Sentinels, Drones, …) are read directly (format
+    ``{"Export<Family>": [{"uniqueName", "name", ...}]}``)."""
     if family in client.categories:
         try:
             return [(entity.entity_id, entity.name)

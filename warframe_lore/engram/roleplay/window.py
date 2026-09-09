@@ -1,7 +1,7 @@
-"""Historique de session avec fenêtre glissante (sliding window).
+"""Session history with sliding window.
 
-Conserve les derniers échanges dans la limite d'un nombre de tours et d'une
-taille de contexte totale ; au-delà, on évacue les tours les plus anciens.
+Keeps the latest exchanges within a turn count and total context size limit;
+beyond that, the oldest turns are evicted.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from .models import Session
 
 
 class SlidingWindow:
-    """Borne l'historique d'une session avant l'appel au modèle."""
+    """Bounds session history before calling the model."""
 
     def __init__(self, max_turns: int = 20,
                  max_context_chars: int = 6000) -> None:
@@ -20,15 +20,15 @@ class SlidingWindow:
 
     def to_messages(self, session: Session,
                     system_prompt: str) -> list[ChatMessage]:
-        """Messages du modèle : system + fenêtre glissante de la session."""
+        """Model messages: system + sliding window of the session."""
         return [ChatMessage("system", system_prompt),
                 *self.bounded_turns(session)]
 
     def bounded_turns(self, session: Session) -> list[ChatMessage]:
-        """Fenêtre glissante : tours retenus (du plus récent au plus ancien)."""
+        """Sliding window: retained turns (most recent to oldest)."""
         window = session.turns[-self.max_turns:]
         used = 0
-        # Parcourt du plus récent au plus ancien pour respecter la taille.
+        # Iterate from most recent to oldest to respect size.
         retained: list[ChatMessage] = []
         for turn in reversed(window):
             message = ChatMessage(turn.role, turn.content)

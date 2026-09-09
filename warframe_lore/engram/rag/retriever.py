@@ -1,9 +1,9 @@
-"""Contrat d'accès au corpus vectoriel pour le moteur RAG.
+"""RAG engine vector corpus access contract.
 
-Abstraction (``typing.Protocol``) : ``RAGService`` dépend de cette interface,
-jamais d'un stockage concret.  ``CosinusSearch`` (PostgreSQL/pgvector) en est
-une implémentation ; on peut en brancher d'autres (FAISS, Qdrant… ) par simple
-substitution — sans altérer le cœur du moteur (principes O, D, L).
+Abstraction (``typing.Protocol``): ``RAGService`` depends on this interface,
+never on a concrete storage. ``CosinusSearch`` (PostgreSQL/pgvector) is one
+implementation; others can be plugged in (FAISS, Qdrant...) by simple
+substitution — without altering the engine core (O, D, L principles).
 """
 
 from __future__ import annotations
@@ -14,26 +14,26 @@ from typing import Protocol, runtime_checkable
 
 @dataclass
 class RAGHit:
-    """Un passage pertinent trouvé par la recherche vectorielle."""
+    """A relevant passage found by vector search."""
 
     chunk_id: int
     page_title: str
     content: str
-    score: float  # similarité cosinus (1 - distance)
+    score: float  # cosine similarity (1 - distance)
 
 
 @runtime_checkable
 class Retriever(Protocol):
-    """Recherche les passages les plus proches d'un vecteur de requête."""
+    """Searches for passages closest to a query vector."""
 
     async def search(self, query_vector: list[float]) -> list[RAGHit]:
-        """Retourne les passages pertinents (limités + seuil de score)."""
+        """Returns relevant passages (limited + score threshold)."""
 
     async def suggest_title(self, question: str) -> str | None:
-        """Titre de page proche lexiquement de la question, ou None.
+        """Page title lexically close to the question, or None.
 
-        Repli de désambiguïsation : utilisé uniquement quand la recherche
-        vectorielle ne remonte aucun passage pour la requête demandée.
+        Disambiguation fallback: used only when vector search returns no
+        passage for the requested query.
         """
 
 

@@ -1,4 +1,4 @@
-"""Statut canonique d'une page de lore (canon vs conjecture)."""
+"""Canon status of a lore page (canon vs speculation)."""
 
 from __future__ import annotations
 
@@ -6,14 +6,14 @@ from enum import Enum
 
 
 class CanonStatus(str, Enum):
-    """Statut canonique d'une page.
+    """Canon status of a page.
 
     Values:
-        canon: lore officiel établi (descriptions de jeu, quêtes, dialogues).
-        speculation: conjecture signalée par le wiki (template/catégorie
-            ``{{Speculation}}``) — à ne PAS prendre comme source primaire.
-        community_theory: théorie des joueurs (ex: flair Reddit) — jamais
-            au même niveau que le canon.
+        canon: established official lore (game descriptions, quests, dialogues).
+        speculation: wiki-flagged speculation (``{{Speculation}}`` template/
+            category) -- do NOT use as a primary source.
+        community_theory: player theory (e.g. Reddit flair) -- never on
+            the same level as canon.
     """
 
     CANON = "canon"
@@ -21,9 +21,9 @@ class CanonStatus(str, Enum):
     COMMUNITY_THEORY = "community_theory"
 
 
-# Ordre de priorité : si plusieurs signaux coexistent, le plus faible l'emporte
-# (une page peut contenir du canon ET une spec ; le RAG doit savoir qu'il y a
-# du non-canon présent).
+# Priority order: when multiple signals coexist, the weakest wins
+# (a page may contain canon AND speculation; the RAG must know there is
+# non-canon content present).
 _CANON_PRIORITY: dict[CanonStatus, int] = {
     CanonStatus.CANON: 0,
     CanonStatus.SPECULATION: 1,
@@ -32,10 +32,10 @@ _CANON_PRIORITY: dict[CanonStatus, int] = {
 
 
 def merge_canon_status(*statuses: CanonStatus | None) -> CanonStatus:
-    """Combine des statuts canon en retenant le plus faible (le plus prudent).
+    """Combines canon statuses, keeping the weakest (most cautious).
 
-    Exemple : une page canon qui contient un template {{Speculation}} en
-    ligne -> statut final "speculation" (le lecteur doit être alerté).
+    Example: a canon page containing an inline ``{{Speculation}}`` template
+    -> final status "speculation" (the reader must be alerted).
     """
     present = [s for s in statuses if s is not None]
     if not present:

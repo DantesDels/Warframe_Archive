@@ -1,8 +1,8 @@
-"""Édition d'un message Discord avec buffering anti rate-limit (SOLID).
+"""Discord message editing with rate-limit buffering (SOLID).
 
-Isole la temporisation du streaming Discord (compteur de tokens + intervalle
-de temps) du transport et du bot : seule responsabilité ici, ne dépend pas de
-la connexion WS ni du routage des messages.
+Isolates the Discord streaming throttling (token counter + time interval)
+from transport and bot: sole responsibility here, does not depend on the WS
+connection nor on message routing.
 """
 
 from __future__ import annotations
@@ -16,11 +16,11 @@ log = logging.getLogger("warframe_lore.discord.streamer")
 
 
 class MessageStreamer:
-    """Diffuse les tokens du LLM sur un message Discord, sans spammer l'API.
+    """Streams LLM tokens onto a Discord message without spamming the API.
 
-    La première édition remplace intégralement le placeholder ; les
-    suivantes ne partent que toutes les ``update_every`` tokens ou après un
-    intervalle minimum ``min_interval`` (chronomètre simple, non bloquant).
+    The first edit fully replaces the placeholder; the following ones only
+    fire every ``update_every`` tokens or after a minimum ``min_interval``
+    (simple, non-blocking timer).
     """
 
     def __init__(self, message: discord.Message, update_every: int = 15,
@@ -33,10 +33,10 @@ class MessageStreamer:
         self._last_edit = 0.0
 
     def reset(self) -> None:
-        """Purge le buffer d'accumulation (nouveau tour / reconnexion).
+        """Purges the accumulation buffer (new turn / reconnection).
 
-        La première édition après un ``reset`` remplace INTÉGRALEMENT le
-        placeholder sans concaténer les fragments de la tentative précédente.
+        The first edit after a ``reset`` FULLY replaces the placeholder
+        without concatenating the fragments of the previous attempt.
         """
         self._parts.clear()
         self._count = 0
@@ -44,11 +44,11 @@ class MessageStreamer:
 
     @property
     def text(self) -> str:
-        """Texte accumulé (sans passer par le contenu du placeholder)."""
+        """Accumulated text (without going through the placeholder content)."""
         return "".join(self._parts)
 
     async def add(self, token: str) -> None:
-        """Accumule un token, édite dès que le seuil est franchi."""
+        """Accumulate a token, edit as soon as the threshold is crossed."""
         if not token:
             return
         self._parts.append(token)
@@ -59,18 +59,18 @@ class MessageStreamer:
             await self.flush()
 
     async def flush(self) -> None:
-        """Pousse le texte accumulé vers Discord (ignoré si inchangé)."""
+        """Push the accumulated text to Discord (ignored if unchanged)."""
         if not self._parts or self.text == self.message.content:
             return
         try:
             await self.message.edit(content=self.text)
         except discord.HTTPException as exc:
-            log.debug("Édition refusée/échouée sur Discord : %s", exc)
+            log.debug("Edit refused/failed on Discord: %s", exc)
             return
         self._last_edit = time.monotonic()
 
     async def finish(self) -> None:
-        """Édition finale en sortie de flux : derniers caractères du buffer."""
+        """Final edit at the end of the stream: last buffer characters."""
         await self.flush()
 
 

@@ -1,4 +1,4 @@
-"""Rendu des templates narratifs (Quote, Spoiler, Speculation, Canon)."""
+"""Rendering of narrative templates (Quote, Spoiler, Speculation, Canon)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from warframe_lore.cleaner.config import CleanerConfig
 
 
 def render_quote_template(template_node: Template) -> str:
-    """Convertit ``{{Quote|texte|personnage}}`` en blockquote Markdown."""
+    """Converts ``{{Quote|text|speaker}}`` to a Markdown blockquote."""
     params = [str(param.value).strip() for param in template_node.params]
     quote_text = params[0] if params else ""
     speaker_name = params[1] if len(params) > 1 else ""
@@ -19,7 +19,7 @@ def render_quote_template(template_node: Template) -> str:
 
 
 def render_spoiler_template(template_node: Template) -> str:
-    """Convertit ``{{Spoiler|texte}}`` en blockquote ``*_SPOILERS_*``."""
+    """Converts ``{{Spoiler|text}}`` to a ``*_SPOILERS_*`` blockquote."""
     params = [str(param.value).strip() for param in template_node.params]
     spoiler_hint = params[0] if params else "Spoiler"
     return f"\n> *_SPOILERS_* _: {spoiler_hint}_"
@@ -27,10 +27,10 @@ def render_spoiler_template(template_node: Template) -> str:
 
 def render_non_canon_template(template_node: Template,
                               cleaner_config: CleanerConfig) -> str:
-    """Rend le template de conjecture en marqueur NON-CANON explicite.
+    """Renders the speculation template as an explicit NON-CANON marker.
 
-    Le premier argument pipe du template (ex: ``{{Speculation|...}}``)
-    devient le texte du marqueur ; sinon marqueur générique.
+    The first pipe argument of the template (e.g. ``{{Speculation|...}}``)
+    becomes the marker text; otherwise a generic marker is used.
     """
     params = [str(param.value).strip() for param in template_node.params]
     explanation_text = params[0] if params else ""
@@ -42,7 +42,7 @@ def render_non_canon_template(template_node: Template,
 
 def render_canon_template(template_node: Template,
                           cleaner_config: CleanerConfig) -> str:
-    """Rend le template de confirmation en marqueur CANON OFFICIEL."""
+    """Renders the confirmation template as an OFFICIAL CANON marker."""
     params = [str(param.value).strip() for param in template_node.params]
     note_text = params[0] if params else ""
     marker_core = f"[{cleaner_config.marker_canon}]"

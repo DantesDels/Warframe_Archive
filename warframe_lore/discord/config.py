@@ -1,4 +1,4 @@
-"""Configuration du bot Discord (Loremaster/terminal Oracle)."""
+"""Discord bot configuration (Loremaster/Oracle terminal)."""
 
 from __future__ import annotations
 
@@ -16,10 +16,10 @@ def _env(name: str, default: str) -> str:
 
 @dataclass
 class DiscordConfig:
-    """Réglages du bot : token, endpoint WS ENGRAM, préfixe.
+    """Bot settings: token, ENGRAM WS endpoint, prefix.
 
-    Surchargeables par variables d'environnement ``DISCORD_*``.
-    Batterie de secours : ``DISCORD_TOKEN`` (secret) et ``ENGRAM_WS_URL``.
+    Overridable through the ``DISCORD_*`` environment variables.
+    Fallback battery: ``DISCORD_TOKEN`` (secret) and ``ENGRAM_WS_URL``.
     """
 
     token: str = field(
@@ -30,8 +30,8 @@ class DiscordConfig:
     prefix: str = field(
         default_factory=lambda: _env("DISCORD_PREFIX", "!"))
     typing_interval: float = float(_env("DISCORD_TYPING", "5"))
-    # Restreindre la réponse à certains canaux (IDs séparés par des virgules) ;
-    # vide = répondre dans tous les canaux accessibles.
+    # Restrict the replies to certain channels (IDs separated by commas);
+    # empty = reply in every accessible channel.
     allowed_channels: tuple[int, ...] = field(
         default_factory=lambda: tuple(
             int(x) for x in _env("DISCORD_CHANNELS", "").split(",")
@@ -39,5 +39,5 @@ class DiscordConfig:
 
     @classmethod
     def load(cls) -> "DiscordConfig":
-        """Construit la configuration depuis l'environnement."""
+        """Build the configuration from the environment."""
         return cls()

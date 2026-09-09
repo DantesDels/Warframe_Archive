@@ -1,4 +1,4 @@
-"""Modèles de transport de la couche LLM."""
+"""LLM layer transport models."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class ChatMessage:
-    """Un message de conversation envoyé au modèle."""
+    """A conversation message sent to the model."""
 
     role: str  # "system" | "user" | "assistant"
     content: str

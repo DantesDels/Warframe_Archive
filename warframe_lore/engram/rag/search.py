@@ -1,9 +1,9 @@
-"""Recherche vectorielle par similarité cosinus sur ``lore_chunks``.
+"""Vector search by cosine similarity on ``lore_chunks``.
 
-Implémentation de :class:`Retriever` (PostgreSQL/pgvector) : utilise
-l'opérateur ``<=>`` (distance cosinus) via l'ORM :class:`LoreChunk`.
-Distance la plus faible = passage le plus proche ; exposé en similarité
-(1 - distance).  Le retriever possède son propre ``async_sessionmaker``.
+Implementation of :class:`Retriever` (PostgreSQL/pgvector): uses the
+``<=>`` operator (cosine distance) via the :class:`LoreChunk` ORM.
+Lowest distance = closest passage; exposed as similarity
+(1 - distance). The retriever owns its own ``async_sessionmaker``.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from sqlalchemy.orm import selectinload
 from ...db import LoreChunk, WikiPage
 from .retriever import RAGHit, Retriever
 
-# Mots-outils français jugés non discriminant pour la recherche de titres.
+# French stopwords deemed non-discriminant for title search.
 _STOPWORDS = {
     "qu'est", "c'est", "comment", "pourquoi", "combien", "histoire",
     "parle", "dis", "decrit", "decris", "raconte", "connais", "sais",
@@ -28,16 +28,16 @@ _STOPWORDS = {
 
 _ALNUM = re.compile(r"[a-zA-Z0-9'_-]+")
 
-# Ratio minimal token/mot de titre pour la désambiguïsation : STRICT (0.93)
-# pour ne proposer que de vraies quasi-correspondances de noms propres.  Sans
-# lui, « une souris verte » → token « verte » valide le titre « Aurax Vertec »
-# (sous-chaîne trompeuse) et Oracle suggère une entité sans rapport.
+# Minimal title token/word ratio for disambiguation: STRICT (0.93) to
+# only propose real near-matches of proper names. Without it,
+# "une souris verte" → token "verte" validates the title "Aurax Vertec"
+# (misleading substring) and Oracle suggests an unrelated entity.
 _TOKEN_WORD_RATIO = 0.93
 
 
 def _token_matches_title(token: str, title: str) -> bool:
-    """Le token est lexiquement proche d'un MOT du titre (pas juste une
-    sous-chaîne à l'intérieur d'un mot plus long)."""
+    """The token is lexically close to a WORD of the title (not just a
+    substring inside a longer word)."""
     for word in _ALNUM.findall(title.lower()):
         if word and difflib.SequenceMatcher(None, token, word).ratio() >= _TOKEN_WORD_RATIO:
             return True
@@ -45,7 +45,7 @@ def _token_matches_title(token: str, title: str) -> bool:
 
 
 class CosinusSearch(Retriever):
-    """Interroge ``lore_chunks`` par similarité cosinus du vecteur de requête."""
+    """Queries ``lore_chunks`` by cosine similarity of the query vector."""
 
     def __init__(self, sessions: async_sessionmaker,
                  top_k: int = 6, min_score: float = 0.35) -> None:
@@ -54,7 +54,7 @@ class CosinusSearch(Retriever):
         self.min_score = min_score
 
     async def search(self, query_vector: list[float]) -> list[RAGHit]:
-        """Retourne les passages les plus proches de ``query_vector``."""
+        """Returns passages closest to ``query_vector``."""
         distance = LoreChunk.embedding.cosine_distance(query_vector).label("dist")
         statement = (
             select(LoreChunk, distance)
@@ -79,11 +79,11 @@ class CosinusSearch(Retriever):
         return hits
 
     async def suggest_title(self, question: str) -> str | None:
-        """Titre de page dont un token de la question est une sous-chaîne.
+        """Page title where a question token is a substring.
 
-        Repli lexical : on teste les tokens du plus long au plus court — le
-        mot le plus spécifique est le plus discriminant — et on retourne le
-        premier titre trouvé dans ``wiki_pages``, ou None.
+        Lexical fallback: tokens are tested from longest to shortest — the
+        most specific word is the most discriminant — and the first title
+        found in ``wiki_pages`` is returned, or None.
         """
         tokens = {t for t in _ALNUM.findall(question.lower())
                   if len(t) >= 3 and t not in _STOPWORDS}

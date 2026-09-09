@@ -1,11 +1,11 @@
-"""Templates MediaWiki : signal, rendu narratif et bruit.
+"""MediaWiki templates: signal, narrative rendering, and noise.
 
-Trois familles regroupées dans ce sous-paquet :
-    * ``signal`` — signal canon/non-canon (``{{Speculation}}``, ``{{Canon}}``) ;
-    * ``render`` — rendu des templates narratifs (quote, spoiler, ...) ;
-    * ``noise``  — bruit + fallback premier argument pipe.
+Three families grouped in this sub-package:
+    * ``signal`` -- canon/non-canon signal (``{{Speculation}}``, ``{{Canon}}``);
+    * ``render`` -- narrative template rendering (quote, spoiler, ...);
+    * ``noise``  -- noise + first-pipe-argument fallback.
 
-Le nom anglais ``NonCanon`` colle aux templates réels du wiki
+The English name ``NonCanon`` matches the real wiki templates
 (``{{Speculation}}``, ``{{Conjecture}}``).
 """
 

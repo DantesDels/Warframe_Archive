@@ -1,17 +1,17 @@
-"""ENGRAM — infrastructure RAG & API du lore Warframe.
+"""ENGRAM — Warframe lore RAG & API infrastructure.
 
-Sous-paquet du projet : fournit un backend de recherche documentaire
-(similarité cosinus pgvector sur ``lore_chunks``) et un terminal Roleplay
-KIM temps réel (WebSocket, streaming token, sliding window).
+Project sub-package: provides a document search backend (cosine similarity
+via pgvector on ``lore_chunks``) and a real-time KIM Roleplay terminal
+(WebSocket, token streaming, sliding window).
 
-Organisation :
-    * ``config``  -> :class:`EngramConfig` (connexions, modèles, fenêtres) ;
-    * ``llm``     -> fournisseurs LLM/embedding locaux (LM Studio) ;
-    * ``rag``     -> recherche vectorielle + construction de prompt ;
-    * ``roleplay``-> sessions KIM + streaming (sliding window) ;
-    * ``api``     -> application FastAPI (routes RAG + Roleplay WS) ;
-    * ``scripts`` -> ETL d'ingestion (``ingest.py``) ;
-    * ``models``  -> dataclasses de transport (un fichier par classe).
+Organization:
+    * ``config``   -> :class:`EngramConfig` (connections, models, windows);
+    * ``llm``      -> local LLM/embedding providers (LM Studio);
+    * ``rag``      -> vector search + prompt construction;
+    * ``roleplay`` -> KIM sessions + streaming (sliding window);
+    * ``api``      -> FastAPI application (RAG routes + Roleplay WS);
+    * ``scripts``  -> ingestion ETL (``ingest.py``);
+    * ``models``   -> transport dataclasses (one file per class).
 """
 
 from __future__ import annotations

@@ -1,11 +1,12 @@
-"""Session hostile PAR UTILISATEUR : persona anti-agression jusqu'aux excuses.
+"""Per-attacker hostile session: anti-aggression persona until an apology.
 
-Dès qu'un utilisateur attaque, le bot ouvre une session Roleplay dédiée à cet
-attaquant et la bascule sur le persona hostile (``persona/oracle_hostile``) :
-le Cephalon exige des excuses et refuse toute aide.  Les autres utilisateurs
-du salon continuent sur la session normale (persona initial), inchangés.
-Quand l'attaquant s'excuse (détection déterministe), on rebascule la session
-sur le persona initial, on sert sa réponse, puis on ferme la session.
+As soon as a user attacks, the bot opens a Roleplay session dedicated to that
+attacker and switches it to the hostile persona (``persona/oracle_hostile``):
+the Cephalon demands an apology and refuses any help.  Other users of the
+channel keep using the normal session (initial persona), unchanged.
+When the attacker apologises (deterministic detection), the session is
+switched back to the initial persona, the reply is delivered, and the session
+is then closed.
 """
 
 from __future__ import annotations
@@ -20,42 +21,46 @@ from .streamer import MessageStreamer
 
 log = logging.getLogger("warframe_lore.discord.hostile")
 
-# Marqueurs d'excuse (détection déterministe, insensible à la casse) : le
-# persona hostile ne revient JAMAIS à la normale sans ce signal explicite.
+# Apology markers (deterministic, case-insensitive detection): the hostile
+# persona NEVER returns to normal without this explicit signal.
 APOLOGY_MARKERS = (
     "pardon", "excuse", "excusez-moi", "désolé", "desole", "désoléé",
     "sorry", "mea culpa", "j'ai eu tort", "j'avais tort", "j'admets ma faute",
     "je m'excuse", "je suis navré", "je suis navree", "je suis navré",
     "navré", "navree", "regret",
+    # English equivalents (the Oracle understands English too)
+    "i apologize", "i apologise", "my apologies", "forgive me",
+    "i am sorry", "i'm sorry", "im sorry", "i was wrong", "it was my fault",
+    "my fault", "i behaved badly", "i am ashamed",
 )
 
 
 def is_apology(text: str) -> bool:
-    """Vrai si le message est (probablement) une excuse adressée au bot."""
+    """Return True if the message is (probably) an apology to the bot."""
     low = (text or "").lower()
     return any(marker in low for marker in APOLOGY_MARKERS)
 
 
 class HostileLink:
-    """Un attaquant → sa propre connexion WS en persona hostile."""
+    """One attacker → its own WS connection in hostile persona."""
 
     def __init__(self, gateway_url: str) -> None:
         self.gateway = RoleplayGateway(gateway_url)
         self._lock = asyncio.Lock()
 
     async def open(self) -> None:
-        """Connecte la session et la bascule sur le persona hostile."""
+        """Connect the session and switch it to the hostile persona."""
         await self.gateway.open()
         await self.gateway.set_persona("hostile")
-        log.info("Session hostile ouverte pour un attaquant")
+        log.info("Hostile session opened for an attacker")
 
     async def deliver(self, message: discord.Message, apology: bool) -> None:
-        """Fait répondre la session — persona hostile (insistance) par
-        défaut, persona initial (rémission) si ``apology``."""
+        """Let the session reply — hostile persona (insistence) by default,
+        initial persona (redemption) if ``apology``."""
         async with self._lock:
             if apology:
                 await self.gateway.set_persona("oracle")
-                log.info("Rémission : persona initial restauré (excuses)")
+                log.info("Redemption: initial persona restored (apology)")
             sending = message.content.strip()
             placeholder = await message.channel.send(
                 "*Le Cephalon Oracle vous toise…*")

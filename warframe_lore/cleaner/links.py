@@ -1,4 +1,4 @@
-"""Liens MediaWiki -> texte lisible (cibles pipées, namespace, sections)."""
+"""MediaWiki links -> readable text (piped targets, namespaces, sections)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ _EXTERNAL_LINK_RAW = re.compile(r"\[(https?://[^\s\[\]]+)\]")
 
 
 def normalise_links(wikitext: str) -> str:
-    """Transforme les liens en texte de lecture : [[Cible|Label]] -> Label."""
+    """Converts links to readable text: [[Target|Label]] -> Label."""
     text = wikitext
     text = _INTERNAL_LINK_PIPED.sub(_replace_piped_link, text)
     text = _INTERNAL_LINK_PLAIN.sub(_replace_plain_link, text)
@@ -30,7 +30,7 @@ def _replace_plain_link(match: re.Match) -> str:
 
 
 def _readable_target(raw_target: str) -> str:
-    """''[[Cible]]'' -> texte lisible (retire section et préfixe namespace)."""
+    """``[[Target]]`` -> readable text (strips section and namespace prefix)."""
     target = raw_target.split("#", 1)[0]
     if ":" in target and not target.lower().startswith("mediawiki"):
         target = target.split(":", 1)[1]

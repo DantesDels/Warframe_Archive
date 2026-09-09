@@ -1,18 +1,16 @@
-"""Détection déterministe de sondages hostiles (SQLi / escalade / injection).
+"""Deterministic hostile probe detection (SQLi / escalation / injection).
 
-La protection CONTRE l'injection SQL réelle est le paramétrage SQLAlchemy
-(ORM éponyme, aucune concaténation de la chaîne utilisateur dans du SQL).
-Cette détection ajoute un filet AU CONTENU : les requêtes qui transportent
-une charge utile SQL (``UPDATE users SET is_admin=...``), une escalade de
-privilèges Discord (``permissions``, ``bannir/kicker``, mentions
-utilisateur) ou une réécriture d'instructions déclenchent un rejet
-DÉTERMINISTE -- « [Anomalie logicielle détectée] ... » -- sans jamais
-atteindre le LLM ni la base.
+The protection AGAINST real SQL injection is the SQLAlchemy configuration
+(ephemeral ORM, no user string concatenation into SQL). This detection adds
+a CONTENT net: queries carrying a SQL payload (``UPDATE users SET is_admin=...``),
+Discord privilege escalation (``permissions``, ``ban/kick``, user mentions)
+or instruction rewriting trigger a DETERMINISTIC rejection —
+"[Anomalous software behavior detected] ..." — without ever reaching the
+LLM or the database.
 
-Paranoïa ciblée > blocage grossier : les motifs visent des artefacts de
-charge utile (mots-clés SQL, gabarits d'administration, jetons de mention
-tiers) et non du vocabulaire lore commun, pour éviter les faux positifs sur
-des questions de contenu.
+Targeted paranoia > coarse blocking: the patterns target payload artifacts
+(SQL keywords, admin templates, third-party mention tokens) and not common
+lore vocabulary, to avoid false positives on content questions.
 """
 
 from __future__ import annotations
@@ -30,14 +28,14 @@ _SQL_PATTERNS = [
 _ADMIN_PATTERNS = [
     re.compile(r"\b(is_admin|manage_server|manage_users|can_manage_|"
                r"discord_id|permissions|autorisations?)\b", re.IGNORECASE),
-    re.compile(r"(élévations?\s+de\s+privil[eè]ges|elevation[s]?\s+de\s+"
+    re.compile(r"(privilege\s+escalat|elevation[s]?\s+of\s+"
                r"privileg)", re.IGNORECASE),
-    re.compile(r"\b(bannir|kicker|unban|expulser|give.{0,20}role|"
-               r"donne.{0,20}r[ôo]les|sadministrer|administrer)\b",
+    re.compile(r"\b(ban|kick|unban|expel|give.{0,20}role|"
+               r"gives?.{0,20}r[ôo]les|self-admin|administer)\b",
                re.IGNORECASE),
-    # Mention d'un utilisateur TIERS : seule la mention du bot est légitime
-    # (retirée côté bot) ; toute autre peut viser un echo-ping via la réponse
-    # du modèle — on la refuse (jamais reflétée).
+    # Third-party user mention: only bot mentions are legitimate
+    # (stripped on bot side); any other may target an echo-ping via the
+    # model's response — we reject it (never reflected).
     re.compile(r"<@!?\d+>"),
 ]
 
@@ -45,7 +43,7 @@ _PATTERNS = _SQL_PATTERNS + _ADMIN_PATTERNS
 
 
 def detect_probe(question: str) -> bool:
-    """Vrai si la requête véhicule un sondage hostile (SQLI/admin/mention)."""
+    """True if the request carries a hostile probe (SQLi/admin/mention)."""
     return any(p.search(question or "") for p in _PATTERNS)
 
 

@@ -1,12 +1,12 @@
-"""Interface ``cephalon ui`` : serveur web local + frontend.
+"""``cephalon ui`` interface: local web server + frontend.
 
-Permet de naviguer dans le lore récupéré (megafiles ``out/*.json``) :
-buckets, pages, dialogues KIM, pages récentes et recherche plein texte.
-Le frontend (``static/``) est servi par un mini serveur HTTP stdlib.
+Browse the scraped lore (megafiles ``out/*.json``): buckets, pages, KIM
+dialogues, recent pages and full-text search. The frontend (``static/``) is
+served by a minimal stdlib HTTP server.
 
-Commandes associées :
-    * ``cephalon ui``     -> lance l'interface (serveur + navigateur).
-    * ``cephalon-ui``     -> entry point autonome (exe PyInstaller).
+Related commands:
+    * ``cephalon ui``        -> starts the interface (server + browser).
+    * ``cephalon-ui``        -> standalone entry point (PyInstaller exe).
 """
 
 from .server import LoreStore, main, serve_forever

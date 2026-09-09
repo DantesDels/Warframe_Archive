@@ -1,11 +1,11 @@
-"""Couche Base de Données : persistance SQL pour la scalabilité RAG.
+"""Database layer: SQL persistence for RAG scalability.
 
-Remplace progressivement le stockage JSON plat par une base PostgreSQL
-normalisée (3NF) préparée pour le support vectoriel (pgvector).
+Progressively replaces the flat JSON storage with a normalized PostgreSQL
+database (3NF) prepared for vector support (pgvector).
 
-Phase 2.5 : découpage intelligent (``ChunkManager``) en deux passes
-(structurelle avec hiérarchie de titres + récursive avec chevauchement)
-et mode dédié aux dialogues (``speakers`` en métadonnées).
+Phase 2.5: smart chunking (``ChunkManager``) in two passes (structural
+with heading hierarchy + recursive with overlap) and a dedicated dialogue
+mode (``speakers`` in metadata).
 """
 
 from .chunks import (

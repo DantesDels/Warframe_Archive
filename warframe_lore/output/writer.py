@@ -1,10 +1,10 @@
-"""Écriture et fusion incrémentale des megafiles JSON.
+"""Incremental merging and writing of JSON megafiles.
 
-Chaque bucket (ex: ``Lore_Quetes``) produit un fichier JSON unique dont le
-contenu est fusionné de façon incrémentale à chaque run (une page modifiée
-est écrasée, sans re-générer l'historique complet).
+Each bucket (e.g. ``Lore_Quetes``) produces a single JSON file whose
+content is merged incrementally on each run (a modified page is
+overwritten, without regenerating the full history).
 
-La logique assistante vit dans ``fusion`` ; ici ne reste que l'orchestrateur.
+The helper logic lives in ``fusion``; only the orchestrator remains here.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ log = logging.getLogger("warframe_lore.output")
 
 
 class MegafileManager:
-    """Lit, fusionne et écrit les megafiles d'un répertoire de sortie."""
+    """Reads, merges, and writes megafiles from an output directory."""
 
     def __init__(self, output_dir: Path) -> None:
         self.output_dir = Path(output_dir)
@@ -34,12 +34,12 @@ class MegafileManager:
                         new_entries: list[OutputEntry],
                         metadata_note: str = "",
                         live_titles: set[str] | None = None) -> dict[str, Any]:
-        """Fusionne les nouvelles entrées dans le megafile du bucket.
+        """Merges new entries into the bucket's megafile.
 
-        ``live_titles`` : ensemble des titres actuellement résolus pour ce
-        bucket.  S'il est fourni, les pages du megafile qui n'y figurent pas
-        (disparues des catégories du wiki) sont retirées, pour éviter de
-        garder indéfiniment des entrées obsolètes au côté des fraîches.
+        ``live_titles``: set of titles currently resolved for this bucket.
+        If provided, megafile pages not in that set (vanished from wiki
+        categories) are removed to avoid keeping stale entries alongside
+        fresh ones indefinitely.
         """
         megafile_path = self.output_dir / filename
         existing_entries = read_existing_entries(megafile_path)
@@ -47,7 +47,7 @@ class MegafileManager:
         if live_titles is not None:
             vanished = [t for t in existing_entries if t not in live_titles]
             if vanished:
-                log.info("%s : %d page(s) disparue(s) retirée(s) du megafile",
+                log.info("%s: %d vanished page(s) removed from megafile",
                          megafile_path.name, len(vanished))
             for title in vanished:
                 existing_entries.pop(title, None)
@@ -72,5 +72,5 @@ class MegafileManager:
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
         atomic_write_json(megafile_path, megafile)
-        log.info("Écrit %s (%d pages)", megafile_path.name, len(ordered_entries))
+        log.info("Wrote %s (%d pages)", megafile_path.name, len(ordered_entries))
         return megafile

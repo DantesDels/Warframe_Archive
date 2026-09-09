@@ -1,20 +1,20 @@
-# Couche `db` — Persistance SQL + RAG
+# `db` Layer — SQL Persistence + RAG
 
-Responsabilité : persister le lore dans **PostgreSQL normalisé** (3NF) armé pour
-le RAG, appliquer le **chunking intelligent**, et maintenir le **delta en base**.
+Responsibility: persist lore in **normalized PostgreSQL** (3NF) equipped for
+RAG, apply **smart chunking**, and maintain the **database-backed delta**.
 
-Stack : SQLAlchemy 2.0 async + asyncpg + pgvector.
+Stack: SQLAlchemy 2.0 async + asyncpg + pgvector.
 
-## Contenu
+## Contents
 
-| Fichier / paquet | Rôle |
+| File / Package | Role |
 |---|---|
-| `models/` | ORM, un fichier par classe : `base.py`, `wiki_page.py`, `lore_chunk.py`, `kim_dialogue.py`, `game_entity_i18n.py`, `sync_state_record.py` |
-| `manager/` | `SQLDatabaseManager` : composition de mixins `base.py` (connexion, `run_ddl_script`), `ingest.py` (upsert page/chunks/dialogues), `entities.py` (upsert `game_entities_i18n`), `delta.py` (état de sync), `queries.py` (stats, récents), `sql_helpers.py` |
-| `chunks/` | `ChunkManager` / `RAGChunk` / `chunk_markdown` : découpage Markdown en chunks RAG (`patterns.py` règles KIM, `splitters.py`, `split.py`) |
-| `kim_parser.py` | `extract_kim_messages` : extraction des messages KIM depuis les blocs dialogues |
+| `models/` | ORM, one file per class: `base.py`, `wiki_page.py`, `lore_chunk.py`, `kim_dialogue.py`, `game_entity_i18n.py`, `sync_state_record.py` |
+| `manager/` | `SQLDatabaseManager`: mixin composition `base.py` (connection, `run_ddl_script`), `ingest.py` (upsert page/chunks/dialogues), `entities.py` (upsert `game_entities_i18n`), `delta.py` (sync state), `queries.py` (stats, recent), `sql_helpers.py` |
+| `chunks/` | `ChunkManager` / `RAGChunk` / `chunk_markdown`: Markdown splitting into RAG chunks (`patterns.py` KIM rules, `splitters.py`, `split.py`) |
+| `kim_parser.py` | `extract_kim_messages`: KIM message extraction from dialogue blocks |
 
-## Schéma (`init_db.sql`)
+## Schema (`init_db.sql`)
 
 ```
 wiki_pages     (page_id PK, namespace, page_title UNIQUE, touched → delta,
@@ -27,65 +27,66 @@ game_entities_i18n (id, entity_id, entity_type, lang, name, description)
 sync_state     (bucket_id, page_title PK composite, page_id, touched → delta)
 ```
 
-Index : `vector(1024)` (pgvector, HNSW), `metadata JSONB` (GIN) pour les filtres
-`@>`.
+Indexes: `vector(1024)` (pgvector, HNSW), `metadata JSONB` (GIN) for `@>`
+filters.
 
-## Chunking RAG (`chunks/`)
+## RAG Chunking (`chunks/`)
 
-Sans dépendance externe (équivalent natif de *langchain-text-splitters*).
+Without external dependencies (a native equivalent of *langchain-text-splitters*).
 
-**Passe 1 — structurelle** : découpe aux `#`/`##`/`###` ; la hiérarchie devient
+**Pass 1 — structural**: splits at `#`/`##`/`###`; hierarchy becomes
 `metadata = {"Header 1": …, "Header 2": …}`.
 
-**Passe 2 — récursive** : merge des blocs sous la taille cible, séparateurs
-priorisés `\n\n` → `. ` → espace, chevauchement borné — jamais de phrase coupée
-en plein mot.
+**Pass 2 — recursive**: merge of blocks under the target size, prioritized
+separators `\n\n` → `. ` → space, bounded overlap — never a sentence cut
+mid-word.
 
-**Mode dialogue** (`is_dialogue=True`, buckets KIM/JDR/Quêtes) : chunks plus
-larges (2500c) qui regroupent des blocquotes `> **Nom:** …`, avec
-`metadata["speakers"]` = interlocuteurs réels du chunk.
+**Dialogue mode** (`is_dialogue=True`, KIM/RPG/Quest buckets): larger chunks
+(2500c) that group `> **Name:** …` blockquotes, with
+`metadata["speakers"]` = actual speakers in the chunk.
 
-| Constante | Défaut |
+| Constant | Default |
 |---|---|
 | `DEFAULT_CHUNK_MAX_CHARACTERS` | 1200 |
 | `DEFAULT_CHUNK_OVERLAP_CHARACTERS` | 175 |
 | `DEFAULT_DIALOGUE_CHUNK_MAX_CHARACTERS` | 2500 |
 | `DEFAULT_DIALOGUE_CHUNK_OVERLAP_CHARACTERS` | 250 |
 
-Le `SQLDatabaseManager` accepte `chunk_max_characters` /
-`chunk_overlap_characters` pour surcharger ces bornes.
+The `SQLDatabaseManager` accepts `chunk_max_characters` /
+`chunk_overlap_characters` to override these bounds.
 
-Requête RAG ciblée :
+Targeted RAG query:
 
 ```sql
 SELECT content_markdown FROM lore_chunks
 WHERE metadata @> '{"Header 2": "Rank 1 - Neutral"}';   -- GIN index
 ```
 
-Filtre par locuteur :
+Speaker filter:
 
 ```sql
 SELECT content_markdown FROM lore_chunks
 WHERE metadata->'speakers' @> '["Amir"]';
 ```
 
-## Robustesse de l'upsert
+## Upsert Robustness
 
-- **Delta en base** : comparaison via `touched` de `wiki_pages` / `sync_state`.
-- **Page recréée (nouvel id, même titre)** : les anciens chunks/dialogues sont
-  nettoyés et la page ré-assignée pour éviter la violation d'unicité sur le
-  titre.
-- **Transactional** : l'écriture d'une page = une transaction (upsert + chunks
-  + dialogues) ; en cas d'erreur, la page est re-traitée au run suivant.
-- `run_ddl_script` découpe `init_db.sql` en statements (asyncpg n'accepte pas
-  plusieurs commandes dans un statement préparé).
+- **Database-backed delta**: comparison via `touched` from `wiki_pages` /
+  `sync_state`.
+- **Recreated page (new id, same title)**: old chunks/dialogues are cleaned
+  up and the page is re-assigned to avoid unique constraint violation on the
+  title.
+- **Transactional**: writing a page = one transaction (upsert + chunks +
+  dialogues); on error, the page is reprocessed on the next run.
+- `run_ddl_script` splits `init_db.sql` into statements (asyncpg does not
+  accept multiple commands in a prepared statement).
 
 ## KIM (`kim_parser.py`)
 
-Le format des pages KIM est un fichier de chat : une ligne par message,
-`> **Personnage:** texte`. `extract_kim_messages` en tire une liste structurée
-(intervalles de lignes, speaker, contenu) utilisée aussi pour renseigner
-`metadata["speakers"]` du chunking dialogue.
+The KIM page format is a chat file: one line per message,
+`> **Character:** text`. `extract_kim_messages` produces a structured list
+(line ranges, speaker, content) also used to populate
+`metadata["speakers"]` for dialogue-mode chunking.
 
 ## Usage
 
@@ -95,19 +96,19 @@ from warframe_lore.db import SQLDatabaseManager
 async def main():
     mgr = SQLDatabaseManager("postgresql+asyncpg://...")
     await mgr.connect()
-    await mgr.upsert_cleaned_page(                # page pré-chunkée / dialogue
+    await mgr.upsert_cleaned_page(                # pre-chunked / dialogue page
         page_title="Excalibur", category="Warframes", page_id=123,
         touched="2026-09-05T12:00:00Z", last_updated="2026-09-05T12:00:00Z",
         canon_status="canon", content_markdown="# Excalibur\n...",
         source_url="https://wiki.warframe.com/wiki/Excalibur",
         detect_kim_dialogues=True,
     )
-    state = await mgr.fetch_sync_state("Lore_Quetes")   # état delta du bucket
+    state = await mgr.fetch_sync_state("Lore_Quetes")   # bucket delta state
     await mgr.record_fetch("Lore_Quetes", title, page_id, touched)
     await mgr.purge_vanished_pages("Lore_Quetes", live_titles)
     await mgr.close()
 ```
 
-La commande `cephalon status` utilise `manager.db_stats()` (pages, chunks,
-dialogues, canon, dernières dates) et `cephalon recent` utilise
-`manager.recent_pages(limit)` (dernières pages modifiées).
+The `cephalon status` command uses `manager.db_stats()` (pages, chunks,
+dialogues, canon, latest dates) and `cephalon recent` uses
+`manager.recent_pages(limit)` (latest modified pages).

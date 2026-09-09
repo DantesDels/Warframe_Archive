@@ -1,9 +1,9 @@
-"""Bot Discord du terminal Oracle — client WebSocket ENGRAM.
+"""Oracle terminal Discord bot — ENGRAM WebSocket client.
 
-    * ``config``  -> :class:`DiscordConfig` (token, URL WS, préfixe) ;
-    * ``gateway`` -> :class:`RoleplayGateway` (connexion WS par canal) ;
+    * ``config``  -> :class:`DiscordConfig` (token, WS URL, prefix) ;
+    * ``gateway`` -> :class:`RoleplayGateway` (per-channel WS connection) ;
     * ``bot``     -> :class:`LoreMasterBot` (discord.Client, streaming) ;
-    * ``main``    -> entry point console.
+    * ``main``    -> console entry point.
 """
 
 from __future__ import annotations

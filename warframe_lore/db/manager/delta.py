@@ -1,8 +1,8 @@
-"""Mode delta : suivi de synchronisation par bucket (``sync_state``).
+"""Delta mode: per-bucket sync tracking (``sync_state``).
 
-Mixin de ``SQLDatabaseManager``.  La table ``sync_state`` remplace (à terme)
-le ``sync_state.json`` local : la comparaison se fait sur le champ
-``touched`` renvoyé par l'API wiki.
+Mixin of ``SQLDatabaseManager``.  The ``sync_state`` table replaces (in
+time) the local ``sync_state.json``: the comparison is made on the
+``touched`` field returned by the wiki API.
 """
 
 from __future__ import annotations
@@ -19,13 +19,13 @@ log = logging.getLogger("warframe_lore.db")
 
 
 class SQLDeltaMixin:
-    """État du mode delta : lecture, acquittement et purge."""
+    """Delta mode state: read, acknowledgement and purge."""
 
     async def fetch_sync_state(self, bucket_id: str) -> dict[str, dict[str, Any]]:
-        """Retourne ``{titre: {pageid, touched}}`` pour un bucket (delta).
+        """Returns ``{title: {pageid, touched}}`` for a bucket (delta).
 
-        Les pages en base pour ce bucket servent de référence : seule une
-        différence de ``touched`` déclenche un re-téléchargement.
+        The pages stored for this bucket serve as reference: only a
+        difference in ``touched`` triggers a re-download.
         """
         session_factory = self._require_session_factory()
         async with session_factory() as session:
@@ -39,7 +39,7 @@ class SQLDeltaMixin:
 
     async def record_fetch(self, bucket_id: str, page_title: str,
                            page_id: int, touched: str | None) -> None:
-        """Marque une page comme synchronisée (upsert dans ``sync_state``)."""
+        """Marks a page as synchronized (upsert in ``sync_state``)."""
         session_factory = self._require_session_factory()
         async with session_factory() as session:
             async with session.begin():
@@ -59,7 +59,7 @@ class SQLDeltaMixin:
 
     async def purge_vanished_pages(self, bucket_id: str,
                                    live_titles: set[str]) -> None:
-        """Efface de l'état les pages disparues de la catégorie résolue."""
+        """Removes from the state the pages that vanished from the resolved category."""
         session_factory = self._require_session_factory()
         async with session_factory() as session:
             async with session.begin():

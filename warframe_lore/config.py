@@ -34,7 +34,7 @@ class Config:
     output_dir: Path = field(default_factory=lambda: PROJECT_ROOT / "out")
     output_format: str = "json"          # 'json' (megafiles) + sql (PostgreSQL)
 
-    # --- PostgreSQL (persistance SQL, choix "SQL + JSON en parallèle") ---
+    # --- PostgreSQL (SQL persistence, "SQL + JSON in parallel" approach) ---
     database_url: str = "postgresql+asyncpg://warframe:warframe@localhost:5432/warframe_lore"
 
     # --- Scope ---

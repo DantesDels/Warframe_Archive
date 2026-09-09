@@ -1,11 +1,11 @@
-"""ETL d'ingestion ENGRAM : megafiles JSON -> ``lore_chunks`` vectorisés.
+"""ENGRAM ingestion ETL: JSON megafiles -> vectorized ``lore_chunks``.
 
-Lit les megafiles ``out/Lore_*.json`` produits par la phase de nettoyage,
-réutilise ``SQLDatabaseManager`` (``upsert_cleaned_page``) pour reconstituer
-les pages + chunks, puis calcule les embeddings manquants via le fournisseur
-LM Studio (``BAAI/bge-m3`` GGUF).
+Reads the ``out/Lore_*.json`` megafiles produced by the cleaning phase,
+reuses ``SQLDatabaseManager`` (``upsert_cleaned_page``) to reconstruct
+pages + chunks, then computes missing embeddings via the LM Studio
+provider (``BAAI/bge-m3`` GGUF).
 
-Utilisation (racine du projet) :
+Usage (project root):
     python -m warframe_lore.engram.scripts.ingest [--glob out/Lore_*.json]
 """
 
@@ -25,24 +25,24 @@ from ..llm import LMStudioProvider
 
 log = logging.getLogger("warframe_lore.engram.ingest")
 
-BATCH = 64  # Taille de lot d'embedding (bge-m3 ~576, on reste prudent).
+BATCH = 64  # Embedding batch size (bge-m3 ~576, staying conservative).
 
 
 def load_pages(glob_pattern: str) -> list[dict]:
-    """Charge toutes les pages des megafiles JSON correspondant au motif."""
+    """Loads all pages from JSON megafiles matching the pattern."""
     pages: list[dict] = []
     for path in sorted(PROJECT_ROOT.glob(glob_pattern)):
         with open(path, encoding="utf-8") as handle:
             data = json.load(handle)
         bucket = data["pages"]
         if not isinstance(bucket, list):
-            raise ValueError(f"{path}: 'pages' n'est pas une liste")
+            raise ValueError(f"{path}: 'pages' is not a list")
         pages.extend(bucket)
     return pages
 
 
 async def embed_pending(sessions, embeddings) -> int:
-    """Calcule les embeddings des chunks sans vecteur (lots de ``BATCH``)."""
+    """Computes embeddings for chunks without vectors (batches of ``BATCH``)."""
     embedded = 0
     while True:
         async with sessions() as session:
@@ -59,13 +59,13 @@ async def embed_pending(sessions, embeddings) -> int:
                 chunk.embedding = vector
             await session.commit()
         embedded += len(missing)
-        log.info("Embeddings calculés : %d", embedded)
+        log.info("Embeddings computed: %d", embedded)
     return embedded
 
 
 async def run(cfg: EngramConfig, glob_pattern: str) -> int:
     pages = load_pages(glob_pattern)
-    log.info("Pages chargées : %d", len(pages))
+    log.info("Pages loaded: %d", len(pages))
 
     manager = SQLDatabaseManager(cfg.database_url)
     await manager.connect()
@@ -89,7 +89,7 @@ async def run(cfg: EngramConfig, glob_pattern: str) -> int:
                 content_markdown=page.get("content_markdown", ""),
             )
             processed += 1
-        log.info("Pages upsertées : %d", processed)
+        log.info("Pages upserted: %d", processed)
         embedded = await embed_pending(manager._require_session_factory(), provider)
         return embedded
     finally:
@@ -98,15 +98,15 @@ async def run(cfg: EngramConfig, glob_pattern: str) -> int:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Ingestion ENGRAM (embeddings).")
+    parser = argparse.ArgumentParser(description="ENGRAM ingestion (embeddings).")
     parser.add_argument("--glob", default="out/Lore_*.json",
-                        help="Motif glob des megafiles (défaut: out/Lore_*.json)")
+                        help="Megafile glob pattern (default: out/Lore_*.json)")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO)
     embedded = asyncio.run(run(EngramConfig.load(), args.glob))
-    log.info("Terminé : %d embedding(s) calculé(s).", embedded)
+    log.info("Done: %d embedding(s) computed.", embedded)
 
 
 if __name__ == "__main__":

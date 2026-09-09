@@ -1,4 +1,4 @@
-"""Routeurs HTTP/WebSocket de l'API ENGRAM."""
+"""ENGRAM API HTTP/WebSocket routers."""
 
 from __future__ import annotations
 

@@ -1,9 +1,8 @@
-"""Chargement léger d'un fichier ``.env`` à la racine (sans dépendance).
+"""Lightweight ``.env`` loader from the project root (no dependency).
 
-Parse les lignes ``KEY=value`` (commentaires ``#``, guillemets simples ou
-doubles, commentaires en fin de ligne). Ne surcharge JAMAIS une variable déjà
-définie dans l'environnement du shell : la priorité reste au shell,
-le ``.env`` sert de batterie de secours.
+Parses ``KEY=value`` lines (``#`` comments, single/double quotes, end-of-line
+comments). Never overrides a variable already set in the shell environment:
+the shell always wins; the ``.env`` file is a fallback.
 """
 
 from __future__ import annotations
@@ -32,7 +31,7 @@ def _parse(lines: list[str]) -> dict[str, str]:
 
 
 def load_dotenv(path: Path | str = PROJECT_ROOT / ".env") -> None:
-    """Charge ``path`` dans ``os.environ`` sans écraser l'existant."""
+    """Load ``path`` into ``os.environ`` without overwriting existing values."""
     if not Path(path).is_file():
         return
     for key, value in _parse(

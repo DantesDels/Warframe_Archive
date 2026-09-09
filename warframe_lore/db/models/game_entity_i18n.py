@@ -1,4 +1,4 @@
-"""Entité du jeu localisée (issue du Warframe Public Export)."""
+"""Localized game entity (from the Warframe Public Export)."""
 
 from __future__ import annotations
 
@@ -19,10 +19,10 @@ from .base import Base
 
 
 class GameEntityI18n(Base):
-    """Entité du jeu localisée, issue du Warframe Public Export.
+    """Localized game entity, from the Warframe Public Export.
 
-    Une ligne par couple (entité, langue) ; se nourrit des fichiers JSON des
-    manifests officiels (``index_<lang>.txt.lzma``).
+    One row per (entity, language) pair; fed by the JSON files of the
+    official manifests (``index_<lang>.txt.lzma``).
     """
 
     __tablename__ = "game_entities_i18n"

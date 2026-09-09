@@ -1,8 +1,8 @@
-"""Bot Discord du terminal Oracle (Roleplay via WebSocket ENGRAM).
+"""Oracle terminal Discord bot (Roleplay via ENGRAM WebSocket).
 
-``LoreMasterBot`` est un ``discord.Client`` : il rend chaque saisie à Oracle,
-diffuse les tokens en direct (edits du message) et déroule une session par
-canal grâce à un :class:`RoleplayGateway` persistant.
+``LoreMasterBot`` is a ``discord.Client``: it forwards every input to Oracle,
+streams tokens live (message edits) and runs one session per channel thanks
+to a persistent :class:`RoleplayGateway`.
 """
 
 from __future__ import annotations
@@ -22,17 +22,22 @@ from .streamer import MessageStreamer
 
 log = logging.getLogger("warframe_lore.discord.bot")
 
-# Déclencheurs d'une question documentaire (demande de retrieval RAG).
+# Trigger words for a document-based question (triggers a RAG retrieval).
+# Bilingual FR/EN: the Oracle understands English input too.
 _LORE_TRIGGERS = (
     "qui ", "qu'est", "quel", "quelle", "quand", "où ", "comment",
     "pourquoi", "combien", "histoir", "lore", "orokin", "tenno",
     "warframe", "primordial", "hex", "void", "kuva", "infest",
     "fragments", "chimer", "trésors", "règne",
+    # English equivalents
+    "who ", "what ", "when ", "where ", "why ", "which ", "whose ",
+    "how ", "how many", "how much", "tell me about", "history",
+    "who 's", "what 's", "when 's", "where 's",
 )
 
 
 class LoreMasterBot(discord.Client):
-    """Discute avec Oracle via une connexion WS par canal."""
+    """Talks to Oracle through one WS connection per channel."""
 
     def __init__(self, gateway_url: str, prefix: str,
                  typing_interval: float = 5.0,
@@ -47,21 +52,21 @@ class LoreMasterBot(discord.Client):
         self._gateways: dict[int, RoleplayGateway] = {}
         self._route_locks: dict[int, asyncio.Lock] = {}
         self._turns: dict[int, asyncio.Task] = {}
-        # Garde-fou anti-spam : cooldown par utilisateur, plafond par canal,
-        # blocage temporaire sur insistance (quasi-DDoS au niveau du salon).
+        # Anti-spam guard rail: per-user cooldown, per-channel cap,
+        # temporary block on insistence (quasi-DDoS at channel level).
         self.guard = BurstGuard()
-        # Escalade des réponses anti-attaque (niveau 0 → 2).
+        # Anti-attack reply escalation (level 0 → 2).
         self.hostility = HostilityTracker()
-        # Sessions hostiles PAR ATTAQUANT (persona anti-agression jusqu'à
-        # ses excuses) : n'affectent jamais la session normale du salon.
+        # PER-ATTACKER hostile sessions (anti-aggression persona until the
+        # apology): never affect the normal channel session.
         self._hostile: dict[int, HostileLink] = {}
 
     async def on_ready(self) -> None:
-        log.info("Loremaster Oracle en ligne : %s (%s)",
+        log.info("Loremaster Oracle online: %s (%s)",
                  self.user, self.user.id)
         for guild in self.guilds:
             channels = [f"{c.name} ({c.id})" for c in guild.text_channels]
-            log.info("Serveur %s (%s) — canaux texte : %s",
+            log.info("Server %s (%s) — text channels: %s",
                      guild.name, guild.id, ", ".join(channels))
 
     async def on_message(self, message: discord.Message) -> None:
@@ -69,41 +74,41 @@ class LoreMasterBot(discord.Client):
             return
         content = message.content.strip()
         if content.startswith("(") or content.startswith("//"):
-            # Hors rôle-play (parenthèses / double slash) : jamais répondre.
+            # Out-of-character (parentheses / double slash): never reply.
             return
-        # N'intervient QUE si le bot est mentionné, ou dans un salon dédié
-        # (ID/nom configuré via --channels).  Sinon il ne parasite pas la
-        # conversation entre joueurs.
+        # Only interferes if the bot is mentioned, or in a dedicated channel
+        # (ID/name configured via --channels).  Otherwise it never disturbs
+        # the conversation between players.
         dedicated = bool(self.allowed_channels
                          and message.channel.id in self.allowed_channels)
         if not dedicated and self.user not in message.mentions:
             return
         text = self._strip_mention(content)
-        # SONDE HOSTILE : rejet déterministe (jamais de LLM sur la charge
-        # utile elle-même) + escalade ciblée sur l'attaquant + bascule de
-        # sa session sur le persona hostile (qui exigera des excuses).
+        # HOSTILE PROBE: deterministic rejection (never a LLM on the payload
+        # itself) + targeted escalation at the attacker + switch of his
+        # session to the hostile persona (which will demand an apology).
         if detect_probe(text):
             await self._handle_probe(message, text)
             return
-        # Utilisateur en mode hostile : ses messages passent par SA session
-        # anti-agression.  Des excuses → rémission (retour persona initial).
+        # User in hostile mode: his messages go through HIS anti-aggression
+        # session.  An apology → redemption (back to the initial persona).
         if message.author.id in self._hostile:
             if is_apology(text):
                 await self._forgive(message.author.id, message, text)
                 return
             if not self.guard.check(message.author.id, message.channel.id):
-                log.info("Spam hostile ignoré user=%s canal=%s",
+                log.info("Hostile spam ignored user=%s channel=%s",
                          message.author.id, message.channel.id)
                 return
             await self._insist(message.author.id, message)
             return
-        # Anti-spam pour les utilisateurs normaux (cooldown / plafonds).
+        # Anti-spam for normal users (cooldown / caps).
         if not self.guard.check(message.author.id, message.channel.id):
             if self.guard.is_blocked(message.author.id):
-                log.warning("Abus bloqué temporairement user=%s canal=%s",
+                log.warning("Temporary block on abuse user=%s channel=%s",
                             message.author.id, message.channel.id)
             else:
-                log.info("Spam ignoré user=%s canal=%s",
+                log.info("Spam ignored user=%s channel=%s",
                          message.author.id, message.channel.id)
             return
         if content.startswith(self.prefix):
@@ -112,7 +117,7 @@ class LoreMasterBot(discord.Client):
         await self._route_to_oracle(message)
 
     async def _handle_probe(self, message: discord.Message, text: str) -> None:
-        """Réagi à une sonde hostile : escalade ciblée + death session."""
+        """React to a hostile probe: targeted escalation + death session."""
         level = self.hostility.strike(message.author.id)
         await message.reply(reply_for(level))
         if message.author.id not in self._hostile:
@@ -121,20 +126,20 @@ class LoreMasterBot(discord.Client):
                 await link.open()
             except ConnectionError:
                 log.warning(
-                    "Persona hostile injoignable — ENGRAM indisponible ?")
+                    "Hostile persona unreachable — ENGRAM down?")
             else:
                 self._hostile[message.author.id] = link
-        log.warning("SONDE_HOSTILE user=%s lvl=%d (session hostile ouverte)",
+        log.warning("HOSTILE_PROBE user=%s lvl=%d (hostile session opened)",
                     message.author.id, level)
 
     async def _insist(self, user_id: int, message: discord.Message) -> None:
-        """Relaye à la session hostile de l'attaquant (il doit s'excuser)."""
+        """Relay to the attacker's hostile session (he must apologise)."""
         link = self._hostile[user_id]
         try:
             await link.deliver(message, apology=False)
         except ConnectionError:
-            # Session hostile morte : on la rouvre (nouvelle tentative).
-            log.warning("Session hostile perdue — réouverture")
+            # Dead hostile session: reopen it (new attempt).
+            log.warning("Hostile session lost — reopening")
             await link.close()
             link = HostileLink(self.gateway_url)
             await link.open()
@@ -143,15 +148,15 @@ class LoreMasterBot(discord.Client):
 
     async def _forgive(self, user_id: int, message: discord.Message,
                        text: str) -> None:
-        """Excuses acceptées : retour au persona initial puis fermeture."""
+        """Apology accepted: back to the initial persona, then close."""
         link = self._hostile.pop(user_id)
         try:
             await link.deliver(message, apology=True)
         except ConnectionError:
-            log.warning("Session hostile déjà fermée lors des excuses")
+            log.warning("Hostile session already closed at apology time")
         finally:
             await link.close()
-        log.info("Rédemption user=%s (persona initial restauré)", user_id)
+        log.info("Redemption user=%s (initial persona restored)", user_id)
 
     async def _handle_command(self, message: discord.Message) -> None:
         text = message.content[len(self.prefix):].strip().lower()
@@ -161,9 +166,9 @@ class LoreMasterBot(discord.Client):
                 await gw.close()
             await message.channel.send("Oracle prêt.")
         elif text in ("stop", "cancel"):
-            # Interrompt la réponse en cours (raisonnement actif) : le flux WS
-            # est coupé, la génération LLM stoppée côté serveur, et le message
-            # d'attente est finalisé par le tour annulé.
+            # Interrupts the current reply (active reasoning): the WS stream
+            # is cut, the LLM generation is stopped server-side, and the
+            # waiting message is finalised with the cancelled turn.
             task = self._turns.get(message.channel.id)
             if task is None or task.done():
                 await message.channel.send(
@@ -178,9 +183,9 @@ class LoreMasterBot(discord.Client):
                 "interrompre la réponse en cours | sinon, parlons simplement.")
 
     async def _route_to_oracle(self, message: discord.Message) -> None:
-        """Diffuse une réponse Oracle, sérialisée par salon et stoppable
-        (``!stop``) : pendant qu'un tour est actif, les autres messages
-        attendent leur tour — plus jamais d'entrelacement de fragments."""
+        """Streams an Oracle reply, serialised per channel and stoppable
+        (``!stop``): while a turn is active, the other messages wait their
+        turn — no more interleaved fragments."""
         channel_id = message.channel.id
         text = self._strip_mention(message.content)
         lock = self._route_locks.setdefault(channel_id, asyncio.Lock())
@@ -205,11 +210,11 @@ class LoreMasterBot(discord.Client):
                         await gateway.send(text, on_token=streamer.add,
                                            rag=use_rag)
                     except ConnectionError as exc:
-                        # Flux mort (ex : serveur ENGRAM redémarré) →
-                        # reconnexion + purge du buffer (pas de concaténation
-                        # de fragments de l'ancienne tentative).
+                        # Dead stream (e.g. ENGRAM server restarted) →
+                        # reconnect + buffer purge (no concatenation of
+                        # fragments from the previous attempt).
                         log.warning(
-                            "Connexion Oracle perdue (%s) — reconnexion", exc)
+                            "Oracle connection lost (%s) — reconnecting", exc)
                         await gateway.close()
                         gateway = RoleplayGateway(self.gateway_url)
                         await gateway.open()
@@ -220,10 +225,10 @@ class LoreMasterBot(discord.Client):
                 finally:
                     typing_task.cancel()
             except asyncio.CancelledError:
-                # Interruption demandée (commande !stop) : on coupe le flux WS
-                # pour stopper côté serveur la génération du LLM, puis on
-                # finalise le message d'attente.
-                log.info("Tour Oracle interrompu sur le canal %s", channel_id)
+                # Interruption requested (!stop): cut the WS stream to stop
+                # the LLM generation server-side, then finalise the waiting
+                # message.
+                log.info("Oracle turn interrupted on channel %s", channel_id)
                 if gateway is not None:
                     await gateway.close()
                     self._gateways.pop(channel_id, None)
@@ -248,7 +253,7 @@ class LoreMasterBot(discord.Client):
                         await placeholder.delete()
 
     def _strip_mention(self, text: str) -> str:
-        """Retire la mention utilisateur vers le bot (``@Oracle …``)."""
+        """Remove the user-to-bot mention (``@Oracle …``)."""
         if self.user is None:
             return text
         mention_id = str(self.user.id)
@@ -256,7 +261,7 @@ class LoreMasterBot(discord.Client):
                     .replace(f"<@!{mention_id}>", "").strip())
 
     def _wants_lore(self, text: str) -> bool:
-        """Vrai si la saisie ressemble à une question de lore (RAG utile)."""
+        """True if the input looks like a lore question (useful RAG)."""
         low = text.lower()
         return any(trigger in low for trigger in _LORE_TRIGGERS)
 

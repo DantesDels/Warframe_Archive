@@ -1,18 +1,18 @@
-"""Sentinelle + protection des puces Wikitext avant conversion Markdown."""
+"""Sentinel + Wikitext bullet protection before Markdown conversion."""
 
 from __future__ import annotations
 
 import re
 
-# Sentinelle protégeant les puces Wikitext ("* ...") avant la conversion
-# en Markdown, pour que le caractère '*' ne collisionne pas avec "**bold**".
+# Sentinel protecting Wikitext bullets ("* ...") before conversion
+# to Markdown, so the '*' character does not collide with "**bold**".
 BULLET_TOKEN = "\x00BULLET\x00"
 _LEADING_BULLETS = re.compile(r"^(\*+)(.*)$", re.MULTILINE)
 _BULLET_LINE = re.compile(r"^\s*" + re.escape(BULLET_TOKEN))
 
 
 def protect_bullets(wikitext: str) -> str:
-    """Remplace les puces de début de ligne par la sentinelle BULLET_TOKEN."""
+    """Replaces leading-line bullets with the BULLET_TOKEN sentinel."""
     def _replace_bullet_line(match: re.Match) -> str:
         return BULLET_TOKEN + match.group(2).lstrip()
 

@@ -1,7 +1,7 @@
-"""Résolution / affectation des pages aux buckets via la source.
+"""Page-to-bucket resolution / assignment via the source.
 
-Le catalogage ici ne fait QUE de la logique de résolution — pas d'HTTP
-(l'expansion réseau est déléguée à ``BaseSource``), pas de nettoyage.
+The cataloguing here does NOTHING but resolution logic — no HTTP (network
+expansion is delegated to ``BaseSource``), no cleaning.
 """
 
 from __future__ import annotations
@@ -17,34 +17,34 @@ log = logging.getLogger("warframe_lore.api.categories")
 
 @dataclass
 class ResolvedBucket:
-    """Un bucket avec tous ses titres de pages résolus (avant filtrage)."""
+    """A bucket with all its page titles resolved (before filtering)."""
 
     spec: CategorySpec
     page_titles: set[str] = field(default_factory=set)
 
 
 class CategoryCatalog:
-    """Résout et cache l'expansion des catégories/préfixes via une source."""
+    """Resolves and caches category/prefix expansion through a source."""
 
     def __init__(self, source: BaseSource) -> None:
         self._source = source
         self._cache: dict[str, set[str]] = {}
 
     def _members(self, category: str) -> set[str]:
-        """Cached expansion d'une catégorie en titres de pages."""
+        """Cached expansion of a category into page titles."""
         if category not in self._cache:
             resolved = self._source.resolve_categories([category])
             self._cache[category] = resolved.get(category, set())
-            log.info("Catégorie '%s' résolue : %d pages",
+            log.info("Category '%s' resolved: %d pages",
                      category, len(self._cache[category]))
         return self._cache[category]
 
     def _prefix(self, prefix: str) -> set[str]:
-        """Cached expansion d'un préfixe de titre en pages."""
+        """Cached expansion of a title prefix into pages."""
         if prefix not in self._cache:
             resolved = self._source.resolve_prefix(prefix)
             self._cache[prefix] = resolved
-            log.info("Préfixe '%s' résolu : %d pages", prefix, len(resolved))
+            log.info("Prefix '%s' resolved: %d pages", prefix, len(resolved))
         return self._cache[prefix]
 
     def resolve(self, spec: CategorySpec) -> ResolvedBucket:
@@ -57,9 +57,9 @@ class CategoryCatalog:
 
 
 def assign_pages(resolved: list[ResolvedBucket]) -> dict[str, CategorySpec]:
-    """Affecte chaque page à exactement un bucket (premier match par ordre).
+    """Assigns each page to exactly one bucket (first match in order).
 
-    Retourne un mapping ``titre_page -> CategorySpec`` propriétaire.
+    Returns a mapping ``page_title -> owning CategorySpec``.
     """
     claimed: dict[str, CategorySpec] = {}
     for bucket in resolved:

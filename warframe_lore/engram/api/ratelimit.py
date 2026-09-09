@@ -1,11 +1,10 @@
-"""Limiteur de débit en mémoire (fenêtre glissante, par IP).
+"""In-memory rate limiter (sliding window, per IP).
 
-Défense anti-DDoS / anti-abuse de l'API ENGRAM : un débit excessif (boucle
-d'attaque, demandes automatisées) est coupé en amont du LLM — HTTP 429 pour la
-route `POST /v1/rag`, fermeture WS 1008 pour le terminal Roleplay.  Les seuils
-viennent de la configuration ``ENGRAM_RATE_LIMIT_*`` ; la mémoire est
-volatile (perte au redémarrage), le stockage reste limité au nombre de clés
-actives.
+Anti-DDoS / anti-abuse defense for the ENGRAM API: excessive traffic
+(attack loop, automated requests) is cut upstream of the LLM — HTTP 429
+for the `POST /v1/rag` route, WS close 1008 for the Roleplay terminal.
+Thresholds come from ``ENGRAM_RATE_LIMIT_*`` configuration; memory is
+volatile (lost on restart), storage is limited to the number of active keys.
 """
 
 from __future__ import annotations
@@ -15,10 +14,10 @@ from collections import deque
 
 
 class SlidingWindowLimiter:
-    """Autorise au plus ``max_events`` appels par ``window_seconds`` et par clé.
+    """Allows at most ``max_events`` calls per ``window_seconds`` per key.
 
-    Fenêtre glissante (pas de pics d'horloge) : les horodatages par clé sont
-    conservés en deque et purgés des entrées expirées à chaque appel.
+    Sliding window (no clock spikes): per-key timestamps are kept in a deque
+    and expired entries are purged on each call.
     """
 
     def __init__(self, max_events: int, window_seconds: float,
@@ -29,7 +28,7 @@ class SlidingWindowLimiter:
         self._events: dict[str, deque[float]] = {}
 
     def allow(self, key: str) -> bool:
-        """Compte un appel si le quota le permet, sinon refuse (``False``)."""
+        """Counts a call if quota allows, otherwise rejects (``False``)."""
         now = self._clock()
         dq = self._events.setdefault(key, deque())
         while dq and now - dq[0] > self.window_seconds:

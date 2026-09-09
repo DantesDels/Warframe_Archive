@@ -1,9 +1,8 @@
-"""ApiHandler — routes HTTP ``/api/*`` et fichiers statiques (Gzip).
+"""ApiHandler — HTTP ``/api/*`` routes and static files (Gzip).
 
-Responsabilité unique : router les requêtes du frontend vers la couche données
-(``LoreStore``), le média (``MediaIndex``) et les fichiers statiques, avec
-compactage Gzip explicite (les gros documents KIM ne sont jamais envoyés en
-clair).
+Single responsibility: route frontend requests to the data layer
+(``LoreStore``), the media layer (``MediaIndex``) and static files, with
+explicit Gzip compression (large KIM documents are never sent in clear).
 """
 
 from __future__ import annotations
@@ -27,9 +26,9 @@ class ApiHandler(BaseHTTPRequestHandler):
     media: MediaIndex = None  # injecté par la fabrique
     root: Path = None        # répertoire des fichiers statiques
 
-    # ------------------------------------------------------------ verbosité
-    def log_message(self, format, *args):  # noqa: A002  (signature stdlib)
-        return  # silencieux ; les logs passent par le lanceur.
+    # ------------------------------------------------------------ verbosity
+    def log_message(self, format, *args):  # noqa: A002  (stdlib signature)
+        return  # silent; logs go through the launcher.
 
     # ---------------------------------------------------------------- routes
     def do_GET(self) -> None:

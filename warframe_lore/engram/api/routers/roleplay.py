@@ -1,8 +1,8 @@
-"""Route Roleplay KIM (WebSocket) : terminal temps réel.
+"""KIM Roleplay route (WebSocket): real-time terminal.
 
-Gère la connexion temps réel : réception du texte de l'utilisateur, streaming
-token par token de la réponse LLM, et historique de session (sliding window).
-Une session par connexion WebSocket.
+Handles the real-time connection: user text reception, token-by-token LLM
+response streaming, and session history (sliding window).
+One session per WebSocket connection.
 """
 
 from __future__ import annotations
@@ -24,18 +24,18 @@ router = APIRouter(tags=["roleplay"])
 async def roleplay(websocket: WebSocket) -> None:
     await websocket.accept()
     container: Container = websocket.app.state.engram
-    # Anti-DDoS : quota de connexions par IP — fermeture 1008 au-delà.
+    # Anti-DDoS: connection quota per IP — 1008 close beyond it.
     host = websocket.client.host if websocket.client else "unknown"
     if not container.ws_limiter.allow(host):
         await websocket.send_json(
             {"type": "error",
-             "message": "tentative abusive : connexions trop fréquentes"})
-        await websocket.close(code=1008, reason="tentative abusive")
+             "message": "abusive attempt: connections too frequent"})
+        await websocket.close(code=1008, reason="abusive attempt")
         return
     session = Session(session_id=uuid.uuid4().hex)
-    # Persona courant de la session : "oracle" (défaut) ou "hostile"
-    # (anti-agression).  Le bot bascule sur le mode hostile dès qu'un
-    # utilisateur attaque, et revient sur "oracle" après ses excuses.
+    # Current session persona: "oracle" (default) or "hostile"
+    # (anti-aggression).  The bot switches to hostile mode as soon as a user
+    # attacks, and returns to "oracle" after the apology.
     persona_mode = "oracle"
 
     async def send_error(message: str) -> None:
@@ -47,33 +47,33 @@ async def roleplay(websocket: WebSocket) -> None:
         while True:
             payload = await websocket.receive_json()
             if payload.get("type") == "persona":
-                # Bascule de persona (mode hostile / retour oracle) : trame de
-                # contrôle — aucune réponse n'est émise côté serveur.
+                # Persona switch (hostile mode / return to oracle): control
+                # frame — no reply is emitted server-side.
                 mode = payload.get("mode")
                 if mode in ("oracle", "hostile"):
                     persona_mode = mode
                 continue
             if payload.get("type") != "message":
                 continue
-            # Sanitisation à la frontière : caractères de contrôle et espaces
-            # anormaux neutralisés AVANT tout usage (embedding, fenêtre).
+            # Frontier sanitisation: control characters and abnormal spacing
+            # neutralised BEFORE any use (embedding, window).
             user_text = sanitize_query(str(payload.get("text", "")))
             if not user_text:
-                await send_error("message vide ou invalide")
+                await send_error("empty or invalid message")
                 continue
-            # SONDE HOSTILE (injection SQL, escalade de privilèges, mention
-            # tiers) : rejet déterministe — la chaîne anti-jailbreak exacte,
-            # sans embedding ni appel LLM.
+            # HOSTILE PROBE (SQL injection, privilege escalation, third-party
+            # mention): deterministic rejection — the exact anti-jailbreak
+            # chain, without embedding or LLM call.
             if detect_probe(user_text):
                 await websocket.send_json(
                     {"type": "token", "token": JAILBREAK_REJECT})
                 await websocket.send_json(
                     {"type": "end", "text": JAILBREAK_REJECT})
                 continue
-            # Flag "rag" : ancrer le tour sur des passages documentaires
-            # récupérés par le RAG.  Sans passage de confiance ni piste de
-            # désambiguïsation, short-circuit : on streame l'erreur exacte
-            # sans jamais appeler le modèle.
+            # "rag" flag: anchor the turn on document passages retrieved by
+            # the RAG.  Without a confident passage nor a disambiguation
+            # clue, short-circuit: stream the exact error without ever
+            # calling the model.
             rag_context = suggestion = None
             if payload.get("rag"):
                 rag_context, suggestion = await container.rag.resolve(user_text)
@@ -81,7 +81,7 @@ async def roleplay(websocket: WebSocket) -> None:
                 await websocket.send_json({"type": "token", "token": RAG_ERROR})
                 await websocket.send_json({"type": "end", "text": RAG_ERROR})
                 continue
-            # Streaming token par token ; on accumule pour clôturer le tour.
+            # Token-by-token streaming; accumulate to close the turn.
             response_parts: list[str] = []
             async for token in container.roleplay.stream(
                     session, user_text, rag_context, persona=persona_mode):
@@ -91,5 +91,5 @@ async def roleplay(websocket: WebSocket) -> None:
                 {"type": "end", "text": "".join(response_parts)})
     except WebSocketDisconnect:
         pass
-    except Exception as exc:  # noqa: BLE001 (erreur de flux -> fermeture propre)
-        await send_error(f"erreur interne : {exc}")
+    except Exception as exc:  # noqa: BLE001 (stream error -> clean close)
+        await send_error(f"internal error: {exc}")

@@ -1,4 +1,4 @@
-"""Conversion du markup gras/italique Wikitext en Markdown."""
+"""Wikitext bold/italic markup conversion to Markdown."""
 
 from __future__ import annotations
 
@@ -6,15 +6,15 @@ import re
 
 
 def convert_markup_to_markdown(wikitext: str) -> str:
-    """Convertit ''italique'' / '''gras''' / '''''gras-italique''''' en Markdown.
+    """Converts ''italic'' / '''bold''' / '''''bold-italic''''' to Markdown.
 
-    Ordre critique : gras-italique (5 apostrophes) d'abord, puis gras (3),
-    puis italique (2), pour éviter des appariements incorrects.
+    Critical order: bold-italic (5 apostrophes) first, then bold (3),
+    then italic (2), to prevent incorrect matches.
     """
     text = wikitext
-    text = re.sub(r"'''''(.*?)'''''", r"**_\1_**", text)  # gras + italique
-    text = re.sub(r"'''(.*?)'''", r"**\1**", text)        # gras
-    text = re.sub(r"''(.*?)''", r"_\1_", text)            # italique
+    text = re.sub(r"'''''(.*?)'''''", r"**_\1_**", text)  # bold + italic
+    text = re.sub(r"'''(.*?)'''", r"**\1**", text)        # bold
+    text = re.sub(r"''(.*?)''", r"_\1_", text)            # italic
     return text
 
 

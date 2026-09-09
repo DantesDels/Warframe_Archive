@@ -1,4 +1,4 @@
-"""Polissage final : galeries vides et lignes blanches en excès."""
+"""Final polish: empty galleries and excess blank lines."""
 
 from __future__ import annotations
 
@@ -6,13 +6,13 @@ import re
 
 
 def collapse_empty_galleries(markdown_text: str) -> str:
-    """Supprime les balises ``<gallery>`` laissées par le pré-traitement."""
+    """Removes ``<gallery>`` tags left by preprocessing."""
     return re.sub(r"(?i)<\s*gallery[^>]*>.*?<\s*/\s*gallery\s*>", "",
                   markdown_text, flags=re.DOTALL)
 
 
 def strip_excess_blank_lines(markdown_text: str) -> str:
-    """Réduit les suites de lignes vides à une seule et nettoie les espaces."""
+    """Collapses runs of empty lines to a single one and trims whitespace."""
     text = re.sub(r"\n{3,}", "\n\n", markdown_text)
     text = re.sub(r"^\s+", "", text, flags=re.MULTILINE)
     return text

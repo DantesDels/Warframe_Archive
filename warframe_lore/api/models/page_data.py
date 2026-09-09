@@ -1,4 +1,4 @@
-"""Contenu brut d'une page de source (pré-nettoyage)."""
+"""Raw content of a source page (pre-cleaning)."""
 
 from __future__ import annotations
 
@@ -7,10 +7,10 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class PageData:
-    """Contenu brut d'une page (avant tout nettoyage).
+    """Raw content of a page (before any cleaning).
 
-    ``content`` reste en format natif de la source (ex: Wikitext pour le
-    wiki).  Le nettoyeur sait quel format traiter selon la source.
+    ``content`` stays in the source's native format (e.g. Wikitext for the
+    wiki).  The cleaner knows which format to process based on the source.
     """
 
     pageid: int

@@ -1,28 +1,28 @@
-# Couche `kim_dm` — Datamine KIM
+# `kim_dm` Layer — KIM Datamine
 
-Responsabilité : le **miroir KIM** (datamine) — les conversations de
-l'*Instant Messenger* du jeu (kinemantik etc.), téléchargée depuis la source
-officielle, parsée et structurée en conversations hiérarchisées.
+Responsibility: the **KIM mirror** (datamine) — conversations from the
+game's *Instant Messenger* (kinemantik etc.), downloaded from the official
+source, parsed and structured into hierarchical conversations.
 
-## Contenu
+## Contents
 
-| Fichier | Rôle |
+| File | Role |
 |---|---|
-| `__init__.py` | API publique : `KimDM`, `WIKI_PAGE_MAP`, `parse_dialogue_file`, `mirror_kim_dm` |
-| `constants.py` | pages KIM connues / mapping |
-| `parser.py` | `parse_dialogue_file` : lignes de dialogue → structure (locuteur, choix du joueur) |
-| `graph.py` | graphe arborescent des conversations (ancrage racine, choix rattachés au PNJ) |
-| `traversal.py` | parcours du graphe (layout dagre TB/UL) |
-| `store.py` | persistance / lecture du miroir local |
-| `mirror.py` | téléchargement du miroir officiel |
+| `__init__.py` | Public API: `KimDM`, `WIKI_PAGE_MAP`, `parse_dialogue_file`, `mirror_kim_dm` |
+| `constants.py` | Known KIM pages / mapping |
+| `parser.py` | `parse_dialogue_file`: dialogue lines → structure (speaker, player choice) |
+| `graph.py` | Tree graph of conversations (root anchoring, choices attached to NPC) |
+| `traversal.py` | Graph traversal (dagre TB/UL layout) |
+| `store.py` | Persistence / reading of the local mirror |
+| `mirror.py` | Download of the official mirror |
 
 ## Usage
 
 ```bash
-cephalon kim-dm               # met à jour le miroir
+cephalon kim-dm               # updates the mirror
 ```
 
-Programmatique :
+Programmatic:
 
 ```python
 from warframe_lore.kim_dm import KimDM, parse_dialogue_file
@@ -31,5 +31,5 @@ dialogue = parse_dialogue_file("§ Amir — Conversation.md")
 dm = KimDM(...)
 ```
 
-L'interface web (`cephalon ui`) consume ce format pour afficher les
-conversations structurées par locuteur et le graphe en flowchart.
+The web interface (`cephalon ui`) consumes this format to display
+conversations structured by speaker and a flowchart graph.

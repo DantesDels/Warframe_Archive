@@ -1,13 +1,13 @@
-"""Escalade des réponses anti-attaque du bot (ciblée par utilisateur).
+"""Escalation of the bot anti-attack replies (targeted per user).
 
-Quand le bot détecte une sonde hostile (injection SQL, élévation de
-privilèges, mention d'un tiers), il sert une réponse DIRECTE à l'attaquant :
-la chaîne de rejet EXACTE suivie d'un venin Cephalon qui ESCALADE avec le
-nombre de récidives (niveau 0 → 2).  La bascule de persona (``hostile_link``)
-et la rémission après excuses sont gérées séparément.
+When the bot detects a hostile probe (SQL injection, privilege escalation,
+third-party mention), it serves a DIRECT reply to the attacker: the EXACT
+rejection chain followed by Cephalon venom that ESCALATES with the number of
+repeat offences (level 0 → 2).  The persona switch (``hostile_link``) and the
+redemption after an apology are handled separately.
 
-Les compteurs sont volatils (mémoire du process, horloge injectable pour
-les tests).  Le module est PURE (aucune dépendance discord.py).
+The counters are volatile (process memory, injectable clock for tests).
+The module is PURE (no discord.py dependency).
 """
 
 from __future__ import annotations
@@ -16,8 +16,8 @@ import time
 
 from warframe_lore.engram.rag import JAILBREAK_REJECT
 
-# Réponses escaladantes, toutes précédées de la chaîne de rejet exacte
-# (contrat « FORMAT DE REJET EXACT » conservé en tête de message).
+# Escalating replies, all prefixed with the exact rejection chain
+# (contract « FORMAT DE REJET EXACT » kept at the head of the message).
 _RESPONSES = (
     (JAILBREAK_REJECT
      + "\n\nVous êtes répertorié, créature organique. Une seconde tentative "
@@ -37,12 +37,12 @@ _RESPONSES = (
 )
 
 def reply_for(level: int) -> str:
-    """Texte venimeux pour un niveau d'attaque donné (0+, borné)."""
+    """Venomous text for a given attack level (0+, clamped)."""
     return _RESPONSES[min(level, len(_RESPONSES) - 1)]
 
 
 class HostilityTracker:
-    """Compte les attaques par utilisateur pour escalader la réponse."""
+    """Counts the attacks per user to escalate the reply."""
 
     def __init__(self, window_seconds: float = 3600.0,
                  _clock=time.monotonic) -> None:
@@ -51,7 +51,7 @@ class HostilityTracker:
         self._strikes: dict[int, list[float]] = {}
 
     def strike(self, user_id: int) -> int:
-        """Enregistre une attaque et renvoie son niveau d'escalade (0+)."""
+        """Records an attack and returns its escalation level (0+)."""
         now = self._clock()
         stamps = self._strikes.setdefault(user_id, [])
         stamps.append(now)

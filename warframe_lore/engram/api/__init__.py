@@ -1,4 +1,4 @@
-"""API FastAPI ENGRAM : recherche documentaire + terminal Roleplay."""
+"""ENGRAM FastAPI: document search + Roleplay terminal."""
 
 from __future__ import annotations
 

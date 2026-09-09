@@ -1,4 +1,4 @@
-"""Miroir de la datamine KIM — téléchargement du dépôt GitHub en cache."""
+"""KIM datamine mirror — downloads the GitHub repo into cache."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from warframe_lore.kim_dm.constants import (
 
 
 def _download(url: str, target: Path, *, timeout: float = 60.0) -> None:
-    """Télécharge ``url`` vers ``target`` (UA + retries simples)."""
+    """Download ``url`` to ``target`` (UA + simple retries)."""
     request = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
     last_error: Exception | None = None
     for attempt in range(3):
@@ -26,18 +26,18 @@ def _download(url: str, target: Path, *, timeout: float = 60.0) -> None:
                     raise OSError(f"HTTP {response.status}")
                 target.write_bytes(response.read())
             return
-        except Exception as exc:  # noqa: BLE001  (repli après retries)
+        except Exception as exc:  # noqa: BLE001  (fallback after retries)
             last_error = exc
             time.sleep(0.5 * (attempt + 1))
-    raise OSError(f"Échec du téléchargement de {url}: {last_error}")
+    raise OSError(f"Failed to download {url}: {last_error}")
 
 
 def mirror_kim_dm(output_dir: Path, *, langs: tuple[str, ...] = ("en",),
                   force: bool = False) -> tuple[list[str], list[str]]:
-    """Télécharge le miroir KIM (graphes + dictionnaires) dans ``out/kim_dm``.
+    """Download the KIM mirror (graphs + dictionaries) into ``out/kim_dm``.
 
-    Retourne ``(téléchargés, échecs)`` — jamais d'exception pour un fichier
-    isolé : les fichiers introuvables n'interrompent pas le reste du miroir.
+    Returns ``(downloaded, failed)`` — never raises for an isolated file:
+    missing files do not interrupt the rest of the mirror.
     """
     root = Path(output_dir) / "kim_dm"
     downloaded: list[str] = []

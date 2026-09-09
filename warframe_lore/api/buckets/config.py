@@ -1,4 +1,4 @@
-"""Chargement de la configuration des buckets (``buckets.json``)."""
+"""Bucket configuration loading (``buckets.json``)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ log = logging.getLogger("warframe_lore.api.categories")
 
 
 class BucketConfig:
-    """Charge les définitions de buckets (depuis un fichier ou par défaut)."""
+    """Loads bucket definitions (from a file or the defaults)."""
 
     def __init__(self, specs: list[CategorySpec] | None = None) -> None:
         self.specs = specs if specs is not None else list(DEFAULT_BUCKETS)
@@ -38,7 +38,7 @@ class BucketConfig:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, indent=2, ensure_ascii=False),
                         encoding="utf-8")
-        log.info("Configuration buckets par défaut écrite -> %s", path)
+        log.info("Default bucket configuration written -> %s", path)
 
     def get(self, bucket_id: str) -> CategorySpec:
         return self._by_id[bucket_id]

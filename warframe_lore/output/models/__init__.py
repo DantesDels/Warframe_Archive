@@ -1,10 +1,10 @@
-"""Modèles de la couche Output — un fichier par classe.
+"""Output layer models -- one file per class.
 
-    * ``canon_status``      -> :class:`CanonStatus` (+ ``merge_canon_status``) ;
-    * ``output_entry``      -> :class:`OutputEntry` ;
+    * ``canon_status``      -> :class:`CanonStatus` (+ ``merge_canon_status``);
+    * ``output_entry``      -> :class:`OutputEntry`;
     * ``megafile_metadata`` -> :class:`MegafileMetadata`.
 
-Le paquet ré-exporte l'API publique pour préserver les imports historiques
+The package re-exports the public API to preserve legacy imports
 (``from warframe_lore.output.models import ...``).
 """
 

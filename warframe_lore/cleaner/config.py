@@ -1,4 +1,4 @@
-"""Config de nettoyage : constantes injectées depuis ``cleaner_config.json``."""
+"""Cleaning config: constants injected from ``cleaner_config.json``."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# Chemin du fichier de config de nettoyage (racine du projet).
+# Path to the cleaning config file (project root).
 CLEANER_CONFIG_PATH = (
     Path(__file__).resolve().parent.parent.parent / "config" / "cleaner_config.json"
 )
@@ -14,7 +14,7 @@ CLEANER_CONFIG_PATH = (
 
 @dataclass
 class CleanerConfig:
-    """Constantes de nettoyage chargées depuis ``cleaner_config.json``."""
+    """Cleaning constants loaded from ``cleaner_config.json``."""
 
     noise_substrings: tuple[str, ...] = ()
     noise_exact_names: frozenset[str] = frozenset()

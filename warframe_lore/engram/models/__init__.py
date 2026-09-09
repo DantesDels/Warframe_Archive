@@ -1,4 +1,4 @@
-"""Modèles de transport d'ENGRAM — un fichier par classe."""
+"""ENGRAM transport models — one file per class."""
 
 from __future__ import annotations
 

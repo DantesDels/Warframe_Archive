@@ -1,15 +1,15 @@
-"""Expansion de requête par alias (surnoms -> noms canoniques).
+"""Query expansion by alias (nicknames -> canonical names).
 
-Certaines entrées ne sont connues du modèle d'embedding que sous leur nom
-canonique (ex : « Lettie » -> page wiki « Leticia »).  ``resolve_alias``
-enrichit la requête à embarquer (rappel), fournit une note d'alias injectée
-dans le prompt (le modèle sait traduire le surnom) et un nom canonique pour
-la désambiguïsation quand aucune donnée exacte n'est récupérée.
+Some entries are only known to the embedding model under their canonical
+name (e.g. "Lettie" -> wiki page "Leticia"). ``resolve_alias`` enriches
+the query to embed (reminder), provides an alias note injected into the
+prompt (the model can translate the nickname) and a canonical name for
+disambiguation when no exact data is retrieved.
 """
 
 from __future__ import annotations
 
-# surnom (minuscules) -> (nom canonique, note mnémonique pour le prompt).
+# nickname (lowercase) -> (canonical name, mnemonic note for the prompt).
 ALIASES = {
     "lettie": ("Leticia",
                "Lettie = Leticia Garcia, membre des Hex (1999)"),
@@ -17,15 +17,15 @@ ALIASES = {
 
 
 def resolve_alias(question: str) -> tuple[str, str, str]:
-    """Retourne (question enrichie, note d'alias, nom canonique).
+    """Returns (enriched question, alias note, canonical name).
 
-    Sans correspondance, la question est retournée telle quelle et les deux
-    autres valeurs sont vides.
+    Without a match, the question is returned as-is and the other two
+    values are empty.
     """
     low = question.lower()
     for alias, (canon, note) in ALIASES.items():
         if alias in low:
-            # L'expansion lexicale force l'embedding à cibler les chunks du
-            # nom canonique, là où le surnom seul serait ambigu.
+            # Lexical expansion forces the embedding to target chunks of the
+            # canonical name, where the nickname alone would be ambiguous.
             return f"{question} ({canon})", note, canon
     return question, "", ""

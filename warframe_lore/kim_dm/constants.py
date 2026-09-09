@@ -1,4 +1,4 @@
-"""Constantes de la datamine KIM (source GitHub + fichiers + moteur)."""
+"""Constants for the KIM datamine (GitHub source + files + engine)."""
 
 from __future__ import annotations
 
@@ -6,10 +6,10 @@ REPO = "Sainan/warframe-kim-dialogues"
 BRANCH = "senpai"
 RAW_BASE = f"https://raw.githubusercontent.com/{REPO}/{BRANCH}/"
 
-# Fichiers de dialogue du jeu par personnage (dossier ``data/`` du miroir).
-# Les stubs ``MinervaDialogue``/``VelimirDialogue`` (782 o) redirigent vers la
-# conversation combinée ``MinVel*`` : on les télécharge (miroir complet) mais
-# ils n'exposent aucune donnée propre.
+# Per-character game dialogue files (``data/`` folder of the mirror).
+# The ``MinervaDialogue``/``VelimirDialogue`` stubs (782 B) redirect to the
+# combined ``MinVel*`` conversation: they are downloaded (full mirror) but
+# expose no own data.
 DIALOGUE_FILES = (
     "AoiDialogue_rom.dialogue.json",
     "ArthurDialogue_rom.dialogue.json",
@@ -31,10 +31,10 @@ DIALOGUE_FILES = (
 
 DIALECT_FILE_PREFIX = "Dialogue_rom.dialogue.json"
 
-# Page wiki (dernier segment du titre « Kinemantik Instant Messenger/X ») ->
-# fichier de datamine correspondant.  Les personnages absents de ce mapping
-# (Fables & Frontiers, stubs Minerva/Velimir) retombent sur l'analyse
-# des sections wiki (fallback historique).
+# Wiki page (last segment of the « Kinemantik Instant Messenger/X » title) ->
+# matching datamine file.  Characters missing from this mapping (Fables &
+# Frontiers, Minerva/Velimir stubs) fall back to wiki section analysis
+# (legacy fallback).
 WIKI_PAGE_MAP = {
     "Amir": "Jabir",
     "Arthur": "Arthur",
@@ -56,7 +56,7 @@ DICTS_DIRNAME = "dicts"
 SUPPORTED_LANGS = ("de", "en", "es", "fr", "it", "ja", "ko", "pl", "pt",
                    "ru", "tc", "th", "tr", "uk", "zh")
 
-# Seuls les types natifs exacts déterminent le rôle d'un nœud.
+# Only exact native types determine a node's role.
 _ENGINE = "/EE/Types/Engine/"
 _NODE_KINDS = {
     _ENGINE + "StartDialogueNode": "start",

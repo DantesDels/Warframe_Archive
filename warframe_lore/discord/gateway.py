@@ -17,7 +17,7 @@ from websockets.legacy.client import connect
 
 log = logging.getLogger("warframe_lore.discord.gateway")
 
-TokenHandler = Callable[[str], Awaitable[None]]
+TokenHandler = Callable[[str], Awaitable[bool]]
 EndHandler = Callable[[str], Awaitable[None]]
 
 
@@ -55,6 +55,9 @@ class RoleplayGateway:
         arrives while Oracle is answering, it simply waits its turn.  A lock
         reduced to ``queue.get()`` would make the second ``send()`` interpret
         the current reply tokens as its own (fragment concatenations).
+        ``on_token`` may return ``True`` to stop the stream early (hard
+        split): the WebSocket is then closed so no residual token arrives
+        after the stop marker.
         """
         async with self._send_lock:
             if not self.active:
@@ -75,7 +78,16 @@ class RoleplayGateway:
                     raise ConnectionError(
                         "WS stream closed before the end of the reply")
                 if kind == "token":
-                    await on_token(frame.get("token", ""))
+                    stop = await on_token(frame.get("token", ""))
+                    if stop:
+                        # Hard split: cut the stream right now, whatever
+                        # the server keeps sending (the API ``stop``
+                        # parameter fails silently).  Close the connection
+                        # to drop the residual tokens.
+                        log.info(
+                            "Hard split on stop marker — closing WS stream")
+                        await self.close()
+                        return
                 elif kind == "end":
                     if on_end:
                         await on_end(frame.get("text", ""))

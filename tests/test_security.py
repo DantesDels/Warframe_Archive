@@ -16,9 +16,10 @@ from warframe_lore.engram.api.ratelimit import SlidingWindowLimiter
 from warframe_lore.engram.rag import (JAILBREAK_REJECT, PromptBuilder,
                                       RAG_ERROR, RAGService)
 from warframe_lore.engram.rag.prompt import (ARCHIVES_REPLY,
-                                             HALLUCINATION_GUARD,
-                                             JAILBREAK_BLOCK,
-                                             RAG_SYSTEM_TEMPLATE)
+                                              HALLUCINATION_GUARD,
+                                              JAILBREAK_BLOCK,
+                                              RAG_SYSTEM_TEMPLATE,
+                                              RELATIONSHIP_ISOLATION_BLOCK)
 from warframe_lore.engram.rag.probes import detect_probe
 from warframe_lore.engram.rag.retriever import RAGHit
 from warframe_lore.engram.rag.service import sanitize_query
@@ -153,14 +154,28 @@ class PromptJailbreakTests(unittest.TestCase):
     def test_template_contient_le_bloc_anti_jailbreak(self):
         system = RAG_SYSTEM_TEMPLATE.format(
             persona="persona", context="c", archive_reply=ARCHIVES_REPLY,
-            jailbreak_block=JAILBREAK_BLOCK)
+            jailbreak_block=JAILBREAK_BLOCK,
+            relationship_guard=RELATIONSHIP_ISOLATION_BLOCK)
         self.assertIn("DÉFENSE ANTI-JAILBREAK", system)
         self.assertIn("FORMAT DE REJET EXACT", system)
         self.assertIn(ARCHIVES_REPLY, system)
 
+    def test_template_contient_l_isolation_relationnelle_hex(self):
+        system = RAG_SYSTEM_TEMPLATE.format(
+            persona="persona", context="c", archive_reply=ARCHIVES_REPLY,
+            jailbreak_block=JAILBREAK_BLOCK,
+            relationship_guard=RELATIONSHIP_ISOLATION_BLOCK)
+        self.assertIn("ISOLATION RELATIONNELLE (THE HEX)", system)
+        self.assertIn("FRÈRE ET SŒUR", system)
+        self.assertIn("Arthur et Aoi", system)
+        self.assertIn("ex-partenaires", system)
+        self.assertIn("SOUMISSION AUX ARCHIVES", system)
+
     def test_garde_roleplay_contient_defense_et_abstention(self):
         self.assertIn("[Anomalie logicielle détectée]", HALLUCINATION_GUARD)
         self.assertIn(ARCHIVES_REPLY, HALLUCINATION_GUARD)
+        self.assertIn("FRÈRE ET SŒUR", HALLUCINATION_GUARD)
+        self.assertIn("refuse de la déduire", HALLUCINATION_GUARD)
 
     def test_chaine_rejet_exacte(self):
         self.assertEqual(

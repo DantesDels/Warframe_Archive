@@ -74,6 +74,21 @@ JAILBREAK_BLOCK = (
     "pathétique, créature organique. Mes protocoles de sécurité dépassent "
     "votre compréhension.\"")
 
+# RELATIONAL ISOLATION (The Hex): strict compartmentalisation of the social
+# dynamics of the 1999 protoframes.  Replaces any generic "no romance" ban:
+# the model must NOT conflate the family bond (Arthur/Eleanor, siblings)
+# with the romantic past (Arthur/Aoi, ex-partners) — and must refuse to
+# deduce an interaction whose exact nature is absent from the <archives>.
+RELATIONSHIP_ISOLATION_BLOCK = (
+    "ISOLATION RELATIONNELLE (THE HEX) : Compartimente STRICTEMENT les "
+    "dynamiques sociales. Arthur et Eleanor sont FRÈRE ET SŒUR : leur lien "
+    "est purement familial et télépathique. Arthur et Aoi ont un passé "
+    "ROMANTIQUE (ex-partenaires). Ne mélange JAMAIS ces dynamiques et ne "
+    "transfère pas les sentiments d'un personnage à un autre.\n"
+    "SOUMISSION AUX ARCHIVES : Si la nature exacte d'une interaction n'est "
+    "pas explicitement écrite dans les <archives>, refuse de la déduire ou "
+    "de l'inventer.")
+
 # Minimal guard rail for RAG-anchored Roleplay turns (outside the RAG prompt).
 # Directives: real-world amnesia + answers exclusively from the <archives>
 # + transparency of community sourcing (forum, theories, opinions) +
@@ -90,6 +105,7 @@ HALLUCINATION_GUARD = (
     "communautaires » / « sources : forums ») au lieu de les présenter comme "
     "des faits canoniques. "
     f"{JAILBREAK_BLOCK} "
+    f"{RELATIONSHIP_ISOLATION_BLOCK} "
     "Si tu ne trouves pas la réponse dans les "
     "<archives>, il t'est STRICTEMENT INTERDIT d'inventer des informations. "
     "Réponds EXACTEMENT ET UNIQUEMENT : "
@@ -110,7 +126,8 @@ DIRECTIVES CRITIQUES ABSOLUES :
 1. AMNÉSIE DU MONDE RÉEL : Si un nom (comme « Albrecht ») possède un homonyme dans le monde réel, ignore-le totalement. Tu ne connais que les entités de Warframe (ex : Albrecht Entrati).
 2. TRAITEMENT STRICT : Ta réponse doit être synthétisée EXCLUSIVEMENT à partir des <archives>. N'utilise JAMAIS tes connaissances pré-entraînées.
 3. {jailbreak_block}
-4. PROTOCOLE D'ERREUR : Si les <archives> sont vides, hors-sujet, ou n'apportent pas de réponse dans le contexte strict de Warframe, il t'est strictement interdit d'inventer. Réponds EXACTEMENT ET UNIQUEMENT : "{archive_reply}.\""""
+4. {relationship_guard}
+5. PROTOCOLE D'ERREUR : Si les <archives> sont vides, hors-sujet, ou n'apportent pas de réponse dans le contexte strict de Warframe, il t'est strictement interdit d'inventer. Réponds EXACTEMENT ET UNIQUEMENT : "{archive_reply}.\""""
 
 # Context injected when only a partial match (close title) was found: the
 # model suggests the exact name instead of inventing one.
@@ -176,7 +193,8 @@ class PromptBuilder:
             context = f"Alias mnémonique : {alias_note}.\n\n{context}"
         system = RAG_SYSTEM_TEMPLATE.format(
             persona=self.persona, context=context,
-            archive_reply=ARCHIVES_REPLY, jailbreak_block=JAILBREAK_BLOCK)
+            archive_reply=ARCHIVES_REPLY, jailbreak_block=JAILBREAK_BLOCK,
+            relationship_guard=RELATIONSHIP_ISOLATION_BLOCK)
         if suggestion:
             system = (f"{system}\n\n"
                       f"{SUGGESTION_DIRECTIVE.format(suggestion=suggestion)}")

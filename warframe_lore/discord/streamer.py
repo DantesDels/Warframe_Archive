@@ -14,6 +14,12 @@ import discord
 
 log = logging.getLogger("warframe_lore.discord.streamer")
 
+# Generation-end marker emitted by the persona (``*[Indexation terminée]*``).
+# The API ``stop`` parameter can silently fail (the model keeps generating
+# after the marker): the Discord client performs its OWN hard split on this
+# exact string — buffer truncated at the marker, stream closed.
+STOP_MARKER = "[Indexation terminée]"
+
 
 class MessageStreamer:
     """Streams LLM tokens onto a Discord message without spamming the API.
@@ -47,16 +53,32 @@ class MessageStreamer:
         """Accumulated text (without going through the placeholder content)."""
         return "".join(self._parts)
 
-    async def add(self, token: str) -> None:
-        """Accumulate a token, edit as soon as the threshold is crossed."""
+    async def add(self, token: str) -> bool:
+        """Accumulate a token, edit as soon as the threshold is crossed.
+
+        Returns ``True`` when the stop marker was detected in the buffer:
+        the text has been truncated at the marker (hard split) and flushed.
+        The caller must then close the WebSocket stream.
+        """
         if not token:
-            return
+            return False
         self._parts.append(token)
         self._count += 1
+        text = self.text
+        if STOP_MARKER in text:
+            # Hard split: the model keeps generating after the marker (the
+            # API ``stop`` parameter fails silently) — cut the text HERE,
+            # whatever follows.  The reply is finalised with the marker.
+            head = text.split(STOP_MARKER)[0]
+            self._parts = [head + "\n\n" + STOP_MARKER]
+            self._count = 0
+            await self.flush()
+            return True
         now = time.monotonic()
         if self._count == 1 or self._count % self.update_every == 0 \
                 or now - self._last_edit >= self.min_interval:
             await self.flush()
+        return False
 
     async def flush(self) -> None:
         """Push the accumulated text to Discord (ignored if unchanged)."""
@@ -74,4 +96,4 @@ class MessageStreamer:
         await self.flush()
 
 
-__all__ = ["MessageStreamer"]
+__all__ = ["MessageStreamer", "STOP_MARKER"]

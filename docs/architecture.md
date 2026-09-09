@@ -34,6 +34,13 @@ each module evolves independently without breaking the rest.
                                                      │ ui   local web server │
                                                      │      + static frontend│
                                                      └───────────────────────┘
+
+  Decoupled pipeline (standalone, on-demand):
+     ┌──────────────────────────────────────────────────────────────────┐
+     │ rag_extract   warframe.fandom.com → LoreChunk (Pydantic)         │
+     │   aiohttp + mwparserfromhell (MediaWiki) ─► Playwright fallback  │
+     │   Tenacity retries · asyncio.Semaphore(3) · H2/H3 semantic split │
+     └──────────────────────────────────────────────────────────────────┘
 ```
 
 ## Main Flow (One Run)
@@ -90,6 +97,26 @@ each module evolves independently without breaking the rest.
 - `chunker.py`: `ChunkManager` — two-pass RAG chunking + dialogue mode.
 - `kim_parser.py`: KIM message extraction from dialogue blocks.
 
+### `warframe_lore/rag_extract` — decoupled RAG extraction pipeline
+- **Design**: standalone, on-demand alternative to the maintenance scraper.
+  Target: `warframe.fandom.com` (content mirror of the official wiki).
+- **`models.py`**: `LoreChunk` (Pydantic) — `source_url` (`HttpUrl`),
+  `page_title`, `section_title`, `content` (min 50 chars), `metadata`
+  (infobox properties). `to_payload()` for JSON serialization.
+- **`extractors.py`**: strategy pattern — abstract `BaseExtractor.extract(url)`;
+  `MediaWikiExtractor` (aiohttp, `prop=revisions&rvprop=content`,
+  `mwparserfromhell`, H2/H3 headings preserved via marker tokens);
+  `PlaywrightFallbackExtractor` (headless Chromium, `.spoiler` /
+  `.expand-button` clicks, DOM → sectioned Markdown).
+- **`resilience.py`**: Tenacity policies (`stop_after_attempt(3)`,
+  `wait_exponential`), `ConcurrencyGuard` (`asyncio.Semaphore`, default 3),
+  retry predicates covering aiohttp/timeout/Playwright errors.
+- **`chunking.py`**: semantic split on `##`/`###` headings, lead →
+  "Introduction", undersized blocks merged → validated `LoreChunk` list.
+- **`pipeline.py` / `__main__.py`**: orchestration with automatic primary →
+  fallback, bounded concurrency, per-URL INFO/ERROR logging; CLI
+  `python -m warframe_lore.rag_extract <url>...`.
+
 ## RAG Chunking (Phase 2.5)
 
 The splitting is performed without dependencies (a robust native equivalent
@@ -135,7 +162,7 @@ Statuses: `canon`, `speculation`, `community_theory`.
 
 - `wiki_pages`: page identity (unique id per page, url, delta-permitted).
 - `lore_chunks`: `wiki_page_id`, `chunk_index`, `content_markdown`,
-  `embedding vector(384)` (pgvector), `metadata JSONB` (+ GIN index),
+  `embedding vector(1024)` (pgvector, bge-m3), `metadata JSONB` (+ GIN index),
   unique constraint `(wiki_page_id, chunk_index)`.
 - `kim_dialogues`: extracted KIM dialogues (speakers, content, links).
 - `sync_state_records`: page state log (delta).
@@ -209,5 +236,6 @@ game data domain (see `README.md` → "Data Sources").
 - Root README — quick start, installation, Docker PostgreSQL, sources.
 - `warframe_lore/cli.py` — full set of `cephalon` commands.
 - `warframe_lore/ui/server.py` — interface server and endpoints.
+- `warframe_lore/rag_extract/README.md` — decoupled RAG extraction pipeline.
 - `pyproject.toml` — package definition, `cephalon` and `cephalon-ui` entry
   points.

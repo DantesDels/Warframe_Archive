@@ -26,9 +26,10 @@ cli           (cephalon interface: run, diff, status, export-entities, kim-dm, u
  ├─► export  (Warframe Public Export: localized game entities → game_entities_i18n)
  ├─► media   (ExportManifest + content-addressed images → out/media/)
  ├─► kim_dm  (KIM datamine: KIM/Fables conversation mirror)
- ├─► ui      (local HTTP server for reading megafiles — "cephalon ui")
- ├─► engram  (AI backend: FastAPI RAG + Roleplay WebSocket via local LM Studio)
- └─► discord (Loremaster bot: Oracle terminal in Discord) ──► engram (WS)
+├─► ui      (local HTTP server for reading megafiles — "cephalon ui")
+  ├─► engram  (AI backend: FastAPI RAG + Roleplay WebSocket via local LM Studio)
+  ├─► rag_extract (decoupled RAG extraction pipeline: aiohttp + Playwright → LoreChunk)
+  └─► discord (Loremaster bot: Oracle terminal in Discord) ──► engram (WS)
 ```
 
 Each layer has a single responsibility (SOLID) and lives in a dedicated
@@ -49,8 +50,13 @@ package with its own README (see [Documentation](#documentation)). See
 - **Chat model**: `Gemma-2-9b-it` (gguf Q4_K_M) chosen for XML formatting
   compliance and VRAM budget (8 GB); interchangeable LLM backends
   (llm_studio, injected abstractions).
-- **Active branch**: `feature/discord-gemma-2-9b` (migration from
-  `Llama-3.2-3B-Instruct`, see the [Project Journal](#journal)).
+- **Decoupled RAG extraction pipeline** (`warframe_lore/rag_extract`):
+  asynchronous Wikitext extraction (aiohttp + mwparserfromhell) with a
+  Playwright DOM fallback, Pydantic-validated `LoreChunk`, Tenacity retry
+  and a 3-concurrency semaphore; standalone CLI and library.
+- **Active branch**: `feature/RAG-upgrades` (RAG improvements: semantic
+  chunking with page/section context, relevance fallback directive,
+  decoupled extraction pipeline).
 
 ## Table of Contents
 
@@ -92,7 +98,7 @@ package with its own README (see [Documentation](#documentation)). See
 | NFR-4 | Robustness | HTTP retries/exponential backoff, atomic JSON publications, replayable delta, Discord reconnection < 1 s (tested), `restart: unless-stopped` for the database. |
 | NFR-5 | Locality & Security | Everything runs **locally** (dummy API key `lm-studio`, servers on `127.0.0.1`); no secrets in the repository (Discord token via environment). |
 | NFR-6 | Maintainability | SOLID + dependency injection (`Retriever` / `LLMProvider` / `EmbeddingProvider` `Protocol` abstractions), environment-based configuration, per-layer documentation. |
-| NFR-7 | Testability | 47 green unit tests (16 KIM contracts + 27 RAG/threshold + 12 security); data audit tools; documented live validation procedure. |
+| NFR-7 | Testability | 109 green unit tests + 32 subtests (16 KIM + 13 RAG/threshold + 22 security + 16 hostility + 5 rewriter + 7 hard-split + 10 semantic chunking + 20 rag_extract); data audit tools; documented live validation procedure. |
 | NFR-8 | Ethics | Lore deals with dark subjects (cloning, experiments…): the model must be able to describe them because they are **explicitly fictional** ("SECURITY CONTEXT" prompt block). |
 
 ## Requirements
@@ -113,7 +119,7 @@ package with its own README (see [Documentation](#documentation)). See
 - **LM Studio** (OpenAI-compatible endpoint on `http://127.0.0.1:1234/v1`) with two models loaded:
   - chat: `gemma-2-9b-it` (gguf, Q4_K_M) — default; tested alternative `llama-3.2-3b-instruct`
   - embedding: `text-embedding-baai-bge-m3-568m` (GGUF, 1024d)
-- pip dependencies (`requirements.txt`): `requests`, `mwparserfromhell`, `SQLAlchemy>=2.0`, `asyncpg`, `pgvector`, `fastapi`, `uvicorn`, `httpx`
+- pip dependencies (`requirements.txt`): `requests`, `mwparserfromhell`, `SQLAlchemy>=2.0`, `asyncpg`, `pgvector`, `fastapi`, `uvicorn`, `httpx`; decoupled extraction adds `aiohttp`, `pydantic>=2.7`, `tenacity`, `playwright`
 
 ### Network Sources (Pipeline)
 
@@ -263,6 +269,7 @@ Discord channel gateway (`DISCORD_CHANNELS`).
 | `kim_dm` | KIM datamine (structured conversations) | [kim_dm](warframe_lore/kim_dm) |
 | `media` | Media index + on-demand images | [media](warframe_lore/media) |
 | `output` | JSON megafiles per bucket (documented schema) | [output](warframe_lore/output) |
+| `rag_extract` | Decoupled RAG extraction pipeline (aiohttp + Playwright → `LoreChunk`) | [rag_extract](warframe_lore/rag_extract) |
 | `scraper` | Pipeline orchestration (Scraper, mixins) | [scraper](warframe_lore/scraper) |
 | `sync` | (legacy) delta state — replaced by SQL database delta | [sync](warframe_lore/sync) |
 | `ui` | Local HTTP server + dark interface | [ui](warframe_lore/ui) |
@@ -278,7 +285,9 @@ pip install -e .
 
 Dependencies: `requests`, `mwparserfromhell`, `SQLAlchemy>=2.0`, `asyncpg`,
 `pgvector`, `fastapi`, `uvicorn`, `httpx`. (RAG chunking and HTTP server
-implemented natively, without langchain dependency.)
+implemented natively, without langchain dependency.) The decoupled
+`rag_extract` pipeline additionally uses `aiohttp`, `pydantic`, `tenacity`
+and `playwright` (`playwright install chromium` only for the DOM fallback).
 
 ## `cephalon` Interface
 
@@ -505,6 +514,36 @@ SELECT content_markdown FROM lore_chunks
 WHERE metadata @> '{"Header 2": "Rank 1 - Neutral"}';
 ```
 
+## Decoupled RAG Extraction Pipeline (`warframe_lore/rag_extract`)
+
+A self-contained, asynchronous alternative to the maintenance scraper:
+it extracts an ad-hoc list of pages straight from the **Warframe Fandom
+wiki** and emits vectorizable `LoreChunk` records. See the
+[`rag_extract` README](warframe_lore/rag_extract/README.md).
+
+- **Module 1 — Data validation**: Pydantic `LoreChunk` (`source_url` as
+  `HttpUrl`, `page_title`, `section_title`, `content` min 50, `metadata`
+  for infobox properties).
+- **Module 2 — Extraction strategies** (Design Pattern): abstract
+  `BaseExtractor.extract(url)`; `MediaWikiExtractor` (aiohttp →
+  `api.php?action=query&prop=revisions&rvprop=content`, cleaning via
+  `mwparserfromhell`, H2/H3 headings preserved); `PlaywrightFallbackExtractor`
+  (headless Chromium, `.spoiler` / `.expand-button` clicks, DOM walk).
+- **Module 3 — Resilience**: Tenacity (3 attempts, exponential backoff) on
+  every extraction method; `asyncio.Semaphore(3)` concurrency cap; native
+  `logging` INFO/ERROR per URL; automatic Wiki → Playwright fallback.
+- **Module 4 — Semantic chunking**: H2/H3-aware split → validated
+  `LoreChunk` list (lead → "Introduction", undersized blocks merged).
+
+```bash
+python -m warframe_lore.rag_extract https://warframe.fandom.com/wiki/Ordis --verbose
+python -m warframe_lore.rag_extract Ordis KineticSiphonTrap --strategy wiki --output out/chunks.json
+```
+
+Output: `{"pages": […], "total_chunks": n, "chunks": [{source_url,
+page_title, section_title, content, metadata}]}` — ready for an embedding
++ pgvector ingestion step.
+
 ## Canon
 
 Each entry carries `canon_status` (`canon` / `speculation` /
@@ -578,15 +617,24 @@ DISCORD_TOKEN=... python -m warframe_lore.discord.main --channels <ID>
 
 ### Unit Suite
 
-- **`tests/test_kim_dm.py`** — 16 tests (unittest/pytest, `python -m pytest -q`) on
-  **KIM datamine contracts**: dialogue structure, sparse IDs,
-  cycle presence, FR/EN localization, system actions, aggregated graphs
-  (~1,400 nodes), first-branch script, etc.
-- **`tests/test_rag_threshold.py`** — 7 tests on the **relevance threshold and
+- **`tests/test_kim_dm.py`** — 16 tests (+ 32 subtest assertions, unittest/pytest,
+  `python -m pytest -q`) on **KIM datamine contracts**: dialogue structure,
+  sparse IDs, cycle presence, FR/EN localization, system actions, aggregated
+  graphs (~1,400 nodes), first-branch script, etc.
+- **`tests/test_rag_threshold.py`** — 13 tests on the **relevance threshold and
   short-circuit** (injected abstractions, no network or database): passages below
   `suggestion_min_score` cleared from context, marginal neighbors excluded,
   bypass without LLM call (HTTP and stream), exact error.
-- **`tests/test_security.py` + `tests/test_hostility.py`** — 21 tests (12 security: SQLi/elevation probes, 429/1008, sanitization; 9 hostility: apologies, escalation, persona switch), deterministic rejections without LLM.
+- **`tests/test_security.py` + `tests/test_hostility.py`** — 38 tests (22 security:
+  SQLi/elevation probes, 429/1008, sanitization; 16 hostility: apologies,
+  escalation, persona switch), deterministic rejections without LLM.
+- **`tests/test_rewriter.py`** — 5 tests (per-user query rewriting, anaphora);
+  **`tests/test_hard_split.py`** — 7 tests (hard split bounds).
+- **`tests/test_semantic_chunks.py`** — 10 tests on **semantic chunking**
+  (sections, `Page: X | Section: Y -` context prefix, structured ingestion).
+- **`tests/test_rag_extract.py`** — 20 tests on the **decoupled extraction
+  pipeline** (Pydantic `LoreChunk` contract, H2/H3 chunking, Tenacity recovery,
+  Playwright-style fallback order, semaphore ≤ 3).
 - **`tests/audit_kim_dm.py`** — standalone structural audit (no expected data:
   reports what is missing/malformed).
 - **Pipeline Audits** — `dump_scraper.py` (volumes/count headers),
@@ -618,7 +666,7 @@ DISCORD_TOKEN=... python -m warframe_lore.discord.main --channels <ID>
 | "…the little mouse in the nursery rhyme a green mouse?" | short-circuit `[Archives] Insufficient data…`, 0 sources (no more false "Aurax Vertec" suggestion) |
 | "…that PS5 story just before?" (anaphora) | reuses the previous question for search: hits 0.63 / 0.60 / 0.58 instead of ~0.51 noise |
 | Multi-user resilience | serialized responses (no more fragment interleaving) + `!stop` interrupts reasoning (live validated) |
-| 27 unit tests (16 KIM + 11 RAG) | 27 passed |
+| Unit tests | 109 passed + 32 subtests (16 KIM + 13 RAG/threshold + 22 security + 16 hostility + 5 rewriter + 7 hard-split + 10 semantic + 20 rag_extract) |
 
 ## User Manual
 
@@ -860,7 +908,7 @@ trials below.
 | Local corpus (audit) | ~3,175 pages |
 | Vectorized chunks in database | 9,159 (`bge-m3`, 1024d) |
 | KIM chunking verified | 843 chunks, no 2,500-char overflow |
-| Unit tests | 56 passed (16 KIM + 27 RAG/threshold + 12 security + 9 hostility) |
+| Unit tests | 109 passed (16 KIM + 13 RAG/threshold + 22 security + 16 hostility + 5 rewriter + 7 hard-split + 10 semantic + 20 rag_extract) + 32 subtests |
 | Anti-SQLi (live) | real attacker payloads → deterministic rejection without LLM; 429 beyond quota; `Lettie` intact |
 | "Lettie" retrieval (live) | 0.598 / 0.581 / 0.577 (Leticia) |
 | "Orokin" retrieval (live) | 0.611 / 0.600 / 0.595 |

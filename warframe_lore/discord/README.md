@@ -41,22 +41,45 @@ déjà dans le shell) ou arguments CLI :
 Commandes du bot : `!reset` (nouvelle session Oracle sur le canal),
 `!help`.
 
-## Lancer
+## 3. Lancer
 
 ```bash
 # 1) racine du projet : créer .env (secret, non versionné)
 #    DISCORD_TOKEN=MTE...  (token du bot depuis le portail Discord)
 
 # 2) depuis la racine du projet (ENGRAM tourne sur :8000)
-python -m warframe_lore.discord.main
+cephalon bot run
+# (équivalent : python -m warframe_lore.discord.main, ou l'alias CLI « -bot run »)
+
+# options utiles — canal dédié + logs verbeux :
+cephalon bot run --channels <ID> --verbose
 # ou, si un token doit primer sur .env :
 $env:DISCORD_TOKEN = "VOTRE_TOKEN"    # PowerShell
-python -m warframe_lore.discord.main
+cephalon bot run
 ```
 
-Imported via console script (si installé) : `loremaster`.
+Disponible aussi via le console script `loremaster`.
 
-## 4. Vérifier
+## 3. Sécurité et hostilité (anti-attaquant)
+
+- **Détection déterministe** (`engram/rag/probes.py`) : injection SQL,
+  élévation de privilèges (`is_admin`, `permissions`…), mentions tierces
+  `<@id>` → rejet **sans appeler le LLM** avec la chaîne exacte
+  `JAILBREAK_REJECT` (HTTP `POST /v1/rag` **et** WS `/v1/roleplay`).
+- **Rate limit** : fenêtre glissante par IP (HTTP 429 / fermeture WS 1008) +
+  garde anti-spam coté bot (`guards.py` : cooldown utilisateur, plafond par
+  canal, blocage temporaire sur insistance).
+- **Persona hostile par attaquant** : dès qu'une sonde est détectée
+  (`bot.py._handle_probe`), la session WS de **cet utilisateur** est basculée
+  sur le persona anti-agression `persona/oracle_hostile` (éditable) via la
+  trame `{"type":"persona","mode":"hostile"}` (`gateway.set_persona`). Les
+  autres utilisateurs et la session normale du salon ne sont pas affectés.
+- **Rédemption par excuses** : le bot insiste pour obtenir des excuses
+  (`_insist`) ; la détection déterministe `is_apology` (`hostile_link.py`,
+  marqueurs : *pardon, excusez-moi, désolé, sorry, mea culpa…*) ramène le
+  persona oracle et ferme la session hostile (`_forgive`).
+
+## 5. Vérifier
 
 - Dans Discord, taper un message sur un canal où le bot est présent → Oracle
   répond en direct (le message s'édite token par token).
@@ -75,7 +98,10 @@ Imported via console script (si installé) : `loremaster`.
 | Fichier | Rôle |
 |---|---|
 | `config.py` | `DiscordConfig` (token, WS, préfixe, canaux autorisés) |
-| `gateway.py` | `RoleplayGateway` — connexion WS par canal, diffusion des tokens |
+| `gateway.py` | `RoleplayGateway` — connexion WS par canal, diffusion des tokens, `set_persona` (bascule personne hostile) |
 | `streamer.py` | `MessageStreamer` — édition du message avec buffering (anti 429) |
-| `bot.py` | `LoreMasterBot` — `discord.Client`, routing des messages |
-| `main.py` | entry point console |
+| `guards.py` | `BurstGuard` — anti-spam (cooldown utilisateur, plafond par canal, blocage) |
+| `hostility.py` | escalade ciblée (`reply_for`, niveau 0→2) + `HostilityTracker` |
+| `hostile_link.py` | session hostile par attaquant (`is_apology`, bascule/retour de persona) |
+| `bot.py` | `LoreMasterBot` — `discord.Client`, routing, détection de sondes (`_handle_probe`/`_insist`/`_forgive`) |
+| `main.py` | entry point console (`launch_bot` partagé avec le CLI `cephalon bot run`) |

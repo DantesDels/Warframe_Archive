@@ -570,6 +570,7 @@ uvicorn warframe_lore.engram.api.app:app --port 8000 --app-dir warframe_lore
 #    (ou : cd warframe_lore/engram && uvicorn api.app:app --port 8000)
 # 6. bot Discord (optionnel) :
 DISCORD_TOKEN=... python -m warframe_lore.discord.main --channels <ID>
+#    (ou : cephalon bot run --channels <ID>)
 ```
 
 ## Tests et validation
@@ -584,6 +585,7 @@ DISCORD_TOKEN=... python -m warframe_lore.discord.main --channels <ID>
   court-circuit** (abstractions injectées, sans réseau ni base) : passages sous
   `suggestion_min_score` vidés du contexte, voisins marginaux exclus, bypass
   sans appel au LLM (HTTP et stream), erreur exacte.
+- **`tests/test_security.py` + `tests/test_hostility.py`** - 21 tests (12 secu : probes SQLi/elevation, 429/1008, sanitization ; 9 hostilite : excuses, escalade, bascule de persona), rejets deterministes sans LLM.
 - **`tests/audit_kim_dm.py`** — audit structurel autonome (pas de données
   attendues : rapporte ce qui manque/mal-formé).
 - **Audits du pipeline** — `dump_scraper.py` (volumes/chefs de comptage),
@@ -631,7 +633,7 @@ DISCORD_TOKEN=... python -m warframe_lore.discord.main --channels <ID>
 
 ### Bot Discord « Loremaster Oracle »
 
-- Se lance avec `python -m warframe_lore.discord.main --channels <id>` ; répond
+- Se lance avec `python -m warframe_lore.discord.main --channels <id>` (ou `cephalon bot run`) ; répond
   dans les canaux autorisés (option `--channels` / `DISCORD_CHANNELS`), OU s'il
   est @mentionné ailleurs. Messages « hors rôle-play » ignorés : ceux commençant
   par `(` ou `//` (et ceux des robots).
@@ -832,6 +834,20 @@ documentés ci-dessous.
     phrase « Mes archives mnémoniques sont corrompues… », ramenée à la chaîne
     unifiée « [Archives] … » partout sauf dans le rejet d'attaque).
 
+17. **Persona hostile + redemption par excuses (anti-attaquant).**
+    *Apres rejet d'une sonde, le bot restait neutre.* *Changement :*
+    detection de sonde au niveau bot (`detect_probe`) -> reponse d'escalade
+    ciblee (`reply_for`, niveau 0->2) prefixee a la chaine `JAILBREAK_REJECT` ET
+    bascule de la session DE L'ATTAQUANT sur un persona hostile dedie
+    (`persona/oracle_hostile`, editable, fallback `HOSTILE_PERSONA`), via une
+    connexion WS par attaquant (`hostile_link.py`) et une trame de controle
+    `{"type":"persona","mode":"hostile"}` (`gateway.set_persona`) ; le bot
+    insiste pour des excuses et la detection deterministe (`is_apology` :
+    pardon, desole, sorry...) ramene le persona oracle et ferme la session.
+    Les autres utilisateurs et la session normale du salon ne sont jamais
+    affectes. *Resultat :* 56 tests verts (dont `tests/test_hostility.py`),
+    lancement du bot uniformise via `cephalon bot run`.
+
 ### Chiffres et validations
 
 | Mesure | Valeur |
@@ -839,7 +855,7 @@ documentés ci-dessous.
 | Corpus local (audit) | ~3 175 pages |
 | Chunks vectorisés en base | 9 159 (`bge-m3`, 1024d) |
 | Chunking KIM vérifié | 843 chunks, aucun dépassement 2 500 car. |
-| Tests unitaires | 47 passed (16 KIM + 27 RAG/seuil + 12 sécurité) |
+| Tests unitaires | 56 passed (16 KIM + 27 RAG/seuil + 12 securite + 9 hostilite) (16 KIM + 27 RAG/seuil + 12 sécurité) |
 | Anti-SQLi (live) | payloads réels du testeur → rejet déterministe sans LLM ; 429 au-delà du quota ; `Lettie` intacte |
 | Retrieval « Lettie » (live) | 0.598 / 0.581 / 0.577 (Leticia) |
 | Retrieval « Orokin » (live) | 0.611 / 0.600 / 0.595 |

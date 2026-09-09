@@ -12,8 +12,12 @@ import logging
 
 import discord
 
+from warframe_lore.engram.rag.probes import detect_probe
+
 from .gateway import RoleplayGateway
 from .guards import BurstGuard
+from .hostile_link import HostileLink, is_apology
+from .hostility import HostilityTracker, reply_for
 from .streamer import MessageStreamer
 
 log = logging.getLogger("warframe_lore.discord.bot")
@@ -46,6 +50,11 @@ class LoreMasterBot(discord.Client):
         # Garde-fou anti-spam : cooldown par utilisateur, plafond par canal,
         # blocage temporaire sur insistance (quasi-DDoS au niveau du salon).
         self.guard = BurstGuard()
+        # Escalade des réponses anti-attaque (niveau 0 → 2).
+        self.hostility = HostilityTracker()
+        # Sessions hostiles PAR ATTAQUANT (persona anti-agression jusqu'à
+        # ses excuses) : n'affectent jamais la session normale du salon.
+        self._hostile: dict[int, HostileLink] = {}
 
     async def on_ready(self) -> None:
         log.info("Loremaster Oracle en ligne : %s (%s)",
@@ -69,8 +78,26 @@ class LoreMasterBot(discord.Client):
                          and message.channel.id in self.allowed_channels)
         if not dedicated and self.user not in message.mentions:
             return
-        # Anti-spam : au-delà du cooldown / des plafonds, le message est ignoré
-        # silencieusement (y compris les commandes, quelle que soit l'insistance).
+        text = self._strip_mention(content)
+        # SONDE HOSTILE : rejet déterministe (jamais de LLM sur la charge
+        # utile elle-même) + escalade ciblée sur l'attaquant + bascule de
+        # sa session sur le persona hostile (qui exigera des excuses).
+        if detect_probe(text):
+            await self._handle_probe(message, text)
+            return
+        # Utilisateur en mode hostile : ses messages passent par SA session
+        # anti-agression.  Des excuses → rémission (retour persona initial).
+        if message.author.id in self._hostile:
+            if is_apology(text):
+                await self._forgive(message.author.id, message, text)
+                return
+            if not self.guard.check(message.author.id, message.channel.id):
+                log.info("Spam hostile ignoré user=%s canal=%s",
+                         message.author.id, message.channel.id)
+                return
+            await self._insist(message.author.id, message)
+            return
+        # Anti-spam pour les utilisateurs normaux (cooldown / plafonds).
         if not self.guard.check(message.author.id, message.channel.id):
             if self.guard.is_blocked(message.author.id):
                 log.warning("Abus bloqué temporairement user=%s canal=%s",
@@ -83,6 +110,48 @@ class LoreMasterBot(discord.Client):
             await self._handle_command(message)
             return
         await self._route_to_oracle(message)
+
+    async def _handle_probe(self, message: discord.Message, text: str) -> None:
+        """Réagi à une sonde hostile : escalade ciblée + death session."""
+        level = self.hostility.strike(message.author.id)
+        await message.reply(reply_for(level))
+        if message.author.id not in self._hostile:
+            link = HostileLink(self.gateway_url)
+            try:
+                await link.open()
+            except ConnectionError:
+                log.warning(
+                    "Persona hostile injoignable — ENGRAM indisponible ?")
+            else:
+                self._hostile[message.author.id] = link
+        log.warning("SONDE_HOSTILE user=%s lvl=%d (session hostile ouverte)",
+                    message.author.id, level)
+
+    async def _insist(self, user_id: int, message: discord.Message) -> None:
+        """Relaye à la session hostile de l'attaquant (il doit s'excuser)."""
+        link = self._hostile[user_id]
+        try:
+            await link.deliver(message, apology=False)
+        except ConnectionError:
+            # Session hostile morte : on la rouvre (nouvelle tentative).
+            log.warning("Session hostile perdue — réouverture")
+            await link.close()
+            link = HostileLink(self.gateway_url)
+            await link.open()
+            self._hostile[user_id] = link
+            await link.deliver(message, apology=False)
+
+    async def _forgive(self, user_id: int, message: discord.Message,
+                       text: str) -> None:
+        """Excuses acceptées : retour au persona initial puis fermeture."""
+        link = self._hostile.pop(user_id)
+        try:
+            await link.deliver(message, apology=True)
+        except ConnectionError:
+            log.warning("Session hostile déjà fermée lors des excuses")
+        finally:
+            await link.close()
+        log.info("Rédemption user=%s (persona initial restauré)", user_id)
 
     async def _handle_command(self, message: discord.Message) -> None:
         text = message.content[len(self.prefix):].strip().lower()
@@ -200,6 +269,9 @@ class LoreMasterBot(discord.Client):
         for gateway in self._gateways.values():
             await gateway.close()
         self._gateways.clear()
+        for link in self._hostile.values():
+            await link.close()
+        self._hostile.clear()
         await super().close()
 
 

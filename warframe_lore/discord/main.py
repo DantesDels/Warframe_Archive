@@ -24,42 +24,54 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--token", default=None,
                         help="Token du bot (ou env DISCORD_TOKEN)")
     parser.add_argument("--ws", default=None,
-                        help="URL WebSocket ENGRAM (défaut: ws://localhost:8000/v1/roleplay)")
+                        help="URL WebSocket ENGRAM (d́faut: ws://localhost:8000/v1/roleplay)")
     parser.add_argument("--prefix", default=None,
-                        help="Préfixe des commandes (défaut: !)")
+                        help="Pŕfixe des commandes (d́faut: !)")
     parser.add_argument("--channels", default=None,
-                        help="IDs de canaux autorisés, séparés par des virgules "
-                             "(défaut: tous)")
+                        help="IDs de canaux autoriśs, śpaŕs par des virgules "
+                             "(d́faut: tous)")
     parser.add_argument("--verbose", action="store_true")
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+def launch_bot(token: str | None, ws: str | None = None,
+               prefix: str | None = None, channels: tuple[int, ...] = (),
+               typing_interval: float | None = None,
+               verbose: bool = False) -> int:
+    """Démarre le bot (bloquant) : partagé entre ``python -m
+    warframe_lore.discord.main`` et ``cephalon bot run``.
+    """
     logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
+        level=logging.DEBUG if verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
     config = DiscordConfig.load()
-    token = args.token or config.token
+    token = token or config.token
     if not token:
         print("Token Discord manquant : passer --token ou DISCORD_TOKEN.",
               file=sys.stderr)
         return 2
 
-    channels = tuple(
-        int(x) for x in (args.channels or "").split(",") if x.strip().isdigit())
+    channels = tuple(channels) or config.allowed_channels
     bot = LoreMasterBot(
-        gateway_url=args.ws or config.engram_ws_url,
-        prefix=args.prefix or config.prefix,
-        typing_interval=config.typing_interval,
-        allowed_channels=channels or config.allowed_channels,
+        gateway_url=ws or config.engram_ws_url,
+        prefix=prefix or config.prefix,
+        typing_interval=typing_interval or config.typing_interval,
+        allowed_channels=channels,
     )
     try:
         bot.run(token, log_handler=None)
         return 0
     except KeyboardInterrupt:
         return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    channels = tuple(
+        int(x) for x in (args.channels or "").split(",") if x.strip().isdigit())
+    return launch_bot(args.token, args.ws, args.prefix, channels,
+                      None, args.verbose)
 
 
 if __name__ == "__main__":

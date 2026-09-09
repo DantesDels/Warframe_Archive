@@ -33,6 +33,10 @@ async def roleplay(websocket: WebSocket) -> None:
         await websocket.close(code=1008, reason="tentative abusive")
         return
     session = Session(session_id=uuid.uuid4().hex)
+    # Persona courant de la session : "oracle" (défaut) ou "hostile"
+    # (anti-agression).  Le bot bascule sur le mode hostile dès qu'un
+    # utilisateur attaque, et revient sur "oracle" après ses excuses.
+    persona_mode = "oracle"
 
     async def send_error(message: str) -> None:
         await websocket.send_json({"type": "error", "message": message})
@@ -42,6 +46,13 @@ async def roleplay(websocket: WebSocket) -> None:
             {"type": "open", "session_id": session.session_id})
         while True:
             payload = await websocket.receive_json()
+            if payload.get("type") == "persona":
+                # Bascule de persona (mode hostile / retour oracle) : trame de
+                # contrôle — aucune réponse n'est émise côté serveur.
+                mode = payload.get("mode")
+                if mode in ("oracle", "hostile"):
+                    persona_mode = mode
+                continue
             if payload.get("type") != "message":
                 continue
             # Sanitisation à la frontière : caractères de contrôle et espaces
@@ -73,7 +84,7 @@ async def roleplay(websocket: WebSocket) -> None:
             # Streaming token par token ; on accumule pour clôturer le tour.
             response_parts: list[str] = []
             async for token in container.roleplay.stream(
-                    session, user_text, rag_context):
+                    session, user_text, rag_context, persona=persona_mode):
                 response_parts.append(token)
                 await websocket.send_json({"type": "token", "token": token})
             await websocket.send_json(

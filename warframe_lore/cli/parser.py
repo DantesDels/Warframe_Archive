@@ -13,7 +13,7 @@ from pathlib import Path
 from . import commands as cmd
 
 _KNOWN_COMMANDS = {"run", "diff", "status", "recent", "buckets",
-                   "init-db", "ui", "export-entities", "kim-dm",
+                   "init-db", "ui", "export-entities", "kim-dm", "bot",
                    "version", "help"}
 
 _SUPPORTED_LANGS = {"de", "en", "es", "fr", "it", "ja", "ko", "pl", "pt",
@@ -119,6 +119,24 @@ def build_parser() -> argparse.ArgumentParser:
                           help="Re-télécharge tout (ignore le cache local).")
     p_kim_dm.set_defaults(func=cmd._cmd_kim_dm)
 
+    # --- bot
+    p_bot = sub.add_parser("bot", help="Lance le bot Discord Oracle.")
+    bot_sub = p_bot.add_subparsers(dest="bot_action", metavar="ACTION")
+    p_bot_run = bot_sub.add_parser("run", help="Démarre le bot (bloquant).")
+    p_bot_run.add_argument("--token", default=None,
+                           help="Token du bot (ou env DISCORD_TOKEN)")
+    p_bot_run.add_argument("--ws", default=None,
+                           help="URL WebSocket ENGRAM (défaut: "
+                                "ws://localhost:8000/v1/roleplay)")
+    p_bot_run.add_argument("--prefix", default=None,
+                           help="Préfixe des commandes (défaut: !)")
+    p_bot_run.add_argument("--channels", default=None,
+                           help="IDs de canaux autorisés, séparés par des "
+                                "virgules (défaut: config ou tous)")
+    p_bot_run.add_argument("--verbose", action="store_true")
+    p_bot_run.set_defaults(func=cmd._cmd_bot)
+    p_bot.set_defaults(func=cmd._cmd_bot)
+
     # --- version
     p_version = sub.add_parser("version", help="Affiche la version.")
     p_version.set_defaults(func=cmd._cmd_version)
@@ -140,6 +158,10 @@ def normalize_legacy_argv(argv: list[str]) -> list[str]:
     """
     if not argv:
         return argv
+
+    if argv[0] in ("-bot", "--bot"):
+        return ["bot"] + list(argv[1:])
+
     first = argv[0]
     if first in _KNOWN_COMMANDS or first in ("-h", "--help"):
         return argv

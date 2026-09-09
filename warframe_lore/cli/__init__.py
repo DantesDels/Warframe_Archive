@@ -14,6 +14,7 @@ Commandes disponibles (préfixe ``cephalon``) :
     * ``cephalon ui``       : lance l'interface web locale (navigateur).
     * ``cephalon export-entities`` : synchronise les entités du jeu.
     * ``cephalon kim-dm``      : télécharge le miroir KIM (datamine).
+    * `cephalon bot run`     : démarre le bot Discord Oracle (bloquant).
     * ``cephalon-ui``       : entry point autonome de l'interface (exe).
     * ``cephalon version``  : affiche la version du paquet.
     * ``cephalon help``     : aide générale.

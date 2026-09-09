@@ -53,6 +53,8 @@ class Container:
             window=SlidingWindow(max_turns=self.config.max_history_turns,
                                  max_context_chars=self.config.max_context_chars),
             system_prompt=self._system_prompt(),
+            hostile_prompt=Persona(self.config.system_prompt)
+                .system_prompt(mode="hostile"),
             temperature=self.config.chat_temperature,
         )
         # Anti-DDoS / anti-abuse : débit maximal par IP (HTTP RAG + WS Roleplay).

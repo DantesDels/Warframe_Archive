@@ -79,6 +79,19 @@ class RoleplayGateway:
                     log.error("Erreur Roleplay : %s", frame.get("message"))
                     return
 
+    async def set_persona(self, mode: str) -> None:
+        """Bascule le persona de la session WS ("oracle" | "hostile").
+
+        Sérialisé sous le ``_send_lock`` : la bascule attend qu'une réponse
+        en cours soit terminée, puis est appliquée avant le message suivant.
+        """
+        async with self._send_lock:
+            if not self.active:
+                raise ConnectionError(
+                    "connexion WS fermée — redémarrer le gateway")
+            await self._conn.send(json.dumps(
+                {"type": "persona", "mode": mode}))
+
     async def _read_loop(self) -> None:
         """Lit les trames entrantes et les met en file d'attente."""
         try:

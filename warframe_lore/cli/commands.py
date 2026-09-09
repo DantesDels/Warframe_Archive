@@ -209,6 +209,21 @@ def _cmd_ui(args) -> int:
     return 0
 
 
+# ------------------------------------------------------------ command: bot
+def _cmd_bot(args) -> int:
+    """Lance le bot Discord Oracle (``cephalon bot run``)."""
+    from ..discord.main import launch_bot
+
+    if getattr(args, "bot_action", None) != "run":
+        print("Usage : cephalon bot run [--token ...] [--channels ...]",
+              file=sys.stderr)
+        return 2
+    channels = tuple(
+        int(x) for x in (args.channels or "").split(",") if x.strip().isdigit())
+    return launch_bot(args.token, args.ws, args.prefix, channels,
+                      None, args.verbose)
+
+
 # --------------------------------------------------------- command: kim-dm
 def _cmd_kim_dm(args) -> int:
     from ..kim_dm import mirror_kim_dm

@@ -12,6 +12,7 @@ import logging
 import sys
 
 from .bot import LoreMasterBot
+from .bootstrap import ensure_database, ensure_engram
 from .config import DiscordConfig
 
 
@@ -39,6 +40,9 @@ def launch_bot(token: str | None, ws: str | None = None,
                verbose: bool = False) -> int:
     """Starts the bot (blocking): shared between ``python -m
     warframe_lore.discord.main`` and ``cephalon bot run``.
+
+    ENGRAM (the Roleplay WebSocket server) is started automatically if it
+    is not already responding — no manual uvicorn launch required.
     """
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.INFO,
@@ -51,18 +55,26 @@ def launch_bot(token: str | None, ws: str | None = None,
               file=sys.stderr)
         return 2
 
+    ws_url = ws or config.engram_ws_url
     channels = tuple(channels) or config.allowed_channels
     bot = LoreMasterBot(
-        gateway_url=ws or config.engram_ws_url,
+        gateway_url=ws_url,
         prefix=prefix or config.prefix,
         typing_interval=typing_interval or config.typing_interval,
         allowed_channels=channels,
     )
+    # Auto-start the local infrastructure: PostgreSQL (docker compose) then
+    # ENGRAM (uvicorn).  The spawned ENGRAM child is stopped with the bot.
+    ensure_database()
+    engram = ensure_engram(ws_url)
     try:
         bot.run(token, log_handler=None)
         return 0
     except KeyboardInterrupt:
         return 0
+    finally:
+        if engram is not None:
+            engram.terminate()
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -11,6 +11,9 @@ venv/
 out/
 sync_state.json
 
+# Dumps locaux d'inspection (scripts dump_scraper.py)
+data/raw/
+
 # Logs d'exécution locale (dossier dédié)
 logs/
 runtime_*.log

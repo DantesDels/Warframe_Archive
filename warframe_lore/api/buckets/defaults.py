@@ -39,7 +39,7 @@ DEFAULT_BUCKETS: list[CategorySpec] = [
         categories=["Quotes"],
         prefix=["Kinemantik Instant Messenger/"],
         title_include=["Kinemantik Instant Messenger", "Fables & Frontiers"],
-        title_exclude=["Lettie", "The Hex", "SectionList"],
+        title_exclude=["The Hex", "SectionList"],
     ),
     CategorySpec(
         id="Lore_Characters",

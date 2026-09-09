@@ -18,6 +18,7 @@ from warframe_lore.engram.rag import (JAILBREAK_REJECT, PromptBuilder,
 from warframe_lore.engram.rag.prompt import (ARCHIVES_REPLY,
                                               HALLUCINATION_GUARD,
                                               JAILBREAK_BLOCK,
+                                              OFF_TOPIC_ERROR,
                                               RAG_SYSTEM_TEMPLATE,
                                               RELATIONSHIP_ISOLATION_BLOCK)
 from warframe_lore.engram.rag.probes import detect_probe
@@ -154,15 +155,29 @@ class PromptJailbreakTests(unittest.TestCase):
     def test_template_contient_le_bloc_anti_jailbreak(self):
         system = RAG_SYSTEM_TEMPLATE.format(
             persona="persona", context="c", archive_reply=ARCHIVES_REPLY,
+            off_topic_error=OFF_TOPIC_ERROR,
             jailbreak_block=JAILBREAK_BLOCK,
             relationship_guard=RELATIONSHIP_ISOLATION_BLOCK)
         self.assertIn("DÉFENSE ANTI-JAILBREAK", system)
         self.assertIn("FORMAT DE REJET EXACT", system)
         self.assertIn(ARCHIVES_REPLY, system)
 
+    def test_template_contient_le_fallback_de_pertinence(self):
+        system = RAG_SYSTEM_TEMPLATE.format(
+            persona="persona", context="c", archive_reply=ARCHIVES_REPLY,
+            off_topic_error=OFF_TOPIC_ERROR,
+            jailbreak_block=JAILBREAK_BLOCK,
+            relationship_guard=RELATIONSHIP_ISOLATION_BLOCK)
+        self.assertIn("ÉVALUATION DE PERTINENCE (FALLBACK)", system)
+        self.assertIn("TU NE DOIS RIEN TENTER DE DÉDUIRE", system)
+        self.assertIn("FORMAT DE REJET STRICT", system)
+        self.assertIn("faux positif de recherche", system)
+        self.assertIn(OFF_TOPIC_ERROR, system)
+
     def test_template_contient_l_isolation_relationnelle_hex(self):
         system = RAG_SYSTEM_TEMPLATE.format(
             persona="persona", context="c", archive_reply=ARCHIVES_REPLY,
+            off_topic_error=OFF_TOPIC_ERROR,
             jailbreak_block=JAILBREAK_BLOCK,
             relationship_guard=RELATIONSHIP_ISOLATION_BLOCK)
         self.assertIn("ISOLATION RELATIONNELLE (THE HEX)", system)

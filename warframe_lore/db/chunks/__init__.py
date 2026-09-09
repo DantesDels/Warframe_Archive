@@ -19,6 +19,7 @@ from .split import (
     ChunkManager,
     RAGChunk,
     chunk_markdown,
+    sections_from_markdown,
 )
 
 __all__ = [
@@ -29,4 +30,5 @@ __all__ = [
     "ChunkManager",
     "RAGChunk",
     "chunk_markdown",
+    "sections_from_markdown",
 ]

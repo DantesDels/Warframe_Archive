@@ -14,6 +14,7 @@ from .chunks import (
     ChunkManager,
     RAGChunk,
     chunk_markdown,
+    sections_from_markdown,
 )
 from .kim_parser import KimMessage, extract_kim_messages
 from .manager import SQLDatabaseManager
@@ -37,6 +38,7 @@ __all__ = [
     "ChunkManager",
     "RAGChunk",
     "chunk_markdown",
+    "sections_from_markdown",
     "DEFAULT_CHUNK_MAX_CHARACTERS",
     "DEFAULT_CHUNK_OVERLAP_CHARACTERS",
     "extract_kim_messages",

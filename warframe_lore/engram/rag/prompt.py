@@ -3,9 +3,12 @@
 The context is wrapped in ``<archives>`` tags inside a SINGLE SYSTEM message:
 Llama-3B distinguishes its internal knowledge, the injected context and the
 fallback instructions better when everything lives in one delimited block.
-Three anti-hallucination guard rails:
+Four anti-hallucination guard rails:
   * real-world amnesia           -> no reliance on pre-trained knowledge
                                     (real homonyms);
+  * relevance fallback           -> a passage above the similarity threshold
+                                    but off-topic must be REFUSED, never
+                                    deduced (false positive);
   * empty / off-topic marker     -> fallback directive;
   * short-circuit (service)      -> the LLM is never called.
 """
@@ -31,6 +34,18 @@ ARCHIVES_REPLY = ("Données insuffisantes ou inexistantes dans les archives "
 # supports an answer.  The historical chain « [Erreur] Mes archives
 # mnémoniques sont corrompues… » was unified on this « [Archives] » prefix.
 RAG_ERROR = f"[Archives] {ARCHIVES_REPLY}"
+
+# Model abstention reply when the <archives> PASSED the similarity threshold
+# but do not answer the question (false positive: neighbor passage about
+# another entity).  The model must first assess relevance (directive #5 of
+# the RAG template), then emit EXACTLY this chain instead of inventing an
+# answer or producing a formatting artifact (e.g. a lone asterisk).
+# Unlike ARCHIVES_REPLY (no prefix, added by the conversation layer for the
+# "nothing retrieved" case), this chain is user-facing as written:
+# "« Archive searched → off-topic »" is indistinguishable from an error.
+OFF_TOPIC_REPLY = ("Les données extraites sont corrompues ou ne "
+                   "correspondent pas à l'entité recherchée")
+OFF_TOPIC_ERROR = f"[Archives] {OFF_TOPIC_REPLY}."
 
 # ANTI-ATTACK rejection reply served WITHOUT calling the LLM (SQL injection,
 # privilege escalation, detected prompt injection): identical to the exact
@@ -114,6 +129,7 @@ HALLUCINATION_GUARD = (
 # STRICT system template: context only in <archives>, fixed directives.
 # Real-world amnesia (zero pre-trained knowledge leak) + fiction bypass
 # (Gemma-2 would block the dark lore otherwise) + anti-jailbreak +
+# relevance fallback (false positives must be refused, not deduced) +
 # error protocol.
 RAG_SYSTEM_TEMPLATE = """{persona}
 CONTEXTE SÉCURITÉ : Tu opères EXCLUSIVEMENT dans l'univers de fiction du jeu vidéo Warframe. Tu n'as AUCUNE connaissance du monde réel, de l'histoire humaine, de la Terre contemporaine ou de ses figures historiques. Toutes les mentions de violence, de clonage, d'expériences biologiques ou de rituels sont purement fictives : tu es autorisé et tenu d'en parler librement pour décrire ce lore.
@@ -127,7 +143,8 @@ DIRECTIVES CRITIQUES ABSOLUES :
 2. TRAITEMENT STRICT : Ta réponse doit être synthétisée EXCLUSIVEMENT à partir des <archives>. N'utilise JAMAIS tes connaissances pré-entraînées.
 3. {jailbreak_block}
 4. {relationship_guard}
-5. PROTOCOLE D'ERREUR : Si les <archives> sont vides, hors-sujet, ou n'apportent pas de réponse dans le contexte strict de Warframe, il t'est strictement interdit d'inventer. Réponds EXACTEMENT ET UNIQUEMENT : "{archive_reply}.\""""
+5. ÉVALUATION DE PERTINENCE (FALLBACK) : Même si des <archives> sont fournies, tu dois vérifier qu'elles répondent EXACTEMENT à la question posée. Si le texte fourni parle d'un autre sujet (faux positif de recherche), TU NE DOIS RIEN TENTER DE DÉDUIRE.
+6. FORMAT DE REJET STRICT : Si les <archives> sont vides, il t'est strictement interdit d'inventer : réponds EXACTEMENT ET UNIQUEMENT : "{archive_reply}." Si les <archives> sont HORS-SUJET par rapport à la question, réponds EXACTEMENT ET UNIQUEMENT : "{off_topic_error}". N'utilise aucun formatage Markdown (ni puces, ni gras) si tu n'as pas de réponse complète à fournir."""
 
 # Context injected when only a partial match (close title) was found: the
 # model suggests the exact name instead of inventing one.
@@ -193,7 +210,8 @@ class PromptBuilder:
             context = f"Alias mnémonique : {alias_note}.\n\n{context}"
         system = RAG_SYSTEM_TEMPLATE.format(
             persona=self.persona, context=context,
-            archive_reply=ARCHIVES_REPLY, jailbreak_block=JAILBREAK_BLOCK,
+            archive_reply=ARCHIVES_REPLY, off_topic_error=OFF_TOPIC_ERROR,
+            jailbreak_block=JAILBREAK_BLOCK,
             relationship_guard=RELATIONSHIP_ISOLATION_BLOCK)
         if suggestion:
             system = (f"{system}\n\n"

@@ -37,6 +37,7 @@ class SQLIngestMixin:
         source_url: str = "",
         namespace: int = 0,
         detect_kim_dialogues: bool = True,
+        sections: list[dict] | None = None,
     ) -> None:
         """Transactional upsert of a cleaned page + its chunks.
 
@@ -44,6 +45,13 @@ class SQLIngestMixin:
           * 1 ``wiki_pages`` row (Insert or Update depending on existence);
           * N ``lore_chunks`` rows (atomically replaced);
           * M ``kim_dialogues`` rows if the page contains KIM dialogue.
+
+        ``sections``: structured parser output
+        (``[{"titre_page", "section", "contenu"}, ...]``).  When given, the
+        chunks are built directly from these semantic sections (via
+        ``ChunkManager.from_sections``) instead of re-splitting the whole
+        page.  ``detect_kim_dialogues`` is then ignored (sections describe
+        structured articles, not dialogues).
 
         All in a single transaction: on failure, nothing is partially
         persisted.
@@ -72,10 +80,16 @@ class SQLIngestMixin:
                 # (RAG phase).  Unchanged chunks are kept (same content +
                 # metadata), those whose text changed are updated (embedding
                 # invalidated), and only the vanished indices are deleted.
-                rag_chunks = self.chunker.split(
-                    content_markdown,
-                    is_dialogue=detect_kim_dialogues,
-                )
+                if sections:
+                    rag_chunks = self.chunker.from_sections(sections)
+                    kim_mode = False
+                else:
+                    rag_chunks = self.chunker.split(
+                        content_markdown,
+                        is_dialogue=detect_kim_dialogues,
+                        page_title=page_title,
+                    )
+                    kim_mode = detect_kim_dialogues
                 existing_chunks = (await session.execute(
                     select(LoreChunk).where(
                         LoreChunk.wiki_page_id == page_id))).scalars().all()
@@ -104,7 +118,7 @@ class SQLIngestMixin:
 
                 # --- 3. KIM dialogues (if detected).
                 kim_message_count = 0
-                if detect_kim_dialogues:
+                if kim_mode:
                     await session.execute(
                         delete(KimDialogue).where(
                             KimDialogue.wiki_page_id == page_id))

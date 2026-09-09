@@ -5,6 +5,13 @@ reuses ``SQLDatabaseManager`` (``upsert_cleaned_page``) to reconstruct
 pages + chunks, then computes missing embeddings via the LM Studio
 provider (``BAAI/bge-m3`` GGUF).
 
+Chunking mode per page:
+  * structured articles use the semantic sections already stored by the
+    scraper (``page["sections"]``, re-split on the fly if absent) -- each
+    chunk vectorized WITH its ``"Page: X | Section: Y - "`` context;
+  * KIM dialogue pages (bucket ``Lore_Dialogues_KIM``) keep the dialogue
+    mode (whole sessions, ``speakers`` metadata).
+
 Usage (project root):
     python -m warframe_lore.engram.scripts.ingest [--glob out/Lore_*.json]
 """
@@ -19,13 +26,30 @@ import logging
 from sqlalchemy import select
 
 from ...config import PROJECT_ROOT
-from ...db import LoreChunk, SQLDatabaseManager, WikiPage
+from ...db import (
+    LoreChunk,
+    SQLDatabaseManager,
+    WikiPage,
+    sections_from_markdown,
+)
 from ..config import EngramConfig
 from ..llm import LMStudioProvider
 
 log = logging.getLogger("warframe_lore.engram.ingest")
 
 BATCH = 64  # Embedding batch size (bge-m3 ~576, staying conservative).
+
+_KIM_BUCKET_ID = "Lore_Dialogues_KIM"
+
+
+def _is_kim_page(page: dict) -> bool:
+    """The megafile entry belongs to the KIM dialogue bucket.
+
+    Older megafiles only carry the bucket ``category`` (title): the KIM
+    bucket title always contains "KIM".
+    """
+    return (page.get("bucket_id") == _KIM_BUCKET_ID
+            or "KIM" in page.get("category", ""))
 
 
 def load_pages(glob_pattern: str) -> list[dict]:
@@ -79,14 +103,24 @@ async def run(cfg: EngramConfig, glob_pattern: str) -> int:
         processed = 0
         for page in pages:
             page_id = int(page.get("_pageid") or 0)
+            page_title = page["page_title"]
+            is_kim = _is_kim_page(page)
+            sections = None if is_kim else page.get("sections")
+            if sections is None and not is_kim:
+                # Old megafiles with no "sections" yet: build the semantic
+                # sections on the fly (identical to the parser's output).
+                sections = sections_from_markdown(
+                    page.get("content_markdown", ""), page_title)
             await manager.upsert_cleaned_page(
-                page_title=page["page_title"],
+                page_title=page_title,
                 category=page.get("category", ""),
                 page_id=page_id,
                 touched=page.get("touched"),
                 last_updated=page.get("last_updated"),
                 canon_status=page.get("canon_status", "canon"),
                 content_markdown=page.get("content_markdown", ""),
+                detect_kim_dialogues=is_kim,
+                sections=sections,
             )
             processed += 1
         log.info("Pages upserted: %d", processed)

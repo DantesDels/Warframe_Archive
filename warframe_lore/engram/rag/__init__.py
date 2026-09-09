@@ -8,12 +8,13 @@
 
 from __future__ import annotations
 
-from .prompt import (JAILBREAK_REJECT, NO_DATA_MARKER, PromptBuilder,
-                     RAGPrompt, RAG_ERROR)
+from .prompt import (JAILBREAK_REJECT, NO_DATA_MARKER, OFF_TOPIC_ERROR,
+                     PromptBuilder, RAGPrompt, RAG_ERROR)
 from .retriever import RAGHit, Retriever
 from .rewriter import QueryRewriter
 from .search import CosinusSearch
 from .service import RAGService
 
-__all__ = ["JAILBREAK_REJECT", "RAG_ERROR", "CosinusSearch", "PromptBuilder",
+__all__ = ["JAILBREAK_REJECT", "RAG_ERROR", "OFF_TOPIC_ERROR",
+           "CosinusSearch", "PromptBuilder",
            "QueryRewriter", "RAGHit", "RAGPrompt", "RAGService", "Retriever"]

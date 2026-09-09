@@ -7,6 +7,12 @@ metadata.
 Pass 2 - recursive with overlap: delegated to the ``splitters`` helpers
 (``recursive_character_split``).
 
+Pass 3 - semantic enrichment: when a ``page_title`` is given, each chunk
+is prefixed with its context ``"Page: X | Section: Y - "`` so that the
+vectorized text carries the page/section it comes from. The same format is
+re-exported as structured sections (``sections_from_markdown``) consumed by
+the ingestion pipeline (``ChunkManager.from_sections``).
+
 Dialogue mode: larger chunks to encompass an entire session, with the
 list of speakers in ``metadata["speakers"]``.
 """
@@ -46,6 +52,44 @@ _RECURSIVE_SEPARATORS = [
 ]
 
 
+def _strip_heading_lines(text: str) -> str:
+    """Drops the markdown heading lines of a structural block.
+
+    The heading context is carried by the ``"Section: Y"`` part of the
+    context prefix; keeping the ``## Y`` line would duplicate it in the
+    vectorized text.
+    """
+    lines = [line for line in text.split("\n")
+             if not _HEADING_TITLE_PATTERN.match(line.strip())]
+    return "\n".join(lines).strip()
+
+
+def _section_chain(headers: dict[str, str]) -> str:
+    """Human-readable section label from the heading hierarchy.
+
+    A block nested under ``## Identité passée`` / ``### Ordan Karris``
+    yields ``"Identité passée > Ordan Karris"``.  The top-level ``#``
+    heading is skipped: it names the page itself, already carried by the
+    ``"Page: X"`` part of the context prefix.
+    """
+    titles = [headers[f"Header {level}"]
+              for level in range(2, 7)
+              if headers.get(f"Header {level}")]
+    return " > ".join(title for title in titles if title)
+
+
+def _context_prefix(page_title: str, section: str) -> str:
+    """Context prefix for semantic retrieval.
+
+    Output: ``"Page: X | Section: Y - "`` (or ``"Page: X - "`` when there
+    is no section to name).
+    """
+    prefix = f"Page: {page_title}"
+    if section:
+        prefix += f" | Section: {section}"
+    return prefix + " - "
+
+
 @dataclass(frozen=True)
 class RAGChunk:
     """A chunk ready for embedding / RAG storage."""
@@ -82,32 +126,92 @@ class ChunkManager:
             dialogue_chunk_overlap_characters)
 
     # ------------------------------------------------------------------ split
-    def split(self, markdown_text: str, is_dialogue: bool = False) -> list[RAGChunk]:
-        """Splits Markdown into ordered chunks (0-based chunk_index)."""
+    def split(self, markdown_text: str, is_dialogue: bool = False,
+              page_title: str = "") -> list[RAGChunk]:
+        """Splits Markdown into ordered chunks (0-based chunk_index).
+
+        Args:
+            page_title: when given, each chunk is prefixed with its context
+                (``"Page: X | Section: Y - "``) and the heading line itself
+                is dropped from the body (deduplicated with the prefix).
+                Without it, the legacy output (raw text, Heading metadata)
+                is preserved unchanged.
+        """
         if markdown_text:
             markdown_text = strip_kim_chunk_meta(markdown_text)
         if not markdown_text or not markdown_text.strip():
             return []
 
         if is_dialogue:
-            return self._split_dialogue(markdown_text)
+            return self._split_dialogue(markdown_text, page_title)
 
         # Pass 1 -- structural blocks with heading hierarchy.
         structural_blocks = self._split_on_heading_blocks(markdown_text)
 
         chunks: list[RAGChunk] = []
         for block, headers in structural_blocks:
+            if page_title:
+                # The heading line becomes the "Section: Y" of the prefix:
+                # it must not be duplicated in the vectorized body.
+                block = _strip_heading_lines(block)
             block_sections = self._recursive_split(
                 block, self.chunk_max_characters,
                 self.chunk_overlap_characters)
             for section_text in block_sections:
                 if not section_text.strip():
                     continue
+                if page_title:
+                    section_name = _section_chain(headers)
+                    content = _context_prefix(
+                        page_title, section_name) + section_text.strip()
+                    metadata = dict(headers)
+                    metadata["page_title"] = page_title
+                    if section_name:
+                        metadata["section"] = section_name
+                else:
+                    content = section_text.strip()
+                    metadata = dict(headers)
                 chunks.append(RAGChunk(
                     chunk_index=len(chunks),
-                    content_markdown=section_text.strip(),
-                    metadata=dict(headers),
+                    content_markdown=content,
+                    metadata=metadata,
                 ))
+        return chunks
+
+    # ----------------------------------------------------------- from sections
+    def from_sections(self, sections: list[dict[str, Any]] | None
+                      ) -> list[RAGChunk]:
+        """Builds chunks directly from the parser's structured sections.
+
+        Accepts the list of dictionaries emitted by the scraper/parser
+        (and consumed by the ingestion pipeline):
+        ``{"titre_page" | "page_title", "section", "contenu" | "content"}``.
+
+        ``contenu`` must be the RAW section body: the context prefix is
+        re-injected here so that the vectorized text format stays
+        centralized (``Page: X | Section: Y - ...``).
+        """
+        chunks: list[RAGChunk] = []
+        for section in sections or []:
+            title = section.get("titre_page") or section.get("page_title") or ""
+            section_name = (section.get("section") or "").strip()
+            body = (section.get("contenu") or section.get("content") or "").strip()
+            if not body:
+                continue
+            if title and not body.startswith("Page:"):
+                content = _context_prefix(title, section_name) + body
+            else:
+                content = body
+            metadata: dict[str, Any] = {}
+            if title:
+                metadata["page_title"] = title
+            if section_name:
+                metadata["section"] = section_name
+            chunks.append(RAGChunk(
+                chunk_index=len(chunks),
+                content_markdown=content,
+                metadata=metadata,
+            ))
         return chunks
 
     # ----------------------------------------------------------- pass 1
@@ -162,7 +266,8 @@ class ChunkManager:
             chunk_max_characters, chunk_overlap_characters)
 
     # ----------------------------------------------------------- dialogue
-    def _split_dialogue(self, markdown_text: str) -> list[RAGChunk]:
+    def _split_dialogue(self, markdown_text: str, page_title: str = ""
+                        ) -> list[RAGChunk]:
         """Splits a dialogue log (KIM / RPG / quests).
 
         Larger chunks to encompass a whole session.  On a cut, the next
@@ -171,7 +276,12 @@ class ChunkManager:
 
         Non-dialogue lines (usage note, branches, free text) do not feed
         ``speakers``: only ``> **Name:**`` lines identify a real speaker.
+
+        When ``page_title`` is given, it is prepended to each chunk (and
+        kept in the metadata) so the vectorized text carries its origin.
         """
+        page_prefix = f"Page: {page_title}\n" if page_title else ""
+
         lines = markdown_text.split("\n")
         chunk_lines: list[str] = []
         per_chunk_speakers: list[str] = []
@@ -196,7 +306,7 @@ class ChunkManager:
                 if chunk_lines:
                     chunks.append(RAGChunk(
                         chunk_index=len(chunks),
-                        content_markdown="\n".join(chunk_lines),
+                        content_markdown=page_prefix + "\n".join(chunk_lines),
                         metadata=speakers_metadata(per_chunk_speakers),
                     ))
                 long_line_speakers = [speaker] if speaker else []
@@ -204,7 +314,7 @@ class ChunkManager:
                         line, max_characters, overlap_characters):
                     chunks.append(RAGChunk(
                         chunk_index=len(chunks),
-                        content_markdown=piece,
+                        content_markdown=page_prefix + piece,
                         metadata=speakers_metadata(long_line_speakers),
                     ))
                 chunk_lines = []
@@ -215,7 +325,7 @@ class ChunkManager:
             if current_size + line_size > max_characters and chunk_lines:
                 chunks.append(RAGChunk(
                     chunk_index=len(chunks),
-                    content_markdown="\n".join(chunk_lines),
+                    content_markdown=page_prefix + "\n".join(chunk_lines),
                     metadata=speakers_metadata(per_chunk_speakers),
                 ))
                 # Keeps the speakers of the previous chunk for safety
@@ -237,9 +347,12 @@ class ChunkManager:
         if chunk_lines:
             chunks.append(RAGChunk(
                 chunk_index=len(chunks),
-                content_markdown="\n".join(chunk_lines),
+                content_markdown=page_prefix + "\n".join(chunk_lines),
                 metadata=speakers_metadata(per_chunk_speakers),
             ))
+        if page_title:
+            for chunk in chunks:
+                chunk.metadata["page_title"] = page_title
         return chunks
 
 
@@ -255,3 +368,41 @@ def chunk_markdown(
     )
     return [chunk.content_markdown
             for chunk in manager.split(markdown_text, is_dialogue=False)]
+
+
+def sections_from_markdown(
+    markdown_text: str,
+    page_title: str = "",
+    chunk_max_characters: int = DEFAULT_CHUNK_MAX_CHARACTERS,
+    chunk_overlap_characters: int = DEFAULT_CHUNK_OVERLAP_CHARACTERS,
+) -> list[dict[str, str]]:
+    """Decomposes a cleaned page into iterative semantic sections.
+
+    This is the structured output of the parsing phase, consumed by the
+    ingestion pipeline (``ChunkManager.from_sections``): each returned dict
+    follows ``{"titre_page": ..., "section": ..., "contenu": ...}``.
+
+    ``contenu`` is the RAW section body -- WITHOUT the context prefix
+    (it is re-injected by ``from_sections`` so the vectorized format stays
+    centralized).  A long section may yield several entries (the recursive
+    pass applies), each one carrying its own section label.
+    """
+    manager = ChunkManager(
+        chunk_max_characters=chunk_max_characters,
+        chunk_overlap_characters=chunk_overlap_characters,
+    )
+    sections: list[dict[str, str]] = []
+    for chunk in manager.split(markdown_text, is_dialogue=False,
+                               page_title=page_title):
+        title = chunk.metadata.get("page_title", "")
+        section_name = chunk.metadata.get("section", "")
+        prefix = _context_prefix(title, section_name) if title else ""
+        body = chunk.content_markdown
+        if prefix and body.startswith(prefix):
+            body = body[len(prefix):]
+        sections.append({
+            "titre_page": title,
+            "section": section_name,
+            "contenu": body.strip(),
+        })
+    return sections

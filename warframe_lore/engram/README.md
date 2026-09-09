@@ -37,15 +37,22 @@ autre stockage vectoriel (FAISS, Qdrant…) ou un autre LLM sans toucher au cœu
 1. La question est vectorisée (`bge-m3`, 1024d) via LM Studio ;
 2. `CosinusSearch` interroge `lore_chunks.embedding` par similarité cosinus
    pgvector (opérateur `<=>`, index HNSW), limité par `top_k` + `min_score` ;
-3. `PromptBuilder` assemble le contexte + la question — **ordonnancement petit
-   modèle** : contexte documentaire en premier, persona Oracle en dernier juste
-   avant la question (les instructions de rôle ne sont pas noyées par le
-   contexte). Borné à `top_k=3` passages et ~4500 caractères (≤1500 tokens) ;
+3. `PromptBuilder` assemble **un seul message système XML-strict** : persona,
+   balises `<archives>{contexte}</archives>` et directives fixes de repli
+   (Gemma-2 délimite mieux connaissances internes / contexte / instructions
+   quand tout est dans un bloc unique). Borné à `top_k=3` passages et ~4500
+   caractères (≤1500 tokens) ;
 4. L'LLM génère la réponse, streamée ou en une fois, avec les sources.
+   **Température 0.1** (analytique). Sans passage de confiance → **short-circuit** :
+   le LLM n'est pas appelé, la chaîne exacte d'erreur mnémonique est renvoyée.
 
-Modèles 3B (ex: `Llama-3.2-3B-Instruct`) : streaming `stream=True`, filtre du
-contenu visible uniquement (`delta.content`), **température basse** (0.3) pour
-des réponses fidèles et un TTFT quasi instantané.
+Modèle `Gemma-2-9b-it` (gguf Q4_K_M, ~5 Go en VRAM) : streaming
+`stream=True`, filtre du contenu visible uniquement (`delta.content`),
+**température basse** (0.3 en chat libre, 0.1 sur les routes RAG) pour des
+réponses fidèles et un TTFT quasi instantané. Un **contournement fiction**
+(bloc « CONTEXTE SÉCURITÉ » du prompt) lève les filtres éthiques de Gemma :
+le lore Warframe traite de clonage, d'expériences et de rituels par nature
+fictifs.
 
 ## Terminal Roleplay (WebSocket)
 

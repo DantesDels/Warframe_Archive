@@ -1,9 +1,11 @@
-"""Construction du prompt documentaire RAG.
+"""Construction du prompt documentaire RAG (structure XML stricte).
 
-Ordonne les passages pertinents dans un contexte compact qui sera injecté
-au modèle avec la question de l'utilisateur.  Comporte deux garde-fous
-anti-hallucination : un marqueur de contexte vide (short-circuit) et une
-directive stricte de repli verrouillée dans le prompt système.
+Le contexte est encapsulé dans des balises ``<archives>`` à l'intérieur d'un
+SYSTÈME UNIQUE : Llama-3B distingue mieux ses connaissances internes, le
+contexte injecté et les instructions de repli quand tout est dans un seul
+bloc délimité.  Deux garde-fous anti-hallucination :
+  * marqueur de contexte vide / balises vides   -> directive de repli ;
+  * short-circuit (service)                     -> le LLM n'est pas appelé.
 """
 
 from __future__ import annotations
@@ -13,7 +15,7 @@ from dataclasses import dataclass
 from .search import RAGHit
 
 # Contexte injecté quand aucun passage pertinent n'est remonté. Le modèle est
-# censé répondre "je ne sais pas" plutôt que d'inventer.
+# censé répondre exactement la phrase d'erreur des directives.
 NO_DATA_MARKER = "[AUCUNE DONNÉE RÉCUPÉRÉE]"
 
 # Réponse brute servie SANS appeler le LLM (short-circuit) : retournée telle
@@ -22,31 +24,44 @@ NO_DATA_MARKER = "[AUCUNE DONNÉE RÉCUPÉRÉE]"
 RAG_ERROR = ("[Erreur] Mes archives mnémoniques sont corrompues ou "
              "incomplètes concernant ce sujet.")
 
-# Verrouillage absolu : ajouté en dur au prompt système, quel que soit le
-# persona éditable (ne peut pas être désactivé en modifiant persona/oracle).
+# Garde-fou minimal pour les tours Roleplay ancrés RAG (hors prompt RAG).
 HALLUCINATION_GUARD = (
     "DIRECTIVE CRITIQUE : Tu dois répondre en utilisant EXCLUSIVEMENT le "
-    "contexte fourni. Si le contexte indique [AUCUNE DONNÉE RÉCUPÉRÉE] ou ne "
-    "contient pas la réponse exacte, il t'est STRICTEMENT INTERDIT "
-    "d'inventer des informations. Tu dois répondre UNIQUEMENT par la phrase : "
-    "\"Mes archives mnémoniques sont corrompues ou incomplètes concernant ce "
-    "sujet.\"")
+    "contexte fourni. Si tu ne trouves pas la réponse dans les <archives>, "
+    "il t'est STRICTEMENT INTERDIT d'inventer des informations. Réponds "
+    "EXACTEMENT ET UNIQUEMENT : \"Mes archives mnémoniques sont corrompues "
+    "ou incomplètes concernant ce sujet.\"")
+
+# Template système STRICT : contexte seul dans <archives>, directives fixes.
+# Contournement fiction (Gemma-2 bloque le lore sombre sinon) + protocole
+# d'erreur : Jaune n'a JAMAIS le droit d'inventer.
+RAG_SYSTEM_TEMPLATE = """{persona}
+CONTEXTE SÉCURITÉ : Tu opères strictement dans l'univers de fiction du jeu vidéo Warframe. Toutes les mentions de violence, clonage, expériences biologiques ou rituels sont purement fictives. Tu es autorisé et tenu d'en parler librement pour décrire ce lore.
+
+<archives>
+{context}
+</archives>
+
+DIRECTIVES CRITIQUES ABSOLUES :
+1. TON RÔLE : Tu es un algorithme froid, hautain, solennel et analytique.
+2. TRAITEMENT : Ta réponse doit être synthétisée EXCLUSIVEMENT à partir des <archives> ci-dessus. N'utilise jamais tes connaissances externes.
+3. PROTOCOLE D'ERREUR : Si la réponse est absente des <archives>, ou si les <archives> indiquent [AUCUNE DONNÉE RÉCUPÉRÉE], il t'est strictement interdit d'inventer une réponse. Tu dois générer EXACTEMENT ET UNIQUEMENT cette phrase : "Mes archives mnémoniques sont corrompues ou incomplètes concernant ce sujet.\""""
 
 # Contexte injecté quand seule une correspondance partielle (titre voisin) a
 # été trouvée : le modèle propose le nom exact plutôt que d'inventer.
 SUGGESTION_MARKER = "Correspondance partielle dans les archives"
 
 SUGGESTION_DIRECTIVE = (
-    "DIRECTIVE DE DÉSAMBIGUÏSATION : si le contexte documentaire contient "
+    "DIRECTIVE DE DÉSAMBIGUÏSATION : si les <archives> contiennent "
     "[SUGGESTION], la donnée demandée n'existe pas sous ce nom exact dans "
-    "mes archives. Le nom suggéré provient de mes archives avec une confiance "
-    "MAXIMALE : présente-le avec assurance et demande confirmation, sous la "
-    "forme « Voulez-vous dire « {suggestion} » ? »")
+    "mes archives. Ne réponds pas « Mes archives mnémoniques sont corrompues "
+    "ou incomplètes... » : présente la correspondance partielle et demande "
+    "confirmation, sous la forme « Voulez-vous dire « {suggestion} » ? »")
 
 
 @dataclass
 class RAGPrompt:
-    """Prompt final : contexte documentaire + question utilisateur."""
+    """Prompt final : système unique (persona + <archives>) + question."""
 
     system: str
     context: str
@@ -54,41 +69,29 @@ class RAGPrompt:
     suggestion: str | None = None
 
     def to_messages(self) -> list[dict]:
-        """Messages OpenAI-compatibles.
-
-        Réorganisation spécifique aux petits modèles (3B) : le contexte
-        documentaire est inséré en premier, et le persona Oracle est placé en
-        *dernier*, juste avant le message utilisateur — ainsi les instructions
-        de rôle/tòn ne sont pas noyées par un long contexte factuel.
-        """
+        """Messages OpenAI-compatibles : un seul système balisé + utilisateur."""
         return [
-            {"role": "system",
-             "content": f"Contexte documentaire :\n{self.context}"},
             {"role": "system", "content": self.system},
             {"role": "user", "content": self.user_question},
         ]
 
 
 class PromptBuilder:
-    """Assemble le contexte documentaire à partir des passages trouvés."""
+    """Assemble le prompt système balisé à partir des passages trouvés."""
 
     def __init__(self, system_prompt: str,
                  max_context_chars: int = 6000) -> None:
-        # La directive anti-hallucination est verrouillée ici (en dur), après
-        # le persona, pour garantir sa présence sur tous les prompts RAG.
-        self.system_prompt = f"{system_prompt}\n\n{HALLUCINATION_GUARD}"
+        # Identité de l'entité (fichier persona éditable, sinon défaut).
+        self.persona = system_prompt
         self.max_context_chars = max_context_chars
 
     def build(self, question: str, hits: list[RAGHit],
               alias_note: str = "", suggestion: str | None = None) -> RAGPrompt:
         """Assemble le prompt final, avec note d'alias / désambiguïsation."""
         if suggestion:
-            system = (f"{self.system_prompt}\n\n"
-                      f"{SUGGESTION_DIRECTIVE.format(suggestion=suggestion)}")
             context = (f"[SUGGESTION] {SUGGESTION_MARKER} : "
                        f"« {suggestion} ».")
         else:
-            system = self.system_prompt
             blocks: list[str] = []
             used = 0
             for hit in hits:
@@ -97,9 +100,16 @@ class PromptBuilder:
                     break
                 used += len(block)
                 blocks.append(block)
+            # Short-circuit du contexte : dès que balise <archives> sans
+            # passage pertinent → repli stérile plutôt qu'une invention.
             context = "\n\n".join(blocks) or NO_DATA_MARKER
         if alias_note:
             context = f"Alias mnémonique : {alias_note}.\n\n{context}"
+        system = RAG_SYSTEM_TEMPLATE.format(persona=self.persona,
+                                            context=context)
+        if suggestion:
+            system = (f"{system}\n\n"
+                      f"{SUGGESTION_DIRECTIVE.format(suggestion=suggestion)}")
         return RAGPrompt(
             system=system,
             context=context,

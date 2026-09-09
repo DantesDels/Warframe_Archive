@@ -21,7 +21,8 @@ class EngramConfig:
     Toutes les valeurs sont surchargeables par variables d'environnement
     ``ENGRAM_*``.  Les modèles visent LM Studio local (endpoint compatible
     OpenAI) : embedding ``BAAI/bge-m3`` (GGUF) et chat
-    ``Llama-3.2-3B-Instruct`` (non-raisonant, rapide pour le Roleplay).
+    ``Gemma-2-9b-it`` (gguf Q4_K_M) — obéissant aux balises XML et aux
+    directives, tenant en 8 Go de VRAM.
     """
 
     # --- Connexions ---
@@ -36,12 +37,14 @@ class EngramConfig:
         default_factory=lambda: _env("ENGRAM_LLM_KEY", "lm-studio"))
 
     # --- Modèles ---
+    # Chat : Gemma-2-9b-it (gguf Q4_K_M) — meilleure obéissance aux formats
+    # XML et aux directives que le 3B ; ~5 Go de VRAM, compatible 8 Go.
     chat_model: str = field(
         default_factory=lambda: _env(
-            "ENGRAM_CHAT_MODEL", "llama-3.2-3b-instruct"))
-    # Température basse → rôleplay fidèle et déterministe sur modèle 3B.
+            "ENGRAM_CHAT_MODEL", "gemma-2-9b-it"))
+    # Température basse → répondes fidèles et déterministes.
     chat_temperature: float = float(_env("ENGRAM_CHAT_TEMP", "0.3"))
-    # Borne de génération : garde sous le budget contexte du modèle 3B.
+    # Borne de génération : garde sous le budget contexte du modèle 9B.
     chat_max_tokens: int = int(_env("ENGRAM_MAX_TOKENS", "2048"))
     embedding_model: str = field(
         default_factory=lambda: _env(
@@ -49,7 +52,8 @@ class EngramConfig:
     embedding_dim: int = int(_env("ENGRAM_EMBED_DIM", "1024"))
 
     # --- RAG ---
-    # Modèles 3B : contexte strict → seulement les 3 passages les plus proches.
+    # VRAM 8 Go : contexte strict → seulement les 3 passages les plus proches
+    # (~1000-1500 tokens max), sinon débordement mémoire (OOM).
     top_k: int = int(_env("ENGRAM_TOP_K", "3"))
 
     min_score: float = float(_env("ENGRAM_MIN_SCORE", "0.35"))

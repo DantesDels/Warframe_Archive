@@ -22,8 +22,9 @@ from .retriever import RAGHit, Retriever
 
 log = logging.getLogger("warframe_lore.engram.rag")
 
-# Température d'inférence RAG : 0.0 -> comportement purement extractif.
-RAG_TEMPERATURE = 0.0
+# Température d'inférence RAG : 0.1 -> analytique/déterministe sans bloquer
+# le moteur (Gemma-2-9b-it Q4_K_M sur 8 Go de VRAM).
+RAG_TEMPERATURE = 0.1
 
 
 class RAGService:

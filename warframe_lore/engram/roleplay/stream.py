@@ -38,9 +38,14 @@ class RoleplayService:
         if rag_context is None:
             messages = self.window.to_messages(session, self.system_prompt)
         else:
+            # Contexte documentaire balisé XML, dans le message système (même
+            # structure stricte que la route RAG → Llama différencie ses
+            # connaissances internes des <archives>).
+            persona = (f"{self.system_prompt}\n\n"
+                       f"Contexte documentaire restitué ci-dessous :\n\n"
+                       f"<archives>\n{rag_context}\n</archives>")
             messages = [
-                ChatMessage("system", f"Contexte documentaire :\n{rag_context}"),
-                ChatMessage("system", self.system_prompt),
+                ChatMessage("system", persona),
                 ChatMessage("system", HALLUCINATION_GUARD),
                 *self.window.bounded_turns(session),
             ]

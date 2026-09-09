@@ -8,12 +8,24 @@ Distance la plus faible = passage le plus proche ; exposé en similarité
 
 from __future__ import annotations
 
+import re
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import selectinload
 
-from ...db import LoreChunk
+from ...db import LoreChunk, WikiPage
 from .retriever import RAGHit, Retriever
+
+# Mots-outils français jugés non discriminant pour la recherche de titres.
+_STOPWORDS = {
+    "qu'est", "c'est", "comment", "pourquoi", "combien", "histoire",
+    "parle", "dis", "decrit", "decris", "raconte", "connais", "sais",
+    "dans", "avec", "dont", "comme", "mais", "sont", "est", "et",
+    "les", "des", "une", "que", "qui", "pas", "vous",
+}
+
+_ALNUM = re.compile(r"[a-zA-Z0-9'_-]+")
 
 
 class CosinusSearch(Retriever):
@@ -49,3 +61,22 @@ class CosinusSearch(Retriever):
                     score=score,
                 ))
         return hits
+
+    async def suggest_title(self, question: str) -> str | None:
+        """Titre de page dont un token de la question est une sous-chaîne.
+
+        Repli lexical : on teste les tokens du plus long au plus court — le
+        mot le plus spécifique est le plus discriminant — et on retourne le
+        premier titre trouvé dans ``wiki_pages``, ou None.
+        """
+        tokens = {t for t in _ALNUM.findall(question.lower())
+                  if len(t) >= 3 and t not in _STOPWORDS}
+        async with self.sessions() as session:
+            for token in sorted(tokens, key=len, reverse=True):
+                title = (await session.execute(
+                    select(WikiPage.page_title)
+                    .where(WikiPage.page_title.ilike(f"%{token}%"))
+                    .limit(1))).scalar_one_or_none()
+                if title:
+                    return title
+        return None

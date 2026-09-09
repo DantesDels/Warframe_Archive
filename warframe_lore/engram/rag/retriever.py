@@ -29,5 +29,12 @@ class Retriever(Protocol):
     async def search(self, query_vector: list[float]) -> list[RAGHit]:
         """Retourne les passages pertinents (limités + seuil de score)."""
 
+    async def suggest_title(self, question: str) -> str | None:
+        """Titre de page proche lexiquement de la question, ou None.
+
+        Repli de désambiguïsation : utilisé uniquement quand la recherche
+        vectorielle ne remonte aucun passage pour la requête demandée.
+        """
+
 
 __all__ = ["RAGHit", "Retriever"]

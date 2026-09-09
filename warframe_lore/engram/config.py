@@ -51,8 +51,14 @@ class EngramConfig:
     # --- RAG ---
     # Modèles 3B : contexte strict → seulement les 3 passages les plus proches.
     top_k: int = int(_env("ENGRAM_TOP_K", "3"))
+
     min_score: float = float(_env("ENGRAM_MIN_SCORE", "0.35"))
 
+    # Seuil de confiance du meilleur passage : sous ce score, la recherche est
+    # jugée trop faible pour fonder une réponse (désambiguïsation / repli
+    # "archives corrompues" au lieu d'utiliser des chunks hors-sujet).
+    suggestion_min_score: float = float(
+        _env("ENGRAM_SUGGEST_MIN_SCORE", "0.5"))
     # --- Roleplay (sliding window) ---
     max_history_turns: int = int(_env("ENGRAM_MAX_TURNS", "20"))
     # ~1100 tokens (fr) : sous la limite stricte de 1000-1500 tokens du modèle.

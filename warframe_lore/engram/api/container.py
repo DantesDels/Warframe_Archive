@@ -44,6 +44,7 @@ class Container:
             prompt_builder=PromptBuilder(
                 system_prompt=self._system_prompt(),
                 max_context_chars=self.config.max_context_chars),
+            suggestion_min_score=self.config.suggestion_min_score,
         )
         self.roleplay = RoleplayService(
             llm=self.llm,

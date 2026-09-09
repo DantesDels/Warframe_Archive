@@ -26,6 +26,17 @@ HALLUCINATION_GUARD = (
     "\"Mes archives mnémoniques sont corrompues ou incomplètes concernant ce "
     "sujet.\"")
 
+# Contexte injecté quand seule une correspondance partielle (titre voisin) a
+# été trouvée : le modèle propose le nom exact plutôt que d'inventer.
+SUGGESTION_MARKER = "Correspondance partielle dans les archives"
+
+SUGGESTION_DIRECTIVE = (
+    "DIRECTIVE DE DÉSAMBIGUÏSATION : si le contexte documentaire contient "
+    "[SUGGESTION], la donnée demandée n'existe pas sous ce nom exact dans "
+    "mes archives. Le nom suggéré provient de mes archives avec une confiance "
+    "MAXIMALE : présente-le avec assurance et demande confirmation, sous la "
+    "forme « Voulez-vous dire « {suggestion} » ? »")
+
 
 @dataclass
 class RAGPrompt:
@@ -61,19 +72,29 @@ class PromptBuilder:
         self.system_prompt = f"{system_prompt}\n\n{HALLUCINATION_GUARD}"
         self.max_context_chars = max_context_chars
 
-    def build(self, question: str, hits: list[RAGHit]) -> RAGPrompt:
-        blocks: list[str] = []
-        used = 0
-        for hit in hits:
-            block = f"[{hit.page_title}] {hit.content.strip()}"
-            if used + len(block) > self.max_context_chars and blocks:
-                break
-            used += len(block)
-            blocks.append(block)
+    def build(self, question: str, hits: list[RAGHit],
+              alias_note: str = "", suggestion: str | None = None) -> RAGPrompt:
+        """Assemble le prompt final, avec note d'alias / désambiguïsation."""
+        if suggestion:
+            system = (f"{self.system_prompt}\n\n"
+                      f"{SUGGESTION_DIRECTIVE.format(suggestion=suggestion)}")
+            context = (f"[SUGGESTION] {SUGGESTION_MARKER} : "
+                       f"« {suggestion} ».")
+        else:
+            system = self.system_prompt
+            blocks: list[str] = []
+            used = 0
+            for hit in hits:
+                block = f"[{hit.page_title}] {hit.content.strip()}"
+                if used + len(block) > self.max_context_chars and blocks:
+                    break
+                used += len(block)
+                blocks.append(block)
+            context = "\n\n".join(blocks) or NO_DATA_MARKER
+        if alias_note:
+            context = f"Alias mnémonique : {alias_note}.\n\n{context}"
         return RAGPrompt(
-            system=self.system_prompt,
-            # Short-circuit : aucun passage pertinent → marqueur explicite
-            # plutôt qu'un contexte vide ou ambigu.
-            context="\n\n".join(blocks) or NO_DATA_MARKER,
+            system=system,
+            context=context,
             user_question=question,
         )

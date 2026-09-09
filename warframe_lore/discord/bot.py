@@ -16,7 +16,7 @@ from warframe_lore.engram.rag.probes import detect_probe
 
 from .gateway import RoleplayGateway
 from .guards import BurstGuard
-from .hostile_link import HostileLink, is_apology
+from .hostile_link import HostileLink, is_sincere_apology
 from .hostility import HostilityTracker, reply_for
 from .streamer import MessageStreamer
 
@@ -93,7 +93,7 @@ class LoreMasterBot(discord.Client):
         # User in hostile mode: his messages go through HIS anti-aggression
         # session.  An apology → redemption (back to the initial persona).
         if message.author.id in self._hostile:
-            if is_apology(text):
+            if is_sincere_apology(text):
                 await self._forgive(message.author.id, message, text)
                 return
             if not self.guard.check(message.author.id, message.channel.id):
@@ -135,8 +135,10 @@ class LoreMasterBot(discord.Client):
     async def _insist(self, user_id: int, message: discord.Message) -> None:
         """Relay to the attacker's hostile session (he must apologise)."""
         link = self._hostile[user_id]
+        user_name, user_role = self._get_metadata(message)
         try:
-            await link.deliver(message, apology=False)
+            await link.deliver(message, apology=False,
+                               user_name=user_name, user_role=user_role)
         except ConnectionError:
             # Dead hostile session: reopen it (new attempt).
             log.warning("Hostile session lost — reopening")
@@ -202,13 +204,15 @@ class LoreMasterBot(discord.Client):
                     await gateway.open()
                     self._gateways[channel_id] = gateway
                 use_rag = self._wants_lore(text)
+                user_name, user_role = self._get_metadata(message)
                 typing_task = asyncio.create_task(self._keep_typing(message))
                 placeholder = await message.channel.send("*Oracle réfléchit…*")
                 streamer = MessageStreamer(placeholder)
                 try:
                     try:
                         await gateway.send(text, on_token=streamer.add,
-                                           rag=use_rag)
+                                           rag=use_rag, user_name=user_name,
+                                           user_role=user_role)
                     except ConnectionError as exc:
                         # Dead stream (e.g. ENGRAM server restarted) →
                         # reconnect + buffer purge (no concatenation of
@@ -221,7 +225,8 @@ class LoreMasterBot(discord.Client):
                         self._gateways[channel_id] = gateway
                         streamer.reset()
                         await gateway.send(text, on_token=streamer.add,
-                                           rag=use_rag)
+                                           rag=use_rag, user_name=user_name,
+                                           user_role=user_role)
                 finally:
                     typing_task.cancel()
             except asyncio.CancelledError:
@@ -259,6 +264,18 @@ class LoreMasterBot(discord.Client):
         mention_id = str(self.user.id)
         return (text.replace(f"<@{mention_id}>", "")
                     .replace(f"<@!{mention_id}>", "").strip())
+
+    @staticmethod
+    def _get_metadata(message: discord.Message) -> tuple[str | None, str | None]:
+        """Extract the Discord identity (display name, highest role name)
+        from a message author.  Used to feed the hierarchical-immunity
+        directive in the system prompt (lore-friendly impersonation defence).
+        """
+        author = message.author
+        user_name = getattr(author, "display_name", None) or getattr(author, "name", None)
+        top_role = getattr(author, "top_role", None)
+        user_role = top_role.name if top_role is not None else None
+        return user_name, user_role
 
     def _wants_lore(self, text: str) -> bool:
         """True if the input looks like a lore question (useful RAG)."""

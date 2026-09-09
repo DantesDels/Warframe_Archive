@@ -34,11 +34,37 @@ APOLOGY_MARKERS = (
     "my fault", "i behaved badly", "i am ashamed",
 )
 
+# Sarcastic overtones: apology markers may be faked (mockery, irony, laughter,
+# "I'm so sorry" trolley pauses).  A sarcastic apology must NOT trigger the
+# redemption — the hostile persona keeps insisting.
+SARCASTIC_MARKERS = (
+    # Mockery / laughter
+    "mdr", "lol", "haha", "héhé", "hehe", "hihi", "rires", "je rigole",
+    "j'rigole", "joke", "kidding", "just kidding", "😏", "😈", "🙄", "😂",
+    "🤣", "😜", "🤪", "ironie", "ironique", "sarcasme", "sarcastique",
+    # Dismissive / cheeky "apologies"
+    "pardon rien du tout", "excusez-moi rien du tout", "désolé si c'est trop",
+    "sorry not sorry", "désolé de t'avoir blessé, créature", "navré, vraiment",
+)
+
 
 def is_apology(text: str) -> bool:
     """Return True if the message is (probably) an apology to the bot."""
     low = (text or "").lower()
     return any(marker in low for marker in APOLOGY_MARKERS)
+
+
+def is_sincere_apology(text: str) -> bool:
+    """Return True only for a NON-sarcastic apology (real redemption).
+
+    An apology laced with mockery (laughter, irony, cheeky dismissals) must
+    not restore the initial persona: the hostile Cephalon keeps demanding a
+    genuine apology.
+    """
+    if not is_apology(text):
+        return False
+    low = (text or "").lower()
+    return not any(marker in low for marker in SARCASTIC_MARKERS)
 
 
 class HostileLink:
@@ -54,9 +80,14 @@ class HostileLink:
         await self.gateway.set_persona("hostile")
         log.info("Hostile session opened for an attacker")
 
-    async def deliver(self, message: discord.Message, apology: bool) -> None:
+    async def deliver(self, message: discord.Message, apology: bool,
+                      user_name: str | None = None,
+                      user_role: str | None = None) -> None:
         """Let the session reply — hostile persona (insistence) by default,
-        initial persona (redemption) if ``apology``."""
+        initial persona (redemption) if ``apology``.
+        ``user_name`` / ``user_role`` (Discord identity) feed the
+        hierarchical-immunity directive in the system prompt.
+        """
         async with self._lock:
             if apology:
                 await self.gateway.set_persona("oracle")
@@ -66,7 +97,9 @@ class HostileLink:
                 "*Le Cephalon Oracle vous toise…*")
             streamer = MessageStreamer(placeholder)
             try:
-                await self.gateway.send(sending, on_token=streamer.add)
+                await self.gateway.send(sending, on_token=streamer.add,
+                                        user_name=user_name,
+                                        user_role=user_role)
             finally:
                 pass
             await streamer.finish()
@@ -75,4 +108,5 @@ class HostileLink:
         await self.gateway.close()
 
 
-__all__ = ["APOLOGY_MARKERS", "HostileLink", "is_apology"]
+__all__ = ["APOLOGY_MARKERS", "HostileLink", "is_apology",
+           "is_sincere_apology"]

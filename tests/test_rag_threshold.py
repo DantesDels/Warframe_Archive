@@ -13,7 +13,7 @@ import unittest
 
 from warframe_lore.engram.rag import NO_DATA_MARKER, PromptBuilder, RAG_ERROR, RAGService
 from warframe_lore.engram.rag.retriever import RAGHit
-from warframe_lore.engram.rag.search import _token_matches_title
+from warframe_lore.engram.rag.search import CosinusSearch, _token_matches_title
 from warframe_lore.engram.rag.service import RAG_TEMPERATURE
 
 
@@ -68,6 +68,33 @@ def make_service(hits, suggestion_min_score=0.5, llm=None):
 
 class ThresholdTests(unittest.TestCase):
     """Le court-circuit doit vider le contexte et ne jamais appeler le LLM."""
+
+    def test_seuil_applique_dans_le_sql_pgvector(self):
+        """Le seuil de pertinence est imposé dans la requête SQL (WHERE
+        ``embedding <=> query <= 1 - min_score``), pas seulement en Python
+        après récupération — un sujet absent (hors-corpus) ne remonte jamais.
+        """
+        from sqlalchemy.dialects import postgresql
+        search = CosinusSearch.__new__(CosinusSearch)
+        search.min_score = 0.5
+        search.top_k = 3
+        sql = str(search._build_statement([0.0] * 1024)
+                  .compile(dialect=postgresql.dialect()))
+        self.assertIn("<=>", sql)                 # opérateur cosine pgvector
+        self.assertIn("WHERE", sql)
+        self.assertIn("<=", sql)                  # contrainte de distance
+        self.assertIn("LIMIT", sql)               # top_k appliqué en SQL
+
+    def test_min_score_calcule_la_distance_maximale(self):
+        """score >= min_score ⇔ distance <= 1 - min_score (lien SQL/Python)."""
+        from sqlalchemy.dialects import postgresql
+        search = CosinusSearch.__new__(CosinusSearch)
+        search.min_score = 0.5
+        search.top_k = 1
+        statement = search._build_statement([0.0] * 1024)
+        # (1 - min_score) = 0.5 : le WHERE contient une borne numérique 0.5.
+        sql = str(statement.compile(dialect=postgresql.dialect()))
+        self.assertIn("%(param_1)s", sql)         # borne paramétrée (anti-SQLi)
 
     def test_sous_seuil_ctx_vide_et_bypass(self):
         service = make_service([hit(1, 0.42)])

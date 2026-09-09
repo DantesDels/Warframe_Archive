@@ -53,23 +53,33 @@ class CosinusSearch(Retriever):
         self.top_k = top_k
         self.min_score = min_score
 
-    async def search(self, query_vector: list[float]) -> list[RAGHit]:
-        """Returns passages closest to ``query_vector``."""
-        distance = LoreChunk.embedding.cosine_distance(query_vector).label("dist")
-        statement = (
+    def _build_statement(self, query_vector: list[float]):
+        """SELECT statement enforcing ``min_score`` in SQL (max distance)."""
+        distance = LoreChunk.embedding.cosine_distance(
+            query_vector).label("dist")
+        return (
             select(LoreChunk, distance)
             .options(selectinload(LoreChunk.wiki_page))
             .where(LoreChunk.embedding.is_not(None))
+            .where(distance <= (1.0 - self.min_score))
             .order_by(distance)
             .limit(self.top_k)
         )
+
+    async def search(self, query_vector: list[float]) -> list[RAGHit]:
+        """Returns passages closest to ``query_vector``.
+
+        The SQL query enforces ``min_score`` directly in the WHERE clause
+        (``distance <= 1 - min_score``), so pgvector never returns
+        off-topic chunks.  Chunks below threshold are rejected at the
+        database level before any Python post-processing.
+        """
+        statement = self._build_statement(query_vector)
         hits: list[RAGHit] = []
         async with self.sessions() as session:
             rows = (await session.execute(statement)).all()
             for chunk, dist in rows:
                 score = 1.0 - float(dist)
-                if score < self.min_score:
-                    continue
                 hits.append(RAGHit(
                     chunk_id=chunk.id,
                     page_title=chunk.wiki_page.page_title,

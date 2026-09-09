@@ -81,10 +81,14 @@ async def roleplay(websocket: WebSocket) -> None:
                 await websocket.send_json({"type": "token", "token": RAG_ERROR})
                 await websocket.send_json({"type": "end", "text": RAG_ERROR})
                 continue
-            # Token-by-token streaming; accumulate to close the turn.
+            # Token-by-token streaming; accumulate to close the turn.  The
+            # Discord identity (display name + galaxy rank) feeds the
+            # hierarchical-immunity directive in the system prompt.
             response_parts: list[str] = []
             async for token in container.roleplay.stream(
-                    session, user_text, rag_context, persona=persona_mode):
+                    session, user_text, rag_context, persona=persona_mode,
+                    user_name=payload.get("user_name"),
+                    user_role=payload.get("user_role")):
                 response_parts.append(token)
                 await websocket.send_json({"type": "token", "token": token})
             await websocket.send_json(

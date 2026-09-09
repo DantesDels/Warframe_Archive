@@ -56,9 +56,12 @@ class MessageStreamer:
     async def add(self, token: str) -> bool:
         """Accumulate a token, edit as soon as the threshold is crossed.
 
-        Returns ``True`` when the stop marker was detected in the buffer:
-        the text has been truncated at the marker (hard split) and flushed.
-        The caller must then close the WebSocket stream.
+        Returns ``True`` when the stop marker was detected AFTER real
+        content in the buffer: the text has been truncated at the marker
+        (hard split) and flushed.  The caller must then close the WebSocket
+        stream.  A marker at the very START of the reply is a persona RP
+        decoration, NOT a generation end: it is stripped and the stream
+        continues.
         """
         if not token:
             return False
@@ -66,14 +69,21 @@ class MessageStreamer:
         self._count += 1
         text = self.text
         if STOP_MARKER in text:
-            # Hard split: the model keeps generating after the marker (the
-            # API ``stop`` parameter fails silently) — cut the text HERE,
-            # whatever follows.  The reply is finalised with the marker.
-            head = text.split(STOP_MARKER)[0]
-            self._parts = [head + "\n\n" + STOP_MARKER]
-            self._count = 0
+            head, _, tail = text.partition(STOP_MARKER)
+            if any(c.isalnum() for c in head):
+                # Hard split: the model keeps generating after the marker
+                # (the API ``stop`` parameter fails silently) — cut the text
+                # HERE, whatever follows.  The reply is finalised with the
+                # marker.
+                self._parts = [head + "\n\n" + STOP_MARKER]
+                self._count = 0
+                await self.flush()
+                return True
+            # Marker at the START of the reply: RP decoration, not an end.
+            self._parts = [tail]
+            self._count = len(tail.split())
             await self.flush()
-            return True
+            return False
         now = time.monotonic()
         if self._count == 1 or self._count % self.update_every == 0 \
                 or now - self._last_edit >= self.min_interval:

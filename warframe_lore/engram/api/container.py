@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import (
 from ..config import EngramConfig
 from ..llm import LMStudioProvider
 from ..persona import Persona
-from ..rag import CosinusSearch, PromptBuilder, RAGService
+from ..rag import CosinusSearch, PromptBuilder, RAGService, QueryRewriter
 from ..roleplay import RoleplayService, SlidingWindow
 from .ratelimit import SlidingWindowLimiter
 
@@ -47,6 +47,7 @@ class Container:
                 max_context_chars=self.config.max_context_chars),
             suggestion_min_score=self.config.suggestion_min_score,
             critical_min_score=self.config.critical_min_score,
+            query_rewriter=QueryRewriter(llm=self.llm),
         )
         self.roleplay = RoleplayService(
             llm=self.llm,

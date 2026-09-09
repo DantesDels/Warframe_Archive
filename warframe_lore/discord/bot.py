@@ -135,7 +135,7 @@ class LoreMasterBot(discord.Client):
     async def _insist(self, user_id: int, message: discord.Message) -> None:
         """Relay to the attacker's hostile session (he must apologise)."""
         link = self._hostile[user_id]
-        user_name, user_role = self._get_metadata(message)
+        user_name, user_role, _ = self._get_metadata(message)
         try:
             await link.deliver(message, apology=False,
                                user_name=user_name, user_role=user_role)
@@ -204,7 +204,7 @@ class LoreMasterBot(discord.Client):
                     await gateway.open()
                     self._gateways[channel_id] = gateway
                 use_rag = self._wants_lore(text)
-                user_name, user_role = self._get_metadata(message)
+                user_name, user_role, user_id = self._get_metadata(message)
                 typing_task = asyncio.create_task(self._keep_typing(message))
                 placeholder = await message.channel.send("*Oracle réfléchit…*")
                 streamer = MessageStreamer(placeholder)
@@ -212,7 +212,8 @@ class LoreMasterBot(discord.Client):
                     try:
                         await gateway.send(text, on_token=streamer.add,
                                            rag=use_rag, user_name=user_name,
-                                           user_role=user_role)
+                                           user_role=user_role,
+                                           user_id=user_id)
                     except ConnectionError as exc:
                         # Dead stream (e.g. ENGRAM server restarted) →
                         # reconnect + buffer purge (no concatenation of
@@ -226,7 +227,8 @@ class LoreMasterBot(discord.Client):
                         streamer.reset()
                         await gateway.send(text, on_token=streamer.add,
                                            rag=use_rag, user_name=user_name,
-                                           user_role=user_role)
+                                           user_role=user_role,
+                                           user_id=user_id)
                 finally:
                     typing_task.cancel()
             except asyncio.CancelledError:
@@ -266,7 +268,8 @@ class LoreMasterBot(discord.Client):
                     .replace(f"<@!{mention_id}>", "").strip())
 
     @staticmethod
-    def _get_metadata(message: discord.Message) -> tuple[str | None, str | None]:
+    def _get_metadata(message: discord.Message) -> tuple[str | None, str | None,
+                                                         int | None]:
         """Extract the Discord identity (display name, highest role name)
         from a message author.  Used to feed the hierarchical-immunity
         directive in the system prompt (lore-friendly impersonation defence).
@@ -275,7 +278,7 @@ class LoreMasterBot(discord.Client):
         user_name = getattr(author, "display_name", None) or getattr(author, "name", None)
         top_role = getattr(author, "top_role", None)
         user_role = top_role.name if top_role is not None else None
-        return user_name, user_role
+        return user_name, user_role, getattr(author, "id", None)
 
     def _wants_lore(self, text: str) -> bool:
         """True if the input looks like a lore question (useful RAG)."""

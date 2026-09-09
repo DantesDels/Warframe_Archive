@@ -48,7 +48,8 @@ class RoleplayGateway:
                    on_end: EndHandler | None = None,
                    rag: bool = False,
                    user_name: str | None = None,
-                   user_role: str | None = None) -> None:
+                   user_role: str | None = None,
+                   user_id: int | None = None) -> None:
         """Sends a message (optionally RAG-anchored) until ``end``.
 
         The ``_send_lock`` covers the ENTIRE reply: if a second message
@@ -68,6 +69,8 @@ class RoleplayGateway:
                 payload["user_name"] = user_name
             if user_role is not None:
                 payload["user_role"] = user_role
+            if user_id is not None:
+                payload["user_id"] = user_id
             await self._conn.send(json.dumps(payload))
             while True:
                 frame = await self._queue.get()

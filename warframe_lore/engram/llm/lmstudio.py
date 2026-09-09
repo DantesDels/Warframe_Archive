@@ -20,6 +20,13 @@ import httpx
 from ..models import ChatMessage
 from .base import EmbeddingProvider, LLMProvider
 
+# Generation-end marker emitted by the persona ("*[Indexation terminée]*").
+# Belt-and-suspenders with the Discord hard split: some 'official' variants
+# of the OpenAI-compatible endpoint honour the ``stop`` parameter (even if
+# LM Studio silently ignores it) — when honoured, the model itself stops at
+# the marker instead of emitting further tokens.
+STOP_MARKER = "[Indexation terminée]"
+
 
 def _payload(messages: list[ChatMessage], model: str,
              stream: bool, temperature: float, max_tokens: int) -> dict:
@@ -30,6 +37,7 @@ def _payload(messages: list[ChatMessage], model: str,
         "stream": stream,
         "temperature": temperature,
         "max_tokens": max_tokens,
+        "stop": [STOP_MARKER],
     }
 
 

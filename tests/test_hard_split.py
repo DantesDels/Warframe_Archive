@@ -41,6 +41,33 @@ class StreamerHardSplitTests(unittest.TestCase):
             f"texte avant \n\n{STOP_MARKER}")
         self.assertEqual(streamer.text, msg.content)
 
+    def test_marqueur_debut_puis_fin_reelle_au_milieu(self):
+        """Marqueur décoratif en tête puis vrai marqueur de fin: le second
+        déclenche le hard split (contenu présent avant lui)."""
+        msg = _FakeMessage()
+        streamer = MessageStreamer(msg, update_every=1000, min_interval=1000.0)
+        _run(streamer.add(f"*{STOP_MARKER}* contenu "))
+        stopped = _run(streamer.add(f"{STOP_MARKER} déchets"))
+        self.assertTrue(stopped)
+        self.assertTrue(
+            msg.content.startswith("* contenu \n\n" + STOP_MARKER))
+
+    def test_marqueur_au_debut_reponse_n_est_pas_un_hard_split(self):
+        """Une réponse qui COMMENCE par le marqueur (déco RP) doit l'ôter
+        du buffer SANS tronquer la suite ni fermer le flux."""
+        msg = _FakeMessage()
+        streamer = MessageStreamer(msg, update_every=1000, min_interval=1000.0)
+        stopped = _run(streamer.add(f"*{STOP_MARKER}* Voici la vraie réponse"))
+        self.assertFalse(stopped)  # pas de fermeture : pas une fin
+        self.assertNotIn(STOP_MARKER, streamer.text)
+        self.assertIn("Voici la vraie réponse", streamer.text)
+        # et un vrai marqueur PLUS TARD déclenche toujours le split
+        stopped = _run(streamer.add(f" final.{STOP_MARKER}reliquat"))
+        self.assertTrue(stopped)
+        self.assertEqual(
+            msg.content,
+            f"* Voici la vraie réponse final.\n\n{STOP_MARKER}")
+
     def test_sans_marqueur_retourne_false_et_garde_le_flux(self):
         msg = _FakeMessage()
         streamer = MessageStreamer(msg, update_every=1000, min_interval=1000.0)

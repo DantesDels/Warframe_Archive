@@ -76,7 +76,8 @@ async def roleplay(websocket: WebSocket) -> None:
             # calling the model.
             rag_context = suggestion = None
             if payload.get("rag"):
-                rag_context, suggestion = await container.rag.resolve(user_text)
+                rag_context, suggestion = await container.rag.resolve(
+                    user_text, user_key=payload.get("user_id"))
             if not rag_context and suggestion is None and payload.get("rag"):
                 await websocket.send_json({"type": "token", "token": RAG_ERROR})
                 await websocket.send_json({"type": "end", "text": RAG_ERROR})

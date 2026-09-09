@@ -22,6 +22,7 @@ from .probes import detect_probe
 from .prompt import (JAILBREAK_REJECT, NO_DATA_MARKER, PromptBuilder, RAG_ERROR,
                      RAGPrompt)
 from .retriever import RAGHit, Retriever
+from .rewriter import QueryRewriter
 
 log = logging.getLogger("warframe_lore.engram.rag")
 
@@ -85,7 +86,8 @@ class RAGService:
     def __init__(self, embeddings: EmbeddingProvider, retriever: Retriever,
                  llm: LLMProvider, prompt_builder: PromptBuilder,
                  suggestion_min_score: float = 0.5,
-                 critical_min_score: float | None = None) -> None:
+                 critical_min_score: float | None = None,
+                 query_rewriter: QueryRewriter | None = None) -> None:
         self.embeddings = embeddings
         self.retriever = retriever
         self.llm = llm
@@ -96,16 +98,23 @@ class RAGService:
         # real corpus (Lettie 0.55-0.63, Orokin 0.59-0.61, Albrecht 0.52-0.53).
         # Default: identical to the disambiguation threshold.
         self.critical_min_score = critical_min_score
+        # Per-user windows (anaphora). None keeps the legacy single global
+        # ``_last_query`` behaviour (used by the document route without an
+        # identity, and by legacy tests).
+        self.query_rewriter = query_rewriter
         self._last_query: str | None = None
 
-    async def retrieve(self, question: str
+    async def retrieve(self, question: str, user_key: str | None = None
                        ) -> tuple[list[RAGHit], RAGPrompt, bool]:
         """Assembles the prompt and decides on short-circuit, with logging.
 
         The query is first enriched by ``resolve_alias`` (nickname -> canonical
         name) to make embedding more reliable. ``bypass`` signals the absence
         of a trusted passage AND disambiguation: the LLM must not be called
-        (short-circuit).
+        (short-circuit). When a ``user_key`` is supplied and a per-user
+        ``QueryRewriter`` is wired, anaphoric questions ("...this story
+        mentioned earlier?") are rewritten into a standalone SEARCH query;
+        the model only ever sees the user's original wording.
         """
         question = sanitize_query(question)
         if not question:
@@ -130,11 +139,10 @@ class RAGService:
             return [], prompt, True
         expanded, alias_note, canon = resolve_alias(question)
         # Query memory: an anaphoric question ("that story... mentioned
-        # earlier?") names no entity → the last question is reused to enrich
-        # vector search only.
-        search_question = question
-        if self._last_query and _is_anaphoric(question):
-            search_question = f"{self._last_query} {question}"
+        # earlier?") names no entity → the SEARCH query is rewritten
+        # (per-user window + micro LLM call when available, or the last
+        # established question). Never the text shown to the model.
+        search_question = await self._rewrite_for_search(question, user_key)
         query_vector = (await self.embeddings.embed([search_question]))[0]
         hits = await self.retriever.search(query_vector)
         floor = (self.suggestion_min_score if self.critical_min_score is None
@@ -155,11 +163,13 @@ class RAGService:
             # Context stripped of content: no off-topic neighbor to the LLM.
             used_hits = []
         bypass = not used_hits and suggestion is None
-        if not bypass:
+        if not bypass and self.query_rewriter is None:
             # Truly established topic: sole legitimate enrichment basis for
-            # a future anaphoric question. A short-circuited query (bypass)
-            # memorizes NOTHING — otherwise the absent topic would pollute the
-            # next one ("that story..." resuming "green mouse").
+            # a future anaphoric question (legacy global memory). A
+            # short-circuited query (bypass) memorizes NOTHING — otherwise
+            # the absent topic would pollute the next one ("that story..."
+            # resuming "green mouse"). With a QueryRewriter, the per-user
+            # window is already maintained by ``_rewrite_for_search``.
             self._last_query = question
         prompt = self.prompt_builder.build(
             question, used_hits, alias_note=alias_note, suggestion=suggestion)
@@ -170,7 +180,28 @@ class RAGService:
                  len(prompt.context), prompt.context[:180].replace("\n", " "))
         return used_hits, prompt, bypass
 
-    async def resolve(self, question: str
+    async def _rewrite_for_search(self, question: str, user_key: str | None
+                                  ) -> str:
+        """Search query for embedding: rewritten when anaphoric.
+
+        With a per-user rewriter: anaphoric questions are reformulated
+        (micro LLM call, concatenation fallback); plain questions are
+        remembered verbatim. Without one (document route, legacy tests),
+        the last established question is concatenated.
+        """
+        if self.query_rewriter is not None and user_key is not None:
+            return await self.query_rewriter.rewrite(
+                user_key, question, _is_anaphoric(question))
+        if self._last_query and _is_anaphoric(question):
+            return f"{self._last_query} {question}"
+        if self.query_rewriter is not None:
+            # No user identity (HTTP route): keep the question verbatim and
+            # remember it globally for the next call — same memory rules.
+            self._last_query = question
+            return question
+        return question
+
+    async def resolve(self, question: str, user_key: str | None = None
                       ) -> tuple[str | None, str | None]:
         """Context/suggestion for a Roleplay turn (WS).
 
@@ -179,15 +210,16 @@ class RAGService:
         context is safe (never an empty marker); a non-null ``suggestion``
         indicates to the router that it concerns disambiguation.
         """
-        _, prompt, bypass = await self.retrieve(question)
+        _, prompt, bypass = await self.retrieve(question, user_key=user_key)
         if bypass:
             return None, None
         return prompt.context, prompt.suggestion
 
-    async def answer_with_sources(self, question: str
+    async def answer_with_sources(self, question: str,
+                                  user_key: str | None = None
                                   ) -> tuple[str, list[RAGHit]]:
         """Model answer + relevant passages (short-circuit otherwise)."""
-        hits, prompt, bypass = await self.retrieve(question)
+        hits, prompt, bypass = await self.retrieve(question, user_key=user_key)
         if prompt.rejected:
             return JAILBREAK_REJECT, []
         if bypass:
@@ -199,9 +231,11 @@ class RAGService:
             chunks.append(token)
         return "".join(chunks), hits
 
-    async def stream_answer(self, question: str) -> AsyncIterator[str]:
+    async def stream_answer(self, question: str,
+                            user_key: str | None = None
+                            ) -> AsyncIterator[str]:
         """Iterates over response tokens (exact error if short-circuit)."""
-        _, prompt, bypass = await self.retrieve(question)
+        _, prompt, bypass = await self.retrieve(question, user_key=user_key)
         if prompt.rejected:
             yield JAILBREAK_REJECT
             return

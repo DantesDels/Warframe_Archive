@@ -24,11 +24,21 @@ class MessageStreamer:
     """
 
     def __init__(self, message: discord.Message, update_every: int = 15,
-                 min_interval: float = 0.7) -> None:
+                 min_interval: float = 1.1) -> None:
         self.message = message
         self.update_every = update_every
         self.min_interval = min_interval
         self._parts: list[str] = []
+        self._count = 0
+        self._last_edit = 0.0
+
+    def reset(self) -> None:
+        """Purge le buffer d'accumulation (nouveau tour / reconnexion).
+
+        La première édition après un ``reset`` remplace INTÉGRALEMENT le
+        placeholder sans concaténer les fragments de la tentative précédente.
+        """
+        self._parts.clear()
         self._count = 0
         self._last_edit = 0.0
 

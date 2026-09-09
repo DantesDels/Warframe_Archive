@@ -8,6 +8,7 @@ Distance la plus faible = passage le plus proche ; exposé en similarité
 
 from __future__ import annotations
 
+import difflib
 import re
 
 from sqlalchemy import select
@@ -26,6 +27,21 @@ _STOPWORDS = {
 }
 
 _ALNUM = re.compile(r"[a-zA-Z0-9'_-]+")
+
+# Ratio minimal token/mot de titre pour la désambiguïsation : STRICT (0.93)
+# pour ne proposer que de vraies quasi-correspondances de noms propres.  Sans
+# lui, « une souris verte » → token « verte » valide le titre « Aurax Vertec »
+# (sous-chaîne trompeuse) et Oracle suggère une entité sans rapport.
+_TOKEN_WORD_RATIO = 0.93
+
+
+def _token_matches_title(token: str, title: str) -> bool:
+    """Le token est lexiquement proche d'un MOT du titre (pas juste une
+    sous-chaîne à l'intérieur d'un mot plus long)."""
+    for word in _ALNUM.findall(title.lower()):
+        if word and difflib.SequenceMatcher(None, token, word).ratio() >= _TOKEN_WORD_RATIO:
+            return True
+    return False
 
 
 class CosinusSearch(Retriever):
@@ -77,6 +93,6 @@ class CosinusSearch(Retriever):
                     select(WikiPage.page_title)
                     .where(WikiPage.page_title.ilike(f"%{token}%"))
                     .limit(1))).scalar_one_or_none()
-                if title:
+                if title and _token_matches_title(token, title):
                     return title
         return None

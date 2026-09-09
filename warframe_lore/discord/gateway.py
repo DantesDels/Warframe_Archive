@@ -47,23 +47,37 @@ class RoleplayGateway:
     async def send(self, text: str, on_token: TokenHandler,
                    on_end: EndHandler | None = None,
                    rag: bool = False) -> None:
-        """Envoie un message (optionnellement ancré RAG) jusqu'à ``end``."""
-        if not self.active:
-            raise ConnectionError("connexion WS fermée — redémarrer le gateway")
-        await self._conn.send(json.dumps(
-            {"type": "message", "text": text, "rag": rag}))
-        while True:
-            async with self._send_lock:
+        """Envoie un message (optionnellement ancré RAG) jusqu'à ``end``.
+
+        Le ``_send_lock`` couvre TOUTE la réponse : si un second message arrive
+        pendant qu'Oracle répond, il attend sereinement son tour.  Un lock
+        réduit à ``queue.get()`` ferait interpréter au deuxième ``send()`` les
+        tokens de la réponse en cours (concaténations de fragments).
+        """
+        async with self._send_lock:
+            if not self.active:
+                raise ConnectionError(
+                    "connexion WS fermée — redémarrer le gateway")
+            await self._conn.send(json.dumps(
+                {"type": "message", "text": text, "rag": rag}))
+            while True:
                 frame = await self._queue.get()
-            kind = frame.get("type")
-            if kind == "token":
-                await on_token(frame.get("token", ""))
-            elif kind == "end":
-                if on_end:
-                    await on_end(frame.get("text", ""))
-                return
-            elif kind == "error":
-                log.error("Erreur Roleplay : %s", frame.get("message"))
+                kind = frame.get("type")
+                # Flux mort en cours de réponse : ne JAMAIS attendre une trame
+                # ``end`` qui n'arrivera pas (sinon blocage/typing infini).
+                if not self.active:
+                    raise ConnectionError(
+                        "flux WS fermé avant la fin de la réponse")
+                if kind == "token":
+                    await on_token(frame.get("token", ""))
+                elif kind == "end":
+                    if on_end:
+                        await on_end(frame.get("text", ""))
+                    return
+                elif kind == "error":
+                    # Erreur terminale (ex : "erreur interne") : tour clos.
+                    log.error("Erreur Roleplay : %s", frame.get("message"))
+                    return
 
     async def _read_loop(self) -> None:
         """Lit les trames entrantes et les met en file d'attente."""
@@ -73,8 +87,15 @@ class RoleplayGateway:
         except Exception as exc:  # noqa: BLE001
             log.warning("Flux WS interrompu : %s", exc)
         finally:
-            # Marque le flux mort : la file n'émettra plus de trames.
+            # Marque le flux mort : la file n'émettra plus de trames.  On y
+            # pousse un sentinelle pour débloquer un ``send()`` en attente
+            # d'une ``end`` qui n'arrivera jamais.
             self._closed = True
+            try:
+                self._queue.put_nowait({"type": "error",
+                                        "message": "flux fermé par le serveur"})
+            except (asyncio.QueueFull, RuntimeError):
+                pass
 
     async def close(self) -> None:
         """Ferme la connexion et le lecteur."""

@@ -11,6 +11,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from starlette.responses import Response
 
 from .container import Container
 from .routers import document_rag, roleplay
@@ -38,6 +39,27 @@ app = FastAPI(title="ENGRAM — Archive KIM",
 
 app.include_router(document_rag)
 app.include_router(roleplay)
+
+
+@app.middleware("http")
+async def ratelimit_rag(request, call_next):
+    """Anti-DDoS : ``POST /v1/rag`` plafonné par IP (429 au-delà du quota).
+
+    La défense est en amont du LLM — un débit abusif ne consomme pas de
+    coût d'inférence.  Le terminal WebSocket partage cette philosophie mais
+    applique le contrôle dans sa propre route (code de fermeture 1008).
+    """
+    if request.method == "POST" and request.url.path == "/v1/rag":
+        limiter = getattr(request.app.state.engram, "rag_limiter", None)
+        if limiter is not None:
+            host = request.client.host if request.client else "unknown"
+            if not limiter.allow(host):
+                return Response(
+                    content="tentative abusive : débit trop élevé, "
+                            "réessayez plus tard",
+                    status_code=429,
+                    media_type="text/plain")
+    return await call_next(request)
 
 
 @app.get("/health", tags=["meta"])

@@ -17,6 +17,7 @@ from ..llm import LMStudioProvider
 from ..persona import Persona
 from ..rag import CosinusSearch, PromptBuilder, RAGService
 from ..roleplay import RoleplayService, SlidingWindow
+from .ratelimit import SlidingWindowLimiter
 
 
 class Container:
@@ -45,6 +46,7 @@ class Container:
                 system_prompt=self._system_prompt(),
                 max_context_chars=self.config.max_context_chars),
             suggestion_min_score=self.config.suggestion_min_score,
+            critical_min_score=self.config.critical_min_score,
         )
         self.roleplay = RoleplayService(
             llm=self.llm,
@@ -53,6 +55,13 @@ class Container:
             system_prompt=self._system_prompt(),
             temperature=self.config.chat_temperature,
         )
+        # Anti-DDoS / anti-abuse : débit maximal par IP (HTTP RAG + WS Roleplay).
+        self.rag_limiter = SlidingWindowLimiter(
+            max_events=self.config.rate_limit_rag,
+            window_seconds=self.config.rate_limit_rag_window)
+        self.ws_limiter = SlidingWindowLimiter(
+            max_events=self.config.rate_limit_ws,
+            window_seconds=self.config.rate_limit_ws_window)
 
     def _system_prompt(self) -> str:
         """Prompt du persona : fichier éditable ``persona/oracle`` sinon défaut."""

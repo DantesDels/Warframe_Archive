@@ -47,6 +47,7 @@ _KIM_POINTER_LINE = re.compile(
     r"\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*"
     r"|(?:\{[^{}:\n]*?\}\s*)+?\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*"
     r")")
+
 # Pointeur de navigation embarqué au milieu d'un message (fermé) : ``{...}``
 # contenant un mot-clé de navigation -> retiré du texte du message.  Exige la
 # fermeture de l'accolade pour ne jamais tronquer la réplique, et exclut les
@@ -54,10 +55,20 @@ _KIM_POINTER_LINE = re.compile(
 # jumpscare image.}``) qui pourraient contenir ``jump`` ou ``same``.
 _KIM_INLINE_NAV = re.compile(
     r"\{(?!.*\bends\b)[^{}\n]*?(?:continues?|contiue|same|goes|jump)[^{}\n]*\}", re.I)
+
 # Conditions de branche (``{If ...}``) et marqueurs de position (``{P1}``…) :
 # purgés du texte des messages (locuteur/parole).
 _KIM_CONDITION_MARK = re.compile(r"\{\s*if\s+[^{}]*\}", re.I)
 _KIM_POSITION_MARK = re.compile(r"\{P\d+\}", re.I)
+
+# Blacklist stricte : lignes de bruit de bas de page (navboxes wiki) qu'un
+# ``> …`` ou un locuteur ne doivent jamais transformer en réplique de dialogue.
+_DIALOGUE_EXCLUDE_EXACT = {"quotesnav", "quotes", "sentient"}
+_DIALOGUE_EXCLUDE_RE = re.compile(r"^\s*update\s*\d+.*$", re.I)
+
+# Guillemets résiduels à retirer en début/fin de ligne de dialogue.
+_DIALOGUE_STRIP_CHARS = ' "”«»'
+
 
 # Titres de section qui délimitent une conversation KIM (``###``/``####`` …) :
 #   ``### Conversation 1 (Tell me about yourself / ...)``
@@ -132,10 +143,16 @@ def parse_dialogue(content: str) -> list[dict]:
         stripped = line.strip()
         if _BOILERPLATE_LINE.match(stripped) or _KIM_POINTER_LINE.match(line):
             continue
+        # Filtre d'exclusion strict : bruit de bas de page (``quotesnav``,
+        # ``Quotes``, ``Sentient``) et historique ``Update N``.
+        if (stripped.casefold() in _DIALOGUE_EXCLUDE_EXACT
+                or _DIALOGUE_EXCLUDE_RE.match(stripped)):
+            continue
         match = _BLOCKQUOTE_SPEAKER.match(stripped)
         if match:
             speaker = clean_kim_text(match.group("speaker").strip())
             text = clean_kim_text(match.group("text").strip())
+            text = text.strip(_DIALOGUE_STRIP_CHARS)
             messages.append({
                 "index": index,
                 "speaker": speaker,
@@ -147,6 +164,7 @@ def parse_dialogue(content: str) -> list[dict]:
             nested = re.match(r"^>\s*>\s*(?P<text>.+)$", stripped)
             if nested:
                 text = clean_kim_text(nested.group("text").strip())
+                text = text.strip(_DIALOGUE_STRIP_CHARS)
                 messages.append({
                     "index": index,
                     "speaker": "",
@@ -156,6 +174,7 @@ def parse_dialogue(content: str) -> list[dict]:
                 })
             elif stripped.startswith("> "):
                 text = clean_kim_text(stripped[2:].strip())
+                text = text.strip(_DIALOGUE_STRIP_CHARS)
                 if text:
                     messages.append({
                         "index": index,

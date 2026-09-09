@@ -11,7 +11,7 @@ from collections.abc import AsyncIterator
 
 from ..llm import LLMProvider
 from ..models import ChatMessage
-from ..rag.prompt import HALLUCINATION_GUARD
+from ..rag.prompt import HALLUCINATION_GUARD, JAILBREAK_BLOCK, RAG_ERROR
 from .models import Session
 from .window import SlidingWindow
 
@@ -36,17 +36,23 @@ class RoleplayService:
         """
         session.add("user", user_text)
         if rag_context is None:
-            messages = self.window.to_messages(session, self.system_prompt)
+            # Chat libre : TOUJOURS verrouillé par le bloc anti-jailbreak —
+            # un utilisateur ne peut pas détourner le persona (prompt
+            # injection, élévation de rôle, sortie de personnage) car la
+            # défense fait partie du prompt système, pas des archives.
+            system = f"{self.system_prompt}\n\n{JAILBREAK_BLOCK}"
+            messages = self.window.to_messages(session, system)
         else:
-            # Contexte documentaire balisé XML, dans le message système (même
-            # structure stricte que la route RAG → Llama différencie ses
-            # connaissances internes des <archives>).
-            persona = (f"{self.system_prompt}\n\n"
-                       f"Contexte documentaire restitué ci-dessous :\n\n"
-                       f"<archives>\n{rag_context}\n</archives>")
+            # Contexte documentaire balisé XML, DANS LE MÊME message système
+            # que le persona et le garde (même structure stricte que la route
+            # RAG).  Deux messages système consécutifs font taire Gemma-2-9b
+            # (variante SPPO) : réponse vide.  Système unique = obéissance.
+            system = (f"{self.system_prompt}\n\n"
+                      f"Contexte documentaire restitué ci-dessous :\n\n"
+                      f"<archives>\n{rag_context}\n</archives>\n\n"
+                      f"{HALLUCINATION_GUARD}")
             messages = [
-                ChatMessage("system", persona),
-                ChatMessage("system", HALLUCINATION_GUARD),
+                ChatMessage("system", system),
                 *self.window.bounded_turns(session),
             ]
         tokens: list[str] = []
@@ -57,5 +63,11 @@ class RoleplayService:
             tokens.append(token)
             yield token
         response = "".join(tokens)
-        if response:
-            session.add("assistant", response)
+        if not response:
+            # Génération vide (modèle silencieux/avorté) : on sert la chaîne
+            # d'abstention au lieu de ne rien dire — le terminal ne reste
+            # jamais bloqué sur une réponse inexistante et le message ne
+            # "disparaît" pas du côté du client Discord.
+            response = RAG_ERROR
+            yield response
+        session.add("assistant", response)

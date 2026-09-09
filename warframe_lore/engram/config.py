@@ -58,11 +58,25 @@ class EngramConfig:
 
     min_score: float = float(_env("ENGRAM_MIN_SCORE", "0.35"))
 
-    # Seuil de confiance du meilleur passage : sous ce score, la recherche est
-    # jugée trop faible pour fonder une réponse (désambiguïsation / repli
-    # "archives corrompues" au lieu d'utiliser des chunks hors-sujet).
+    # Seuil de désambiguïsation : sous ce score, la recherche est jugée trop
+    # faible pour fonder une réponse ; on tente la suggestion « Voulez-vous
+    # dire… » avant le court-circuit.
     suggestion_min_score: float = float(
         _env("ENGRAM_SUGGEST_MIN_SCORE", "0.5"))
+
+    # Seuil critique de réponse : sous ce score, le LLM n'est JAMAIS appelé
+    # (court-circuit immédiat, chaîne '[Archives] Données insuffisantes…').
+    # Par défaut identique au seuil de suggestion, calibré sur le corpus réel
+    # (Lettie 0.55-0.63, Orokin 0.59-0.61, Albrecht 0.52-0.53).
+    critical_min_score: float = float(
+        _env("ENGRAM_CRITICAL_MIN_SCORE", "0.5"))
+
+    # --- Anti-DDoS / anti-abuse (débit API, fenêtre par IP) ---
+    # Route RAG : 30 requêtes/min ; Roleplay WS : 20 connexions/min.
+    rate_limit_rag: int = int(_env("ENGRAM_RATE_LIMIT_RAG", "30"))
+    rate_limit_rag_window: float = float(_env("ENGRAM_RATE_WINDOW", "60"))
+    rate_limit_ws: int = int(_env("ENGRAM_RATE_LIMIT_WS", "20"))
+    rate_limit_ws_window: float = float(_env("ENGRAM_RATE_WS_WINDOW", "60"))
     # --- Roleplay (sliding window) ---
     max_history_turns: int = int(_env("ENGRAM_MAX_TURNS", "20"))
     # ~1100 tokens (fr) : sous la limite stricte de 1000-1500 tokens du modèle.

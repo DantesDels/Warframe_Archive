@@ -816,7 +816,11 @@ function renderKimConversations() {
     host.appendChild(select);
   }
   select.innerHTML = "";
-  for (const conversation of kimConvList) {
+  // Tri alphanumérique naturel : Story1 < Story2 < Story10 (et non Story1 < Story10 < Story2).
+  const sorted = [...kimConvList].sort((a, b) =>
+    (a.title || "").localeCompare(b.title || "", undefined,
+      { numeric: true, sensitivity: "base" }));
+  for (const conversation of sorted) {
     const short = kimRankShort(conversation.rank);
     const label = short ? `${short} · ${conversation.title}` : conversation.title;
     const option = el("option", "", label);

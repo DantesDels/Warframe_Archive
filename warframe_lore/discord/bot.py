@@ -13,6 +13,7 @@ import logging
 import discord
 
 from .gateway import RoleplayGateway
+from .guards import BurstGuard
 from .streamer import MessageStreamer
 
 log = logging.getLogger("warframe_lore.discord.bot")
@@ -40,6 +41,11 @@ class LoreMasterBot(discord.Client):
         self.typing_interval = typing_interval
         self.allowed_channels = set(allowed_channels)
         self._gateways: dict[int, RoleplayGateway] = {}
+        self._route_locks: dict[int, asyncio.Lock] = {}
+        self._turns: dict[int, asyncio.Task] = {}
+        # Garde-fou anti-spam : cooldown par utilisateur, plafond par canal,
+        # blocage temporaire sur insistance (quasi-DDoS au niveau du salon).
+        self.guard = BurstGuard()
 
     async def on_ready(self) -> None:
         log.info("Loremaster Oracle en ligne : %s (%s)",
@@ -52,9 +58,28 @@ class LoreMasterBot(discord.Client):
     async def on_message(self, message: discord.Message) -> None:
         if message.author.bot or not message.content:
             return
-        if self.allowed_channels and message.channel.id not in self.allowed_channels:
+        content = message.content.strip()
+        if content.startswith("(") or content.startswith("//"):
+            # Hors rôle-play (parenthèses / double slash) : jamais répondre.
             return
-        if message.content.startswith(self.prefix):
+        # N'intervient QUE si le bot est mentionné, ou dans un salon dédié
+        # (ID/nom configuré via --channels).  Sinon il ne parasite pas la
+        # conversation entre joueurs.
+        dedicated = bool(self.allowed_channels
+                         and message.channel.id in self.allowed_channels)
+        if not dedicated and self.user not in message.mentions:
+            return
+        # Anti-spam : au-delà du cooldown / des plafonds, le message est ignoré
+        # silencieusement (y compris les commandes, quelle que soit l'insistance).
+        if not self.guard.check(message.author.id, message.channel.id):
+            if self.guard.is_blocked(message.author.id):
+                log.warning("Abus bloqué temporairement user=%s canal=%s",
+                            message.author.id, message.channel.id)
+            else:
+                log.info("Spam ignoré user=%s canal=%s",
+                         message.author.id, message.channel.id)
+            return
+        if content.startswith(self.prefix):
             await self._handle_command(message)
             return
         await self._route_to_oracle(message)
@@ -65,46 +90,101 @@ class LoreMasterBot(discord.Client):
             if text == "reset" and message.channel.id in self._gateways:
                 gw = self._gateways.pop(message.channel.id)
                 await gw.close()
-            await message.channel.send("Oracle prêt." )
+            await message.channel.send("Oracle prêt.")
+        elif text in ("stop", "cancel"):
+            # Interrompt la réponse en cours (raisonnement actif) : le flux WS
+            # est coupé, la génération LLM stoppée côté serveur, et le message
+            # d'attente est finalisé par le tour annulé.
+            task = self._turns.get(message.channel.id)
+            if task is None or task.done():
+                await message.channel.send(
+                    "Aucune réponse en cours à interrompre.")
+                return
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+            await message.channel.send("Réponse interrompue.")
         elif text.startswith("help"):
             await message.channel.send(
-                f"{self.prefix}reset — nouvelle session | sinon, parlons simplement.")
+                f"{self.prefix}reset — nouvelle session | {self.prefix}stop — "
+                "interrompre la réponse en cours | sinon, parlons simplement.")
 
     async def _route_to_oracle(self, message: discord.Message) -> None:
+        """Diffuse une réponse Oracle, sérialisée par salon et stoppable
+        (``!stop``) : pendant qu'un tour est actif, les autres messages
+        attendent leur tour — plus jamais d'entrelacement de fragments."""
         channel_id = message.channel.id
-        gateway = self._gateways.get(channel_id)
-        if gateway is None or not gateway.active:
-            if gateway is not None:
-                await gateway.close()
-            gateway = RoleplayGateway(self.gateway_url)
-            await gateway.open()
-            self._gateways[channel_id] = gateway
-        use_rag = self._wants_lore(message.content)
-        placeholder = await message.channel.send("*Oracle réfléchit…*")
-        streamer = MessageStreamer(placeholder)
-        typing_task = asyncio.create_task(self._keep_typing(message))
-        try:
+        text = self._strip_mention(message.content)
+        lock = self._route_locks.setdefault(channel_id, asyncio.Lock())
+        async with lock:
+            placeholder = None
+            streamer = None
+            gateway = self._gateways.get(channel_id)
+            self._turns[channel_id] = asyncio.current_task()
             try:
-                await gateway.send(message.content, on_token=streamer.add,
-                                   rag=use_rag)
-            except ConnectionError as exc:
-                # Flux mort (ex: serveur ENGRAM redémarré) → reconnexion.
-                log.warning("Connexion Oracle perdue (%s) — reconnexion", exc)
-                await gateway.close()
-                gateway = RoleplayGateway(self.gateway_url)
-                await gateway.open()
-                self._gateways[channel_id] = gateway
-                await gateway.send(message.content, on_token=streamer.add,
-                                   rag=use_rag)
-        finally:
-            typing_task.cancel()
-        await streamer.finish()
-        if not streamer._parts and placeholder.content == "*Oracle réfléchit…*":
-            if not gateway.active:
-                await placeholder.edit(
-                    content="*Oracle est injoignable — serveur ENGRAM éteint.*")
-            else:
-                await placeholder.delete()
+                if gateway is None or not gateway.active:
+                    if gateway is not None:
+                        await gateway.close()
+                    gateway = RoleplayGateway(self.gateway_url)
+                    await gateway.open()
+                    self._gateways[channel_id] = gateway
+                use_rag = self._wants_lore(text)
+                typing_task = asyncio.create_task(self._keep_typing(message))
+                placeholder = await message.channel.send("*Oracle réfléchit…*")
+                streamer = MessageStreamer(placeholder)
+                try:
+                    try:
+                        await gateway.send(text, on_token=streamer.add,
+                                           rag=use_rag)
+                    except ConnectionError as exc:
+                        # Flux mort (ex : serveur ENGRAM redémarré) →
+                        # reconnexion + purge du buffer (pas de concaténation
+                        # de fragments de l'ancienne tentative).
+                        log.warning(
+                            "Connexion Oracle perdue (%s) — reconnexion", exc)
+                        await gateway.close()
+                        gateway = RoleplayGateway(self.gateway_url)
+                        await gateway.open()
+                        self._gateways[channel_id] = gateway
+                        streamer.reset()
+                        await gateway.send(text, on_token=streamer.add,
+                                           rag=use_rag)
+                finally:
+                    typing_task.cancel()
+            except asyncio.CancelledError:
+                # Interruption demandée (commande !stop) : on coupe le flux WS
+                # pour stopper côté serveur la génération du LLM, puis on
+                # finalise le message d'attente.
+                log.info("Tour Oracle interrompu sur le canal %s", channel_id)
+                if gateway is not None:
+                    await gateway.close()
+                    self._gateways.pop(channel_id, None)
+                if streamer is not None and placeholder is not None:
+                    await placeholder.edit(
+                        content=f"{streamer.text or '*aucun texte*'}"
+                                "\n*… réponse interrompue.*")
+                    placeholder = None
+                raise
+            finally:
+                self._turns.pop(channel_id, None)
+            if streamer is not None:
+                await streamer.finish()
+                if (not streamer._parts
+                        and placeholder is not None
+                        and placeholder.content == "*Oracle réfléchit…*"):
+                    if not gateway.active:
+                        await placeholder.edit(
+                            content="*Oracle est injoignable — serveur "
+                                    "ENGRAM éteint.*")
+                    else:
+                        await placeholder.delete()
+
+    def _strip_mention(self, text: str) -> str:
+        """Retire la mention utilisateur vers le bot (``@Oracle …``)."""
+        if self.user is None:
+            return text
+        mention_id = str(self.user.id)
+        return (text.replace(f"<@{mention_id}>", "")
+                    .replace(f"<@!{mention_id}>", "").strip())
 
     def _wants_lore(self, text: str) -> bool:
         """Vrai si la saisie ressemble à une question de lore (RAG utile)."""

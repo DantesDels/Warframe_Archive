@@ -12,7 +12,9 @@ import uuid
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ..container import Container
-from ...rag import RAG_ERROR
+from ...rag import JAILBREAK_REJECT, RAG_ERROR
+from ...rag.probes import detect_probe
+from ...rag.service import sanitize_query
 from ...roleplay import Session
 
 router = APIRouter(tags=["roleplay"])
@@ -22,6 +24,14 @@ router = APIRouter(tags=["roleplay"])
 async def roleplay(websocket: WebSocket) -> None:
     await websocket.accept()
     container: Container = websocket.app.state.engram
+    # Anti-DDoS : quota de connexions par IP — fermeture 1008 au-delà.
+    host = websocket.client.host if websocket.client else "unknown"
+    if not container.ws_limiter.allow(host):
+        await websocket.send_json(
+            {"type": "error",
+             "message": "tentative abusive : connexions trop fréquentes"})
+        await websocket.close(code=1008, reason="tentative abusive")
+        return
     session = Session(session_id=uuid.uuid4().hex)
 
     async def send_error(message: str) -> None:
@@ -34,9 +44,20 @@ async def roleplay(websocket: WebSocket) -> None:
             payload = await websocket.receive_json()
             if payload.get("type") != "message":
                 continue
-            user_text = str(payload.get("text", "")).strip()
+            # Sanitisation à la frontière : caractères de contrôle et espaces
+            # anormaux neutralisés AVANT tout usage (embedding, fenêtre).
+            user_text = sanitize_query(str(payload.get("text", "")))
             if not user_text:
-                await send_error("message vide ignoré")
+                await send_error("message vide ou invalide")
+                continue
+            # SONDE HOSTILE (injection SQL, escalade de privilèges, mention
+            # tiers) : rejet déterministe — la chaîne anti-jailbreak exacte,
+            # sans embedding ni appel LLM.
+            if detect_probe(user_text):
+                await websocket.send_json(
+                    {"type": "token", "token": JAILBREAK_REJECT})
+                await websocket.send_json(
+                    {"type": "end", "text": JAILBREAK_REJECT})
                 continue
             # Flag "rag" : ancrer le tour sur des passages documentaires
             # récupérés par le RAG.  Sans passage de confiance ni piste de

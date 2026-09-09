@@ -21,8 +21,12 @@ class SlidingWindow:
     def to_messages(self, session: Session,
                     system_prompt: str) -> list[ChatMessage]:
         """Messages du modèle : system + fenêtre glissante de la session."""
+        return [ChatMessage("system", system_prompt),
+                *self.bounded_turns(session)]
+
+    def bounded_turns(self, session: Session) -> list[ChatMessage]:
+        """Fenêtre glissante : tours retenus (du plus récent au plus ancien)."""
         window = session.turns[-self.max_turns:]
-        messages = [ChatMessage("system", system_prompt)]
         used = 0
         # Parcourt du plus récent au plus ancien pour respecter la taille.
         retained: list[ChatMessage] = []
@@ -33,5 +37,4 @@ class SlidingWindow:
             used += len(message.content)
             retained.append(message)
         retained.reverse()
-        messages.extend(retained)
-        return messages
+        return retained

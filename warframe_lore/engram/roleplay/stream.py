@@ -10,6 +10,8 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 
 from ..llm import LLMProvider
+from ..models import ChatMessage
+from ..rag.prompt import HALLUCINATION_GUARD
 from .models import Session
 from .window import SlidingWindow
 
@@ -24,12 +26,29 @@ class RoleplayService:
         self.system_prompt = system_prompt
         self.temperature = temperature
 
-    async def stream(self, session: Session, user_text: str) -> AsyncIterator[str]:
-        """Append la saisie, streame la réponse, et enregistre celle-ci."""
+    async def stream(self, session: Session, user_text: str,
+                     rag_context: str | None = None) -> AsyncIterator[str]:
+        """Append la saisie, streame la réponse, et enregistre celle-ci.
+
+        ``rag_context`` (passages documentaires de confiance) fusionne un
+        contexte externe dans le prompt : ordre petit-modèle (contexte,
+        persona, garde anti-hallucination, puis fenêtre de dialogue).
+        """
         session.add("user", user_text)
-        messages = self.window.to_messages(session, self.system_prompt)
+        if rag_context is None:
+            messages = self.window.to_messages(session, self.system_prompt)
+        else:
+            messages = [
+                ChatMessage("system", f"Contexte documentaire :\n{rag_context}"),
+                ChatMessage("system", self.system_prompt),
+                ChatMessage("system", HALLUCINATION_GUARD),
+                *self.window.bounded_turns(session),
+            ]
         tokens: list[str] = []
-        async for token in self.llm.chat_stream(messages, self.temperature):
+        # Tour ancré documentairement : température bridée (extractif).
+        temperature = (min(self.temperature, 0.1) if rag_context
+                       else self.temperature)
+        async for token in self.llm.chat_stream(messages, temperature):
             tokens.append(token)
             yield token
         response = "".join(tokens)

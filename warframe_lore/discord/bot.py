@@ -17,6 +17,14 @@ from .streamer import MessageStreamer
 
 log = logging.getLogger("warframe_lore.discord.bot")
 
+# Déclencheurs d'une question documentaire (demande de retrieval RAG).
+_LORE_TRIGGERS = (
+    "qui ", "qu'est", "quel", "quelle", "quand", "où ", "comment",
+    "pourquoi", "combien", "histoir", "lore", "orokin", "tenno",
+    "warframe", "primordial", "hex", "void", "kuva", "infest",
+    "fragments", "chimer", "trésors", "règne",
+)
+
 
 class LoreMasterBot(discord.Client):
     """Discute avec Oracle via une connexion WS par canal."""
@@ -71,12 +79,14 @@ class LoreMasterBot(discord.Client):
             gateway = RoleplayGateway(self.gateway_url)
             await gateway.open()
             self._gateways[channel_id] = gateway
+        use_rag = self._wants_lore(message.content)
         placeholder = await message.channel.send("*Oracle réfléchit…*")
         streamer = MessageStreamer(placeholder)
         typing_task = asyncio.create_task(self._keep_typing(message))
         try:
             try:
-                await gateway.send(message.content, on_token=streamer.add)
+                await gateway.send(message.content, on_token=streamer.add,
+                                   rag=use_rag)
             except ConnectionError as exc:
                 # Flux mort (ex: serveur ENGRAM redémarré) → reconnexion.
                 log.warning("Connexion Oracle perdue (%s) — reconnexion", exc)
@@ -84,7 +94,8 @@ class LoreMasterBot(discord.Client):
                 gateway = RoleplayGateway(self.gateway_url)
                 await gateway.open()
                 self._gateways[channel_id] = gateway
-                await gateway.send(message.content, on_token=streamer.add)
+                await gateway.send(message.content, on_token=streamer.add,
+                                   rag=use_rag)
         finally:
             typing_task.cancel()
         await streamer.finish()
@@ -94,6 +105,11 @@ class LoreMasterBot(discord.Client):
                     content="*Oracle est injoignable — serveur ENGRAM éteint.*")
             else:
                 await placeholder.delete()
+
+    def _wants_lore(self, text: str) -> bool:
+        """Vrai si la saisie ressemble à une question de lore (RAG utile)."""
+        low = text.lower()
+        return any(trigger in low for trigger in _LORE_TRIGGERS)
 
     async def _keep_typing(self, message: discord.Message) -> None:
         while True:

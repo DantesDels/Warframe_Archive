@@ -16,6 +16,12 @@ from .search import RAGHit
 # censé répondre "je ne sais pas" plutôt que d'inventer.
 NO_DATA_MARKER = "[AUCUNE DONNÉE RÉCUPÉRÉE]"
 
+# Réponse brute servie SANS appeler le LLM (short-circuit) : retournée telle
+# quelle, dans la requête et le WebSocket, quand aucun passage de confiance
+# ne fonde une réponse.
+RAG_ERROR = ("[Erreur] Mes archives mnémoniques sont corrompues ou "
+             "incomplètes concernant ce sujet.")
+
 # Verrouillage absolu : ajouté en dur au prompt système, quel que soit le
 # persona éditable (ne peut pas être désactivé en modifiant persona/oracle).
 HALLUCINATION_GUARD = (
@@ -45,6 +51,7 @@ class RAGPrompt:
     system: str
     context: str
     user_question: str
+    suggestion: str | None = None
 
     def to_messages(self) -> list[dict]:
         """Messages OpenAI-compatibles.
@@ -97,4 +104,5 @@ class PromptBuilder:
             system=system,
             context=context,
             user_question=question,
+            suggestion=suggestion,
         )

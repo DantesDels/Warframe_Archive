@@ -45,11 +45,13 @@ class RoleplayGateway:
         self._worker = asyncio.create_task(self._read_loop())
 
     async def send(self, text: str, on_token: TokenHandler,
-                   on_end: EndHandler | None = None) -> None:
-        """Envoie un message et traite le flux de tokens jusqu'à ``end``."""
+                   on_end: EndHandler | None = None,
+                   rag: bool = False) -> None:
+        """Envoie un message (optionnellement ancré RAG) jusqu'à ``end``."""
         if not self.active:
             raise ConnectionError("connexion WS fermée — redémarrer le gateway")
-        await self._conn.send(json.dumps({"type": "message", "text": text}))
+        await self._conn.send(json.dumps(
+            {"type": "message", "text": text, "rag": rag}))
         while True:
             async with self._send_lock:
                 frame = await self._queue.get()

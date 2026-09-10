@@ -3,17 +3,22 @@
 Exposes the API contract used by the ``/timeline/`` Vue app:
 
 - ``GET /api/timeline/roots``
-      ``{"nodes": [era ...], "edges": [paradox edges ...]}``
+      ``{"nodes": [era ...], "edges": [root edges ...]}``
 - ``GET /api/timeline?parent_id={id}``
-      ``{"nodes": [immediate children ...], "edges": []}``
+      ``{"nodes": [immediate children ...], "edges": [parent edges ...]}``
 
 ``has_children`` is derived from the static tree so the frontend can
 render an expansion button and fetch children on demand, depth by depth.
+
+Edges are keyed by the node that loads them (their parent), so endpoints
+are always both loaded when the edge is drawn.  Each edge carries a
+``paradox`` flag: causal chains (false, solid) vs eternalism links
+(true, dashed).
 """
 
 from __future__ import annotations
 
-from ._data import NODES, PARADOX_EDGES
+from ._data import EDGES, NODES
 
 _PARENT_CHILDREN: dict[str, list[dict]] = {}
 _ID_NODE: dict[str, dict] = {}
@@ -63,16 +68,29 @@ def all_nodes() -> list[dict]:
     return [_public(n) for n in NODES]
 
 
+def edges(parent_id: str = "") -> list[dict]:
+    """Edges drawn once ``parent_id`` and its endpoints are loaded."""
+    return [dict(e) for e in EDGES.get(parent_id, [])]
+
+
+def all_edges() -> list[dict]:
+    return [dict(e) for group in EDGES.values() for e in group]
+
+
 def paradox_edges() -> list[dict]:
-    return list(PARADOX_EDGES)
+    return [e for e in all_edges() if e["paradox"]]
+
+
+def sequel_edges() -> list[dict]:
+    return [e for e in all_edges() if not e["paradox"]]
 
 
 def roots_payload() -> dict:
-    return {"nodes": roots(), "edges": paradox_edges()}
+    return {"nodes": roots(), "edges": edges()}
 
 
 def children_payload(parent_id: str) -> dict | None:
     """Payload for ``/api/timeline?parent_id=`` or ``None`` (404)."""
     if parent_id not in _ID_NODE:
         return None
-    return {"nodes": children(parent_id), "edges": []}
+    return {"nodes": children(parent_id), "edges": edges(parent_id)}

@@ -206,11 +206,15 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   will-change: transform;
 }
 
-.edges { position: absolute; left: 0; top: 0; pointer-events: none; }
+.edges { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; }
 
 /* -------------------------------------------------------------- sémantique */
+/* Taille réelle mesurée après le rendu 2 temps : max-content (une boîte qui
+   épouse son label), min-width minimal par semantic, fade-in au placement. */
 .node {
+  z-index: 10;
   position: absolute;
+  width: max-content;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   border-radius: 10px;
   border: 1px solid var(--hairline);
@@ -219,9 +223,13 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   font-size: 12.5px;
   box-shadow: var(--shadow);
   user-select: none;
+  opacity: 1;
+  transition: opacity 0.3s ease;
 }
 
 .node-era {
+  min-width: 190px;
+  padding: 10px 16px;
   border-radius: 14px;
   font-size: 15px; font-weight: 800;
   color: var(--gold);
@@ -231,6 +239,8 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 }
 
 .node-quest {
+  min-width: 150px;
+  padding: 8px 14px;
   font-size: 13px; font-weight: 600;
   color: var(--silver);
   border-color: rgba(226, 232, 240, 0.35);
@@ -238,6 +248,7 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 }
 
 .node-fragment {
+  width: 18px; height: 18px;
   border-radius: 999px;
   border-color: transparent;
   background: var(--accent);
@@ -259,12 +270,18 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .node-expand:active { transform: scale(0.9); }
 .node-expand:disabled { opacity: 0.45; cursor: default; }
 
-/* ------------------------------------------------- liens paradoxaux animés */
+/* ------------------------------------------------ liens (causalité / paradoxe) */
 .edge {
   fill: none;
   stroke: rgba(148, 163, 184, 0.4);
   stroke-width: 1.5;
 }
+/* Causalité linéaire (séquences de quêtes) : trait plein discret. */
+.edge-sequel {
+  stroke: rgba(226, 232, 240, 0.55);
+  stroke-width: 1.75;
+}
+/* Eternalism / paradoxe : pointillés animés magenta. */
 .edge-paradox {
   stroke: var(--paradox);
   stroke-width: 2;
@@ -274,6 +291,24 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 }
 @keyframes paradox-flow {
   to { stroke-dashoffset: -26; }
+}
+
+/* ------------------------------------------------------------- tooltip survol */
+.tl-tip {
+  position: fixed;
+  z-index: 30;
+  transform: translate(-50%, -100%);
+  max-width: 260px;
+  padding: 7px 11px;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  border-radius: 8px;
+  background: rgba(21, 31, 54, 0.96);
+  color: var(--text-strong);
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  white-space: normal;
 }
 
 /* ============================================================ mobile < 768px */

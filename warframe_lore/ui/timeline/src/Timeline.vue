@@ -5,22 +5,21 @@
  *   /api/timeline?parent_id={id} au clic sur un nœud avec has_children.
  * - Layout dagre délégué à dagre.worker.js ; les positions reviennent sans
  *   bloquer l'UI (tokens incrémentaux pour ignorer les résultats périmés).
- * - Pan/Zoom via @vueuse/gesture (drag, wheel, pinch) appliqués au stage.
+ * - Pan/Zoom via gestes natifs (pointer drag, wheel, pinch) sur le stage.
+ * - Rendu 2 temps : les nouveaux nœuds sont enfants, mesurés après le patch
+ *   DOM (offsetWidth/offsetHeight), puis placés par dagre avec fade-in.
  */
-import { computed, onMounted, onUnmounted, reactive, ref, shallowRef } from 'vue'
-
-const SIZES = {
-  era: { width: 190, height: 58 },
-  quest: { width: 168, height: 42 },
-  fragment: { width: 18, height: 18 },
-}
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef } from 'vue'
 
 /* ------------------------------------------------------------- état réactif */
 const nodes = shallowRef(new Map())      // id -> nœud vivant {x, y, ...}
-const edges = ref([])                    // liens paradoxaux (2 extrémités chargées)
+const edges = ref([])                    // liens {source, target, label, paradox}
+const edgePoints = shallowRef(new Map()) // "src\0tgt" -> points de routing dagre
 const loading = ref(false)
 const expanding = ref(new Set())
 const error = ref('')
+const tip = ref(null)                    // tooltip fragment {x, y, text}
+const nodeEls = new Map()                // id -> HTMLElement (mesure DOM réelle)
 
 const view = reactive({ x: 32, y: 32, scale: 1 })
 const bounds = reactive({ width: 0, height: 0 })
@@ -60,7 +59,7 @@ worker.onmessage = (event) => {
       requestLayout()
       return
     }
-    applyPositions(data.positions)
+    applyLayout(data.positions, data.edges || [])
     if (layoutQueued) {
       layoutQueued = false
       requestLayout()
@@ -115,7 +114,7 @@ function requestLayout() {
   postLayout(layoutToken)
 }
 
-function applyPositions(positions) {
+function applyLayout(positions, edgePointsList) {
   const current = nodes.value
   let minX = Infinity
   let minY = Infinity
@@ -133,19 +132,29 @@ function applyPositions(positions) {
   if (minX === Infinity) return
 
   // Décale pour que le coin du graphe commence à 24 px (aucune coordonnée
-  // négative dans le canevas) puis remplace les records (nouveau Map →
-  // déclenche le re-rendu du graphe).
+  // négative dans le canevas). Le même décalage s'applique aux points de
+  // routing des arêtes (sinon courbes et boîtes se désynchronisent).
   const dx = 24 - minX
   const dy = 24 - minY
+  const pts = new Map()
+  for (const ep of edgePointsList || []) {
+    pts.set(
+      `${ep.source}\u0000${ep.target}`,
+      (ep.points || []).map((p) => ({ x: p.x + dx, y: p.y + dy })),
+    )
+  }
+
+  // Remplace les records (nouveau Map -> déclenche le re-rendu du graphe).
   const next = new Map()
   current.forEach((n) => {
     const p = positions[n.id]
     next.set(
       n.id,
-      p ? { ...n, x: p.x + dx, y: p.y + dy } : n,
+      p ? { ...n, x: p.x + dx, y: p.y + dy, placed: true } : n,
     )
   })
   nodes.value = next
+  edgePoints.value = pts
 
   bounds.width = maxX - minX
   bounds.height = maxY - minY
@@ -159,7 +168,6 @@ async function fetchJson(url) {
 }
 
 function makeRecord(p) {
-  const size = SIZES[p.kind] || SIZES.quest
   return {
     id: p.id,
     parent_id: p.parent_id,
@@ -168,11 +176,44 @@ function makeRecord(p) {
     has_children: !!p.has_children,
     year: p.year || '',
     note: p.note || '',
-    width: size.width,
-    height: size.height,
+    // Dimensions réelles inconnues tant que le nœud n'est pas mesuré dans le
+    // DOM (rendu 2 temps) : on les lit puis on les envoie au worker dagre.
+    width: 0,
+    height: 0,
+    measured: false,
+    placed: false,
     x: 0,
     y: 0,
   }
+}
+
+function setNodeEl(el, id) {
+  if (el) nodeEls.set(id, el)
+  else nodeEls.delete(id)
+}
+
+/* Rendu 2 temps, phase 1 : après le patch DOM, on mesure la taille réelle de
+ * chaque nœud encore non placé (offsetWidth/offsetHeight de son contenu)
+ * puis on redemande un layout dagre avec ces dimensions exactes. */
+function measureUnmeasured() {
+  const current = nodes.value
+  nodeEls.forEach((el, id) => {
+    const n = current.get(id)
+    if (!n || n.measured) return
+    const w = el.offsetWidth
+    const h = el.offsetHeight
+    if (w > 0 && h > 0) {
+      n.width = w
+      n.height = h
+      n.measured = true
+    }
+  })
+}
+
+async function layout() {
+  await nextTick()
+  measureUnmeasured()
+  requestLayout()
 }
 
 function mergeNodes(list) {
@@ -186,7 +227,14 @@ function mergeNodes(list) {
 
 function mergeEdges(list) {
   const seen = new Set(edges.value.map((e) => `${e.source}\u0000${e.target}`))
-  const extra = (list || []).filter((e) => !seen.has(`${e.source}\u0000${e.target}`))
+  const extra = (list || [])
+    .filter((e) => !seen.has(`${e.source}\u0000${e.target}`))
+    .map((e) => ({
+      source: e.source,
+      target: e.target,
+      label: e.label || '',
+      paradox: !!e.paradox,
+    }))
   if (extra.length) edges.value = edges.value.concat(extra)
 }
 
@@ -197,7 +245,7 @@ async function loadRoots() {
     const payload = await fetchJson('/api/timeline/roots')
     mergeNodes(payload.nodes)
     mergeEdges(payload.edges)
-    requestLayout()
+    await layout()
   } catch (err) {
     error.value = err && err.message ? String(err.message) : String(err)
   } finally {
@@ -209,12 +257,12 @@ function expand(node) {
   if (expanding.value.has(node.id)) return
   expanding.value.add(node.id)
   fetchJson(`/api/timeline?parent_id=${encodeURIComponent(node.id)}`)
-    .then((payload) => {
+    .then(async (payload) => {
       mergeNodes(payload.nodes)
       mergeEdges(payload.edges)
       const live = nodes.value.get(node.id)
       if (live) live.has_children = false
-      requestLayout()
+      await layout()
     })
     .catch((err) => {
       error.value = err && err.message ? String(err.message) : String(err)
@@ -322,6 +370,7 @@ const nodeList = computed(() => [...nodes.value.values()])
 
 const renderedEdges = computed(() => {
   const map = nodes.value
+  const pts = edgePoints.value
   const out = []
   for (const e of edges.value) {
     const source = map.get(e.source)
@@ -330,14 +379,37 @@ const renderedEdges = computed(() => {
     out.push({
       key: `${e.source}\u0000${e.target}`,
       label: e.label || '',
+      paradox: e.paradox,
       source,
       target,
+      points: pts.get(`${e.source}\u0000${e.target}`) || null,
     })
   }
   return out
 })
 
+/* Courbe de Catmull-Rom convertie en Béziers cubiques : chaque point de
+ * routing dagre est traversé exactement, la tangente est déduite des voisins
+ * (lissée), et les extrémités touchent les bords des boîtes. */
+function catmullRomPath(pts) {
+  let d = `M ${pts[0].x} ${pts[0].y}`
+  for (let i = 0; i < pts.length - 1; i += 1) {
+    const p1 = pts[i]
+    const p2 = pts[i + 1]
+    const prev = pts[i - 1] || p1
+    const nxt = pts[i + 2] || p2
+    const c1x = p1.x + (p2.x - prev.x) / 6
+    const c1y = p1.y + (p2.y - prev.y) / 6
+    const c2x = p2.x - (nxt.x - p1.x) / 6
+    const c2y = p2.y - (nxt.y - p1.y) / 6
+    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`
+  }
+  return d
+}
+
 function pathFor(e) {
+  if (e.points && e.points.length >= 2) return catmullRomPath(e.points)
+  // Fallback sans routing (nœud pas encore mesuré) : conique d'horizon.
   const sx = e.source.x + e.source.width / 2
   const sy = e.source.y + e.source.height / 2
   const tx = e.target.x + e.target.width / 2
@@ -346,13 +418,15 @@ function pathFor(e) {
   return `M ${sx} ${sy} C ${mx} ${sy}, ${mx} ${ty}, ${tx} ${ty}`
 }
 
+function edgeClass(e) {
+  return e.paradox ? 'edge edge-paradox' : 'edge edge-sequel'
+}
+
 function nodeStyle(n) {
-  return {
-    left: `${n.x}px`,
-    top: `${n.y}px`,
-    width: `${n.width}px`,
-    height: `${n.height}px`,
-  }
+  // Tant que dagre n'a pas placé le nœud : invisible (opacity 0 en inline,
+  // prioritaire), la position est posée par le layout suivant.
+  if (!n.placed) return { opacity: 0 }
+  return { left: `${n.x}px`, top: `${n.y}px` }
 }
 
 function nodeTitle(n) {
@@ -360,6 +434,18 @@ function nodeTitle(n) {
   if (n.year) parts.push(n.year)
   if (n.note) parts.push(n.note)
   return parts.join(' — ')
+}
+
+/* Tooltip survol des fragments (points sans label) : position fixe dans le
+ * viewport, calculée depuis la boîte du nœud au survol. */
+function showTip(event, n) {
+  if (n.kind !== 'fragment') return
+  const rect = event.currentTarget.getBoundingClientRect()
+  tip.value = { x: rect.left + rect.width / 2, y: rect.top - 8, text: nodeTitle(n) }
+}
+
+function hideTip() {
+  tip.value = null
 }
 
 const canvasStyle = computed(() => ({
@@ -405,7 +491,7 @@ onUnmounted(() => worker.terminate())
           <path
             v-for="e in renderedEdges"
             :key="e.key"
-            class="edge edge-paradox"
+            :class="edgeClass(e)"
             :d="pathFor(e)"
           >
             <title>{{ e.label }}</title>
@@ -415,10 +501,13 @@ onUnmounted(() => worker.terminate())
         <div
           v-for="n in nodeList"
           :key="n.id"
+          :ref="(el) => setNodeEl(el, n.id)"
           class="node"
           :class="`node-${n.kind}`"
           :style="nodeStyle(n)"
           :title="nodeTitle(n)"
+          @pointerenter="showTip($event, n)"
+          @pointerleave="hideTip"
         >
           <span v-if="n.kind !== 'fragment'" class="node-label">{{ n.label }}</span>
           <span v-else class="node-dot"></span>
@@ -433,5 +522,11 @@ onUnmounted(() => worker.terminate())
         </div>
       </div>
     </div>
+
+    <div
+      v-if="tip"
+      class="tl-tip"
+      :style="{ left: tip.x + 'px', top: tip.y + 'px' }"
+    >{{ tip.text }}</div>
   </div>
 </template>

@@ -8,7 +8,8 @@
  *
  * Contrat :
  *   in :  { token, nodes: [{ id, width, height }], edges: [{ source, target }] }
- *   out : { type: "layout", token, positions: { id: { x, y, width, height } } }
+ *   out : { type: "layout", token, positions: { id: { x, y, width, height } },
+ *           edges: [{ source, target, points: [{ x, y }, ...] }] }
  */
 import * as dagre from '@dagrejs/dagre'
 
@@ -45,7 +46,15 @@ self.onmessage = (event) => {
         height: node.height,
       }
     }
-    self.postMessage({ type: 'layout', token, positions })
+    // Routing points de chaque arête (chemin des bords de boîte) : l'UI les
+    // lisse en courbes de Bézier au lieu de tracer des segments droits.
+    const edgeList = []
+    for (const edge of graph.edges()) {
+      const pts = (graph.edge(edge).points || [])
+        .map((p) => ({ x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 }))
+      edgeList.push({ source: edge.v, target: edge.w, points: pts })
+    }
+    self.postMessage({ type: 'layout', token, positions, edges: edgeList })
   } catch (err) {
     self.postMessage({
       type: 'error',

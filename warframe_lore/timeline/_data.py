@@ -1,9 +1,14 @@
 """Timeline curated data (Warframe lore, eternalism).
 
-Static, deterministic hierarchy: ``era`` (roots) -> ``quest`` ->
+Static, deterministic hierarchy: ``era`` (roots) -> ``era``/``quest`` ->
 ``fragment`` (leaves).  ``has_children`` is derived from ``parent_id``,
 which lets the frontend lazy-load by depth: roots first, then
 ``/api/timeline?parent_id={id}``.
+
+Causality: the Orokin Empire roots divide between the main path
+(Old War -> Origin System) and the paradox branch (Zariman), which bursts
+into Duviri and 1999 — never sequentially.  In the Origin System,
+Octavia's Anthem follows The War Within and The Sacrifice succeeds it.
 """
 
 from __future__ import annotations
@@ -12,16 +17,31 @@ from __future__ import annotations
 NODES: list[dict] = [
     # ------------------------------------------------------------ ères (racines)
     {
-        "id": "era-old-war", "parent_id": None,
+        "id": "era-orokin", "parent_id": None,
+        "label": "L'Empire Orokin", "kind": "era", "year": "Le Premier Monde",
+        "note": "Ballas, les Sentients et la Chute. L'Empire se divise : le "
+                "cheminement principal vers l'Ancienne Guerre et la branche "
+                "paradoxale de la Zariman.",
+    },
+    {
+        "id": "era-old-war", "parent_id": "era-orokin",
         "label": "L'Ancienne Guerre", "kind": "era", "year": "Ère Orokin",
         "note": "L'Empire Orokin, les Sentients et la Guerre qui a aveuglé "
                 "le Système. L'Opérateur s'éveille de ce cauchemar.",
     },
     {
-        "id": "era-origin", "parent_id": None,
+        "id": "era-origin", "parent_id": "era-old-war",
         "label": "Le Système d'Origine", "kind": "era", "year": "Présent",
         "note": "Les Tenno face à la Renaissance du Système. Toutes les "
                 "grandes quêtes contemporaines en découlent.",
+    },
+    {
+        "id": "era-zariman", "parent_id": "era-orokin",
+        "label": "La Zariman · Système d'Origine", "kind": "era",
+        "year": "Paradoxe",
+        "note": "Le manifeste du Vide : le vaisseau, ses enfants et le voyage "
+                "qui n'a jamais eu lieu. Cette branche éclate vers Duviri "
+                "(Drifter) et 1999 (Albrecht).",
     },
     {
         "id": "era-1999", "parent_id": None,
@@ -35,18 +55,19 @@ NODES: list[dict] = [
         "note": "Le drame du Drifter, pris dans la Spirale infinie entre le "
                 "Vide et la réalité.",
     },
-    # ------------------------------------------------------------ quêtes : Ancienne Guerre
+    # ------------------------------------------------------------ quêtes : Système d'Origine (chemin principal)
     {
-        "id": "q-sacrifice", "parent_id": "era-old-war",
-        "label": "The Sacrifice", "kind": "quest", "year": "Flashback Orokin",
-        "note": "Excalibur Umbra, Ballas et le dernier secret des Orokin.",
+        "id": "q-sacrifice", "parent_id": "era-origin",
+        "label": "The Sacrifice", "kind": "quest",
+        "note": "Excalibur Umbra, Ballas et le dernier secret des Orokin. "
+                "Découle de l'Octavia's Anthem.",
     },
     {
-        "id": "q-octavia", "parent_id": "era-old-war",
+        "id": "q-octavia", "parent_id": "era-origin",
         "label": "Octavia's Anthem", "kind": "quest",
-        "note": "Le Mandachorde et l'Étoile chantée de Maprico.",
+        "note": "Le Mandachorde et l'Étoile chantée de Maprico. Suit la "
+                "Guerre Intérieure, précède The Sacrifice.",
     },
-    # ------------------------------------------------------------ quêtes : Système d'Origine
     {
         "id": "q-vors", "parent_id": "era-origin",
         "label": "Vor's Prize", "kind": "quest",
@@ -77,15 +98,16 @@ NODES: list[dict] = [
                 "du Drifter.",
     },
     {
-        "id": "q-zariman", "parent_id": "era-origin",
-        "label": "Angels of the Zariman", "kind": "quest",
-        "note": "Le vaisseau-manifestation et le prix du voyage dans le Vide.",
-    },
-    {
         "id": "q-whispers", "parent_id": "era-origin",
         "label": "Whispers in the Walls", "kind": "quest",
         "note": "Albrecht Entrati, le Requiem et la cavité dans les "
                 "fondations de la réalité.",
+    },
+    # ------------------------------------------------------------ quêtes : Zariman (branche paradoxale)
+    {
+        "id": "q-zariman", "parent_id": "era-zariman",
+        "label": "Angels of the Zariman", "kind": "quest",
+        "note": "Le vaisseau-manifestation et le prix du voyage dans le Vide.",
     },
     {
         "id": "q-jade", "parent_id": "era-origin",
@@ -149,12 +171,28 @@ NODES: list[dict] = [
      "label": "La Spirale de Duviri", "kind": "fragment"},
 ]
 
-# Alternative temporal edges (Eternalism) : Duviri / 1999 / New War.
-# Drawn as animated dashed SVG paths (``edge-paradox``).
-PARADOX_EDGES: list[dict] = [
-    {"source": "era-1999", "target": "era-duviri",
-     "label": "Boucle temporelle"},
-    {"source": "q-1999", "target": "q-duviri", "label": "Le même drame"},
-    {"source": "q-new-war", "target": "era-duviri",
-     "label": "Portail du Drifter"},
-]
+# Edges (Eternalism), keyed by the parent that loads them (lazy fetch).
+# ``paradox: True``  -> dashed flow (Duviri / 1999 / New War / Zariman).
+# ``paradox: False`` -> linear causality (sequel quests).
+EDGES: dict[str, list[dict]] = {
+    # L'Empire se divise : la branche paradoxale de la Zariman éclate vers
+    # Duviri (Drifter) et 1999 (Albrecht) — jamais séquentiels.
+    "era-orokin": [
+        {"source": "era-orokin", "target": "era-zariman",
+         "label": "Paradoxe d'éternisme", "paradox": True},
+        {"source": "era-zariman", "target": "era-duviri",
+         "label": "Le Drifter", "paradox": True},
+        {"source": "era-zariman", "target": "era-1999",
+         "label": "Albrecht Entrati", "paradox": True},
+    ],
+    # Causalité linéaire : Octavia's Anthem suit The War Within,
+    # The Sacrifice en découle. Le Portail du Drifter reste paradoxal.
+    "era-origin": [
+        {"source": "q-within", "target": "q-octavia",
+         "label": "Après la Guerre Intérieure", "paradox": False},
+        {"source": "q-octavia", "target": "q-sacrifice",
+         "label": "La vérité sur Umbra", "paradox": False},
+        {"source": "q-new-war", "target": "era-duviri",
+         "label": "Portail du Drifter", "paradox": True},
+    ],
+}

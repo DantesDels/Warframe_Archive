@@ -9,7 +9,8 @@
  * Contrat :
  *   in :  { token, nodes: [{ id, width, height }], edges: [{ source, target }] }
  *   out : { type: "layout", token, positions: { id: { x, y, width, height } },
- *           edges: [{ source, target, points: [{ x, y }, ...] }] }
+ *           edges: [{ source, target, points: [{ x, y }, ...] }],
+ *           size: { width, height } }  (dimensions totales du graphe)
  */
 import * as dagre from '@dagrejs/dagre'
 
@@ -54,7 +55,13 @@ self.onmessage = (event) => {
         .map((p) => ({ x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 }))
       edgeList.push({ source: edge.v, target: edge.w, points: pts })
     }
-    self.postMessage({ type: 'layout', token, positions, edges: edgeList })
+    // Dimensions totales du graphe (source unique de vérité pour le <svg>).
+    const bounds = graph.graph()
+    const size = {
+      width: Math.round(bounds.width || 0),
+      height: Math.round(bounds.height || 0),
+    }
+    self.postMessage({ type: 'layout', token, positions, edges: edgeList, size })
   } catch (err) {
     self.postMessage({
       type: 'error',

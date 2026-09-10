@@ -37,23 +37,27 @@ NODES: list[dict] = [
     },
     {
         "id": "era-zariman", "parent_id": "era-orokin",
-        "label": "La Zariman · Système d'Origine", "kind": "era",
-        "year": "Paradoxe",
+        "label": "La Zariman", "kind": "era",
+        "year": "Système d'Origine · Paradoxe",
         "note": "Le manifeste du Vide : le vaisseau, ses enfants et le voyage "
                 "qui n'a jamais eu lieu. Cette branche éclate vers Duviri "
                 "(Drifter) et 1999 (Albrecht).",
     },
+    # -------------------------------------------------- mondes-paradoxes fusionnés
+    # era-quête fusionnés : "L'An 1999" + quête "1999" -> node-1999 ;
+    # "Duviri" + quête "The Duviri Paradox" -> node-duviri. Un seul nœud,
+    # jamais d'îlot en doublon. Les fragments pendent directement sous l'ère.
     {
-        "id": "era-1999", "parent_id": None,
+        "id": "node-1999", "parent_id": None,
         "label": "L'An 1999", "kind": "era", "year": "Paradoxe",
-        "note": "Höllvania, la veille de l'an 1999 : un siècle figé qui "
-                "n'aboutit qu'au Néant. Paradoxe d'éternisme.",
+        "note": "Höllvania, la veille de l'an 1999 : la quête '1999', ses "
+                "fragments et un siècle figé qui n'aboutit qu'au Néant.",
     },
     {
-        "id": "era-duviri", "parent_id": None,
+        "id": "node-duviri", "parent_id": None,
         "label": "Duviri", "kind": "era", "year": "Royaume paradoxal",
-        "note": "Le drame du Drifter, pris dans la Spirale infinie entre le "
-                "Vide et la réalité.",
+        "note": "Le drame du Drifter pris dans la Spirale infinie entre le "
+                "Vide et la réalité, quête 'The Duviri Paradox' incluse.",
     },
     # ------------------------------------------------------------ quêtes : Système d'Origine (chemin principal)
     {
@@ -119,24 +123,11 @@ NODES: list[dict] = [
         "label": "Heart of Deimos", "kind": "quest",
         "note": "Le cœur de l'Infestation, battant sous Deimos.",
     },
-    # ------------------------------------------------------------ quêtes : 1999
+    # ------------------------------------------------------------ quêtes : node-1999 (ère fusionnée)
     {
-        "id": "q-1999", "parent_id": "era-1999",
-        "label": "1999", "kind": "quest",
-        "note": "L'équipe qui tenait la ligne pendant la veille de la chute "
-                "de Höllvania.",
-    },
-    {
-        "id": "q-hex", "parent_id": "era-1999",
+        "id": "q-hex", "parent_id": "node-1999",
         "label": "The Hex", "kind": "quest",
         "note": "Les six, la KIM et le lien qui défie les boucles.",
-    },
-    # ------------------------------------------------------------ quêtes : Duviri
-    {
-        "id": "q-duviri", "parent_id": "era-duviri",
-        "label": "The Duviri Paradox", "kind": "quest",
-        "note": "Le Drifter apprend à converser avec ses prisons, une rechute "
-                "à la fois.",
     },
     # ------------------------------------------------------------ fragments
     {"id": "f-sacrifice-excal", "parent_id": "q-sacrifice",
@@ -159,15 +150,15 @@ NODES: list[dict] = [
      "label": "Requiem d'Albrecht", "kind": "fragment"},
     {"id": "f-newwar-pact", "parent_id": "q-new-war",
      "label": "Pacte du Drifter", "kind": "fragment"},
-    {"id": "f-1999-hollvania", "parent_id": "q-1999",
+    {"id": "f-1999-hollvania", "parent_id": "node-1999",
      "label": "Höllvania · veille de 1999", "kind": "fragment"},
-    {"id": "f-1999-indifference", "parent_id": "q-1999",
+    {"id": "f-1999-indifference", "parent_id": "node-1999",
      "label": "Le Néant approche", "kind": "fragment"},
     {"id": "f-hex-kim", "parent_id": "q-hex",
      "label": "La KIM · les Liens", "kind": "fragment"},
-    {"id": "f-duviri-throne", "parent_id": "q-duviri",
+    {"id": "f-duviri-throne", "parent_id": "node-duviri",
      "label": "Le Trône du Drifter", "kind": "fragment"},
-    {"id": "f-duviri-thrax", "parent_id": "q-duviri",
+    {"id": "f-duviri-thrax", "parent_id": "node-duviri",
      "label": "La Spirale de Duviri", "kind": "fragment"},
 ]
 
@@ -180,9 +171,9 @@ EDGES: dict[str, list[dict]] = {
     "era-orokin": [
         {"source": "era-orokin", "target": "era-zariman",
          "label": "Paradoxe d'éternisme", "paradox": True},
-        {"source": "era-zariman", "target": "era-duviri",
+        {"source": "era-zariman", "target": "node-duviri",
          "label": "Le Drifter", "paradox": True},
-        {"source": "era-zariman", "target": "era-1999",
+        {"source": "era-zariman", "target": "node-1999",
          "label": "Albrecht Entrati", "paradox": True},
     ],
     # Causalité linéaire : Octavia's Anthem suit The War Within,
@@ -192,7 +183,7 @@ EDGES: dict[str, list[dict]] = {
          "label": "Après la Guerre Intérieure", "paradox": False},
         {"source": "q-octavia", "target": "q-sacrifice",
          "label": "La vérité sur Umbra", "paradox": False},
-        {"source": "q-new-war", "target": "era-duviri",
+        {"source": "q-new-war", "target": "node-duviri",
          "label": "Portail du Drifter", "paradox": True},
     ],
 }

@@ -51,14 +51,30 @@ class TimelineTest(unittest.TestCase):
                 parent = self.nodes.get(n["parent_id"])
                 self.assertIsNotNone(parent, f"parent inconnu: {node_id}")
                 if n["kind"] == "fragment":
-                    expected_kind = "quest"
+                    # Les fragments pendent sous une quête OU sous une ère
+                    # fusionnée (node-1999, node-duviri).
+                    expected_kind = ("quest", "era")
                 else:
-                    expected_kind = "era"  # era -> era | quest -> era
-                self.assertEqual(parent["kind"], expected_kind,
-                                 f"parent de {node_id} mal classifié")
+                    expected_kind = ("era",)  # era -> era | quest -> era
+                self.assertIn(parent["kind"], expected_kind,
+                              f"parent de {node_id} mal classifié")
             # Un noeud sans enfant n'expose jamais has_children=True.
             if n["kind"] == "fragment":
                 self.assertFalse(n["has_children"])
+
+    def test_doublons_fusionnes(self) -> None:
+        """1999 et Duviri sont fusionnés (ère + quête) : un seul nœud par
+        monde, aucun doublon laissé derrière."""
+        for gone in ("era-1999", "q-1999", "era-duviri", "q-duviri"):
+            self.assertNotIn(gone, self.nodes, f"doublon encore présent: {gone}")
+        for merged in ("node-1999", "node-duviri"):
+            self.assertEqual(self.nodes[merged]["kind"], "era")
+            self.assertIsNone(self.nodes[merged]["parent_id"])
+        self.assertEqual(self.nodes["f-1999-hollvania"]["parent_id"], "node-1999")
+        self.assertEqual(self.nodes["f-1999-indifference"]["parent_id"], "node-1999")
+        self.assertEqual(self.nodes["f-hex-kim"]["parent_id"], "q-hex")
+        self.assertEqual(self.nodes["f-duviri-throne"]["parent_id"], "node-duviri")
+        self.assertEqual(self.nodes["f-duviri-thrax"]["parent_id"], "node-duviri")
 
     def test_has_children_coherent_avec_arbre(self) -> None:
         parents = {n["parent_id"] for n in all_nodes() if n["parent_id"]}
@@ -95,10 +111,10 @@ class TimelineTest(unittest.TestCase):
         self.assertIn(("q-within", "q-octavia"), seq)
         self.assertIn(("q-octavia", "q-sacrifice"), seq)
         par = {(e["source"], e["target"]) for e in paradox_edges()}
-        self.assertIn(("era-zariman", "era-duviri"), par)
-        self.assertIn(("era-zariman", "era-1999"), par)
+        self.assertIn(("era-zariman", "node-duviri"), par)
+        self.assertIn(("era-zariman", "node-1999"), par)
         # 1999 et Duviri ne sont plus liés séquentiellement.
-        self.assertNotIn(("era-1999", "era-duviri"), par | seq)
+        self.assertNotIn(("node-1999", "node-duviri"), par | seq)
         self.assertNotIn(("q-1999", "q-duviri"), par | seq)
 
     def test_roots_payload(self) -> None:
@@ -107,10 +123,14 @@ class TimelineTest(unittest.TestCase):
         self.assertEqual(payload["edges"], edges())
 
     def test_children_payload(self) -> None:
-        payload = children_payload("era-1999")
+        payload = children_payload("node-1999")
         self.assertIsNotNone(payload)
         self.assertTrue(payload["nodes"])
         self.assertEqual(payload["edges"], [])
+        self.assertEqual(
+            {f["id"] for f in children_payload("node-1999")["nodes"]},
+            {"q-hex", "f-1999-hollvania", "f-1999-indifference"},
+        )
         self.assertEqual(len(children_payload("era-origin")["edges"]), 3)
         self.assertEqual(
             {e["source"] for e in children_payload("era-orokin")["edges"]},
@@ -123,7 +143,7 @@ class TimelineTest(unittest.TestCase):
         self.assertEqual(len(ids), len(set(ids)))
 
     def test_node_internal(self) -> None:
-        self.assertEqual(node("q-duviri")["kind"], "quest")
+        self.assertEqual(node("node-duviri")["kind"], "era")
         self.assertIsNone(node("absent"))
 
 

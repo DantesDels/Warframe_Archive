@@ -59,7 +59,7 @@ worker.onmessage = (event) => {
       requestLayout()
       return
     }
-    applyLayout(data.positions, data.edges || [])
+    applyLayout(data.positions, data.edges || [], data.size)
     if (layoutQueued) {
       layoutQueued = false
       requestLayout()
@@ -86,13 +86,24 @@ function postLayout(token) {
   // edges.value est un ref profondément réactif : les éléments filtrés sont des
   // Proxy Vue que structuredClone ne peut pas cloner ("could not be cloned").
   // On aplatit donc chaque lién en objet brut avant envoi au worker.
-  const payloadEdges = edges.value
+  const special = edges.value
     .filter((e) => loaded.has(e.source) && loaded.has(e.target))
     .map((e) => ({ source: e.source, target: e.target }))
+  const seen = new Set(special.map((e) => `${e.source}\u0000${e.target}`))
+  // Liens d'arbre parent->enfant : sans eux, dagre laisse les nouveaux nœuds
+  // orphelins et les jette à l'extrémité droite du canevas (îlots coupés).
+  // On ne les dessine pas (uniquement la topologie), et on évite les doublons
+  // avec un edge spécial déjà présent entre la même paire orientée.
+  const tree = []
+  nodes.value.forEach((n) => {
+    if (!n.parent_id || !loaded.has(n.parent_id)) return
+    const key = `${n.parent_id}\u0000${n.id}`
+    if (!seen.has(key)) tree.push({ source: n.parent_id, target: n.id })
+  })
   lastPayload = {
     token,
     nodes: payloadNodes,
-    edges: payloadEdges,
+    edges: special.concat(tree),
     options: { rankdir: 'LR' },
   }
   try {
@@ -114,7 +125,7 @@ function requestLayout() {
   postLayout(layoutToken)
 }
 
-function applyLayout(positions, edgePointsList) {
+function applyLayout(positions, edgePointsList, layoutSize) {
   const current = nodes.value
   let minX = Infinity
   let minY = Infinity
@@ -156,8 +167,15 @@ function applyLayout(positions, edgePointsList) {
   nodes.value = next
   edgePoints.value = pts
 
-  bounds.width = maxX - minX
-  bounds.height = maxY - minY
+  // Dimensions du <svg>/wrapper : celles du graphe calculées par le worker
+  // (g.graph().width/height). Fallback sur l'étendue des boîtes.
+  if (layoutSize && (layoutSize.width || layoutSize.height)) {
+    bounds.width = layoutSize.width
+    bounds.height = layoutSize.height
+  } else {
+    bounds.width = maxX - minX
+    bounds.height = maxY - minY
+  }
 }
 
 /* -------------------------------------------------------------- lazy loading */
@@ -422,11 +440,15 @@ function edgeClass(e) {
   return e.paradox ? 'edge edge-paradox' : 'edge edge-sequel'
 }
 
+/* Centrage strict : la coordonnée dagre (x, y) est le CENTRE de la boîte.
+ * transform (et non top/left) : translate(calc(x - 50%), calc(y - 50%))
+ * ancre le centre du nœud sur le point dagre, quelles que soient les
+ * dimensions réelles (mesurées) de la carte. */
 function nodeStyle(n) {
-  // Tant que dagre n'a pas placé le nœud : invisible (opacity 0 en inline,
-  // prioritaire), la position est posée par le layout suivant.
   if (!n.placed) return { opacity: 0 }
-  return { left: `${n.x}px`, top: `${n.y}px` }
+  return {
+    transform: `translate(calc(${n.x}px - 50%), calc(${n.y}px - 50%))`,
+  }
 }
 
 function nodeTitle(n) {
@@ -448,7 +470,7 @@ function hideTip() {
   tip.value = null
 }
 
-const canvasStyle = computed(() => ({
+const wrapperStyle = computed(() => ({
   transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
   width: `${bounds.width}px`,
   height: `${bounds.height}px`,
@@ -486,7 +508,10 @@ onUnmounted(() => worker.terminate())
     >
       <div v-if="loading && !nodeList.length" class="tl-caption">Chargement des ères…</div>
 
-      <div class="canvas" :style="canvasStyle">
+      <!-- Wrapper unique Pan/Zoom : <svg> (paths) et nœuds HTML sont frères
+           dans ce conteneur absolu. La matrice translate/scale s'applique
+           uniquement ici -> pas de désynchronisation entre lignes et cartes. -->
+      <div class="pan-zoom-wrapper" :style="wrapperStyle">
         <svg class="edges" :width="bounds.width" :height="bounds.height">
           <path
             v-for="e in renderedEdges"
@@ -509,7 +534,10 @@ onUnmounted(() => worker.terminate())
           @pointerenter="showTip($event, n)"
           @pointerleave="hideTip"
         >
-          <span v-if="n.kind !== 'fragment'" class="node-label">{{ n.label }}</span>
+          <span v-if="n.kind !== 'fragment'" class="node-text">
+            <span class="node-label">{{ n.label }}</span>
+            <span v-if="n.kind === 'era' && n.year" class="node-sub">{{ n.year }}</span>
+          </span>
           <span v-else class="node-dot"></span>
           <button
             v-if="n.has_children"

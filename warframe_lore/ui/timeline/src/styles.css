@@ -200,8 +200,12 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 }
 .stage:active { cursor: grabbing; }
 
-.canvas {
+/* Wrapper unique Pan/Zoom : contient <svg> (liens) et <div> (nœuds) en
+   frères. La matrice translate/scale ne s'applique qu'ici, jamais sur les
+   enfants : les deux calques zooment de concert, sans désynchronisation. */
+.pan-zoom-wrapper {
   position: absolute; left: 0; top: 0;
+  width: max-content;
   transform-origin: 0 0;
   will-change: transform;
 }
@@ -210,10 +214,12 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 
 /* -------------------------------------------------------------- sémantique */
 /* Taille réelle mesurée après le rendu 2 temps : max-content (une boîte qui
-   épouse son label), min-width minimal par semantic, fade-in au placement. */
+   épouse son label), min-width minimal par semantic, fade-in au placement.
+   La position est posée VIA transform (nodeStyle) : le centre de la boîte
+   coïncide avec la coordonnée dagre, jamais via top/left seuls. */
 .node {
   z-index: 10;
-  position: absolute;
+  position: absolute; left: 0; top: 0;
   width: max-content;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   border-radius: 10px;
@@ -225,6 +231,27 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   user-select: none;
   opacity: 1;
   transition: opacity 0.3s ease;
+}
+
+.node-text {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 0;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.node-label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Sous-titre d'ère (ex: "La Zariman" -> "Système d'Origine · Paradoxe") :
+   forcé sur sa propre ligne via le flex-colonne de .node-text. */
+.node-sub {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--text-dim);
 }
 
 .node-era {

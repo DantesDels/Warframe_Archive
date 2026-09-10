@@ -8,7 +8,6 @@
  * - Pan/Zoom via @vueuse/gesture (drag, wheel, pinch) appliqués au stage.
  */
 import { computed, onMounted, onUnmounted, reactive, ref, shallowRef } from 'vue'
-import { useGesture } from '@vueuse/gesture'
 
 const SIZES = {
   era: { width: 190, height: 58 },
@@ -35,10 +34,26 @@ const worker = new Worker(
 let layoutToken = 0
 let layoutInFlight = false
 let layoutQueued = false
+let layoutRetry = null
+let lastPayload = null
+
+/* Garde-fou : Chrome peut perdre le premier postMessage d'un worker module
+ * (init asynchrone concurrencé par le chargement). Si aucune réponse dans le
+ * délai, on re-poste le même payload (idempotent par token). */
+function scheduleRetry(token) {
+  clearTimeout(layoutRetry)
+  layoutRetry = setTimeout(() => {
+    if (layoutInFlight && token === layoutToken && lastPayload) {
+      worker.postMessage(lastPayload)
+      scheduleRetry(token)
+    }
+  }, 1000)
+}
 
 worker.onmessage = (event) => {
   const data = event.data || {}
   if (data.type === 'layout') {
+    clearTimeout(layoutRetry)
     layoutInFlight = false
     if (data.token !== layoutToken) {
       // résultat périmé (une expansion a eu lieu entre-temps) : on relance.
@@ -51,9 +66,43 @@ worker.onmessage = (event) => {
       requestLayout()
     }
   } else if (data.type === 'error') {
+    clearTimeout(layoutRetry)
     layoutInFlight = false
     error.value = data.error || 'Erreur de calcul du layout'
   }
+}
+worker.onerror = (event) => {
+  clearTimeout(layoutRetry)
+  error.value = event && event.message
+    ? `Worker indisponible : ${event.message}`
+    : 'Worker indisponible (chargement du module)'
+}
+
+function postLayout(token) {
+  const payloadNodes = []
+  nodes.value.forEach((n) => {
+    payloadNodes.push({ id: n.id, width: n.width, height: n.height })
+  })
+  const loaded = new Set(nodes.value.keys())
+  // edges.value est un ref profondément réactif : les éléments filtrés sont des
+  // Proxy Vue que structuredClone ne peut pas cloner ("could not be cloned").
+  // On aplatit donc chaque lién en objet brut avant envoi au worker.
+  const payloadEdges = edges.value
+    .filter((e) => loaded.has(e.source) && loaded.has(e.target))
+    .map((e) => ({ source: e.source, target: e.target }))
+  lastPayload = {
+    token,
+    nodes: payloadNodes,
+    edges: payloadEdges,
+    options: { rankdir: 'LR' },
+  }
+  try {
+    worker.postMessage(lastPayload)
+  } catch (err) {
+    error.value = err && err.message ? `Envoi au worker impossible : ${err.message}` : String(err)
+    return
+  }
+  scheduleRetry(token)
 }
 
 function requestLayout() {
@@ -63,20 +112,7 @@ function requestLayout() {
   }
   layoutInFlight = true
   layoutToken += 1
-  const payloadNodes = []
-  nodes.value.forEach((n) => {
-    payloadNodes.push({ id: n.id, width: n.width, height: n.height })
-  })
-  const loaded = new Set(nodes.value.keys())
-  const payloadEdges = edges.value.filter(
-    (e) => loaded.has(e.source) && loaded.has(e.target),
-  )
-  worker.postMessage({
-    token: layoutToken,
-    nodes: payloadNodes,
-    edges: payloadEdges,
-    options: { rankdir: 'LR' },
-  })
+  postLayout(layoutToken)
 }
 
 function applyPositions(positions) {
@@ -202,23 +238,71 @@ function zoomAt(factor, cx, cy) {
   view.scale = next
 }
 
-const bind = useGesture({
-  onDrag: ({ delta, tap }) => {
-    if (tap) return
-    view.x += delta[0]
-    view.y += delta[1]
-  },
-  onWheel: ({ delta, event }) => {
-    const el = stageEl.value
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    zoomAt(delta[1] > 0 ? 0.92 : 1.08,
-      event.clientX - rect.left, event.clientY - rect.top)
-  },
-  onPinch: ({ offset }) => {
-    view.scale = clampScale(offset[0] || 1)
-  },
-})
+/* Gestes natifs (pointer drag) — pan · zoom molette · pinch deux doigts. */
+const pointers = new Map()
+const pan = { active: false, lastX: 0, lastY: 0 }
+const pinch = { active: false, dist0: 1, scale0: 1, cx0: 0, cy0: 0 }
+
+function pointerDist() {
+  const [a, b] = [...pointers.values()]
+  return Math.hypot(a.x - b.x, a.y - b.y)
+}
+function pointerCenter() {
+  const [a, b] = [...pointers.values()]
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+}
+
+function onPointerDown(event) {
+  const el = stageEl.value
+  if (el && el.setPointerCapture) el.setPointerCapture(event.pointerId)
+  pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+  if (pointers.size === 2) {
+    pinch.active = true
+    pinch.dist0 = pointerDist()
+    pinch.scale0 = view.scale
+    const c = pointerCenter()
+    pinch.cx0 = c.x
+    pinch.cy0 = c.y
+  } else {
+    pan.active = true
+    pan.lastX = event.clientX
+    pan.lastY = event.clientY
+  }
+}
+
+function onPointerMove(event) {
+  if (!pointers.has(event.pointerId)) return
+  const prev = pointers.get(event.pointerId)
+  prev.x = event.clientX
+  prev.y = event.clientY
+  if (pinch.active && pointers.size >= 2) {
+    const dist = pointerDist()
+    const next = clampScale(pinch.scale0 * (dist / pinch.dist0))
+    const wx = (pinch.cx0 - view.x) / view.scale
+    const wy = (pinch.cy0 - view.y) / view.scale
+    view.scale = next
+    view.x = pinch.cx0 - wx * next
+    view.y = pinch.cy0 - wy * next
+  } else if (pan.active) {
+    view.x += event.clientX - pan.lastX
+    view.y += event.clientY - pan.lastY
+    pan.lastX = event.clientX
+    pan.lastY = event.clientY
+  }
+}
+
+function onPointerUp(event) {
+  pointers.delete(event.pointerId)
+  if (pointers.size < 2) pinch.active = false
+  if (pointers.size === 0) pan.active = false
+}
+
+function onWheel(event) {
+  const rect = stageEl.value?.getBoundingClientRect()
+  if (!rect) return
+  zoomAt(event.deltaY > 0 ? 0.92 : 1.08,
+    event.clientX - rect.left, event.clientY - rect.top)
+}
 
 function zoomButtons(factor) {
   const el = stageEl.value
@@ -304,7 +388,16 @@ onUnmounted(() => worker.terminate())
       role="alert"
     >{{ error }} — rechargez le serveur Cephalon.</div>
 
-    <div ref="stageEl" class="stage" v-bind="bind()">
+    <div
+      ref="stageEl"
+      class="stage"
+      @pointerdown="onPointerDown"
+      @pointermove="onPointerMove"
+      @pointerup="onPointerUp"
+      @pointercancel="onPointerUp"
+      @pointerleave="onPointerUp"
+      @wheel.prevent="onWheel"
+    >
       <div v-if="loading && !nodeList.length" class="tl-caption">Chargement des ères…</div>
 
       <div class="canvas" :style="canvasStyle">
@@ -334,6 +427,7 @@ onUnmounted(() => worker.terminate())
             class="node-expand"
             type="button"
             :disabled="expanding.has(n.id)"
+            @pointerdown.stop.prevent
             @click.stop="expand(n)"
           >{{ expanding.has(n.id) ? '…' : '+' }}</button>
         </div>

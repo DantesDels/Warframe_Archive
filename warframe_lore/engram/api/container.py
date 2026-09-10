@@ -15,7 +15,8 @@ from sqlalchemy.ext.asyncio import (
 from ..config import EngramConfig
 from ..llm import LMStudioProvider
 from ..persona import Persona
-from ..rag import CosinusSearch, PromptBuilder, RAGService, QueryRewriter
+from ..rag import (AliasResolver, CosinusSearch, HybridSearch,
+                   PromptBuilder, RAGService, QueryRewriter)
 from ..roleplay import RoleplayService, SlidingWindow
 from .ratelimit import SlidingWindowLimiter
 
@@ -48,6 +49,13 @@ class Container:
             suggestion_min_score=self.config.suggestion_min_score,
             critical_min_score=self.config.critical_min_score,
             query_rewriter=QueryRewriter(llm=self.llm),
+        )
+        # Hybrid search (RAG Inspector): same alias middleware as RAGService,
+        # so the inspector reflects exactly what the vectorization sees.
+        self.search = HybridSearch(
+            sessions=self.sessions,
+            embeddings=self.llm,
+            alias_resolver=self.rag.alias_resolver,
         )
         self.roleplay = RoleplayService(
             llm=self.llm,

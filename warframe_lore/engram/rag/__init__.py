@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from .aliases import AliasResolver
 from .context import RAGContext, RAGContextFactory
+from .hybrid import (HybridHit, HybridQuery, HybridSearch, query_terms,
+                     strip_context_prefix, ts_rank_normalized)
 from .prompt import (JAILBREAK_REJECT, NO_DATA_MARKER, OFF_TOPIC_ERROR,
                      PromptBuilder, RAGPrompt, RAG_ERROR)
 from .retriever import RAGHit, Retriever
@@ -23,6 +25,8 @@ from .search import CosinusSearch
 from .service import RAGService
 
 __all__ = ["AliasResolver", "JAILBREAK_REJECT", "RAG_ERROR", "OFF_TOPIC_ERROR",
-           "CosinusSearch", "PromptBuilder", "QueryRewriter",
+           "CosinusSearch", "HybridHit", "HybridQuery", "HybridSearch",
+           "PromptBuilder", "QueryRewriter", "query_terms",
            "RAGContext", "RAGContextFactory", "RAGHit", "RAGPrompt",
-           "RAGService", "Retriever", "strip_trailing_padding"]
+           "RAGService", "Retriever", "strip_context_prefix",
+           "strip_trailing_padding", "ts_rank_normalized"]

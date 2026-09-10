@@ -27,6 +27,9 @@ buckets.json.local
 # Env
 .env
 
+# Node (RAG Inspector / Vite)
+node_modules/
+
 # IDE / OS
 .vscode/
 .idea/

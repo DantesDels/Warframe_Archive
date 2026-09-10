@@ -49,6 +49,8 @@ class ApiHandler(BaseHTTPRequestHandler):
             elif path == "/vendor/vue-flow.bundle.css":
                 self._send_static("vendor/vue-flow.bundle.css",
                                   content_type="text/css")
+            elif path == "/inspector/" or path.startswith("/inspector/"):
+                self._send_inspector(path)
             elif path == "/api/stats":
                 self._send_json(self.store.stats())
             elif path == "/api/buckets":
@@ -90,6 +92,22 @@ class ApiHandler(BaseHTTPRequestHandler):
                 pass
 
     # -------------------------------------------------------------- helpers
+    def _send_inspector(self, path: str) -> None:
+        """RAG Inspector (build Vue, page autonome ``/inspector/``).
+
+        ``/inspector/`` sert ``index.html`` ; les assets hachés sont servis
+        sous ``/inspector/assets/*`` depuis le dossier ``static/inspector``.
+        """
+        relative = path[len("/inspector/"):]
+        if not relative:
+            relative = "index.html"
+        content_type = "text/html"
+        if relative.endswith(".js"):
+            content_type = "text/javascript"
+        elif relative.endswith(".css"):
+            content_type = "text/css"
+        self._send_static(f"inspector/{relative}", content_type=content_type)
+
     def _pages_for_query(self, query) -> list[dict]:
         bucket = (query.get("bucket") or [""])[0]
         if not bucket or not self.store.bucket_exists(bucket):

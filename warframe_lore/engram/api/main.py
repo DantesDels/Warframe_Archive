@@ -11,10 +11,11 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 
 from .container import Container
-from .routers import document_rag, roleplay
+from .routers import document_rag, roleplay, search
 
 # Access audit visible on stderr (server log): INFO level without root
 # handler, so that "Audit RAG" lines actually show up.
@@ -37,8 +38,19 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="ENGRAM — Archive KIM",
               version="0.1.0", lifespan=lifespan)
 
+# Local inspection tools (Cephalon UI ``/inspector/`` calls the API from
+# http://127.0.0.1:<port>): permissive CORS is acceptable, this server binds
+# localhost only and carries no cookie/session.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
 app.include_router(document_rag)
 app.include_router(roleplay)
+app.include_router(search)
 
 
 @app.middleware("http")

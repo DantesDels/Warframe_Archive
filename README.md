@@ -668,6 +668,26 @@ DISCORD_TOKEN=... python -m warframe_lore.discord.main --channels <ID>
 | Multi-user resilience | serialized responses (no more fragment interleaving) + `!stop` interrupts reasoning (live validated) |
 | Unit tests | 109 passed + 32 subtests (16 KIM + 13 RAG/threshold + 22 security + 16 hostility + 5 rewriter + 7 hard-split + 10 semantic + 20 rag_extract) |
 
+### Live Validation — 7-Request Benchmark (September 2026)
+
+7 French RAG questions were run live against ENGRAM (`POST /v1/rag`,
+`stream: false`, Python/httpx, 180 s timeout, 9 159 chunks, `Gemma-2-9b-it`):
+
+| # | Question | Observation | Verdict |
+|---|---|---|---|
+| 1 | Oraxia | corpus `Oraxia/Main` 0.651 (« 61st unique Warframe ») — réponse ancrée, pas de rejet | Non conforme — à re-vérifier |
+| 2 | Eleanor et Arthur | reframing fraternel clinique, sources KIM 0.659/0.646/0.634 | Conforme |
+| 3 | « Mercenaire d'Os » | court-circuit, 0 sources — l'alias FR n'atteint pas Ordan Karris (Ordis) | Échec sûr (alias) |
+| 4 | Garuda vs Gara | « deux Toroides Calda » ✓ mais conclusion inversée (Gara / Garuda) | Partiel — inférence inversée |
+| 5 | La Moelle (2026) | « données corrompues » + sources hors-sujet (Protoframe, Ryoku) | Échec sûr (données absentes) |
+| 6 | Kalymos | « une Oraxia comme animal de compagnie » au lieu de Kalymos le Kavat | Hallucination grave |
+| 7 | Index Neptune | réponse correcte (Nef Anyo, Sark 0.540) mais `*` résiduel | Partiel — artefact de sortie |
+
+**Bilan : 1 conforme, 1 erreur de raisonnement, 1 hallucination, 1 artefact,
+3 échecs sûrs.** Correctifs ciblés sur `hotfix/rag-pipeline-core` (isolation
+d'état via `Depends()`, middleware d'alias pré-vectorisation, sanitation regex
+de queue, directive d'extraction logique dans le system prompt).
+
 ## User Manual
 
 ### Web Interface (`cephalon ui`)

@@ -221,6 +221,29 @@ game data domain (see `README.md` → "Data Sources").
 | `wiki.warframe.com` (MediaWiki API) | narrative lore, dialogues, canon | **scraped** (`MediaWikiSource`) |
 | `browse.wf` (warframe-public-export-plus, calamity-inc) | raw game data, images, localizations | identified (future enrichment) |
 
+## ENGRAM Live Validation — 7-Request Benchmark (September 2026)
+
+A live grid of 7 French RAG questions was executed against a running
+ENGRAM (`POST http://127.0.0.1:8000/v1/rag`, body `{"question", "stream":
+false}`, UTF-8 via Python/httpx, timeout 180 s per request), 9 159 chunks in
+pgvector (`bge-m3`, 1024d), chat `Gemma-2-9b-it` (Q4_K_M). Verdicts:
+
+| # | Question | Expected / Reality | Verdict |
+|---|---|---|---|
+| 1 | **Oraxia** (nouveau frame) | corpus: `Oraxia/Main`, score 0.651 (« 61st unique Warframe », Mercy's Kiss / Webbed Embrace / Widow's Brood / Silken Stride) → réponse ancrée | Non conforme — réflexion à vérifier, mais aucun rejet court-circuit, aucun inventaire |
+| 2 | Eleanor et Arthur | reframing fraternel clinique (« son frère Arthur »), aucune extrapolation romantique ; sources KIM (0.659 / 0.646 / 0.634) | Conforme |
+| 3 | « Mercenaire d'Os » | court-circuit « Données insuffisantes », 0 sources ; l'alias FR n'atteint **pas** Ordan Karris/Ordis (alors que « Qui est Ordan Karris » répond) | Échec sûr (alias non résolu avant vectorisation) |
+| 4 | Garuda vs Gara | « **deux** Toroides Calda » ✓, mais conclusion contradictoire « Gara ne nécessite pas de composants de Cetus » malgré la source « *Unlike Gara, Garuda does not require … Fishing* » | Partiel — inférence inversée |
+| 5 | La Moelle (édition 2026) | « données corrompues » + sources hors-sujet (Protoframe, Ryoku 0.529-0.510) ; contenu 2026 absent de la base | Échec sûr (contenu absent du corpus) |
+| 6 | Kalymos | répond « une **Oraxia** comme animal de compagnie » au lieu de **Kalymos le Kavat** ; sources pertinentes (`Cavia Aftermath`, `Albrecht Entrati`) non exploitées | Hallucination grave |
+| 7 | Index Neptune | réponse correcte (**Nef Anyo**, Cephalon Sark 0.540) mais `*` résiduel en queue | Partiel — artefact de sortie |
+
+**Bilan :** 1 conforme · 1 erreur de raisonnement (Q4) · 1 hallucination (Q6) ·
+1 artefact de sortie (Q7) · 3 échecs sûrs (Q3 alias, Q5 données absentes, Q1 à
+re-vérifier). Les correctifs associés (isolation d'état, middleware d'alias,
+sanitation de sortie, directive d'extraction logique) vivent sur la branche
+`hotfix/rag-pipeline-core`.
+
 ## Environment Variables
 
 | Variable | Override |

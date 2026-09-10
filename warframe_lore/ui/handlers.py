@@ -16,6 +16,7 @@ from urllib.parse import parse_qs, unquote
 
 from ..cleaner.formatting import cut_footer_noise, normalise_deep_headings
 from ..media import MediaIndex
+from ..timeline import children_payload, roots_payload
 from .patch_notes import _PATCH_HISTORY_HEADING, extract_patch_notes
 from .store import LoreStore
 
@@ -51,6 +52,21 @@ class ApiHandler(BaseHTTPRequestHandler):
                                   content_type="text/css")
             elif path == "/inspector/" or path.startswith("/inspector/"):
                 self._send_inspector(path)
+            elif path == "/timeline/" or path.startswith("/timeline/"):
+                self._send_timeline(path)
+            elif path == "/api/timeline/roots":
+                self._send_json(roots_payload())
+            elif path == "/api/timeline":
+                parent_id = (query.get("parent_id") or [None])[0]
+                if not parent_id:
+                    self._send_json({"error": "parent_id manquant"},
+                                    status=400)
+                    return
+                payload = children_payload(parent_id)
+                if payload is None:
+                    self._send_json({"error": "Noeud inconnu"}, status=404)
+                    return
+                self._send_json(payload)
             elif path == "/api/stats":
                 self._send_json(self.store.stats())
             elif path == "/api/buckets":
@@ -107,6 +123,22 @@ class ApiHandler(BaseHTTPRequestHandler):
         elif relative.endswith(".css"):
             content_type = "text/css"
         self._send_static(f"inspector/{relative}", content_type=content_type)
+
+    def _send_timeline(self, path: str) -> None:
+        """Timeline (build Vue, page autonome ``/timeline/``).
+
+        ``/timeline/`` sert ``index.html`` ; les assets hachés sont servis
+        sous ``/timeline/assets/*`` depuis le dossier ``static/timeline``.
+        """
+        relative = path[len("/timeline/"):]
+        if not relative:
+            relative = "index.html"
+        content_type = "text/html"
+        if relative.endswith(".js"):
+            content_type = "text/javascript"
+        elif relative.endswith(".css"):
+            content_type = "text/css"
+        self._send_static(f"timeline/{relative}", content_type=content_type)
 
     def _pages_for_query(self, query) -> list[dict]:
         bucket = (query.get("bucket") or [""])[0]

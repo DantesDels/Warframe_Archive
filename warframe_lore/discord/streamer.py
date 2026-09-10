@@ -12,6 +12,8 @@ import time
 
 import discord
 
+from warframe_lore.engram.rag.sanitize import strip_trailing_padding
+
 log = logging.getLogger("warframe_lore.discord.streamer")
 
 # Generation-end marker emitted by the persona (``*[Indexation terminée]*``).
@@ -102,7 +104,17 @@ class MessageStreamer:
         self._last_edit = time.monotonic()
 
     async def finish(self) -> None:
-        """Final edit at the end of the stream: last buffer characters."""
+        """Final edit at the end of the stream.
+
+        Strips trailing formatting artifacts (lone ``*`` / ``-`` / whitespace)
+        from the accumulated tokens JUST before the final Discord emission —
+        the message is built from tokens, not from the WS ``end`` frame.
+        """
+        if self._parts:
+            cleaned = strip_trailing_padding(self.text)
+            if cleaned != self.text:
+                self._parts = [cleaned]
+                self._count = len(cleaned.split())
         await self.flush()
 
 

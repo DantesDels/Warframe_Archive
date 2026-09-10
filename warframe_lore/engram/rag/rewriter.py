@@ -1,33 +1,36 @@
-"""Per-user search query rewriting (anaphora resolution).
+"""Search query rewriting for anaphora resolution (stateless).
 
 Long-distance references ("...this PS5 story mentioned earlier?") retrieve
 poorly in vector space because they name no entity.  Instead of the single
-global ``last_query`` concatenation, this module keeps a per-user window of
-recent questions and — only when the input is anaphoric — asks a *micro* LLM
-call to produce a standalone search query.
+global ``last_query`` concatenation, the caller supplies a per-request /
+per-connection :class:`RAGContext` (see ``context.py``) holding a window of
+recent questions; — only when the input is anaphoric — a *micro* LLM call
+produces a standalone search query.
 
 Guarantees:
   * the rewritten text is used for the EMBEDDING / pgvector search ONLY;
     the model never sees it (the prompt keeps the user's exact wording);
   * the call happens only for anaphoric inputs (cheap, bounded): plain
-    questions are stored and relayed unchanged, with zero model cost;
-  * on any LLM failure the concatenation fallback (last query + current
+    questions are stored in the caller's context and relayed unchanged,
+    with zero model cost;
+  * on any LLM failure the concatenation fallback (last question + current
     question) is used, mirroring the historical behaviour.
+
+The rewriter is STATELESS: the window lives in the caller-owned
+``RAGContext``, so nothing survives the request / connection that owns it.
 """
 
 from __future__ import annotations
 
 import logging
-from collections import deque
 from collections.abc import AsyncIterator
 
 from ..llm import LLMProvider
 from ..models import ChatMessage
+from .context import RAGContext
 
 log = logging.getLogger("warframe_lore.engram.rag.rewriter")
 
-# Per-user context window (most recent questions) feeding the rewrite.
-WINDOW_SIZE = 3
 # The micro call is bounded: a short standalone query is enough.
 REWRITE_MAX_TOKENS = 96
 REWRITE_TEMPERATURE = 0.0
@@ -42,41 +45,26 @@ _SYSTEM = (
 
 
 class QueryRewriter:
-    """Per-user recent-question window with LLM-assisted rewrite."""
+    """Rewrites anaphoric search queries using a caller-owned context."""
 
-    def __init__(self, llm: LLMProvider | None = None,
-                 window_size: int = WINDOW_SIZE) -> None:
+    def __init__(self, llm: LLMProvider | None = None) -> None:
         self.llm = llm
-        self.window_size = window_size
-        self._recent: dict[str, deque[str]] = {}
 
-    def remember(self, user_key: str, question: str) -> None:
-        """Stores a plain question in the user's window (no model call)."""
-        window = self._recent.setdefault(user_key, deque(maxlen=self.window_size))
-        if window and window[-1] == question:
-            return
-        window.append(question)
-
-    def history(self, user_key: str) -> list[str]:
-        return list(self._recent.get(user_key, ()))
-
-    def clear(self, user_key: str) -> None:
-        """Forgets the user's recent questions (new discussion)."""
-        self._recent.pop(user_key, None)
-
-    async def rewrite(self, user_key: str, question: str,
+    async def rewrite(self, context: RAGContext, question: str,
                       is_anaphoric: bool) -> str:
         """Returns the SEARCH query: rewritten (anaphoric) or verbatim.
 
         ``is_anaphoric`` is decided by the caller (``service._is_anaphoric``)
         so that this module stays heuristic-free.  When no rewrite is needed,
-        the question is relayed verbatim and memorised for later.
+        the question is relayed verbatim and memorised in ``context``.
         """
+        if context is None:
+            context = RAGContext()
         if not is_anaphoric:
-            self.remember(user_key, question)
+            context.remember(question)
             return question
-        history = self.history(user_key)
-        self.remember(user_key, question)
+        history = context.history()
+        context.remember(question)
         if not history:
             # Anaphora with no previous turn in this window: nothing to
             # resolve — the verbatim question is the best search query.

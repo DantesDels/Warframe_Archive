@@ -11,7 +11,9 @@ from __future__ import annotations
 import asyncio
 import unittest
 
-from warframe_lore.engram.rag import NO_DATA_MARKER, PromptBuilder, RAG_ERROR, RAGService
+from warframe_lore.engram.rag import (NO_DATA_MARKER,
+                                      PromptBuilder, RAGContext, RAG_ERROR,
+                                      RAGService)
 from warframe_lore.engram.rag.retriever import RAGHit
 from warframe_lore.engram.rag.search import CosinusSearch, _token_matches_title
 from warframe_lore.engram.rag.service import RAG_TEMPERATURE
@@ -162,7 +164,8 @@ class ThresholdTests(unittest.TestCase):
 
     def test_anaphore_reutilise_la_derniere_question_pour_la_recherche(self):
         """« …cette histoire de PS5 dit juste avant ? » embarque la question
-        précédente dans l'embedding (jamais dans le texte vu par le modèle)."""
+        précédente dans l'embedding (jamais dans le texte vu par le modèle).
+        La mémoire est portée par un contexte EXPLICITEMENT partagé."""
         emb = FakeEmbedCapture()
         service = RAGService(
             embeddings=emb,
@@ -170,14 +173,19 @@ class ThresholdTests(unittest.TestCase):
             llm=FakeLLM(),
             prompt_builder=PromptBuilder("persona"),
         )
-        run(service.retrieve("Sur quelles plateformes jouer à Warframe ?"))
+        ctx = RAGContext()
         run(service.retrieve(
-            "Tu peux me parler de cette histoire de PS5 dit juste avant ?"))
+            "Sur quelles plateformes jouer à Warframe ?", context=ctx))
+        run(service.retrieve(
+            "Tu peux me parler de cette histoire de PS5 dit juste avant ?",
+            context=ctx))
         self.assertEqual(emb.queries[0], "Sur quelles plateformes jouer à Warframe ?")
         self.assertTrue(emb.queries[1].startswith(
             "Sur quelles plateformes jouer à Warframe ?"))
 
     def test_anaphore_sans_precedent_reste_inchangee(self):
+        """Le middleware d'alias élargit la requête vers la forme canonique
+        (Fix Q3) ; sans précédent d'anaphore, rien d'autre n'est concaténé."""
         emb = FakeEmbedCapture()
         service = RAGService(
             embeddings=emb,
@@ -186,7 +194,7 @@ class ThresholdTests(unittest.TestCase):
             prompt_builder=PromptBuilder("persona"),
         )
         run(service.retrieve("Qui est Lettie ?"))
-        self.assertEqual(emb.queries, ["Qui est Lettie ?"])
+        self.assertEqual(emb.queries, ["Qui est Lettie ? (Leticia)"])
 
 
 def run_async_iterable(agen):

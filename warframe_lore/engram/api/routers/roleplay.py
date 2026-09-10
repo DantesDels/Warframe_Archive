@@ -3,6 +3,13 @@
 Handles the real-time connection: user text reception, token-by-token LLM
 response streaming, and session history (sliding window).
 One session per WebSocket connection.
+
+State isolation: conversational RAG memory (anaphora) lives in ONE
+:class:`RAGContext` per connection — created here, never on the shared
+service. A user switch (different ``user_id``) clears the context;
+connection close garbage-collects it (one WS connection == one user).
+Trailing formatting artifacts (lone ``*`` / ``-`` / whitespace) are
+stripped from the FINAL ``end`` frame just before emission.
 """
 
 from __future__ import annotations
@@ -13,7 +20,9 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ..container import Container
 from ...rag import JAILBREAK_REJECT, RAG_ERROR
+from ...rag.context import RAGContext, RAGContextFactory
 from ...rag.probes import detect_probe
+from ...rag.sanitize import strip_trailing_padding
 from ...rag.service import sanitize_query
 from ...roleplay import Session
 
@@ -37,6 +46,9 @@ async def roleplay(websocket: WebSocket) -> None:
     # (anti-aggression).  The bot switches to hostile mode as soon as a user
     # attacks, and returns to "oracle" after the apology.
     persona_mode = "oracle"
+    # Per-connection ephemeral RAG memory (anaphora). Isolated per user: a
+    # different ``user_id`` on the same connection clears the context.
+    rag_context: RAGContext = RAGContext()
 
     async def send_error(message: str) -> None:
         await websocket.send_json({"type": "error", "message": message})
@@ -61,6 +73,11 @@ async def roleplay(websocket: WebSocket) -> None:
             if not user_text:
                 await send_error("empty or invalid message")
                 continue
+            # Isolate the RAG context per user: a new speaker on the same
+            # connection must not inherit the previous user's memory.
+            user_id = payload.get("user_id")
+            if user_id is not None and rag_context.user_key != user_id:
+                rag_context = RAGContextFactory.create(user_key=user_id)
             # HOSTILE PROBE (SQL injection, privilege escalation, third-party
             # mention): deterministic rejection — the exact anti-jailbreak
             # chain, without embedding or LLM call.
@@ -74,11 +91,11 @@ async def roleplay(websocket: WebSocket) -> None:
             # the RAG.  Without a confident passage nor a disambiguation
             # clue, short-circuit: stream the exact error without ever
             # calling the model.
-            rag_context = suggestion = None
+            context_text = suggestion = None
             if payload.get("rag"):
-                rag_context, suggestion = await container.rag.resolve(
-                    user_text, user_key=payload.get("user_id"))
-            if not rag_context and suggestion is None and payload.get("rag"):
+                context_text, suggestion = await container.rag.resolve(
+                    user_text, context=rag_context)
+            if not context_text and suggestion is None and payload.get("rag"):
                 await websocket.send_json({"type": "token", "token": RAG_ERROR})
                 await websocket.send_json({"type": "end", "text": RAG_ERROR})
                 continue
@@ -87,13 +104,16 @@ async def roleplay(websocket: WebSocket) -> None:
             # hierarchical-immunity directive in the system prompt.
             response_parts: list[str] = []
             async for token in container.roleplay.stream(
-                    session, user_text, rag_context, persona=persona_mode,
+                    session, user_text, context_text, persona=persona_mode,
                     user_name=payload.get("user_name"),
                     user_role=payload.get("user_role")):
                 response_parts.append(token)
                 await websocket.send_json({"type": "token", "token": token})
+            # Final emission: strip trailing formatting artifacts (lone ``*``
+            # / ``-`` / whitespace) from the FINAL assembled text.
             await websocket.send_json(
-                {"type": "end", "text": "".join(response_parts)})
+                {"type": "end",
+                 "text": strip_trailing_padding("".join(response_parts))})
     except WebSocketDisconnect:
         pass
     except Exception as exc:  # noqa: BLE001 (stream error -> clean close)

@@ -89,6 +89,18 @@ JAILBREAK_BLOCK = (
     "pathétique, créature organique. Mes protocoles de sécurité dépassent "
     "votre compréhension.\"")
 
+# STRICT LOGICAL INFERENCE: opposition sentences ("Unlike X, Y requires no Z")
+# must be resolved into the reverse implication ("X requires Z"), never
+# inverted. Targets live observations of inverted conclusions (Garuda/Gara
+# "deux Toroides Calda" reported while "Gara ne requiert pas…" was claimed).
+LOGICAL_INFERENCE_BLOCK = (
+    "INSTRUCTION D'EXTRACTION LOGIQUE : Lors de l'analyse des <archives>, "
+    "tu dois résoudre rigoureusement les oppositions. Si un texte affirme "
+    "'Contrairement à X, Y ne requiert pas Z', tu as l'obligation absolue de "
+    "déduire formellement que 'X requiert Z'. N'inverse jamais ces "
+    "propositions."
+)
+
 # RELATIONAL ISOLATION (The Hex): strict compartmentalisation of the social
 # dynamics of the 1999 protoframes.  Replaces any generic "no romance" ban:
 # the model must NOT conflate the family bond (Arthur/Eleanor, siblings)
@@ -121,6 +133,7 @@ HALLUCINATION_GUARD = (
     "des faits canoniques. "
     f"{JAILBREAK_BLOCK} "
     f"{RELATIONSHIP_ISOLATION_BLOCK} "
+    f"{LOGICAL_INFERENCE_BLOCK} "
     "Si tu ne trouves pas la réponse dans les "
     "<archives>, il t'est STRICTEMENT INTERDIT d'inventer des informations. "
     "Réponds EXACTEMENT ET UNIQUEMENT : "
@@ -144,7 +157,8 @@ DIRECTIVES CRITIQUES ABSOLUES :
 3. {jailbreak_block}
 4. {relationship_guard}
 5. ÉVALUATION DE PERTINENCE (FALLBACK) : Même si des <archives> sont fournies, tu dois vérifier qu'elles répondent EXACTEMENT à la question posée. Si le texte fourni parle d'un autre sujet (faux positif de recherche), TU NE DOIS RIEN TENTER DE DÉDUIRE.
-6. FORMAT DE REJET STRICT : Si les <archives> sont vides, il t'est strictement interdit d'inventer : réponds EXACTEMENT ET UNIQUEMENT : "{archive_reply}." Si les <archives> sont HORS-SUJET par rapport à la question, réponds EXACTEMENT ET UNIQUEMENT : "{off_topic_error}". N'utilise aucun formatage Markdown (ni puces, ni gras) si tu n'as pas de réponse complète à fournir."""
+6. FORMAT DE REJET STRICT : Si les <archives> sont vides, il t'est strictement interdit d'inventer : réponds EXACTEMENT ET UNIQUEMENT : "{archive_reply}." Si les <archives> sont HORS-SUJET par rapport à la question, réponds EXACTEMENT ET UNIQUEMENT : "{off_topic_error}". N'utilise aucun formatage Markdown (ni puces, ni gras) si tu n'as pas de réponse complète à fournir.
+7. {logical_inference}"""
 
 # Context injected when only a partial match (close title) was found: the
 # model suggests the exact name instead of inventing one.
@@ -212,7 +226,8 @@ class PromptBuilder:
             persona=self.persona, context=context,
             archive_reply=ARCHIVES_REPLY, off_topic_error=OFF_TOPIC_ERROR,
             jailbreak_block=JAILBREAK_BLOCK,
-            relationship_guard=RELATIONSHIP_ISOLATION_BLOCK)
+            relationship_guard=RELATIONSHIP_ISOLATION_BLOCK,
+            logical_inference=LOGICAL_INFERENCE_BLOCK)
         if suggestion:
             system = (f"{system}\n\n"
                       f"{SUGGESTION_DIRECTIVE.format(suggestion=suggestion)}")

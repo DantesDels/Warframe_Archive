@@ -56,7 +56,9 @@ package with its own README (see [Documentation](#documentation)). See
   and a 3-concurrency semaphore; standalone CLI and library.
 - **Active branch**: `feature/RAG-upgrades` (RAG improvements: semantic
   chunking with page/section context, relevance fallback directive,
-  decoupled extraction pipeline).
+  decoupled extraction pipeline). **Hardening branch**:
+  `hotfix/rag-pipeline-core` (state isolation, alias middleware,
+  output sanitization, logical-inference directive).
 
 ## Table of Contents
 
@@ -98,7 +100,7 @@ package with its own README (see [Documentation](#documentation)). See
 | NFR-4 | Robustness | HTTP retries/exponential backoff, atomic JSON publications, replayable delta, Discord reconnection < 1 s (tested), `restart: unless-stopped` for the database. |
 | NFR-5 | Locality & Security | Everything runs **locally** (dummy API key `lm-studio`, servers on `127.0.0.1`); no secrets in the repository (Discord token via environment). |
 | NFR-6 | Maintainability | SOLID + dependency injection (`Retriever` / `LLMProvider` / `EmbeddingProvider` `Protocol` abstractions), environment-based configuration, per-layer documentation. |
-| NFR-7 | Testability | 109 green unit tests + 32 subtests (16 KIM + 13 RAG/threshold + 22 security + 16 hostility + 5 rewriter + 7 hard-split + 10 semantic chunking + 20 rag_extract); data audit tools; documented live validation procedure. |
+| NFR-7 | Testability | 127 green unit tests + 32 subtests (16 KIM + 13 RAG/threshold + 23 security + 16 hostility + 6 rewriter + 8 hard-split + 10 semantic chunking + 20 rag_extract + 4 RAG context isolation + 5 aliases + 6 output sanitization); data audit tools; documented live validation procedure. |
 | NFR-8 | Ethics | Lore deals with dark subjects (cloning, experiments…): the model must be able to describe them because they are **explicitly fictional** ("SECURITY CONTEXT" prompt block). |
 
 ## Requirements
@@ -625,11 +627,23 @@ DISCORD_TOKEN=... python -m warframe_lore.discord.main --channels <ID>
   short-circuit** (injected abstractions, no network or database): passages below
   `suggestion_min_score` cleared from context, marginal neighbors excluded,
   bypass without LLM call (HTTP and stream), exact error.
-- **`tests/test_security.py` + `tests/test_hostility.py`** — 38 tests (22 security:
-  SQLi/elevation probes, 429/1008, sanitization; 16 hostility: apologies,
-  escalation, persona switch), deterministic rejections without LLM.
-- **`tests/test_rewriter.py`** — 5 tests (per-user query rewriting, anaphora);
-  **`tests/test_hard_split.py`** — 7 tests (hard split bounds).
+- **`tests/test_security.py` + `tests/test_hostility.py`** — 39 tests (23 security:
+  SQLi/elevation probes, 429/1008, sanitization, logical-inference directive;
+  16 hostility: apologies, escalation, persona switch), deterministic
+  rejections without LLM.
+- **`tests/test_rewriter.py`** — 6 tests (per-user query rewriting, anaphora,
+  no cross-request memory without a shared context);
+  **`tests/test_hard_split.py`** — 8 tests (hard split bounds + trailing
+  artifact purge on final Discord edit).
+- **`tests/test_rag_context.py`** — 4 tests on **state isolation** (Fix Q6):
+  empty-memory without a shared context, fresh context per request via
+  `Depends`, per-user isolation, clear on user switch.
+- **`tests/test_aliases.py`** — 5 tests on the **alias middleware** (Fix Q3):
+  `Mercenaire d'Os` → Ordan Karris / Ordis resolved BEFORE vectorization,
+  extensible registry, prompts keep the user's exact wording.
+- **`tests/test_output_sanitize.py`** — 6 tests on **output sanitization**
+  (Fix Q7): lone trailing `*` / `-` / whitespace stripped from the final
+  answer / Discord edit, never mid-stream.
 - **`tests/test_semantic_chunks.py`** — 10 tests on **semantic chunking**
   (sections, `Page: X | Section: Y -` context prefix, structured ingestion).
 - **`tests/test_rag_extract.py`** — 20 tests on the **decoupled extraction
@@ -666,7 +680,7 @@ DISCORD_TOKEN=... python -m warframe_lore.discord.main --channels <ID>
 | "…the little mouse in the nursery rhyme a green mouse?" | short-circuit `[Archives] Insufficient data…`, 0 sources (no more false "Aurax Vertec" suggestion) |
 | "…that PS5 story just before?" (anaphora) | reuses the previous question for search: hits 0.63 / 0.60 / 0.58 instead of ~0.51 noise |
 | Multi-user resilience | serialized responses (no more fragment interleaving) + `!stop` interrupts reasoning (live validated) |
-| Unit tests | 109 passed + 32 subtests (16 KIM + 13 RAG/threshold + 22 security + 16 hostility + 5 rewriter + 7 hard-split + 10 semantic + 20 rag_extract) |
+| Unit tests | 127 passed + 32 subtests (16 KIM + 13 RAG/threshold + 23 security + 16 hostility + 6 rewriter + 8 hard-split + 10 semantic + 20 rag_extract + 4 RAG context isolation + 5 aliases + 6 output sanitization) |
 
 ### Live Validation — 7-Request Benchmark (September 2026)
 
@@ -921,6 +935,30 @@ trials below.
     affected. *Result:* 56 tests green (including `tests/test_hostility.py`),
     bot launch unified via `cephalon bot run`.
 
+18. **RAG Pipeline Hardening + Logic Corrections (7-request benchmark).**
+    *Live benchmark (Sept. 2026)* — 7 French questions via `POST /v1/rag`:
+    1 compliant · 1 reasoning error (Garuda/Gara, inverted inference) ·
+    1 hallucination (Kalymos → "Oraxia") · 1 artifact (trailing ``*`` on
+    Index) · 3 safe failures (uncancelled "Mercenaire d'Os" alias, missing
+    2026 data, Oraxia to re-check).
+    *Diagnoses & fixes (`hotfix/rag-pipeline-core`)*:
+    (a) the alias expansion was NEVER applied to the embedding (`expanded`
+    was computed then dropped in `service.retrieve`) → extensible
+    `AliasResolver` middleware + "Mercenaire d'Os" → Ordan Karris / Ordis,
+    applied BEFORE `pgvector`;
+    (b) conversational state on the singleton (global `_last_query`,
+    `QueryRewriter` persistent dict) → ephemeral `RAGContext` owned by the
+    caller (`Depends()` factory per HTTP request, per-connection context on
+    the WebSocket): nothing survives an async request;
+    (c) generation-end artifacts → `strip_trailing_padding`
+    (`r'[\*\-\s]+$'`) applied just before the final WS `end` frame, on the
+    HTTP answer, and on the final Discord edit (`MessageStreamer.finish` —
+    the bot builds messages from TOKENS);
+    (d) inverted opposition reasoning ("Unlike X, Y requires no Z" →
+    "X requires Z") → `INSTRUCTION D'EXTRACTION LOGIQUE` directive in
+    `RAG_SYSTEM_TEMPLATE` and `HALLUCINATION_GUARD`.
+    *Result:* 127 green tests + 32 subtests.
+
 ### Figures and Validations
 
 | Measurement | Value |
@@ -928,7 +966,7 @@ trials below.
 | Local corpus (audit) | ~3,175 pages |
 | Vectorized chunks in database | 9,159 (`bge-m3`, 1024d) |
 | KIM chunking verified | 843 chunks, no 2,500-char overflow |
-| Unit tests | 109 passed (16 KIM + 13 RAG/threshold + 22 security + 16 hostility + 5 rewriter + 7 hard-split + 10 semantic + 20 rag_extract) + 32 subtests |
+| Unit tests | 127 passed (16 KIM + 13 RAG/threshold + 23 security + 16 hostility + 6 rewriter + 8 hard-split + 10 semantic + 20 rag_extract + 4 RAG context isolation + 5 aliases + 6 output sanitization) + 32 subtests |
 | Anti-SQLi (live) | real attacker payloads → deterministic rejection without LLM; 429 beyond quota; `Lettie` intact |
 | "Lettie" retrieval (live) | 0.598 / 0.581 / 0.577 (Leticia) |
 | "Orokin" retrieval (live) | 0.611 / 0.600 / 0.595 |

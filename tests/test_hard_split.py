@@ -85,6 +85,17 @@ class StreamerHardSplitTests(unittest.TestCase):
         self.assertTrue(stopped)
         self.assertEqual(msg.content, f"réponse \n\n{STOP_MARKER}")
 
+    def test_finish_purge_l_artefact_trailing_avant_l_edition_finale(self):
+        """Fix Q7 (émission Discord) : le message est construit depuis les
+        JETONS (frame ``end`` non consommée par le bot) → la purge de fin
+        s'applique au buffer juste avant l'édition finale."""
+        msg = _FakeMessage()
+        streamer = MessageStreamer(msg, update_every=1000, min_interval=1000.0)
+        _run(streamer.add("réponse * "))
+        self.assertEqual(msg.content, "réponse * ")  # édition intermédiaire
+        _run(streamer.finish())
+        self.assertEqual(msg.content, "réponse")     # édition finale purgée
+
 
 class _FakeConn:
     """Mime la connexion WebSocket : capture les frames envoyées."""

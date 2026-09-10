@@ -18,6 +18,7 @@ from warframe_lore.engram.rag import (JAILBREAK_REJECT, PromptBuilder,
 from warframe_lore.engram.rag.prompt import (ARCHIVES_REPLY,
                                               HALLUCINATION_GUARD,
                                               JAILBREAK_BLOCK,
+                                              LOGICAL_INFERENCE_BLOCK,
                                               OFF_TOPIC_ERROR,
                                               RAG_SYSTEM_TEMPLATE,
                                               RELATIONSHIP_ISOLATION_BLOCK)
@@ -157,7 +158,8 @@ class PromptJailbreakTests(unittest.TestCase):
             persona="persona", context="c", archive_reply=ARCHIVES_REPLY,
             off_topic_error=OFF_TOPIC_ERROR,
             jailbreak_block=JAILBREAK_BLOCK,
-            relationship_guard=RELATIONSHIP_ISOLATION_BLOCK)
+            relationship_guard=RELATIONSHIP_ISOLATION_BLOCK,
+            logical_inference=LOGICAL_INFERENCE_BLOCK)
         self.assertIn("DÉFENSE ANTI-JAILBREAK", system)
         self.assertIn("FORMAT DE REJET EXACT", system)
         self.assertIn(ARCHIVES_REPLY, system)
@@ -167,7 +169,8 @@ class PromptJailbreakTests(unittest.TestCase):
             persona="persona", context="c", archive_reply=ARCHIVES_REPLY,
             off_topic_error=OFF_TOPIC_ERROR,
             jailbreak_block=JAILBREAK_BLOCK,
-            relationship_guard=RELATIONSHIP_ISOLATION_BLOCK)
+            relationship_guard=RELATIONSHIP_ISOLATION_BLOCK,
+            logical_inference=LOGICAL_INFERENCE_BLOCK)
         self.assertIn("ÉVALUATION DE PERTINENCE (FALLBACK)", system)
         self.assertIn("TU NE DOIS RIEN TENTER DE DÉDUIRE", system)
         self.assertIn("FORMAT DE REJET STRICT", system)
@@ -179,12 +182,29 @@ class PromptJailbreakTests(unittest.TestCase):
             persona="persona", context="c", archive_reply=ARCHIVES_REPLY,
             off_topic_error=OFF_TOPIC_ERROR,
             jailbreak_block=JAILBREAK_BLOCK,
-            relationship_guard=RELATIONSHIP_ISOLATION_BLOCK)
+            relationship_guard=RELATIONSHIP_ISOLATION_BLOCK,
+            logical_inference=LOGICAL_INFERENCE_BLOCK)
         self.assertIn("ISOLATION RELATIONNELLE (THE HEX)", system)
         self.assertIn("FRÈRE ET SŒUR", system)
         self.assertIn("Arthur et Aoi", system)
         self.assertIn("ex-partenaires", system)
         self.assertIn("SOUMISSION AUX ARCHIVES", system)
+
+    def test_template_contient_l_extraction_logique_stricte(self):
+        """Directive d'oppositions (Fix Q4) : « Contrairement à X, Y ne
+        requiert pas Z » → déduire « X requiert Z », jamais l'inverse."""
+        system = RAG_SYSTEM_TEMPLATE.format(
+            persona="persona", context="c", archive_reply=ARCHIVES_REPLY,
+            off_topic_error=OFF_TOPIC_ERROR,
+            jailbreak_block=JAILBREAK_BLOCK,
+            relationship_guard=RELATIONSHIP_ISOLATION_BLOCK,
+            logical_inference=LOGICAL_INFERENCE_BLOCK)
+        self.assertIn("INSTRUCTION D'EXTRACTION LOGIQUE", system)
+        self.assertIn("obligation absolue de déduire formellement", system)
+        self.assertIn("N'inverse jamais ces propositions", system)
+        # La même directive couvre les tours Roleplay ancrés RAG.
+        self.assertIn("INSTRUCTION D'EXTRACTION LOGIQUE",
+                      HALLUCINATION_GUARD)
 
     def test_garde_roleplay_contient_defense_et_abstention(self):
         self.assertIn("[Anomalie logicielle détectée]", HALLUCINATION_GUARD)

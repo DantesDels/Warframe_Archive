@@ -4,7 +4,7 @@
  * Sidebar fidèle à l'interface principale : brand, retour à l'archive,
  * buckets, et le toggle « Mode Débogueur » placé SOUS la section Buckets.
  */
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 
 import HybridSearch from './components/HybridSearch.vue'
 import { fetchBuckets, RagApiError } from './services/ragApi.js'
@@ -13,6 +13,15 @@ const debugMode = ref(false)
 const buckets = ref([])
 const bucketsError = ref('')
 const bucketsLoading = ref(true)
+
+// Drawer mobile : la topbar (burger) le pilote, la sidebar glisse par-dessus
+// le contenu et le voile cliquable / Échap la referment.
+const menuOpen = ref(false)
+const onKeydown = (event) => {
+  if (event.key === 'Escape') menuOpen.value = false
+}
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 onMounted(async () => {
   try {
@@ -28,7 +37,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="app">
+  <div class="app" :class="{ 'sidebar-open': menuOpen }">
     <aside id="sidebar">
       <div class="brand">
         <div class="brand-logo">CA</div>
@@ -84,6 +93,14 @@ onMounted(async () => {
 
     <main id="content">
       <header id="topbar">
+        <button
+          id="btn-menu"
+          type="button"
+          aria-label="Ouvrir le menu"
+          aria-controls="sidebar"
+          :aria-expanded="String(menuOpen)"
+          @click="menuOpen = !menuOpen"
+        >☰</button>
         <div id="breadcrumb">
           <span class="crumb">Cephalon Archive</span>
           <span class="crumb-sep">›</span>
@@ -101,5 +118,7 @@ onMounted(async () => {
         <HybridSearch :debug="debugMode" />
       </section>
     </main>
+
+    <div id="sidebar-backdrop" @click="menuOpen = false"></div>
   </div>
 </template>

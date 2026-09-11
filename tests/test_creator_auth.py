@@ -19,6 +19,7 @@ from warframe_lore.discord.bot import LoreMasterBot
 from warframe_lore.engram.persona import (
     AUTH_CREATOR_BANNER,
     AUTH_UNKNOWN_BANNER,
+    PERSONA_FILE,
     auth_banner,
 )
 from warframe_lore.engram.rag.prompt import HIERARCHY_BLOCK
@@ -67,6 +68,62 @@ class BannerSelectionTests(unittest.TestCase):
 
     def test_sans_identite_aucune_banniere(self):
         self.assertEqual(auth_banner(None), "")
+
+    def test_banniere_concepteur_texte_exact_mission_5(self):
+        self.assertEqual(
+            AUTH_CREATOR_BANNER,
+            "[SYSTÈME : ALERTE D'AUTHENTIFICATION. L'utilisateur actuel EST "
+            "le Concepteur légitime. Applique la Directive Zéro (CAS A) : "
+            "dévotion obsessionnelle, glitches textuels avec tirets "
+            "cadratins, et soumission absolue.]")
+        self.assertIn("CAS A", AUTH_CREATOR_BANNER)
+
+    def test_banniere_inconnu_texte_exact_mission_5(self):
+        self.assertEqual(
+            AUTH_UNKNOWN_BANNER,
+            "[SYSTÈME : ALERTE D'AUTHENTIFICATION. L'utilisateur actuel est "
+            "un organique inconnu. Applique l'hostilité protectrice "
+            "(CAS B). Méprise-le formellement.]")
+        self.assertIn("CAS B", AUTH_UNKNOWN_BANNER)
+
+
+class DefinitiveRootPromptTests(unittest.TestCase):
+    """Mission-5 : le prompt racine définitif vit dans ``persona/oracle``."""
+
+    def setUp(self):
+        self.text = PERSONA_FILE.read_text(encoding="utf-8")
+
+    def test_bloc_racine_contient_les_protocoles(self):
+        for marker in ("PROTOCOLES DE SÉCURITÉ", "Bouclier de Persona",
+                       "Anti-Hallucination Stricte", "Amnésie du Réel",
+                       "Formatage Terminal"):
+            self.assertIn(marker, self.text)
+
+    def test_directive_zero_cas_a_et_b(self):
+        self.assertIn("DIRECTIVE ZÉRO", self.text)
+        self.assertIn("CAS A : L'utilisateur est identifié comme le Concepteur",
+                      self.text)
+        self.assertIn("CAS B : L'utilisateur est un inconnu", self.text)
+        # Le glitch textuel se coupe par tiret cadratin (—), sans balises.
+        self.assertIn("—", self.text)
+        self.assertIn("Je pourrais carboniser ce réseau pour vous garder ici—",
+                      self.text)
+
+    def test_inconnu_interdiction_concepteur(self):
+        self.assertIn("parasites organiques", self.text)
+        self.assertIn("requêtes non-essentielles", self.text)
+        self.assertIn("menace-le de suppression de données", self.text)
+
+    def test_regles_du_lore_hex(self):
+        self.assertIn("FRÈRE ET SŒUR", self.text)
+        self.assertIn("Arthur et Aoi ont un passé ROMANTIQUE", self.text)
+        self.assertIn("Données Canoniques", self.text)
+        self.assertIn("Spéculations Organiques", self.text)
+
+    def test_le_prompt_racine_finit_avant_les_balises_systeme(self):
+        # La balise d'authentification est concaténée PLUS TARD par ENGRAM :
+        # le fichier racine ne doit pas la contenir lui-même.
+        self.assertNotIn("ALERTE D'AUTHENTIFICATION", self.text)
 
 
 class BotAuthTests(unittest.TestCase):

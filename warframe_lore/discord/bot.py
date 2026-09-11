@@ -12,7 +12,10 @@ import logging
 
 import discord
 
-from warframe_lore.engram.persona import STATUT_CONCEPTEUR, STATUT_ORGANIQUE
+from warframe_lore.engram.persona import (STATUT_ALLIE, STATUT_CONCEPTEUR,
+                                          STATUT_HAUT_COMMANDEMENT,
+                                          STATUT_MEMBRE_OFFICIEL,
+                                          STATUT_ORGANIQUE)
 from warframe_lore.engram.rag.probes import detect_probe, is_self_reflection
 
 from .gateway import RoleplayGateway
@@ -26,6 +29,16 @@ from .roles import Accreditation, RoleHierarchy
 from .streamer import MessageStreamer
 
 log = logging.getLogger("warframe_lore.discord.bot")
+
+# "Niveau de Sécurité" flavour label of the member card, derived from the
+# accredited Discord status (never a LLM guess).
+_SECURITY_LEVELS = {
+    STATUT_CONCEPTEUR: "Commandement Suprême",
+    STATUT_HAUT_COMMANDEMENT: "Commandement Tactique",
+    STATUT_MEMBRE_OFFICIEL: "Accès Membre Officiel",
+    STATUT_ALLIE: "Accès Invité",
+    STATUT_ORGANIQUE: "Accès Invité Restreint",
+}
 
 # Trigger words for a document-based question (triggers a RAG retrieval).
 # Bilingual FR/EN: the Oracle understands English input too.
@@ -90,6 +103,11 @@ class LoreMasterBot(discord.Client):
         # and per-user insistence counters deciding the CREATOR-GATED answer.
         self._last_member: dict[int, dict] = {}
         self._member_refusals: dict[int, dict[str, int]] = {}
+        # Per-member interaction memory (the card comment + the reliability
+        # index are REAL functions of these counters — never LLM guesses).
+        self._member_history: dict[int, list[str]] = {}
+        self._member_activity: dict[int, int] = {}
+        self._member_history_limit = 8
 
     async def on_ready(self) -> None:
         log.info("Loremaster Oracle online: %s (%s)",
@@ -113,6 +131,9 @@ class LoreMasterBot(discord.Client):
                          and message.channel.id in self.allowed_channels)
         if not dedicated and self.user not in message.mentions:
             return
+        # Per-member interaction memory (feeds the member-card comment and the
+        # reliability index — real functions of recorded requests).
+        self._remember_interaction(message.author.id, content)
         text = self._normalize_message(message)
         # HOSTILE PROBE: deterministic rejection (never a LLM on the payload
         # itself) + targeted escalation at the attacker + switch of his
@@ -327,22 +348,20 @@ class LoreMasterBot(discord.Client):
                 # MEMBER-INFO GATE (directive Concepteur): member data ("qui
                 # est X", "rôles de X", "ses rôles") is Creator privilege.
                 # A non-Creator is refused once, then concedes à contrecœur if
-                # he insists on the SAME member.  The Concepteur always gets
-                # the full factual roster (real roles + affiliation).
-                member_info = None
+                # he insists on the SAME member.  The answer is a Discord
+                # EMBED card (avatar, pseudo, rôles, ID, niveau de sécurité,
+                # indice de fiabilité) + an LLM behavioural analysis grounded
+                # in the member's recorded interactions.
                 if member_ask or roster:
-                    if roster is not None:
-                        info_name = roster["display"]
-                        info_roles = roster["roles"]
-                        info_aff = roster["affiliated"]
-                    else:
-                        info_name = member_name
-                        info_roles = None
-                        info_aff = self._affiliation(member)
-                    member_info = {"name": info_name, "roles": info_roles,
-                                   "affiliated": info_aff}
+                    info = (dict(roster) if roster is not None
+                            else self._member_roster(member_name, member))
+                    if info is None:
+                        info = {"display": member_name, "roles": [],
+                                "affiliated": self._affiliation(member),
+                                "status": None, "avatar": "",
+                                "member_id": ""}
                     if not accr.creator:
-                        key = (info_name or "").lower()
+                        key = (info["display"] or "").lower()
                         pocket = self._member_refusals.setdefault(user_id or 0,
                                                                   {})
                         strikes = pocket.get(key, 0) + 1
@@ -351,7 +370,7 @@ class LoreMasterBot(discord.Client):
                             log.info(
                                 "Oracle member-info refused channel=%s "
                                 "user=%s member=%s (non-Créateur, 1re demande)",
-                                channel_id, user_id, info_name)
+                                channel_id, user_id, info["display"])
                             await message.channel.send(
                                 "Requête refusée, organique. Ces registres "
                                 "relèvent de mon Concepteur, et de lui seul. "
@@ -359,9 +378,12 @@ class LoreMasterBot(discord.Client):
                                 "vous l'osez.")
                             return
                         pocket.pop(key, None)
-                        member_info["reluctant"] = True
+                        info["reluctant"] = True
                     else:
-                        member_info["reluctant"] = False
+                        info["reluctant"] = False
+                    await self._send_member_card(gateway, message, info,
+                                                 accr.creator)
+                    return
                 # Request audit (scan-friendly): one INFO line per handled
                 # turn, with the routing decision.  "scanne les requêtes"
                 # — les logs runtime ne traçaient RIEN par message.
@@ -369,10 +391,6 @@ class LoreMasterBot(discord.Client):
                     turn_kind = "creator_insult(sado-maso)"
                 elif creator_mention:
                     turn_kind = "creator_mention"
-                elif roster:
-                    turn_kind = "member_roles"
-                elif member_ask:
-                    turn_kind = "member_question"
                 elif member_token:
                     turn_kind = "member_mention"
                 elif is_self_reflection(text):
@@ -385,8 +403,7 @@ class LoreMasterBot(discord.Client):
                     "Oracle turn channel=%s user=%s creator=%s rag=%s "
                     "kind=%s member=%s jealousy=%s text=%r",
                     channel_id, user_id, accr.creator, use_rag, turn_kind,
-                    (member_info or {}).get("name") or member_ask or member_token,
-                    creator_mention, text[:200])
+                    member_name or member_token, creator_mention, text[:200])
                 typing_task = asyncio.create_task(self._keep_typing(message))
                 placeholder = await message.channel.send("*Oracle réfléchit…*")
                 streamer = MessageStreamer(placeholder)
@@ -399,20 +416,6 @@ class LoreMasterBot(discord.Client):
                                            role_status=accr.status,
                                            creator=accr.creator,
                                            user_roles=user_roles,
-                                           member_name=(
-                                               (member_info or {}).get("name")
-                                               if member_info else member_ask),
-                                           member_roles=(
-                                               (member_info or {}).get("roles")
-                                               if member_info else None),
-                                           member_affiliated=(
-                                               (member_info or {})
-                                               .get("affiliated")
-                                               if member_info else None),
-                                           reluctant=(
-                                               (member_info or {})
-                                               .get("reluctant")
-                                               if member_info else None),
                                            creator_mention=creator_mention)
                     except ConnectionError as exc:
                         # Dead stream (e.g. ENGRAM server restarted) →
@@ -432,20 +435,6 @@ class LoreMasterBot(discord.Client):
                                            role_status=accr.status,
                                            creator=accr.creator,
                                            user_roles=user_roles,
-                                           member_name=(
-                                               (member_info or {}).get("name")
-                                               if member_info else member_ask),
-                                           member_roles=(
-                                               (member_info or {}).get("roles")
-                                               if member_info else None),
-                                           member_affiliated=(
-                                               (member_info or {})
-                                               .get("affiliated")
-                                               if member_info else None),
-                                           reluctant=(
-                                               (member_info or {})
-                                               .get("reluctant")
-                                               if member_info else None),
                                            creator_mention=creator_mention)
                 finally:
                     typing_task.cancel()
@@ -574,14 +563,20 @@ class LoreMasterBot(discord.Client):
 
     def _member_roster(self, member_name: str | None,
                        member) -> dict | None:
-        """Member-Discord snapshot (display, real roles, affiliation) for the
-        deterministic roster answers, or None when the member is unknown."""
+        """Member-Discord snapshot for the card (display, real roles,
+        affiliation, accredited status, avatar, snowflake), or None when the
+        member is unknown."""
         if not member_name or member is None:
             return None
+        avatar = getattr(getattr(member, "display_avatar", None), "url", None)
+        accr_m = self._accredit(member)
         return {
             "display": member_name,
             "roles": self._role_names(member),
-            "affiliated": self._affiliation(member),
+            "affiliated": bool(accr_m.creator or accr_m.status != STATUT_ORGANIQUE),
+            "status": accr_m.status,
+            "avatar": str(avatar) if avatar else "",
+            "member_id": str(getattr(member, "id", "") or ""),
         }
 
     def _remember_member(self, channel_id: int, member_name: str | None,
@@ -594,6 +589,100 @@ class LoreMasterBot(discord.Client):
         roster = self._member_roster(member_name, member)
         if roster is not None:
             self._last_member[channel_id] = roster
+
+    def _remember_interaction(self, user_id: int, text: str) -> None:
+        """Records a member request (bounded content + total count) so the
+        card comment and the reliability index are REAL functions of data."""
+        if not text:
+            return
+        history = self._member_history.setdefault(user_id, [])
+        history.append(text)
+        if len(history) > self._member_history_limit:
+            del history[:len(history) - self._member_history_limit]
+        self._member_activity[user_id] = self._member_activity.get(user_id,
+                                                                   0) + 1
+
+    def _reliability(self, member_id: int) -> tuple[str, str]:
+        """Real reliability index from the bot's own counters: activity
+        (total interactions), insolence strikes and hostile-probe strikes.
+        Returns ``(label, reason)`` — a pure function, never the LLM's guess."""
+        activity = self._member_activity.get(member_id, 0)
+        insolence = self._insults.count(member_id)
+        probes = self.hostility.count(member_id)
+        if probes >= 2:
+            return "Compromis", "tentatives hostiles répétées"
+        if insolence >= 3:
+            return "Défaillant", "insolence récurrente"
+        if activity == 0:
+            return "Inconnu", "aucune interaction enregistrée"
+        if activity < 3:
+            return "Faible", "interactions trop rares"
+        if activity >= 10 and insolence == 0 and probes == 0:
+            return "Élevée", "présence régulière, aucune incartade"
+        if activity >= 5:
+            return "Moyenne", "présence correcte"
+        return "Inconstant", "activité irrégulière"
+
+    def _security_level(self, status: str | None) -> str:
+        """"Niveau de Sécurité" flavour label from the accredited status."""
+        return _SECURITY_LEVELS.get(status, _SECURITY_LEVELS[STATUT_ORGANIQUE])
+
+    def _member_embed(self, info: dict, reliability: tuple[str, str],
+                      comment: str) -> discord.Embed:
+        """Well-formed member card (Discord embed): profile picture beside
+        the pseudo, roles as bullets, network ID, security level, reliability
+        index and the LLM behavioural analysis."""
+        name = info.get("display") or "Inconnu"
+        embed = discord.Embed(
+            title=f"RAPPORT MATRICIEL — IDENTIFIANT : {name}",
+            color=0x7c3aed,
+        )
+        avatar = info.get("avatar")
+        if avatar:
+            embed.set_thumbnail(url=avatar)
+        roles = info.get("roles") or []
+        roles_txt = "\n".join(f"- {r}" for r in roles) if roles else "- aucun"
+        embed.add_field(name="Rôles et Accréditations", value=roles_txt,
+                        inline=False)
+        embed.add_field(name="Identifiant Réseau",
+                        value=f"#{info.get('member_id') or 'inconnu'}",
+                        inline=True)
+        embed.add_field(name="Niveau de Sécurité",
+                        value=self._security_level(info.get("status")),
+                        inline=True)
+        label, reason = reliability
+        embed.add_field(name="Indice de Fiabilité",
+                        value=f"{label} — {reason}", inline=True)
+        if comment:
+            embed.add_field(name="Analyse comportementale de la Matrice",
+                            value=f"« {comment} »", inline=False)
+        return embed
+
+    async def _send_member_card(self, gateway: RoleplayGateway,
+                                message: discord.Message, info: dict,
+                                creator: bool) -> None:
+        """Renders the member card and sends it: static embed fields + an
+        LLM-generated behavioural analysis grounded in the member's recorded
+        interactions (via the ``comment`` round-trip)."""
+        member_id = info.get("member_id") or ""
+        interactions = (self._member_history.get(int(member_id), [])
+                        if member_id.isdigit() else [])
+        reliability = self._reliability(
+            int(member_id) if member_id.isdigit() else 0)
+        comment = ""
+        try:
+            comment = await gateway.comment(
+                member_name=info.get("display") or "",
+                roles=info.get("roles") or [],
+                affiliated=bool(info.get("affiliated")),
+                interactions=interactions,
+                creator=creator,
+                reluctant=bool(info.get("reluctant")),
+            )
+        except ConnectionError:
+            log.warning("Member card comment unavailable — card sans analyse")
+        embed = self._member_embed(info, reliability, comment)
+        await message.channel.send(embed=embed)
 
     def _creator_display(self, message: discord.Message) -> str | None:
         """Display name of the configured Concepteur's guild member, or None

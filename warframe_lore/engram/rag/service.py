@@ -66,6 +66,60 @@ _MAX_QUERY_LEN = 2000
 _MENTION_TOKENS = re.compile(r"<@!?\d+>|<#\d+>|<a?:[a-z0-9_]+:\d+>",
                              re.IGNORECASE)
 
+# Entity-lookup questions ("qui est X", "qu'est-ce que X", "parle-moi de X",
+# "que sais-tu de X", "c'est qui X"…).  When the named target never appears
+# in the retrieved passages, the model would otherwise invent a biography
+# (playtest: "Qui est Vena ?" → hallucinated Warframe).  The guard below
+# short-circuits those before the LLM is ever called.
+_LOOKUP_PREFIXES = (
+    "qui est ", "qui était ", "qui es-tu ",
+    "qu'est-ce que ", "qu'est-ce qu'",
+    "c'est qui ", "c'est quoi ",
+    "parle-moi de ", "parlez-moi de ",
+    "parle-moi d'", "parlez-moi d'",
+    "que sais-tu de ", "que sais-tu sur ",
+    "que peux-tu me dire de ", "que peux-tu me dire sur ",
+    "raconte-moi ", "racontez-moi ",
+)
+
+# Leading articles/determiners skipped before the proper-noun detection.
+_DETERMINERS = frozenset({
+    "le", "la", "les", "un", "une", "des", "du", "de", "ce", "cet", "cette",
+    "ces", "mon", "ma", "mes", "son", "sa", "ses", "ton", "ta", "tes",
+    "notre", "votre", "leur", "leurs", "au", "aux",
+})
+
+# French elisions stripped before the proper-noun detection ("l'Orokin" →
+# "Orokin", "d'Arthur" → "Arthur").
+_ELISION_PREFIXES = ("l'", "d'", "s'", "n'", "j'", "t'", "m'", "qu'")
+
+
+def _first_proper_noun(tail: str) -> str | None:
+    """First significant token of the tail, returned only if it is a
+    capitalised proper noun; a lowercase descriptor ("le fondateur des…")
+    yields ``None`` so a paraphrasing answer is never false-positived."""
+    for token in tail.split():
+        word = token.strip("'’\"“”()[]-.,;:!?")
+        low = word.lower()
+        if low.startswith(_ELISION_PREFIXES):
+            word = word[2:]
+            low = word.lower()
+        if len(word) < 3 or low in _DETERMINERS:
+            continue
+        return word if word[0].isupper() else None
+    return None
+
+
+def _lookup_entity(question: str) -> str | None:
+    """Proper-noun target of a "who/what is X" lookup, else ``None``."""
+    q = (question or "").strip()
+    low = q.lower()
+    for prefix in _LOOKUP_PREFIXES:
+        if low.startswith(prefix):
+            tail = q[len(prefix):].strip().rstrip("?.!…")
+            return _first_proper_noun(tail)
+    return None
+
 
 def sanitize_query(text: str) -> str:
     """Sanitizes user input before search/vectorization: strips control
@@ -176,6 +230,19 @@ class RAGService:
             # Context stripped of content: no off-topic neighbor to the LLM.
             used_hits = []
         bypass = not used_hits and suggestion is None
+        # Entity-lookup guard (playtest "Qui est Vena ?"): a "qui est X"
+        # question whose named target NEVER appears in the retrieved passages
+        # must not reach the model — the archives cannot support an answer, so
+        # short-circuit instead of letting the model invent a biography.
+        if not bypass and used_hits:
+            entity = _lookup_entity(question)
+            context_blob = " ".join(h.content for h in used_hits).lower()
+            if entity and entity.lower() not in context_blob:
+                used_hits = []
+                suggestion = None
+                bypass = True
+                log.info("Audit RAG entity=%r absent des passages -> "
+                         "court-circuit (anti-hallucination)", entity)
         # The anti-vide (empty-context) truncation works below the RAG route,
         # whatever the search query was: the PROMPT always embeds the user's
         # exact wording.

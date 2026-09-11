@@ -16,6 +16,7 @@ from warframe_lore.engram.persona import (
 from warframe_lore.engram.roleplay.identity import (
     external_organic_reply,
     identity_reply,
+    member_comment_request,
     member_roster_reply,
 )
 
@@ -116,6 +117,33 @@ class MemberRosterReplyTests(unittest.TestCase):
         reply = member_roster_reply("lulu", ["Mascotte"], affiliated=False,
                                     reluctant=True)
         self.assertIn("À contrecœur, puisque vous insistez", reply)
+
+
+class MemberCommentRequestTests(unittest.TestCase):
+    """Matériau de la fiche membre : le commentaire est généré par le modèle
+    à partir des interactions réelles du membre (jamais une formule figée)."""
+
+    def test_contient_le_materiau_brut(self):
+        request = member_comment_request(
+            "Aze07", ["CHEF DE CLAN", "PRIME"], affiliated=False,
+            interactions=["Qui est Arthur ?", "Parle-moi de Vena"])
+        self.assertIn("Fiche membre : Aze07", request)
+        self.assertIn("CHEF DE CLAN, PRIME", request)
+        self.assertIn("non affilié au Clan", request)
+        self.assertIn("- Qui est Arthur ?", request)
+        self.assertIn("- Parle-moi de Vena", request)
+
+    def test_aucune_interaction_explicite(self):
+        request = member_comment_request("lulu", [], affiliated=True,
+                                         interactions=None)
+        self.assertIn("(aucune interaction enregistrée)", request)
+
+    def test_audience_concepteur_et_concession(self):
+        request = member_comment_request(
+            "Tom.Pass", [], affiliated=True,
+            interactions=[], creator=True, reluctant=True)
+        self.assertIn("ton Concepteur", request)
+        self.assertIn("cédé à contrecœur", request)
 
 
 if __name__ == "__main__":

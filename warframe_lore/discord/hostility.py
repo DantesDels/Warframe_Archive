@@ -59,5 +59,13 @@ class HostilityTracker:
             stamps.pop(0)
         return len(stamps) - 1
 
+    def count(self, user_id: int) -> int:
+        """Number of recorded strikes for the user (current window, pruned)."""
+        now = self._clock()
+        stamps = self._strikes.get(user_id, [])
+        while stamps and now - stamps[0] > self.window_seconds:
+            stamps.pop(0)
+        return len(stamps)
+
 
 __all__ = ["HostilityTracker", "reply_for"]

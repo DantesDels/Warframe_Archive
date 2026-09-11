@@ -1,0 +1,98 @@
+"""Fiche membre (card Discord) : indice de fiabilité RÉEL, niveau de sécurité
+et mise en page de l'embed — sans connexion Discord (objet bot minimal)."""
+
+from __future__ import annotations
+
+import unittest
+
+from warframe_lore.discord.bot import LoreMasterBot
+from warframe_lore.discord.hostility import HostilityTracker
+from warframe_lore.engram.persona import (
+    STATUT_HAUT_COMMANDEMENT,
+    STATUT_ORGANIQUE,
+)
+
+
+class _Bot(LoreMasterBot):
+    """Compteurs seuls — aucun ``discord.Client`` sous-jacent n'est monté."""
+
+    def __init__(self) -> None:
+        self._member_activity: dict[int, int] = {}
+        self._member_history: dict[int, list[str]] = {}
+        self._insults = HostilityTracker()
+        self.hostility = HostilityTracker()
+        self._member_refusals: dict[int, dict[str, int]] = {}
+        self._last_member: dict[int, dict] = {}
+
+
+class ReliabilityTests(unittest.TestCase):
+    """L'indice de fiabilité est une vraie fonction des compteurs enregistrés."""
+
+    def test_inconnu_sans_interaction(self):
+        bot = _Bot()
+        self.assertEqual(
+            bot._reliability(1), ("Inconnu", "aucune interaction enregistrée"))
+
+    def test_compromis_apres_probes_repetees(self):
+        bot = _Bot()
+        bot.hostility.strike(1)
+        bot.hostility.strike(1)
+        self.assertEqual(bot._reliability(1)[0], "Compromis")
+
+    def test_defaillant_apres_insolence_recurrente(self):
+        bot = _Bot()
+        for _ in range(3):
+            bot._insults.strike(1)
+        self.assertEqual(bot._reliability(1)[0], "Défaillant")
+
+    def test_elevée_activite_reguliere_sans_incartade(self):
+        bot = _Bot()
+        bot._member_activity[1] = 12
+        self.assertEqual(
+            bot._reliability(1), ("Élevée", "présence régulière, aucune incartade"))
+
+    def test_faible_peu_d_interactions(self):
+        bot = _Bot()
+        bot._member_activity[1] = 1
+        self.assertEqual(bot._reliability(1)[0], "Faible")
+
+
+class SecurityLevelTests(unittest.TestCase):
+    def test_mapping_status_vers_niveau(self):
+        bot = _Bot()
+        self.assertEqual(bot._security_level(STATUT_HAUT_COMMANDEMENT),
+                         "Commandement Tactique")
+        self.assertEqual(bot._security_level(STATUT_ORGANIQUE),
+                         "Accès Invité Restreint")
+        self.assertEqual(bot._security_level(None), "Accès Invité Restreint")
+
+
+class MemberEmbedTests(unittest.TestCase):
+    def test_fiche_complete_bien_construite(self):
+        bot = _Bot()
+        info = {
+            "display": "Aze07",
+            "roles": ["CHEF DE CLAN", "PRIME"],
+            "affiliated": True,
+            "status": STATUT_HAUT_COMMANDEMENT,
+            "avatar": "https://cdn.discordapp.com/avatars/1/a.png",
+            "member_id": "4829",
+        }
+        embed = bot._member_embed(info, ("Élevée", "régulière"), "observation")
+        data = embed.to_dict()
+        self.assertIn("RAPPORT MATRICIEL", data["title"])
+        self.assertIn("Aze07", data["title"])
+        self.assertEqual(data["thumbnail"]["url"],
+                         "https://cdn.discordapp.com/avatars/1/a.png")
+        fields = {f["name"]: f["value"] for f in data["fields"]}
+        self.assertIn("CHEF DE CLAN", fields["Rôles et Accréditations"])
+        self.assertIn("PRIME", fields["Rôles et Accréditations"])
+        self.assertEqual(fields["Identifiant Réseau"], "#4829")
+        self.assertIn("Commandement Tactique", fields["Niveau de Sécurité"])
+        self.assertIn("Élevée", fields["Indice de Fiabilité"])
+        self.assertIn("observation",
+                      fields["Analyse comportementale de la Matrice"])
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -16,7 +16,7 @@ from warframe_lore.engram.rag import (NO_DATA_MARKER,
                                       RAGService)
 from warframe_lore.engram.rag.retriever import RAGHit
 from warframe_lore.engram.rag.search import CosinusSearch, _token_matches_title
-from warframe_lore.engram.rag.service import RAG_TEMPERATURE
+from warframe_lore.engram.rag.service import RAG_TEMPERATURE, _lookup_entity
 
 
 def hit(n, score, page="Page"):
@@ -195,6 +195,43 @@ class ThresholdTests(unittest.TestCase):
         )
         run(service.retrieve("Qui est Lettie ?"))
         self.assertEqual(emb.queries, ["Qui est Lettie ? (Leticia)"])
+
+
+class EntityLookupGuardTests(unittest.TestCase):
+    """Anti-hallucination : « Qui est Vena ? » ne doit jamais fabriquer une
+    biographie quand le nom visé est absent des passages retrouvés."""
+
+    def test_qui_est_extrait_le_nom(self):
+        self.assertEqual(_lookup_entity("Qui est Vena ?"), "Vena")
+        self.assertEqual(_lookup_entity("qui est Arthur ?"), "Arthur")
+
+    def test_qu_est_ce_que_avec_elision(self):
+        self.assertEqual(_lookup_entity("Qu'est-ce que l'Orokin ?"), "Orokin")
+
+    def test_parle_moi_d_elision(self):
+        self.assertEqual(_lookup_entity("Parle-moi d'Albrecht Entrati"),
+                         "Albrecht")
+
+    def test_descripteur_minuscule_ignore(self):
+        # « le fondateur des Tenno » : descripteur minuscule → pas de garde.
+        self.assertIsNone(_lookup_entity("Qui est le fondateur des Tenno ?"))
+
+    def test_question_non_lookup(self):
+        self.assertIsNone(_lookup_entity("Comment jouer à Warframe ?"))
+
+    def test_entite_absente_court_circuite(self):
+        service = make_service([hit(1, 0.62)])
+        _, prompt, bypass = run(service.retrieve("Qui est Vena ?"))
+        self.assertTrue(bypass)
+        self.assertNotIn("contenu", prompt.context)
+
+    def test_entite_presente_conserve_le_contexte(self):
+        service = make_service([
+            RAGHit(chunk_id=1, page_title="Page",
+                   content="Vena est une entité du Néant.", score=0.62)])
+        _, prompt, bypass = run(service.retrieve("Qui est Vena ?"))
+        self.assertFalse(bypass)
+        self.assertIn("Vena", prompt.context)
 
 
 def run_async_iterable(agen):

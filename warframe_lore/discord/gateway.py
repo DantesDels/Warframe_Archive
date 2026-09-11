@@ -124,6 +124,34 @@ class RoleplayGateway:
                     log.error("Roleplay error: %s", frame.get("message"))
                     return
 
+    async def comment(self, member_name: str, roles: list[str],
+                      affiliated: bool, interactions: list[str],
+                      creator: bool, reluctant: bool) -> str:
+        """One-shot member-card comment: sends a ``comment`` frame and waits
+        for the single ``comment`` reply (non-streamed)."""
+        async with self._send_lock:
+            if not self.active:
+                raise ConnectionError(
+                    "WS connection closed — restart the gateway")
+            payload = {"type": "comment", "member_name": member_name,
+                       "member_roles": list(roles),
+                       "member_affiliated": affiliated,
+                       "interactions": list(interactions),
+                       "creator": creator, "reluctant": reluctant}
+            await self._conn.send(json.dumps(payload))
+            while True:
+                frame = await self._queue.get()
+                kind = frame.get("type")
+                if not self.active:
+                    raise ConnectionError(
+                        "WS stream closed before the comment reply")
+                if kind == "comment":
+                    return str(frame.get("text", ""))
+                if kind == "error":
+                    log.error("Roleplay comment error: %s",
+                              frame.get("message"))
+                    return ""
+
     async def set_persona(self, mode: str) -> None:
         """Switches the persona of the WS session ("oracle" | "hostile").
 

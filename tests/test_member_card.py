@@ -136,7 +136,10 @@ class MemberEmbedTests(unittest.TestCase):
         fields = {f["name"]: f["value"] for f in data["fields"]}
         self.assertIn("CHEF DE CLAN", fields["Rôles et Accréditations"])
         self.assertIn("PRIME", fields["Rôles et Accréditations"])
-        self.assertEqual(fields["Identifiant Réseau"], "#4829")
+        # Identifiant Réseau : sous-titre (h4) juste sous le pseudo.
+        self.assertIn("Identifiant Réseau", data["description"])
+        self.assertIn("#4829", data["description"])
+        self.assertNotIn("Identifiant Réseau", fields)
         self.assertIn("Commandement Tactique", fields["Niveau de Sécurité"])
         self.assertIn("Assidu", fields["Assiduité"])
         self.assertIn("Élevée", fields["Indice de Fiabilité"])

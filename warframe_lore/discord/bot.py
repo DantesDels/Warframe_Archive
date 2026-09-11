@@ -664,13 +664,13 @@ class LoreMasterBot(discord.Client):
         avatar = info.get("avatar")
         if avatar:
             embed.set_thumbnail(url=avatar)
+        # Identifiant Réseau : en sous-titre (h4) juste sous le pseudo.
+        embed.description = (
+            f"**Identifiant Réseau :** #{info.get('member_id') or 'inconnu'}")
         roles = info.get("roles") or []
         roles_txt = "\n".join(f"- {r}" for r in roles) if roles else "- aucun"
         embed.add_field(name="Rôles et Accréditations", value=roles_txt,
                         inline=False)
-        embed.add_field(name="Identifiant Réseau",
-                        value=f"#{info.get('member_id') or 'inconnu'}",
-                        inline=True)
         embed.add_field(name="Niveau de Sécurité",
                         value=self._security_level(info.get("status")),
                         inline=True)

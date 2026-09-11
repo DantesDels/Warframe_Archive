@@ -155,14 +155,15 @@ class MemberEmbedTests(unittest.TestCase):
                                   ("Assidu", "plus actif que 80% des membres"),
                                   "observation")
         data = embed.to_dict()
-        self.assertIn("RAPPORT MATRICIEL", data["title"])
-        self.assertIn("Aze07", data["title"])
+        self.assertEqual(data["title"], "RAPPORT MATRICIEL")
+        self.assertNotIn("Aze07", data["title"])
         self.assertEqual(data["thumbnail"]["url"],
                          "https://cdn.discordapp.com/avatars/1/a.png")
         fields = {f["name"]: f["value"] for f in data["fields"]}
         self.assertIn("CHEF DE CLAN", fields["Rôles et Accréditations"])
         self.assertIn("PRIME", fields["Rôles et Accréditations"])
-        # Identifiant Réseau : sous-titre (h4) juste sous le pseudo.
+        # Pseudo et identifiant réseau : sous-titres sous « RAPPORT MATRICIEL ».
+        self.assertIn("IDENTIFIANT :** Aze07", data["description"])
         self.assertIn("Identifiant Réseau", data["description"])
         self.assertIn("#4829", data["description"])
         self.assertNotIn("Identifiant Réseau", fields)

@@ -654,15 +654,14 @@ class LoreMasterBot(discord.Client):
         the pseudo, roles as bullets, network ID, security level, reliability
         index and the LLM behavioural analysis."""
         name = info.get("display") or "Inconnu"
-        embed = discord.Embed(
-            title=f"RAPPORT MATRICIEL — IDENTIFIANT : {name}",
-            color=0x7c3aed,
-        )
+        embed = discord.Embed(title="RAPPORT MATRICIEL", color=0x7c3aed)
         avatar = info.get("avatar")
         if avatar:
             embed.set_thumbnail(url=avatar)
-        # Identifiant Réseau : en sous-titre (h4) juste sous le pseudo.
+        # Pseudo puis identifiant réseau : en sous-titres (h4) juste sous le
+        # titre « RAPPORT MATRICIEL ».
         embed.description = (
+            f"**IDENTIFIANT :** {name}\n"
             f"**Identifiant Réseau :** #{info.get('member_id') or 'inconnu'}")
         roles = info.get("roles") or []
         roles_txt = "\n".join(f"- {r}" for r in roles) if roles else "- aucun"

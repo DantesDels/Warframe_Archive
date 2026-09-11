@@ -1,8 +1,8 @@
-"""Signaux canon d'une page : resolved spéculation + statut final.
+"""Page canon signals: resolved speculation + final status.
 
-Mixin de ``Scraper``.  Le statut canon au niveau page est calculé par
-recoupement de ``Category:Speculation`` et des signaux détectés dans le
-corps par le cleaner (``CleanOutput``).
+Mixin of ``Scraper``.  The page-level canon status is computed by
+cross-referencing ``Category:Speculation`` with signals detected in the
+body by the cleaner (``CleanOutput``).
 """
 
 from __future__ import annotations
@@ -16,17 +16,17 @@ log = logging.getLogger("warframe_lore.scraper")
 
 
 class CanonSignalsMixin:
-    """Résolution de la catégorie spéculative + fusion des statuts."""
+    """Speculation category resolution + status merging."""
 
     async def _resolve_speculation_titles(self) -> None:
-        """Développe la ``Category:Speculation`` pour connaître les pages
-        considérées comme conjecturales par le wiki."""
+        """Expands ``Category:Speculation`` to know which pages are
+        considered speculative by the wiki."""
         resolve_members: Callable[..., dict[str, set[str]]] = \
             self.source.resolve_categories
         mapping = resolve_members(["Speculation"])
         self._speculation_titles = mapping.get("Speculation", set())
         if self._speculation_titles:
-            log.info("Category:Speculation résolue : %d page(s) conjecturales",
+            log.info("Category:Speculation resolved: %d speculative page(s)",
                      len(self._speculation_titles))
 
     def _page_canon_status(
@@ -35,11 +35,10 @@ class CanonSignalsMixin:
         non_canon_detected_in_body: bool,
         canon_detected_in_body: bool,
     ) -> CanonStatus:
-        """Calcule le statut canon d'une page (niveau page + signaux inline).
+        """Computes a page's canon status (page level + inline signals).
 
-        Priorités : une page listée dans ``Category:Speculation`` OU qui
-        contient un template ``{{Speculation}}`` en ligne -> speculation ;
-        sinon canon.
+        Priorities: a page listed in ``Category:Speculation`` OR containing
+        an inline ``{{Speculation}}`` template -> speculation; otherwise canon.
         """
         page_level_speculative = page_title in self._speculation_titles
         inline_non_canon = non_canon_detected_in_body
@@ -52,8 +51,8 @@ class CanonSignalsMixin:
             CanonStatus.SPECULATION if inline_non_canon
             else CanonStatus.CANON
         )
-        # merge_canon_status retient le statut le plus faible (priorité la
-        # plus haute) : un seul signal spéculatif suffit à classer en spec.
+        # merge_canon_status keeps the weakest status (highest priority):
+        # a single speculative signal is enough to classify as spec.
         from ..output import merge_canon_status
 
         return merge_canon_status(page_status, body_status)

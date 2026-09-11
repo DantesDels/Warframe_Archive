@@ -1,8 +1,7 @@
-"""Construction du parser argparse + rétro-compatibilité des flags racines.
+"""Argument parser construction + legacy root-flag compatibility.
 
-Déclare les sous-commandes du CLI ``cephalon`` et convertit l'ancienne
-syntaxe (``python -m warframe_lore --force ...``) vers les sous-commandes
-modernes.
+Declares the ``cephalon`` CLI subcommands and converts the old syntax
+(``python -m warframe_lore --force ...``) into the modern subcommands.
 """
 
 from __future__ import annotations
@@ -13,7 +12,7 @@ from pathlib import Path
 from . import commands as cmd
 
 _KNOWN_COMMANDS = {"run", "diff", "status", "recent", "buckets",
-                   "init-db", "ui", "export-entities", "kim-dm",
+                   "init-db", "ui", "export-entities", "kim-dm", "bot",
                    "version", "help"}
 
 _SUPPORTED_LANGS = {"de", "en", "es", "fr", "it", "ja", "ko", "pl", "pt",
@@ -23,123 +22,143 @@ _SUPPORTED_LANGS = {"de", "en", "es", "fr", "it", "ja", "ko", "pl", "pt",
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cephalon",
-        description="Scrape & clean Warframe lore (quêtes, dialogues, KIM, "
-                    "factions) depuis l'API MediaWiki officielle vers des "
-                    "megafiles JSON + PostgreSQL (RAG-ready).",
+        description="Scrape & clean Warframe lore (quests, dialogues, KIM, "
+                    "factions) from the official MediaWiki API into JSON "
+                    "megafiles + PostgreSQL (RAG-ready).",
     )
     parser.add_argument("--verbose", "-v", action="store_true",
                         help="Enable debug logging.")
-    sub = parser.add_subparsers(dest="command", metavar="COMMANDE")
+    sub = parser.add_subparsers(dest="command", metavar="COMMAND")
 
     # --- run
-    p_run = sub.add_parser("run", help="Exécute le pipeline complet "
-                                       "(delta incrémental).")
+    p_run = sub.add_parser("run", help="Run the full pipeline "
+                                       "(incremental delta).")
     p_run.add_argument("--force", action="store_true",
-                       help="Re-traiter toutes les pages (ignore le delta).")
+                       help="Re-process all pages (ignore the delta).")
     p_run.add_argument("--skip-sql", action="store_true",
-                       help="Pipeline JSON seul (sans PostgreSQL).")
+                       help="JSON-only pipeline (without PostgreSQL).")
     p_run.add_argument("--no-ui", action="store_true",
-                       help="N'ouvre pas l'interface web à la fin de la sync.")
+                       help="Do not open the web UI at the end of the sync.")
     p_run.add_argument("--bucket-config", type=Path, default=None)
     p_run.add_argument("--database-url", type=str, default=None)
     p_run.set_defaults(func=cmd._cmd_run)
 
     # --- diff
-    p_diff = sub.add_parser("diff", help="Prévisualise le delta sans écrire.")
+    p_diff = sub.add_parser("diff", help="Preview the delta without writing.")
     p_diff.add_argument("--force", action="store_true",
-                        help="Considère TOUTES les pages comme à re-traiter.")
+                        help="Consider ALL pages as to re-process.")
     p_diff.add_argument("--skip-sql", action="store_true",
-                        help="Simule en mode JSON seul (tout est à re-traiter).")
+                        help="Simulate in JSON-only mode (everything to redo).")
     p_diff.add_argument("--bucket-config", type=Path, default=None)
     p_diff.add_argument("--database-url", type=str, default=None)
     p_diff.set_defaults(func=cmd._cmd_diff)
 
     # --- status
-    p_status = sub.add_parser("status", help="État courant de la base.")
+    p_status = sub.add_parser("status", help="Current database state.")
     p_status.add_argument("--database-url", type=str, default=None)
     p_status.set_defaults(func=cmd._cmd_status)
 
     # --- recent
-    p_recent = sub.add_parser("recent", help="Dernières pages modifiées.")
+    p_recent = sub.add_parser("recent", help="Most recently modified pages.")
     p_recent.add_argument("--limit", type=int, default=10,
-                          help="Nombre de pages à afficher (défaut 10).")
+                          help="Number of pages to display (default 10).")
     p_recent.add_argument("--database-url", type=str, default=None)
     p_recent.set_defaults(func=cmd._cmd_recent)
 
     # --- buckets
-    p_buckets = sub.add_parser("buckets", help="Liste les buckets.")
+    p_buckets = sub.add_parser("buckets", help="List the buckets.")
     p_buckets.add_argument("--init", action="store_true",
-                           help="Écrit la config par défaut dans buckets.json.")
+                           help="Write the default config into buckets.json.")
     p_buckets.add_argument("--bucket-config", type=Path, default=None)
     p_buckets.set_defaults(func=cmd._cmd_buckets)
 
     # --- init-db
-    p_init = sub.add_parser("init-db", help="Crée le schéma PostgreSQL.")
+    p_init = sub.add_parser("init-db", help="Create the PostgreSQL schema.")
     p_init.add_argument("--database-url", type=str, default=None)
     p_init.add_argument("--bucket-config", type=Path, default=None)
     p_init.set_defaults(func=cmd._cmd_init_database)
 
     # --- ui
-    p_ui = sub.add_parser("ui", help="Lance l'interface web locale.")
+    p_ui = sub.add_parser("ui", help="Launch the local web UI.")
     p_ui.add_argument("--port", type=int, default=0,
-                      help="Port à utiliser (0 = port libre automatique).")
+                      help="Port to use (0 = automatic free port).")
     p_ui.add_argument("--no-browser", action="store_true",
-                      help="N'ouvre pas le navigateur automatiquement.")
+                      help="Do not open the browser automatically.")
     p_ui.add_argument("--out", type=Path, default=None,
-                      help="Dossier des megafiles (défaut: out/).")
+                      help="Megafiles directory (default: out/).")
     p_ui.set_defaults(func=cmd._cmd_ui)
 
     # --- export-entities
     p_export = sub.add_parser(
         "export-entities",
-        help="Synchronise les entités du jeu (Public Export) vers la base.")
+        help="Synchronise the game entities (Public Export) into the database.")
     p_export.add_argument("--lang", action="append", choices=sorted(_SUPPORTED_LANGS),
-                          help="Langues à traiter (défaut: en fr).")
+                          help="Languages to process (default: en fr).")
     p_export.add_argument("--categories", action="append",
-                          help="Catégories d'actifs (défaut: les 10 utilitaires).")
+                          help="Asset categories (default: the 10 utility ones).")
     p_export.add_argument("--cache-dir", type=Path, default=None,
-                          help="Dossier de cache des actifs (défaut: "
-                               "cache/public_export/).")
+                          help="Asset cache directory (default: cache/public_export/).")
     p_export.add_argument("--force", action="store_true",
-                          help="Re-télécharge les actifs (ignore le cache).")
+                          help="Re-download assets (ignore the cache).")
     p_export.add_argument("--database-url", type=str, default=None)
     p_export.set_defaults(func=cmd._cmd_export_entities)
 
     # --- kim-dm
     p_kim_dm = sub.add_parser(
         "kim-dm",
-        help="Télécharge/cache le miroir KIM (graphes de dialogue du jeu + "
-             "dictionnaires de localisation) dans out/kim_dm/.")
+        help="Download/cache the KIM mirror (in-game dialogue graphs + "
+             "localisation dictionaries) into out/kim_dm/.")
     p_kim_dm.add_argument("--out", type=Path, default=None,
-                          help="Dossier des megafiles (défaut: out/).")
+                          help="Megafiles directory (default: out/).")
     p_kim_dm.add_argument("--lang", action="append", choices=sorted(_SUPPORTED_LANGS),
-                          help="Langues du dictionnaire à télécharger "
-                               "(défaut: en fr).")
+                          help="Dictionary languages to download (default: en fr).")
     p_kim_dm.add_argument("--force", action="store_true",
-                          help="Re-télécharge tout (ignore le cache local).")
+                          help="Re-download everything (ignore the local cache).")
     p_kim_dm.set_defaults(func=cmd._cmd_kim_dm)
 
+    # --- bot
+    p_bot = sub.add_parser("bot", help="Launch the Oracle Discord bot.")
+    bot_sub = p_bot.add_subparsers(dest="bot_action", metavar="ACTION")
+    p_bot_run = bot_sub.add_parser("run", help="Start the bot (blocking).")
+    p_bot_run.add_argument("--token", default=None,
+                           help="Bot token (or env DISCORD_TOKEN)")
+    p_bot_run.add_argument("--ws", default=None,
+                           help="ENGRAM WebSocket URL (default: "
+                                "ws://localhost:8000/v1/roleplay)")
+    p_bot_run.add_argument("--prefix", default=None,
+                           help="Commands prefix (default: !)")
+    p_bot_run.add_argument("--channels", default=None,
+                           help="Allowed channel IDs, comma-separated "
+                                "(default: config or all)")
+    p_bot_run.add_argument("--verbose", action="store_true")
+    p_bot_run.set_defaults(func=cmd._cmd_bot)
+    p_bot.set_defaults(func=cmd._cmd_bot)
+
     # --- version
-    p_version = sub.add_parser("version", help="Affiche la version.")
+    p_version = sub.add_parser("version", help="Show the version.")
     p_version.set_defaults(func=cmd._cmd_version)
 
     # --- help
-    p_help = sub.add_parser("help", help="Affiche l'aide générale.")
+    p_help = sub.add_parser("help", help="Show the general help.")
     p_help.set_defaults(func=None)
 
     return parser
 
 
 def normalize_legacy_argv(argv: list[str]) -> list[str]:
-    """Convertit l'ancienne syntaxe (flags racines) en sous-commandes.
+    """Convert the old syntax (root flags) into subcommands.
 
-    Rétro-compatibilité : ``python -m warframe_lore --force --skip-sql``
-    devient ``cephalon run --force --skip-sql`` ; ``--init-db``,
-    ``--list-buckets`` et ``--init-bucket-config`` sont traduits vers les
-    sous-commandes correspondantes.
+    Backwards compatibility: ``python -m warframe_lore --force --skip-sql``
+    becomes ``cephalon run --force --skip-sql``; ``--init-db``,
+    ``--list-buckets`` and ``--init-bucket-config`` are translated to the
+    matching subcommands.
     """
     if not argv:
         return argv
+
+    if argv[0] in ("-bot", "--bot"):
+        return ["bot"] + list(argv[1:])
+
     first = argv[0]
     if first in _KNOWN_COMMANDS or first in ("-h", "--help"):
         return argv

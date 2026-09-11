@@ -1,4 +1,4 @@
-"""Requêtes de correspondance titre/uniquename -> nom de fichier image."""
+"""Look-up queries mapping title/uniquename -> image filename."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ __all__ = ["MediaLookupMixin"]
 
 
 class MediaLookupMixin:
-    """Mapper titre de page / locuteur / uniqueName vers un fichier PNG."""
+    """Map page title / speaker / uniqueName to a PNG filename."""
 
     def texture_map(self) -> dict[str, str]:
         return dict(self._texture)
@@ -24,5 +24,5 @@ class MediaLookupMixin:
         return self.filename_for_unique(uid) if uid else None
 
     def lookup(self, key: str) -> str | None:
-        """Titre de page ou nom de locuteur -> nom de fichier image."""
+        """Page title or speaker name -> image filename."""
         return self.filename_for_title(key)

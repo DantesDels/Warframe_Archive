@@ -1,21 +1,21 @@
-"""Blocs non narratifs : tableaux wiki, blocs de code Lua/JSON, fichiers."""
+"""Non-narrative blocks: wiki tables, Lua/JSON code blocks, files."""
 
 from __future__ import annotations
 
 import re
 
-_REFERENCES_DE_COMMONS = re.compile(
+_COMMONS_FILE_REFS = re.compile(
     r"\[\[(?:File|Image|file|image)\s*:[^\]]*\]\]"
-    r"|\[\d+[^\]]*\]",  # références externes numériques (rares)
+    r"|\[\d+[^\]]*\]",  # numeric external references (rare)
     re.IGNORECASE,
 )
 
-_BALISES_LUA_CODE = (
+_LUA_CODE_TAGS = (
     r"<syntaxhighlight\b.*?</syntaxhighlight>"
     r"|<source\b.*?</source>"
     r"|<code\b.*?</code>"
 )
-_FONCTIONS_PARSER = re.compile(
+_PARSER_FUNCTIONS = re.compile(
     r"\{\{#(?:invoke|if|ifeq|ifexpr|expr|switch|titleparts|lst|lsth|lstx)"
     r"[^{}]*\}\}",
     re.IGNORECASE,
@@ -23,20 +23,20 @@ _FONCTIONS_PARSER = re.compile(
 
 
 def strip_file_and_image_references(wikitext: str) -> str:
-    """Supprime les liens internes vers fichiers/images Commons."""
-    return _REFERENCES_DE_COMMONS.sub("", wikitext)
+    """Removes internal links to Commons files/images."""
+    return _COMMONS_FILE_REFS.sub("", wikitext)
 
 
 def strip_tables_and_code_blocks(wikitext: str) -> str:
-    """Enlève les tableaux wiki ``{|...|}`` et les blocs de code Lua/JSON.
+    """Removes wiki tables ``{|...|}`` and Lua/JSON code blocks.
 
-    Les tableaux des pages lore sont majoritairement des stats : on les
-    supprime purement et simplement (aucune valeur narrative).
+    Tables on lore pages are mostly stats: we remove them entirely
+    (no narrative value).
     """
     text = wikitext
     text = re.sub(r"\{\|.*?\|\}", "", text, flags=re.DOTALL)
-    text = re.sub(_BALISES_LUA_CODE, "", text, flags=re.IGNORECASE | re.DOTALL)
-    text = _FONCTIONS_PARSER.sub("", text)
+    text = re.sub(_LUA_CODE_TAGS, "", text, flags=re.IGNORECASE | re.DOTALL)
+    text = _PARSER_FUNCTIONS.sub("", text)
     return text
 
 

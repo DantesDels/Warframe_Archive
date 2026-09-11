@@ -1,11 +1,10 @@
-"""Parsing des ``[Char]Dialogue_rom.dialogue.json`` (nœuds natifs).
+"""Parsing of the ``[Char]Dialogue_rom.dialogue.json`` files (native nodes).
 
-Responsabilité unique : traduire les nœuds natifs du jeu (``Id``/``Content``/
-``Speaker``/routes sortantes) en structure de conversation.  Aucun état n'est
-simulé : les actions et conditions sont décrites, jamais exécutées.  Les
-projections de consultation (graphe/messages/script) vivent dans
-``traversal`` — ``_DialogueFile`` n'expose que l'index des nœuds et leur
-rendu visible.
+Single responsibility: translate the game's native nodes (``Id``/``Content``/
+``Speaker``/outgoing routes) into a conversation structure.  No state is
+simulated: actions and conditions are described, never executed.  Read-only
+projections (graph/messages/script) live in ``traversal`` —
+``_DialogueFile`` only exposes the node index and their visible rendering.
 """
 
 from __future__ import annotations
@@ -22,7 +21,7 @@ from warframe_lore.kim_dm.traversal import (
 
 
 def _node_kind(node: dict) -> str:
-    """Rôle du type natif exact ; les types inconnus restent des systèmes."""
+    """Role of the exact native type; unknown types stay as system nodes."""
     return _NODE_KINDS.get(node.get("type", ""), "system")
 
 
@@ -32,7 +31,7 @@ def _rank_from_id(conv_id: str) -> str:
 
 
 class _DialogueFile:
-    """Parseur des nœuds natifs ; aucune reconstruction à partir d'Incoming."""
+    """Parser of native nodes; no reconstruction from Incoming data."""
 
     def __init__(self, nodes: list[dict], text: dict[str, str],
                  sender: str) -> None:
@@ -46,16 +45,16 @@ class _DialogueFile:
                        if _node_kind(node) == "start"]
 
     def kind(self, node: dict) -> str:
-        """Rôle du type natif exact (start/npc/choice/chemistry/system/end)."""
+        """Role of the exact native type (start/npc/choice/chemistry/system/end)."""
         return _node_kind(node)
 
     def _text_of(self, value: Any) -> str:
-        """Résout une clé du dictionnaire sans altérer le texte natif."""
+        """Resolve a dictionary key without altering the native text."""
         value = "" if value is None else str(value)
         return self.text.get(value, value)
 
     def _system_text(self, node: dict) -> str:
-        """Décrit les actions et conditions sans les exécuter."""
+        """Describe actions and conditions without executing them."""
         node_type = node.get("type", "")
         content = self._text_of(node.get("Content"))
         if node_type == _ENGINE + "CheckBooleanDialogueNode":
@@ -137,7 +136,7 @@ class _DialogueFile:
         return visible
 
     def _edges(self, node: dict) -> list[dict]:
-        """Une arête par entrée native, y compris les routes parallèles."""
+        """One edge per native entry, including parallel routes."""
         routes = [(route, node.get(route) or [], label, None)
                   for route, label in (("Outgoing", ""), ("TrueNodes", "True"),
                                        ("FalseNodes", "False"))]
@@ -166,11 +165,11 @@ class _DialogueFile:
 
 def parse_dialogue_file(nodes: list[dict], text: dict[str, str],
                         sender: str = "") -> list[dict]:
-    """Reconstruit les conversations d'un ``[Char]Dialogue_rom.dialogue.json``.
+    """Reconstruct the conversations of a ``[Char]Dialogue_rom.dialogue.json``.
 
-    Une conversation par type natif exact ``StartDialogueNode``. Le graphe
-    contient tous les IDs atteignables par les seules routes sortantes natives.
-    ``sender`` est le nom wiki de repli des PNJ sans Speaker explicite.
+    One conversation per exact native ``StartDialogueNode`` type. The graph
+    contains all IDs reachable via native outgoing routes only.
+    ``sender`` is the fallback wiki name for NPCs without an explicit Speaker.
     """
     if not isinstance(nodes, list):
         return []

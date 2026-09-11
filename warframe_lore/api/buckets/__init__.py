@@ -1,10 +1,10 @@
-"""Buckets logiques : définition, configuration et résolution.
+"""Logical buckets: definition, configuration and resolution.
 
-Sous-paquet regroupant ce qui concerne la notion de "bucket" (groupement
-logique de pages source -> megafile de sortie) :
-    * ``defaults`` — les 8 buckets par défaut ;
-    * ``config``   — chargement/sauvegarde de ``buckets.json`` ;
-    * ``catalog``  — résolution des catégories + affectation des pages.
+Sub-package regrouping everything about the "bucket" notion (logical
+grouping of source pages -> output megafile):
+    * ``defaults`` — the 8 default buckets;
+    * ``config``   — load/save of ``buckets.json``;
+    * ``catalog``  — category resolution + page assignment.
 """
 
 from __future__ import annotations

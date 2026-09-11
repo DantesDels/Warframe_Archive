@@ -1,7 +1,7 @@
-"""Prétraitement du Wikitext brut — façade de compatibilité.
+"""Raw Wikitext preprocessing -- compatibility facade.
 
-Transformations destructives applicables AVANT l'analyse structurelle
-(commentaires/balises HTML -> ``html`` ; fichiers/tableaux/code -> ``blocks``).
+Destructive transformations applied BEFORE structural parsing
+(comments/HTML tags -> ``html``; files/tables/code -> ``blocks``).
 """
 
 from __future__ import annotations

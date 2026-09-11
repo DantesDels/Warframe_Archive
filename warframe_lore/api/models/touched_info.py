@@ -1,4 +1,4 @@
-"""Métadonnées légères de modification (calcul du delta)."""
+"""Light modification metadata (delta computation)."""
 
 from __future__ import annotations
 
@@ -7,10 +7,10 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class TouchedInfo:
-    """Information légère pour le calcul du delta (mode incrémental).
+    """Light information for delta computation (incremental mode).
 
-    C'est ce qui permet de ne re-télécharger que les pages modifiées sans
-    avoir à récupérer leur contenu.
+    This is what allows re-downloading only the modified pages without
+    having to fetch their content.
     """
 
     pageid: int | None

@@ -1,4 +1,4 @@
-"""Service d'images : téléchargement à la demande + charge utile /api/media."""
+"""Image service: on-demand download + /api/media payload."""
 
 from __future__ import annotations
 
@@ -14,11 +14,11 @@ __all__ = ["MediaServeMixin"]
 
 
 class MediaServeMixin:
-    """Sert les PNG (cache local) et assemble la charge utile JSON pour l'UI."""
+    """Serve PNGs (local cache) and assemble the JSON payload for the UI."""
 
     def fetch_image(self, filename: str) -> bytes | None:
-        """PNG mis en cache dans ``<output_dir>/media`` (téléchargement à la
-        première demande). Retourne ``None`` si introuvable."""
+        """PNG cached in ``<output_dir>/media`` (downloaded on first request).
+        Returns ``None`` if not found."""
         texture_location = self._by_file.get(filename)
         if not texture_location:
             return None
@@ -29,7 +29,7 @@ class MediaServeMixin:
         try:
             download_to(url, local, timeout=self.timeout)
         except (urllib.error.HTTPError, urllib.error.URLError) as error:
-            log.warning("Image indisponible %s (%s) : %s",
+            log.warning("Image unavailable %s (%s): %s",
                         filename, url, getattr(error, "code", error.reason))
             return None
         return local.read_bytes()
@@ -39,10 +39,10 @@ class MediaServeMixin:
         page_titles_by_bucket: dict[str, list[str]],
         speakers: list[str],
     ) -> dict:
-        """Charge utile JSON pour ``/api/media``.
+        """JSON payload for ``/api/media``.
 
-        Ne contient que les images pertinentes pour l'archive (titres de
-        pages + locuteurs KIM + représentants de bucket) — léger pour l'UI.
+        Only images relevant to the archive (page titles + KIM speakers +
+        bucket representatives) — lightweight for the UI.
         """
         titles: dict[str, str] = {}
         buckets: dict[str, str] = {}

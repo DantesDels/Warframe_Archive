@@ -1,4 +1,4 @@
-"""Synchronisation des entités localisées vers la base (boucle async)."""
+"""Localized entity synchronization to the database (async loop)."""
 
 from __future__ import annotations
 
@@ -16,20 +16,20 @@ async def sync_entities(
     langs: tuple[str, ...] | None = None,
     force: bool = False,
 ) -> dict[str, int]:
-    """Synchronise les entités localisées en base.
+    """Synchronizes localized entities to the database.
 
-    Étapes : index par langue -> filtrage des catégories retenues ->
-    téléchargement (cache) -> extraction -> upsert into
+    Steps: per-language index -> category filtering ->
+    download (cache) -> extraction -> upsert into
     ``game_entities_i18n``.
 
     Returns:
-        ``{"entities": N, "assets": M, "skipped": K}`` — N lignes écrites,
-        M actifs téléchargés/relus, K actifs manquants (404).
+        ``{"entities": N, "assets": M, "skipped": K}`` -- N rows written,
+        M assets downloaded/reused, K missing assets (404).
     """
     from warframe_lore.db.manager import SQLDatabaseManager
 
     if not isinstance(manager, SQLDatabaseManager):
-        raise TypeError("manager doit être un SQLDatabaseManager connecté.")
+        raise TypeError("manager must be a connected SQLDatabaseManager.")
 
     langs = tuple(langs) if langs else client.langs
     client.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -54,8 +54,8 @@ async def sync_entities(
                 written = await manager.upsert_game_entities(
                     [entity.as_tuple() for entity in entities])
                 total_entities += written
-                log.info("[%s] %s : %d entités.", lang, category, written)
-    log.info("Synchronisation Public Export terminée : %d entités, "
-             "%d actifs, %d en échec.", total_entities, assets_used, skipped)
+                log.info("[%s] %s: %d entities.", lang, category, written)
+    log.info("Public Export sync complete: %d entities, "
+             "%d assets, %d skipped.", total_entities, assets_used, skipped)
     return {"entities": total_entities, "assets": assets_used,
             "skipped": skipped}

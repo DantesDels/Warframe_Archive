@@ -1,10 +1,10 @@
-"""Retrait des noms de fichiers audio (.ogg/.mp3/.wav) du Wiki.
+"""Removal of Wiki audio file names (.ogg/.mp3/.wav).
 
-Noms laissés par les lecteurs audio dans les transcriptions de quêtes :
-    * jeton unique        -> ``LeekterSlippery.ogg``, ``DCodexA00010Silvana_en.ogg``
-    * code créé en deux    -> ``DWraithQM1CrpArrive0060RJCephalon en.ogg``
-      morceaux (loc. en)     ``DThroneRoom0050Erra en.mp3`` ``BbPainAmbulas00020 en.ogg``
-Noter : ``[a-z0-9_]`` avec re.IGNORECASE accepte aussi les majuscules.
+File names left by audio players in quest transcriptions:
+    * unique token          -> ``LeekterSlippery.ogg``, ``DCodexA00010Silvana_en.ogg``
+    * code created in two   -> ``DWraithQM1CrpArrive0060RJCephalon en.ogg``
+      parts (locale en)       ``DThroneRoom0050Erra en.mp3`` ``BbPainAmbulas00020 en.ogg``
+Note: ``[a-z0-9_]`` with re.IGNORECASE also accepts uppercase.
 """
 
 from __future__ import annotations
@@ -17,15 +17,15 @@ _AUDIO_FILE_TOKEN = re.compile(r"\b[\w-]+\.(?:ogg|mp3|wav)\b", re.IGNORECASE)
 
 
 def strip_audio_filenames(markdown: str) -> str:
-    """Retire les métadonnées audio du Wiki (noms de fichiers .ogg/.mp3/.wav).
+    """Removes Wiki audio metadata (file names .ogg/.mp3/.wav).
 
-    Passe 1 : le code créé suivi de la locale est supprimé en un seul coup
-    (``DThroneRoom0050Erra en.mp3``), sinon la locale ``en.ogg`` orpheline
-    resterait collée au texte.
-    Passe 2 : tout jeton autonome ``Word.ogg/.mp3/.wav`` restant.
-    Passe 3 : les lignes devenues vides ou réduites à un seul locuteur
-    (ex: ``> **Angel's song:**`` après suppression du fichier) sont retirées,
-    d'où qu'elles viennent.
+    Pass 1: the code created followed by locale is removed in one go
+    (``DThroneRoom0050Erra en.mp3``), otherwise the orphan locale ``en.ogg``
+    would remain stuck to the text.
+    Pass 2: any remaining standalone ``Word.ogg/.mp3/.wav`` token.
+    Pass 3: lines that became empty or reduced to a single speaker
+    (e.g. ``> **Angel's song:**`` after file removal) are removed,
+    regardless of origin.
     """
     if not markdown:
         return markdown
@@ -35,13 +35,13 @@ def strip_audio_filenames(markdown: str) -> str:
     for line in text.split("\n"):
         stripped = line.strip()
         body = stripped[1:].strip() if stripped.startswith(">") else stripped
-        # Locuteur résiduel seul sur sa ligne : ``> **Angel's song:**``
+        # Residual speaker alone on its line: ``> **Angel's song:**``
         body = re.sub(r"^\*\*[^*]*\*\*\s*:?\s*$", "", body)
-        # Libellé résiduel seul : ``Angel's song:``
+        # Residual label alone: ``Angel's song:``
         body = re.sub(
-            r"^[A-Za-z][\w'’]*(?:[ -][A-Za-z][\w'’]*)*\s*:\s*$", "", body)
-        # Cruft Markdown (``*`` ``_`` ``>`` ``:`` ``"`` ``-`` …) sans texte.
-        body = re.sub(r"[>*_:.\"'’\-\u2013\u2014]", "", body).strip()
+            r"^[A-Za-z][\w''']*(?:[ -][A-Za-z][\w''']*)*\s*:\s*$", "", body)
+        # Markdown cruft (``*`` ``_`` ``>`` ``:`` ``"`` ``-`` ...) without text.
+        body = re.sub(r"[>*_:.\"''\-\u2013\u2014]", "", body).strip()
         if body:
             lines_out.append(line)
     return "\n".join(lines_out)

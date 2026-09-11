@@ -1,8 +1,8 @@
-"""Façade du client MediaWiki — préserve les imports historiques.
+"""Facade for the MediaWiki client — preserves legacy imports.
 
-L'implémentation a été éclatée entre ``mediawiki`` (composition de la
-source), ``mediawiki_queries``, ``mediawiki_categories`` et ``http``
-(transport).  Ce module ré-exporte ce qui vivait historiquement ici.
+The implementation has been split between ``mediawiki`` (source
+composition), ``mediawiki_queries``, ``mediawiki_categories`` and ``http``
+(transport).  This module re-exports what historically lived here.
 """
 
 from __future__ import annotations

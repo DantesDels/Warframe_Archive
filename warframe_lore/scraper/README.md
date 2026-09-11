@@ -1,40 +1,40 @@
-# Couche `scraper` — Orchestration
+# `scraper` Layer — Orchestration
 
-Responsabilité : coordonner les couches `api` (extraction), `cleaner`
-(nettoyage), `output` (megafiles JSON) et `db` (PostgreSQL) en un pipeline
-complet, avec mode **delta incrémental**.
+Responsibility: coordinate the `api` (extraction), `cleaner` (cleaning),
+`output` (JSON megafiles) and `db` (PostgreSQL) layers into a complete
+pipeline, with **incremental delta** mode.
 
-## Contenu
+## Contents
 
-Le paquet expose `Scraper` (point d'entrée `run` / `arun`), composée de mixins,
-un par préoccupation :
+The package exposes `Scraper` (entry point `run` / `arun`), composed of mixins,
+one per concern:
 
-| Fichier | Rôle |
+| File | Role |
 |---|---|
-| `sync.py` | `ScraperSyncMixin._sync_buckets` : résolution → delta → récupération → nettoyage → écriture par bucket |
-| `delta.py` | `ScraperDeltaMixin.delta_plan` / `_page_is_fresh` : calcul du delta sans rien écrire (utilisé par `cephalon diff`) |
-| `ingest.py` | `ScraperIngestMixin._clean_and_store` : nettoyage d'une page + publication JSON + SQL |
-| `canon.py` | `CanonSignalsMixin` : résolution de `Category:Speculation` + statut canon final |
-| `__init__.py` | classe `Scraper` : `__init__` (injection), `run` / `arun`, composition des mixins |
+| `sync.py` | `ScraperSyncMixin._sync_buckets`: resolution → delta → fetch → cleaning → write per bucket |
+| `delta.py` | `ScraperDeltaMixin.delta_plan` / `_page_is_fresh`: delta calculation without writing anything (used by `cephalon diff`) |
+| `ingest.py` | `ScraperIngestMixin._clean_and_store`: page cleaning + JSON and SQL publishing |
+| `canon.py` | `CanonSignalsMixin`: `Category:Speculation` resolution + final canon status |
+| `__init__.py` | `Scraper` class: `__init__` (injection), `run` / `arun`, mixin composition |
 
-## Flux
+## Flow
 
-1. Résolution des buckets (`CategoryCatalog.resolve` + `assign_pages`) ;
-2. Purge des pages disparues (`db.purge_vanished_pages`) ;
-3. Delta (`delta_plan` : comparaison `touched` vs base SQL) ;
-4. `fetch_pages` des pages modifiées (`MediaWikiSource`) ;
-5. `_clean_and_store` par page → megafile JSON **puis** acquittement delta
-   (`record_fetch`) — l'acquittement ne se fait qu'après une écriture
-   JSON réussie (la base et le JSON ne doivent pas diverger).
+1. Bucket resolution (`CategoryCatalog.resolve` + `assign_pages`);
+2. Purge vanished pages (`db.purge_vanished_pages`);
+3. Delta (`delta_plan`: comparison of `touched` vs SQL database);
+4. `fetch_pages` for modified pages (`MediaWikiSource`);
+5. `_clean_and_store` per page → JSON megafile **then** delta acknowledgment
+   (`record_fetch`) — acknowledgment only occurs after a successful JSON
+   write (the database and JSON must not diverge).
 
 ## Usage
 
 ```python
 from warframe_lore.scraper import Scraper
 
-scraper = Scraper()              # ou bucket_config=, database_url=
-scraper.run()                    # synchrone ; arun() pour async
+scraper = Scraper()              # or bucket_config=, database_url=
+scraper.run()                    # synchronous; arun() for async
 scraper.run(force=True)
 ```
 
-En pratique, on passe par la CLI : `cephalon run`, `cephalon diff`.
+In practice, use the CLI: `cephalon run`, `cephalon diff`.

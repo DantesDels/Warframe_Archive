@@ -1,8 +1,8 @@
-"""Mise en forme finale du Markdown — façade de compatibilité.
+"""Final Markdown formatting -- compatibility facade.
 
-Ré-exporte les fonctions pures ``str -> str`` des sous-modules de mise en
-forme, pour préserver les imports historiques (``from ..cleaner.formatting
-import cut_footer_noise``).  Voir ``bullets``, ``headings``, ``markup``,
+Re-exports pure ``str -> str`` functions from formatting sub-modules,
+preserving legacy imports (``from ..cleaner.formatting import
+cut_footer_noise``).  See ``bullets``, ``headings``, ``markup``,
 ``links``, ``dialogue_lines``, ``footers``, ``polish``.
 """
 

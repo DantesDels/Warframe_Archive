@@ -1,4 +1,4 @@
-"""Réseau : index LZMA + actifs hachés (avec cache local incrémental)."""
+"""Networking: LZMA index + hashed assets (with incremental local cache)."""
 
 from __future__ import annotations
 
@@ -14,13 +14,13 @@ log = logging.getLogger(__name__)
 
 
 def fetch_index(client, lang: str) -> list[str]:
-    """Télécharge et décompresse ``index_<lang>.txt.lzma``.
+    """Downloads and decompresses ``index_<lang>.txt.lzma``.
 
-    Retourne la liste des noms hachés d'actifs (ex: ``ExportRecipes_en.json
-    !00_<hash>``).  Ne lève pas d'exception sur flux partiel.
+    Returns the list of hashed asset names (e.g. ``ExportRecipes_en.json
+    !00_<hash>``).  Does not raise on a partial stream.
     """
     url = f"{ORIGIN_BASE}/index_{lang}.txt.lzma"
-    log.info("Index %s : %s", lang, url)
+    log.info("Index %s: %s", lang, url)
     raw = client._http_get(url)
     text = decompress_lzma(raw)
     assets: list[str] = []
@@ -28,15 +28,15 @@ def fetch_index(client, lang: str) -> list[str]:
         line = line.strip()
         if not line:
             continue
-        # Nom d'actif attendu : ``Export<Cat>_<lang>.json!00_<hash>``.
-        # Une ligne sans digest (ex: flux LZMA tronqué en plein nom) ne
-        # désigne aucun contenu exploitable -> ignorée.
+        # Expected asset name: ``Export<Cat>_<lang>.json!00_<hash>``.
+        # A line without a digest (e.g. LZMA stream truncated mid-name)
+        # refers to no usable content -> skipped.
         name, marker, digest = line.partition("!00_")
         if not marker or not digest or not name:
-            log.warning("Ligne d'index invalide ignorée : '%s'.", line)
+            log.warning("Invalid index line ignored: '%s'.", line)
             continue
         assets.append(line)
-    log.info("Index %s : %d manifests découverts.", lang, len(assets))
+    log.info("Index %s: %d manifests found.", lang, len(assets))
     return assets
 
 
@@ -45,11 +45,11 @@ def asset_url(client, asset: str) -> str:
 
 
 def fetch_asset(client, lang: str, asset: str, force: bool = False) -> bytes | None:
-    """Récupère l'actif JSON haché, avec cache local par nom haché.
+    """Fetches the hashed JSON asset, with local cache by hashed name.
 
-    L'actif déjà présent dans le cache est réutilisé (hash content-addressed
-    : un contenu identique porte un nom identique).  Retourne ``None`` si
-    le téléchargement échoue (404/403) et que rien n'est en cache.
+    An asset already present in the cache is reused (content-addressed
+    hash: identical content has an identical name).  Returns ``None`` if
+    the download fails (404/403) and nothing is cached.
     """
     filename = sanitize_asset_filename(asset)
     cache_path = client.cache_dir / lang / filename
@@ -57,30 +57,30 @@ def fetch_asset(client, lang: str, asset: str, force: bool = False) -> bytes | N
     if cache_path.exists() and not force:
         cached = cache_path.read_bytes()
         if is_valid_asset_payload(cached, category):
-            log.debug("Cache %s : %s réutilisé.", lang, asset)
+            log.debug("Cache %s: %s reused.", lang, asset)
             return cached
-        log.warning("Cache corrompu pour %s/%s : re-téléchargement.",
+        log.warning("Corrupted cache for %s/%s: re-downloading.",
                     lang, asset)
     url = asset_url(client, asset)
     try:
         payload = client._http_get(url)
     except urllib.error.HTTPError as error:
-        log.warning("Actif indisponible %s (%s) : %s", asset, url,
+        log.warning("Asset unavailable %s (%s): %s", asset, url,
                     error.code)
         return None
     except urllib.error.URLError as error:
-        log.warning("Actif injoignable %s (%s) : %s", asset, url,
+        log.warning("Asset unreachable %s (%s): %s", asset, url,
                     error.reason)
         return None
-    # On ne met JAMAIS en cache un payload invalide (il serait réutilisé
-    # à l'infini par hash-addressing en masquant la corruption).
+    # We NEVER cache an invalid payload (it would be reused indefinitely
+    # by hash-addressing while masking corruption).
     if not is_valid_asset_payload(payload, category):
-        log.warning("Payload invalide pour %s (%s) : non mis en cache.",
+        log.warning("Invalid payload for %s (%s): not cached.",
                     asset, url)
         return payload
     cache_path.parent.mkdir(parents=True, exist_ok=True)
-    # Écriture atomique : un crash en plein write ne laisse pas un cache
-    # tronqué qui passerait la validation au prochain run.
+    # Atomic write: a crash mid-write leaves no truncated cache that would
+    # pass validation on the next run.
     temporary_path = cache_path.with_suffix(cache_path.suffix + ".tmp")
     temporary_path.write_bytes(payload)
     temporary_path.replace(cache_path)

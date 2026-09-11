@@ -1,16 +1,16 @@
-"""Buckets logiques par défaut (alignés sur le cahier des charges).
+"""Default logical buckets (aligned with the project specification).
 
-Le wiki officiel n'utilise pas exactement les noms du cahier des charges
+The official wiki does not use exactly the names from the specification
 (``Quests``, ``Kinemantik_Instant_Messenger``, ``Fables_&_Frontiers``, ...).
-Ses catégories réelles sont :
-  * Quêtes        -> ``Quest`` (+ ``Replayable Quests`` / ``Not Replayable Quests``)
-  * Personnages   -> ``Characters``
+Its real categories are:
+  * Quests        -> ``Quest`` (+ ``Replayable Quests`` / ``Not Replayable Quests``)
+  * Characters    -> ``Characters``
   * Factions      -> ``Factions``
-  * Citations     -> ``Quotes`` (429 pages : voix, transcripts, KIM, F&F)
-  * Lore générale -> ``Lore``
+  * Quotes        -> ``Quotes`` (429 pages: voices, transcripts, KIM, F&F)
+  * General lore  -> ``Lore``
 
-L'ordre compte : une page est réclamée par le PREMIER bucket qui l'accepte,
-ce qui évite les doublons entre megafiles.
+Order matters: a page is claimed by the FIRST bucket that accepts it,
+which avoids duplicates between megafiles.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ DEFAULT_BUCKETS: list[CategorySpec] = [
         categories=["Quotes"],
         prefix=["Kinemantik Instant Messenger/"],
         title_include=["Kinemantik Instant Messenger", "Fables & Frontiers"],
-        title_exclude=["Lettie", "The Hex", "SectionList"],
+        title_exclude=["The Hex", "SectionList"],
     ),
     CategorySpec(
         id="Lore_Characters",

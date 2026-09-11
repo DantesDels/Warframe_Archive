@@ -1,4 +1,4 @@
-"""Delta computation : quelles pages récupérer, sans rien écrire."""
+"""Delta computation: which pages to fetch, without writing anything."""
 
 from __future__ import annotations
 
@@ -15,15 +15,15 @@ __all__ = ["ScraperDeltaMixin"]
 
 
 class ScraperDeltaMixin:
-    """Calcule le delta (mode prévisualisation ``diff`` inclus)."""
+    """Computes the delta (``diff`` preview mode included)."""
 
     async def delta_plan(self, force: bool = False,
                          bucket_config=None) -> dict[str, list[str]]:
-        """Calcule le delta sans rien écrire (mode prévisualisation ``diff``).
+        """Computes the delta without writing anything (``diff`` preview mode).
 
-        Reproduit la résolution des buckets + la comparaison des ``touched``
-        sans télécharger les contenus ni écrire en base.  Retourne un mapping
-        ``bucket_id -> [titres à mettre à jour]``.
+        Reproduces bucket resolution + ``touched`` comparison without
+        downloading content or writing to the database.  Returns a mapping
+        ``bucket_id -> [titles to update]``.
         """
         buckets = bucket_config or self.buckets
         resolved_buckets = [
@@ -55,9 +55,9 @@ class ScraperDeltaMixin:
 
     async def _page_is_fresh(self, bucket_id: str, page_title: str,
                              touched: str | None) -> bool:
-        """Vrai si la page en base est déjà à jour (même ``touched``)."""
+        """True if the page in the database is already up-to-date (same ``touched``)."""
         if touched is None:
-            return False  # pas de référence : on (re)télécharge
+            return False  # no reference: we (re)download
         state = await self.db.fetch_sync_state(bucket_id)
         stored = state.get(page_title)
         return stored is not None and stored.get("touched") == touched

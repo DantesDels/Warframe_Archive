@@ -1,4 +1,4 @@
-"""Titres Wiki -> Markdown : reflow ``== X ==`` et abaissement des profonds."""
+"""Wiki headings -> Markdown: reflow ``== X ==`` and flatten deep levels."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ _HEADING_WIKI = re.compile(r"^(={2,})(.*?)(?:={2,}|$)", re.MULTILINE)
 
 
 def reflow_headings_to_markdown(wikitext: str) -> str:
-    """Convertit ``== Titre ==`` en ``## Titre`` (niveau limité à 6)."""
+    """Converts ``== Heading ==`` to ``## Heading`` (level capped at 6)."""
 
     def _heading_replacement(match: re.Match) -> str:
         heading_equals_count = match.group(1).count("=")
@@ -20,11 +20,11 @@ def reflow_headings_to_markdown(wikitext: str) -> str:
 
 
 def normalise_deep_headings(markdown_text: str) -> str:
-    """Abaisse les titres résiduels profonds (``#### X``) en titres ``## X``.
+    """Flattens deep residual headings (``#### X``) to ``## X``.
 
-    Le Wiki utilise des titres profonds (``==== Leaving without purchasing ====``)
-    pour découper les transcriptions ; ce sont de véritables titres de section,
-    pas du bruit.  On reflète le niveau à un titre lisible ``##``.
+    The Wiki uses deep headings (``==== Leaving without purchasing ====``)
+    to split transcriptions; these are real section headings, not noise.
+    We reflect the level to a readable ``##`` heading.
     """
     return re.sub(r"^#{3,}\s*", "## ", markdown_text, flags=re.MULTILINE)
 

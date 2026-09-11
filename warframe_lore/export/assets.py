@@ -1,4 +1,4 @@
-"""Helpers d'actifs : noms de fichier sûrs, validation, textes localisés."""
+"""Asset helpers: safe filenames, validation, localized text normalization."""
 
 from __future__ import annotations
 
@@ -9,33 +9,33 @@ log = logging.getLogger(__name__)
 
 
 def sanitize_asset_filename(asset: str) -> str:
-    """Nom de fichier sûr pour le cache local (``!00_`` etc. ne sont pas
-    valides sur tous les systèmes de fichiers)."""
+    """Safe filename for the local cache (``!00_`` etc. are not valid
+    on all filesystems)."""
     return asset.replace("!", "_").replace("/", "_").replace("\\", "_")
 
 
 def is_valid_asset_payload(payload: bytes, category: str) -> bool:
-    """Vrai si ``payload`` est un actif JSON exploitable.
+    """True if ``payload`` is a usable JSON asset.
 
-    Miroir de ce que ``extract_entities`` accepte : soit un objet dont la
-    clé ``category`` mène à une liste, soit une liste à la racine.  Une
-    réponse tronquée, vide ou d'une structure inattendue est considérée
-    invalide (à ne pas mettre en cache).
+    Mirrors what ``extract_entities`` accepts: either a dict whose
+    ``category`` key leads to a list, or a list at the root.  A
+    truncated, empty, or unexpected-structure response is considered
+    invalid (not to be cached).
     """
     try:
         data = json.loads(payload.decode("utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError) as error:
-        log.warning("JSON illisible (%s)", error)
+        log.warning("Unreadable JSON (%s)", error)
         return False
     entries = data.get(category) if isinstance(data, dict) else data
     return isinstance(entries, list)
 
 
 def as_text(value, *, default: str | None = None) -> str | None:
-    """Normalise un champ localisé (``str``, ``list[str]``, ``dict``, ``None``).
+    """Normalizes a localized field (``str``, ``list[str]``, ``dict``, ``None``).
 
-    Certains exports (mods de combos) portent ``description`` sous forme de
-    liste de fragments — on la joint en une chaîne lisible.
+    Some exports (combo mods) carry ``description`` as a list of fragments
+    -- we join them into a single readable string.
     """
     if value is None:
         return default
@@ -47,7 +47,7 @@ def as_text(value, *, default: str | None = None) -> str | None:
         joined = " ".join(part for part in parts if part)
         return joined or default
     if isinstance(value, dict):
-        # ``{"name": ...}`` localisé : on reprend le premier champ texte.
+        # ``{"name": ...}`` localized: take the first text field.
         for key in ("name", "value", "0"):
             if key in value:
                 return as_text(value[key], default=default)

@@ -1,8 +1,8 @@
-"""Façade de la résolution des buckets — préserve les imports historiques.
+"""Facade for bucket resolution — preserves legacy imports.
 
-La logique a été éclatée dans le sous-paquet ``buckets`` (``defaults``,
-``config``, ``catalog``).  L'ancienne API ``Categories`` ré-exporte ici les
-symboles publics pour ne pas casser les imports existants.
+The logic has been split into the ``buckets`` sub-package (``defaults``,
+``config``, ``catalog``).  The former ``Categories`` API re-exports the
+public symbols here so existing imports keep working.
 """
 
 from __future__ import annotations

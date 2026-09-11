@@ -1,4 +1,4 @@
-"""Entrée individuelle d'un megafile de sortie."""
+"""Individual entry in a JSON megafile."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from .canon_status import CanonStatus
 
 @dataclass
 class OutputEntry:
-    """Une entrée du megafile de sortie (schéma JSON documenté)."""
+    """An entry in the output megafile (documented JSON schema)."""
 
     page_title: str
     category: str
@@ -21,7 +21,7 @@ class OutputEntry:
     extra: dict = field(default_factory=dict)
 
     def to_json_dict(self) -> dict:
-        """Sérialise vers le dict conforme au schéma de sortie."""
+        """Serializes to a dict conforming to the output schema."""
         payload = {
             "page_title": self.page_title,
             "category": self.category,

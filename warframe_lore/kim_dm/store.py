@@ -1,8 +1,8 @@
-"""KimDM — accès en mémoire aux conversations d'un miroir de datamine local.
+"""KimDM — in-memory access to conversations from a local datamine mirror.
 
-Responsabilité unique : charger ``out/kim_dm`` (fichiers natifs ``data/`` +
-dictionnaires ``dicts/``) et exposer conversations/graphes par personnage wiki
-(``conversations_for``/``conversation``/``graph``) ainsi que la disponibilité.
+Single responsibility: load ``out/kim_dm`` (native ``data/`` files +
+``dicts/`` dictionaries) and expose conversations/graphs per wiki character
+(``conversations_for``/``conversation``/``graph``) plus availability.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from warframe_lore.kim_dm.parser import parse_dialogue_file
 
 
 class KimDM:
-    """Graphes KIM reconstruits depuis un miroir de datamine local."""
+    """KIM graphs reconstructed from a local datamine mirror."""
 
     def __init__(self, data_dir: Path, dicts_dir: Path) -> None:
         self.data_dir = Path(data_dir)
@@ -29,12 +29,12 @@ class KimDM:
         self._store: dict[str, dict[str, Any]] = {}
         self.load()
 
-    # ------------------------------------------------------------- miroir
+    # ------------------------------------------------------------- mirror
     def available(self) -> bool:
         return bool(self._store)
 
     def conversations_for(self, wiki_character: str) -> list[dict] | None:
-        """Conversations (résumé) d'un personnage exposé, ``None`` sinon."""
+        """Conversations (summary) of an exposed character, ``None`` otherwise."""
         data = self._store.get(wiki_character)
         if not data:
             return None
@@ -54,8 +54,8 @@ class KimDM:
         return None
 
     def graph(self, wiki_character: str, conv: str | None = None) -> dict | None:
-        """Graphe d'une conversation (ou union de toute la page) — None si
-        le personnage n'est pas couvert par le miroir."""
+        """Graph of a conversation (or union of the whole page) — None if the
+        character is not covered by the mirror."""
         data = self._store.get(wiki_character)
         if not data:
             return None
@@ -66,9 +66,9 @@ class KimDM:
         return _anchor_graph(merged["nodes"], merged["edges"],
                              f"{wiki_character} — conversations")
 
-    # -------------------------------------------------------------- disque
+    # -------------------------------------------------------------- disk
     def load(self) -> None:
-        """Recharge le miroir (conversations + dict) depuis le disque."""
+        """Reload the mirror (conversations + dict) from disk."""
         self._store = {}
         text: dict[str, str] = {}
         for lang in ("en", "fr"):

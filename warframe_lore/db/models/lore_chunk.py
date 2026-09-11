@@ -1,4 +1,4 @@
-"""Paragraphe/section découpé du contenu nettoyé (préparation RAG)."""
+"""Paragraph/section split from the cleaned content (RAG preparation)."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from .wiki_page import WikiPage
 
 
 class LoreChunk(Base):
-    """Paragraphe/section découpé du contenu nettoyé (préparation RAG)."""
+    """Paragraph/section split from the cleaned content (RAG preparation)."""
 
     __tablename__ = "lore_chunks"
 
@@ -36,22 +36,24 @@ class LoreChunk(Base):
         nullable=False)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     content_markdown: Mapped[str] = mapped_column(Text, nullable=False)
-    # Métadonnées JSONB (Phase 2.5) : hiérarchie des titres Markdown
-    # (Header 1/2/3) + locuteurs pour les dialogues.  Stockées en JSONB sur
-    # PostgreSQL (JSON générique sur les autres dialectes pour les tests),
-    # indexées GIN pour le filtrage pré-vectoriel.
-    # NB : l'attribut Python s'appelle `chunk_metadata` car `metadata` est
-    # réservé par SQLAlchemy (MetaData du schéma) ; la colonne DB reste
+    # JSONB metadata (Phase 2.5): Markdown heading hierarchy
+    # (Header 1/2/3) + speakers for dialogues.  Stored as JSONB on
+    # PostgreSQL (generic JSON on other dialects for tests), GIN-indexed
+    # for pre-vector filtering.
+    # NB: the Python attribute is named `chunk_metadata` because `metadata`
+    # is reserved by SQLAlchemy (schema MetaData); the DB column stays
     # `metadata`.
     chunk_metadata: Mapped[dict] = mapped_column(
         "metadata",
         JSON().with_variant(JSONB, "postgresql"),
         nullable=False, default=dict, server_default="{}")
-    # Colonne vector(384) — nullable jusqu'à ce qu'un modèle d'embedding la
-    # remplisse.  Le type pgvector (via le paquet 'pgvector') permet de faire
-    # des recherches de similarité (cosine ops) directement en SQL.
+    # vector(1024) column — nullable until an embedding model fills it.
+    # 1024 = actual dimension of the BGE-M3 GGUF model served by
+    # LM Studio ("baai-bge-m3-568m"), aligned with init_db.sql.  The
+    # pgvector type (via the 'pgvector' package) enables similarity search
+    # (cosine ops) directly in SQL.
     embedding: Mapped[Optional[object]] = mapped_column(
-        Vector(384), nullable=True)
+        Vector(1024), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -60,7 +62,7 @@ class LoreChunk(Base):
     __table_args__ = (
         UniqueConstraint("wiki_page_id", "chunk_index",
                          name="uq_lore_chunks_page_index"),
-        # Parité avec init_db.sql.
+        # Parity with init_db.sql.
         Index("idx_chunks_page", "wiki_page_id"),
         Index("idx_chunks_metadata", "metadata", postgresql_using="gin"),
         Index("idx_chunks_embedding", "embedding",

@@ -1,8 +1,8 @@
-"""Projections de consultation d'un ``_DialogueFile`` : graphe/messages/script.
+"""Read-only projections of a ``_DialogueFile``: graph/messages/script.
 
-Fonctions pures prenant le parseur en argument (aucun état partagé).  Les
-parcours sont itératifs — pas de plafond de profondeur ni de récursion Python
-sur les cycles du graphe natif.
+Pure functions taking the parser as an argument (no shared state). The
+traversals are iterative — no depth cap nor Python recursion on cycles of
+the native graph.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 def build_graph(parser: "_DialogueFile", start: dict) -> dict:
-    """Graphe complet atteignable depuis un nœud de départ natif."""
+    """Full graph reachable from a native start node."""
     visible: dict[int, dict] = {}
     edges: list[dict] = []
     stack = [start["Id"]]
@@ -32,7 +32,7 @@ def build_graph(parser: "_DialogueFile", start: dict) -> dict:
 
 
 def build_messages(parser: "_DialogueFile", start: dict) -> list[dict]:
-    """DFS itératif des répliques, sans plafond ni récursion sur les cycles."""
+    """Iterative DFS of the replies, no cap nor recursion on cycles."""
     lines: list[dict] = []
     visited: set[int] = set()
     stack = [start["Id"]]
@@ -50,8 +50,8 @@ def build_messages(parser: "_DialogueFile", start: dict) -> list[dict]:
                               "speaker": visible["speaker"],
                               "text": visible["text"],
                               "player": visible["player"],
-                              # Une entrée = une réplique : découpé par
-                              # le front pour aérer l'affichage du chat.
+                              # One entry = one reply: split by
+                              # the front to space out the chat display.
                               "lines": [ln.strip() for ln in
                                         visible["text"].split("\n")
                                         if ln.strip()]})
@@ -61,10 +61,10 @@ def build_messages(parser: "_DialogueFile", start: dict) -> list[dict]:
 
 
 def build_script(parser: "_DialogueFile", start: dict) -> list[dict]:
-    """Projection linéaire existante : première branche, choix en prompt.
+    """Existing linear projection: first branch, choices as prompts.
 
-    Les actions sont traversées, jamais émises comme répliques PNJ.
-    Aucun état ni résultat de condition n'est simulé.
+    Actions are traversed, never emitted as NPC replies.
+    No state nor condition result is simulated.
     """
     steps: list[dict] = []
     visited: set[int] = set()
@@ -94,7 +94,7 @@ def build_script(parser: "_DialogueFile", start: dict) -> list[dict]:
                     options.append({"text": text, "ends": False})
             steps.append({"kind": "prompt", "options": options or None,
                           "ends": False, "jump_to": None})
-            # La continuation suit toujours le premier choix, sans état.
+            # The continuation always follows the first choice, without state.
             children = [choices[0]["Id"]]
         if not children:
             if steps:

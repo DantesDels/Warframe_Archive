@@ -1,6 +1,6 @@
-"""Entités localisées du jeu (``game_entities_i18n``) : upsert + stats.
+"""Localized game entities (``game_entities_i18n``): upsert + stats.
 
-Mixin de ``SQLDatabaseManager`` — issue du Warframe Public Export.
+Mixin of ``SQLDatabaseManager`` — from the Warframe Public Export.
 """
 
 from __future__ import annotations
@@ -16,20 +16,20 @@ log = logging.getLogger("warframe_lore.db")
 
 
 class SQLEntitiesMixin:
-    """Upsert des entités localisées + comptage de diagnostic."""
+    """Upsert of localized entities + diagnostic count."""
 
     async def upsert_game_entities(
         self, entities: list[tuple[str, str | None, str, str, str | None]],
     ) -> int:
-        """Upsert d'entités localisées dans ``game_entities_i18n``.
+        """Upserts localized entities into ``game_entities_i18n``.
 
         Args:
             entities: tuples ``(entity_id, entity_type, lang, name, description)``.
-                L'upsert se fait sur ``(entity_id, lang)`` — mise à jour du nom,
-                de la description et refresh de ``updated_at``.
+                The upsert keys on ``(entity_id, lang)`` — updates the name,
+                the description and refreshes ``updated_at``.
 
         Returns:
-            Nombre de lignes upsertées.
+            Number of upserted rows.
         """
         if not entities:
             return 0
@@ -38,8 +38,8 @@ class SQLEntitiesMixin:
         async with session_factory() as session:
             async with session.begin():
                 written = 0
-                # asyncpg plafonne le nombre de paramètres par requête (32767).
-                # 5 colonnes/ligne -> lots de 2500 lignes (12500 params).
+                # asyncpg caps the number of parameters per query (32767).
+                # 5 columns/row -> batches of 2500 rows (12500 params).
                 for start in range(0, len(entities), 2500):
                     batch = entities[start:start + 2500]
                     payload = [
@@ -67,7 +67,7 @@ class SQLEntitiesMixin:
         return written
 
     async def count_game_entities(self) -> tuple[int, set[str]]:
-        """Stats : nombre de lignes et langues présentes (diagnostic)."""
+        """Stats: number of rows and present languages (diagnostic)."""
         session_factory = self._require_session_factory()
         async with session_factory() as session:
             langs = set((await session.execute(

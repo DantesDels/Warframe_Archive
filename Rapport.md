@@ -1,73 +1,73 @@
-# Rapport d'audit technique : Cephalon Archive
+# Technical Audit Report: Cephalon Archive
 
-**L'enjeu prioritaire est la fidélité des données, avant l'optimisation vectorielle ou la conteneurisation.** Plusieurs comportements actuels peuvent conserver des archives obsolètes, classer une spéculation comme canon ou produire un parcours KIM incorrect.
+**The top priority is data fidelity, ahead of vector optimization or containerization.** Several current behaviors can retain obsolete archives, classify speculation as canon, or produce an incorrect KIM flow.
 
-Audit du commit `28baaab`, branche locale `dev`, sans modification du projet pendant l'audit. Les exemples ci-dessous sont des corrections proposées, pas des changements appliqués.
+Audit of commit `28baaab`, local branch `dev`, with no project modifications during the audit. The examples below are proposed corrections, not applied changes.
 
-## Constats prioritaires
+## Priority Findings
 
-`P1` : à corriger avant de considérer le corpus fiable pour un RAG. `P2` : robustesse, sécurité ou UX à traiter avant une diffusion plus large. Aucun incident de compromission n'a été constaté.
+`P1`: must be fixed before considering the corpus reliable for RAG. `P2`: robustness, security or UX to address before wider distribution. No compromise incident was observed.
 
-### 1. P1 : La synchronisation SQL/JSON peut diverger
+### 1. P1: SQL/JSON Synchronization Can Diverge
 
-Références : [scraper.py:173](warframe_lore/scraper.py#L173), [scraper.py:281](warframe_lore/scraper.py#L281), [writer.py:55](warframe_lore/output/writer.py#L55), [manager.py:295](warframe_lore/db/manager.py#L295).
+References: [scraper.py:173](warframe_lore/scraper.py#L173), [scraper.py:281](warframe_lore/scraper.py#L281), [writer.py:55](warframe_lore/output/writer.py#L55), [manager.py:295](warframe_lore/db/manager.py#L295).
 
-Le traitement actuel suit cet ordre :
+The current processing follows this order:
 
 ```text
-Écriture SQL → validation du delta SQL → publication JSON du bucket
+SQL Write → SQL Delta Validation → JSON Bucket Publication
 ```
 
-Si la publication JSON échoue, le prochain lancement considère néanmoins la page comme synchronisée. Le JSON peut rester ancien indéfiniment.
+If JSON publication fails, the next run nevertheless considers the page as synchronized. The JSON can remain stale indefinitely.
 
-Deux problèmes connexes existent :
+Two related issues exist:
 
-- La fusion JSON est additive : une page retirée d'un bucket reste dans son ancien megafile.
-- `purge_vanished_pages()` efface l'état de synchronisation, pas la page SQL ni ses dérivés.
+- JSON merge is additive: a page removed from a bucket remains in its old megafile.
+- `purge_vanished_pages()` deletes the synchronization state, not the SQL page or its derivatives.
 
-**Correction minimale :** acquitter la synchronisation seulement après publication réussie, et réconcilier les affectations avec un inventaire complet.
+**Minimal fix:** acknowledge synchronization only after successful publication, and reconcile assignments with a complete inventory.
 
-**Architecture préférable :** PostgreSQL devient la source de vérité ; les megafiles deviennent une projection régénérable, indépendamment du delta réseau.
+**Preferable architecture:** PostgreSQL becomes the single source of truth; megafiles become a regenerable projection, independent of network delta.
 
 ```python
-# Pseudocode : contrats proposés, absents actuellement.
+# Pseudocode: proposed contracts, currently absent.
 async with repository.transaction() as tx:
     await tx.upsert_page(page)
     await tx.record_revision(page)
     await tx.mark_bucket_dirty(bucket_id)
 
-# Exécuté aussi lorsqu'aucune page ne nécessite de téléchargement.
+# Executed also when no page requires downloading.
 for bucket_id in await repository.dirty_buckets():
     snapshot = await repository.bucket_snapshot(bucket_id)
     publisher.publish_atomically(snapshot)
     await repository.mark_published(bucket_id, snapshot.revision)
 ```
 
-Le marquage final doit être conditionné à la révision publiée : une modification concurrente ne doit pas être acquittée par erreur.
+The final marking must be conditioned on the published revision: a concurrent modification must not be acknowledged by mistake.
 
-Pour les disparitions, choisir explicitement entre suppression du corpus courant et conservation historique avec `retired_at`. Ne jamais déduire une suppression d'une résolution de catégories partielle ou échouée.
+For disappearances, explicitly choose between deleting the current corpus and historical retention with `retired_at`. Never infer a deletion from a partial or failed category resolution.
 
-### 2. P1 : Le classement canonique contredit son contrat
+### 2. P1: Canon Ranking Contradicts Its Contract
 
-Références : [output/models.py:34](warframe_lore/output/models.py#L34), [scraper.py:106](warframe_lore/scraper.py#L106), [cleaner/pipeline.py:199](warframe_lore/cleaner/pipeline.py#L199).
+References: [output/models.py:34](warframe_lore/output/models.py#L34), [scraper.py:106](warframe_lore/scraper.py#L106), [cleaner/pipeline.py:199](warframe_lore/cleaner/pipeline.py#L199).
 
-Trois défauts sont identifiés :
+Three defects are identified:
 
-- Les priorités augmentent avec l'incertitude, mais `merge_canon_status()` utilise `min()`.
-- La présence simultanée de signaux canon et spéculatif aboutit à `canon`.
-- Les templates spéculatifs imbriqués ne sont pas détectés par le parcours de premier niveau.
+- Priorities increase with uncertainty, but `merge_canon_status()` uses `min()`.
+- The simultaneous presence of canon and speculative signals results in `canon`.
+- Nested speculative templates are not detected by the first-level traversal.
 
-Résultat reproduit :
+Reproduced result:
 
 ```python
 merge_canon_status(CanonStatus.CANON, CanonStatus.SPECULATION)
-# Actuel : CanonStatus.CANON
+# Current: CanonStatus.CANON
 ```
 
-Corrections ciblées :
+Targeted corrections:
 
 ```python
-# output/models.py : conserver le traitement existant du cas vide.
+# output/models.py: keep the existing empty-case handling.
 return max(present, key=lambda status: _CANON_PRIORITY[status])
 
 # scraper.py
@@ -75,29 +75,29 @@ if page_level_speculative or inline_non_canon:
     return CanonStatus.SPECULATION
 return CanonStatus.CANON
 
-# pipeline.py : détecter avant de remplacer/aplatir les templates.
+# pipeline.py: detect before replacing/flattening templates.
 non_canon_detected = any(
     must_flag_non_canon(node, self.cleaner_config)
     for node in parsed.filter_templates(recursive=True)
 )
 ```
 
-À terme, une page peut contenir plusieurs niveaux de fiabilité. Conserver un statut prudent au niveau page et une provenance précise par section/chunk évitera de rejeter tout un article pour un seul passage spéculatif.
+Long-term, a page can contain multiple reliability levels. Retaining a cautious page-level status with a precise provenance per section/chunk will avoid discarding an entire article for a single speculative passage.
 
-### 3. P1 : Le graphe KIM perd sa sémantique
+### 3. P1: KIM Graph Loses Its Semantics
 
-Références : [cleaner/pipeline.py:144](warframe_lore/cleaner/pipeline.py#L144), [chunker.py:43](warframe_lore/db/chunker.py#L43), [server.py:747](warframe_lore/ui/server.py#L747), [app.js:775](warframe_lore/ui/static/app.js#L775).
+References: [cleaner/pipeline.py:144](warframe_lore/cleaner/pipeline.py#L144), [chunker.py:43](warframe_lore/db/chunker.py#L43), [server.py:747](warframe_lore/ui/server.py#L747), [app.js:775](warframe_lore/ui/static/app.js#L775).
 
-Les conditions `{If ...}`, marqueurs `{P1}` et certains renvois sont supprimés **avant stockage**. Ce qui devait être masqué en mode RP disparaît donc aussi de la représentation exploitable par le RAG.
+The `{If ...}` conditions, `{P1}` markers and some redirects are deleted **before storage**. What was meant to be hidden in RP mode also disappears from the representation usable by RAG.
 
-Le graphe reconstruit comporte également des erreurs vérifiées :
+The reconstructed graph also contains verified errors:
 
-- Un choix terminal reçoit une arête vers la réplique suivante.
-- Une arête directe PNJ → PNJ permet de contourner les choix.
-- Le simulateur ignore `option.ends`.
-- Une étape portant `jump_to` est sautée avant affichage de sa propre réplique.
+- A terminal choice receives an edge to the next line.
+- A direct NPC → NPC edge allows bypassing choices.
+- The simulator ignores `option.ends`.
+- A step with `jump_to` is skipped before displaying its own line.
 
-**Correction architecturale : parser une fois, produire plusieurs vues.**
+**Architectural fix: parse once, produce multiple views.**
 
 ```python
 from dataclasses import dataclass
@@ -112,9 +112,9 @@ class DialogueNode:
     terminal: bool
 ```
 
-La vue RP affiche `text`. Le simulateur et le RAG utilisent aussi `conditions` et `next_ids`. Les destinations non résolues doivent être signalées, pas remplacées silencieusement par un flux séquentiel.
+The RP view displays `text`. The simulator and RAG also use `conditions` and `next_ids`. Unresolved destinations must be flagged, not silently replaced by a sequential flow.
 
-Invariants à imposer :
+Invariants to enforce:
 
 ```python
 assert all(edge["target"] in nodes_by_id for edge in edges)
@@ -124,7 +124,7 @@ assert not any(
 )
 ```
 
-Correctif immédiat du choix terminal :
+Immediate fix for the terminal choice:
 
 ```javascript
 appendSimBubble({ ...option, speaker: "", player: true });
@@ -136,26 +136,26 @@ kimSimState.cursor++;
 simNext();
 ```
 
-Cela ne suffit pas à reconstruire les branches perdues. Les pages déjà nettoyées devront être retraitées depuis une source conservant leurs annotations.
+This is not enough to reconstruct the lost branches. Pages already cleaned will need to be reprocessed from a source that retains their annotations.
 
-### 4. P1 : Le chunking dialogue ne respecte pas toujours ses bornes
+### 4. P1: Dialogue Chunking Does Not Always Respect Its Bounds
 
-Référence : [chunker.py:218–256](warframe_lore/db/chunker.py#L218).
+Reference: [chunker.py:218–256](warframe_lore/db/chunker.py#L218).
 
-Une réplique synthétique de 6 012 caractères produit :
+A synthetic line of 6,012 characters produces:
 
 ```text
 [2500, 2500, 1512, 6012]
 ```
 
-Elle est découpée, puis réémise intégralement. Placée après une courte réplique, elle contourne le fallback et reste entière.
+It is split, then re-emitted in full. Placed after a short line, it bypasses the fallback and remains whole.
 
-**Nuance :** ce défaut n'a pas été déclenché par les 843 chunks KIM recalculés sur le corpus local ; leur maximum observé est 2 499 caractères.
+**Nuance:** this defect was not triggered by the 843 KIM chunks recalculated on the local corpus; their observed maximum is 2,499 characters.
 
-Traiter les longues lignes avant le débordement ordinaire corrige les deux chemins :
+Processing long lines before the ordinary overflow fixes both paths:
 
 ```python
-# À placer avant le traitement ordinaire de la ligne.
+# Place before the ordinary line treatment.
 if len(line) > max_characters:
     if chunk_lines:
         chunks.append(RAGChunk(
@@ -173,31 +173,31 @@ if len(line) > max_characters:
     continue
 ```
 
-Autres limites du mode dialogue : il court-circuite la passe par titres et n'applique pas de chevauchement textuel entre les chunks ordinaires. Les locuteurs, eux, s'accumulent, même lorsqu'ils ne figurent plus dans le texte émis.
+Other limitations of dialogue mode: it bypasses the headings pass and does not apply textual overlap between ordinary chunks. Speakers, however, accumulate even when they no longer appear in the emitted text.
 
-La correction durable consiste à découper d'abord par conversation/section, puis par tours de parole, avec un chevauchement de tours réellement conservés.
+The lasting fix is to split first by conversation/section, then by turns of speech, with overlap of actually retained turns.
 
-### 5. P1 : Une regex présente un coût polynomial élevé
+### 5. P1: A Regex Has High Polynomial Cost
 
-Références : [cleaner/pipeline.py:88](warframe_lore/cleaner/pipeline.py#L88), avec variantes dans `chunker.py`, `server.py` et `app.js`.
+References: [cleaner/pipeline.py:88](warframe_lore/cleaner/pipeline.py#L88), with variants in `chunker.py`, `server.py` and `app.js`.
 
-Le préfixe suivant permet plusieurs répartitions concurrentes des mêmes espaces :
+The following prefix allows multiple concurrent distributions of the same spaces:
 
 ```regex
 ^>\s*\*{0,3}\s*>?\s*
 ```
 
-Sur l'entrée `">" + " " * n + "X"`, le nettoyage complet a pris environ :
+On the input `">" + " " * n + "X"`, complete cleaning took approximately:
 
-| Espaces | Temps |
+| Spaces | Time |
 |---:|---:|
-| 100 | 0,006 s |
-| 200 | 0,035 s |
-| 400 | 0,275 s |
+| 100 | 0.006 s |
+| 200 | 0.035 s |
+| 400 | 0.275 s |
 
-La croissance est compatible avec un coût cubique. C'est un risque crédible de blocage sur contenu wiki adversarial, **pas une preuve d'attaque constatée**.
+The growth is consistent with cubic cost. This is a credible blocking risk on adversarial wiki content, **not a confirmed observed attack**.
 
-Remplacer le préfixe ambigu par :
+Replace the ambiguous prefix with:
 
 ```python
 prefix = (
@@ -207,9 +207,9 @@ prefix = (
 )
 ```
 
-Les espaces optionnels suivent alors un marqueur effectivement consommé. Ajouter des tests sur les quatre variantes et des budgets de taille d'entrée.
+The optional spaces then follow an effectively consumed marker. Add tests for the four variants and input size budgets.
 
-Plus généralement, employer l'AST pour les structures imbriquées et réserver les regex aux transformations locales. Par exemple, l'ordre actuel enlève les balises HTML avant de supprimer certains blocs de code ; leur contenu subsiste. Correction immédiate :
+More generally, use the AST for nested structures and reserve regexes for local transformations. For example, the current order removes HTML tags before deleting certain code blocks; their content persists. Immediate fix:
 
 ```python
 text = strip_wikitext_comments(wikitext)
@@ -217,77 +217,77 @@ text = strip_tables_and_code_blocks(text)
 text = convert_html_tags(text)
 ```
 
-### 6. P1 : Le Public Export n'est pas vérifié comme annoncé
+### 6. P1: Public Export Is Not Verified as Claimed
 
-Références : [export.py:37](warframe_lore/export.py#L37), [export.py:64](warframe_lore/export.py#L64), [export.py:159](warframe_lore/export.py#L159).
+References: [export.py:37](warframe_lore/export.py#L37), [export.py:64](warframe_lore/export.py#L64), [export.py:159](warframe_lore/export.py#L159).
 
-La séparation des responsabilités est correcte :
+The separation of responsibilities is correct:
 
 ```text
-Origin HTTPS → index compressé
-Content      → manifests désignés par l'index
+Origin HTTPS → compressed index
+Content      → manifests designated by the index
 ```
 
-En revanche :
+However:
 
-- Les manifests sont téléchargés en **HTTP**.
-- Le suffixe hash sert de clé de cache ; aucune vérification des octets contre ce digest n'est effectuée.
-- Un cache existant est accepté sans validation et écrit directement avant parsing.
-- Un index LZMA tronqué peut produire un nom incomplet accepté comme asset.
+- Manifests are downloaded over **HTTP**.
+- The hash suffix serves as a cache key; no verification of bytes against this digest is performed.
+- An existing cache is accepted without validation and written directly before parsing.
+- A truncated LZMA index can produce an incomplete name accepted as an asset.
 
-Exemple reproduit après troncature d'un flux synthétique :
+Reproduced example after truncation of a synthetic stream:
 
 ```text
 ExportWeapons_en.json!00_
 ```
 
-**Le nom content-addressed n'est pas, à lui seul, une preuve d'intégrité.**
+**The content-addressed name alone is not proof of integrity.**
 
-Correction du contrat de téléchargement :
+Download contract fix:
 
 ```python
-# Pseudocode : validation obligatoire avant publication du cache.
+# Pseudocode: mandatory validation before cache publication.
 payload = fetch_authenticated(asset_url)
 document = json.loads(payload.decode("utf-8"))
 
 if not isinstance(document, dict):
-    raise ValueError("Manifest invalide")
+    raise ValueError("Invalid manifest")
 if not isinstance(document.get(category), list):
-    raise ValueError("Categorie absente ou invalide")
+    raise ValueError("Missing or invalid category")
 
 verify_provider_digest(payload, expected_digest)
 atomic_cache_write(cache_path, payload)
 ```
 
-`verify_provider_digest()` nécessite de documenter l'algorithme réel du fournisseur ; il ne faut pas supposer arbitrairement SHA-256. Le support HTTPS de l'endpoint Content doit également être vérifié avant modification, ce qui n'a pas été fait pendant cet audit.
+`verify_provider_digest()` requires documenting the actual algorithm of the provider; SHA-256 must not be assumed arbitrarily. HTTPS support of the Content endpoint must also be verified before modification, which was not done during this audit.
 
-Pour LZMA, une politique stricte bornée serait :
+For LZMA, a strict bounded policy would be:
 
 ```python
-limit = 2 * 1024 * 1024  # Budget d'index à calibrer.
+limit = 2 * 1024 * 1024  # Index budget to calibrate.
 decoder = lzma.LZMADecompressor(
     format=lzma.FORMAT_ALONE,
     memlimit=64 * 1024 * 1024,
 )
 decoded = decoder.decompress(raw, max_length=limit + 1)
 if len(decoded) > limit or not decoder.eof:
-    raise ValueError("Index trop grand ou incomplet")
+    raise ValueError("Index too large or incomplete")
 ```
 
-Si l'absence d'EOF est une particularité fournisseur confirmée, prévoir une exception explicite avec validation des lignes complètes et des catégories attendues, plutôt qu'accepter indistinctement tout préfixe décodé.
+If the absence of EOF is a confirmed provider-specific behavior, provide an explicit exception with validation of complete lines and expected categories, rather than indiscriminately accepting any decoded prefix.
 
-### 7. P1 : La persistance RAG est incomplète et destructive
+### 7. P1: RAG Persistence Is Incomplete and Destructive
 
-Références : [models.py:96](warframe_lore/db/models.py#L96), [manager.py:158](warframe_lore/db/manager.py#L158), [init_db.sql:72](init_db.sql#L72).
+References: [models.py:96](warframe_lore/db/models.py#L96), [manager.py:158](warframe_lore/db/manager.py#L158), [init_db.sql:72](init_db.sql#L72).
 
-**Manque fonctionnel :** `embedding vector(384)` existe, mais le pipeline audité ne calcule ni n'insère de vecteurs. Aucune recherche vectorielle n'est raccordée à l'interface.
+**Functional gap:** `embedding vector(384)` exists, but the audited pipeline neither computes nor inserts vectors. No vector search is wired to the interface.
 
-**Défaut de cycle de vie :** chaque upsert supprime et recrée les chunks. Tout embedding ajouté extérieurement serait perdu, même pour un texte inchangé.
+**Lifecycle defect:** every upsert deletes and recreates chunks. Any externally added embedding would be lost, even for unchanged text.
 
-Préserver les enrichissements seulement lorsque leur entrée reste identique :
+Preserve enrichments only when their entry remains identical:
 
 ```sql
--- Fragment d'upsert des chunks.
+-- Fragment of chunk upsert.
 ON CONFLICT (wiki_page_id, chunk_index) DO UPDATE
 SET content_markdown = EXCLUDED.content_markdown,
     metadata = EXCLUDED.metadata,
@@ -300,9 +300,9 @@ SET content_markdown = EXCLUDED.content_markdown,
     END;
 ```
 
-Supprimer ensuite les indices disparus. À terme, comparer l'empreinte du texte réellement encodé et la version du modèle, plutôt que toutes les métadonnées.
+Then delete orphaned indices. Long-term, compare the fingerprint of the actually encoded text with the model version, rather than all metadata.
 
-**Divergence ORM/DDL :** le SQL déclare GIN, HNSW et l'unicité du titre ; les modèles ne les reproduisent pas. Ce n'est pas une preuve que la base déployée manque d'index, mais deux modes d'initialisation peuvent produire deux schémas différents.
+**ORM/DDL Divergence:** the SQL declares GIN, HNSW and title uniqueness; the models do not reproduce them. This is not proof that the deployed database lacks indexes, but two initialization modes can produce two different schemas.
 
 ```python
 Index("idx_wiki_pages_title", WikiPage.page_title, unique=True)
@@ -313,15 +313,15 @@ Index("idx_chunks_embedding", LoreChunk.embedding,
       postgresql_ops={"embedding": "vector_cosine_ops"})
 ```
 
-Une procédure de migrations versionnées doit devenir la référence, avec test de cohérence du modèle.
+A versioned migrations procedure must become the reference, with model consistency testing.
 
-### 8. P2 : Le bootstrap frontend réinstalle les événements
+### 8. P2: Frontend Bootstrap Reinstalls Events
 
-Références : [app.js:1110](warframe_lore/ui/static/app.js#L1110), [app.js:1178](warframe_lore/ui/static/app.js#L1178), [app.js:554](warframe_lore/ui/static/app.js#L554).
+References: [app.js:1110](warframe_lore/ui/static/app.js#L1110), [app.js:1178](warframe_lore/ui/static/app.js#L1178), [app.js:554](warframe_lore/ui/static/app.js#L554).
 
-Le bouton Recharger rappelle `init()`, qui ajoute de nouveaux listeners anonymes aux éléments persistants. Après un rechargement, le burger peut effectuer deux inversions successives et sembler ne plus fonctionner.
+The Reload button calls `init()`, which adds new anonymous listeners to persistent elements. After a reload, the burger can perform two successive invocations and appear to stop working.
 
-Correction minimale :
+Minimal fix:
 
 ```javascript
 $("#btn-reload").addEventListener("click", () => {
@@ -329,16 +329,16 @@ $("#btn-reload").addEventListener("click", () => {
 });
 ```
 
-Pour un rafraîchissement sans navigation, séparer installation unique des événements et rechargement des données.
+For a refresh without navigation, separate one-time event installation from data reloading.
 
-Les rendus asynchrones présentent aussi une course : ouvrir A puis B peut laisser une réponse tardive de A écraser le contenu de B.
+Asynchronous renders also present a race condition: opening A then B can leave a late response from A overwriting B's content.
 
 ```javascript
 let routeEpoch = 0;
 
 function handleRoute() {
   const epoch = ++routeEpoch;
-  // Transmettre epoch au rendu choisi par le routeur.
+  // Pass epoch to the route-chosen render.
 }
 
 async function renderPage(bucketId, title, epoch) {
@@ -346,24 +346,24 @@ async function renderPage(bucketId, title, epoch) {
     `/api/page?bucket=${encodeURIComponent(bucketId)}&title=${encodeURIComponent(title)}`
   );
   if (epoch !== routeEpoch) return;
-  // Appliquer le rendu uniquement après cette garde.
+  // Apply render only after this guard.
 }
 ```
 
-Appliquer le même principe aux erreurs, suggestions et changements d'onglets, avec annulation éventuelle via `AbortController`. Une migration Vue ne supprimerait pas automatiquement ces courses.
+Apply the same principle to errors, suggestions and tab changes, with optional cancellation via `AbortController`. A Vue migration would not automatically remove these races.
 
-### 9. P2 : Le cache ne garantit ni cohérence ni fraîcheur
+### 9. P2: Cache Guarantees Neither Consistency Nor Freshness
 
-Références : [server.py:103](warframe_lore/ui/server.py#L103), [app.js:62](warframe_lore/ui/static/app.js#L62).
+References: [server.py:103](warframe_lore/ui/server.py#L103), [app.js:62](warframe_lore/ui/static/app.js#L62).
 
-Le serveur recharge tous les fichiers à échéance sans verrou et publie `_buckets` puis `_pages` séparément. Des requêtes concurrentes peuvent travailler sur des générations différentes.
+The server reloads all files at expiry without a lock and publishes `_buckets` then `_pages` separately. Concurrent requests may work on different generations.
 
-Inversement, le navigateur conserve les réponses dans une `Map` sans expiration : `Cache-Control: no-store` ne purge pas ce cache applicatif.
+Conversely, the browser retains responses in a `Map` without expiration: `Cache-Control: no-store` does not purge this application cache.
 
-Contrat serveur recommandé :
+Recommended server contract:
 
 ```python
-# Pseudocode : les lecteurs capturent une seule référence.
+# Pseudocode: readers capture a single reference.
 with self._reload_lock:
     if time.monotonic() < self._next_reload:
         return
@@ -372,9 +372,9 @@ with self._reload_lock:
     self._next_reload = time.monotonic() + 5
 ```
 
-Conserver le dernier snapshot valide en cas d'échec. Pour garantir la cohérence entre plusieurs megafiles, publier une génération complète puis basculer un manifeste de référence.
+Retain the last valid snapshot on failure. To guarantee consistency across multiple megafiles, publish a complete generation then switch a reference manifest.
 
-Correction client minimale :
+Minimal client fix:
 
 ```javascript
 const hit = apiCache.get(path);
@@ -382,27 +382,27 @@ if (cache && hit && hit.expiresAt > performance.now()) {
   return hit.data;
 }
 
-// Après réception :
+// After receipt:
 apiCache.set(path, {
   data,
   expiresAt: performance.now() + 5000,
 });
 ```
 
-Il faut aussi invalider `state.stats`, les buckets et les caches KIM. Une version de corpus partagée est plus fiable qu'une accumulation de TTL indépendants.
+`state.stats`, buckets and KIM caches must also be invalidated. A shared corpus version is more reliable than an accumulation of independent TTLs.
 
-### 10. P2 : Les frontières HTTP/HTML sont à durcir
+### 10. P2: HTTP/HTML Boundaries Need Hardening
 
-Références : [server.py:833](warframe_lore/ui/server.py#L833), [server.py:918](warframe_lore/ui/server.py#L918), [app.js:115](warframe_lore/ui/static/app.js#L115).
+References: [server.py:833](warframe_lore/ui/server.py#L833), [server.py:918](warframe_lore/ui/server.py#L918), [app.js:115](warframe_lore/ui/static/app.js#L115).
 
-Le serveur écoute uniquement sur `127.0.0.1`, ce qui réduit fortement l'exposition actuelle. Néanmoins :
+The server listens only on `127.0.0.1`, which greatly reduces current exposure. Nevertheless:
 
-- `limit=-1` est accepté et renvoie presque tous les résultats.
-- Les threads et le coût des recherches ne sont pas plafonnés.
-- `Access-Control-Allow-Origin: *` autorise les lectures inter-origines lorsque le navigateur permet l'accès au service local.
-- Le rendu Markdown ne filtre pas les protocoles des liens.
+- `limit=-1` is accepted and returns nearly all results.
+- Threads and search cost are not capped.
+- `Access-Control-Allow-Origin: *` allows cross-origin reads when the browser permits access to the local service.
+- Markdown rendering does not filter link protocols.
 
-Premiers garde-fous :
+First safeguards:
 
 ```python
 limit = max(1, min(_int_from_query(query, "limit", 50), 200))
@@ -411,9 +411,9 @@ if len(query_text) > 256:
     return
 ```
 
-Pour le lancement local actuel, contrôler `Host`/`Origin` avant le traitement et retirer le wildcard CORS. Une configuration de déploiement devra définir explicitement ses origines autorisées.
+For the current local launch, check `Host`/`Origin` before processing and remove the CORS wildcard. A deployment configuration must explicitly define its authorized origins.
 
-Pour les liens, utiliser un parseur Markdown avec rendu contrôlé ; à défaut, construire les liens depuis des tokens validés :
+For links, use a Markdown parser with controlled rendering; failing that, build links from validated tokens:
 
 ```javascript
 function safeLink(label, href) {
@@ -433,13 +433,13 @@ function safeLink(label, href) {
 }
 ```
 
-Aucune exécution XSS n'a été démontrée. Aucun traversal exploitable n'a été confirmé : les routes statiques sont fixes et les médias passent par une liste de noms générés.
+No XSS execution has been demonstrated. No exploitable traversal has been confirmed: static routes are fixed and media goes through a generated name list.
 
-### 11. P2 : Recherche, accessibilité et spoilers restent inachevés
+### 11. P2: Search, Accessibility and Spoilers Remain Incomplete
 
-Références : [app.js:1034](warframe_lore/ui/static/app.js#L1034), [app.js:1230](warframe_lore/ui/static/app.js#L1230), [styles.css:879](warframe_lore/ui/static/styles.css#L879), [app.js:547](warframe_lore/ui/static/app.js#L547).
+References: [app.js:1034](warframe_lore/ui/static/app.js#L1034), [app.js:1230](warframe_lore/ui/static/app.js#L1230), [styles.css:879](warframe_lore/ui/static/styles.css#L879), [app.js:547](warframe_lore/ui/static/app.js#L547).
 
-**Recherche :** après apparition des suggestions, Enter ne fait rien si aucune suggestion n'est sélectionnée, car l'index vaut `-1`.
+**Search:** after suggestions appear, Enter does nothing if no suggestion is selected, because the index is `-1`.
 
 ```javascript
 if (event.key === "Enter") {
@@ -455,75 +455,75 @@ if (event.key === "Enter") {
 }
 ```
 
-**Accessibilité :** les résultats et cartes sont des `div` cliquables. Employer des liens natifs :
+**Accessibility:** results and cards are clickable `div`s. Use native links:
 
 ```javascript
 const item = el("a", "page-list-item");
 item.href = `#page?${encodeURIComponent(bucketId)}?${encodeURIComponent(title)}`;
 ```
 
-Sur mobile, rendre la sidebar fermée `inert`, gérer Escape et restituer le focus au burger. Le rail tablette masque actuellement les libellés des buckets ; supprimer ce rail incomplet est préférable à des boutons vides.
+On mobile, make the closed sidebar `inert`, handle Escape and restore focus to the burger. The tablet rail currently hides bucket labels; removing this incomplete rail is preferable to empty buttons.
 
-**Spoilers :** le code affiche un avertissement mais insère immédiatement le contenu. Un premier bloc accessible peut être natif :
+**Spoilers:** the code shows a warning but immediately inserts the content. An accessible first block can be native:
 
 ```javascript
 function spoilerBlock(body, reason) {
   const box = el("details", "spoiler-block");
-  box.append(el("summary", null, `Afficher le spoiler : ${reason}`), body);
+  box.append(el("summary", null, `Show spoiler: ${reason}`), body);
   return box;
 }
 ```
 
-Appliquer la même politique aux snippets, au simulateur et au montage du graphe. Il s'agit d'un contrôle UX, pas d'une barrière de sécurité.
+Apply the same policy to snippets, the simulator and graph assembly. This is a UX control, not a security barrier.
 
-## Stack réelle
+## Actual Stack
 
-Plusieurs éléments du contexte décrivent une cible plutôt que l'implémentation présente.
+Several items in the context describe a target rather than the present implementation.
 
-| Élément annoncé | État constaté |
+| Announced Element | Observed State |
 |---|---|
-| Frontend Vue Composition API | Application principale en JavaScript natif ; Vue utilisé pour le flowchart |
-| Tailwind CSS | CSS personnalisé, sans chaîne Tailwind versionnée |
-| `MarkdownHeaderTextSplitter` / `RecursiveCharacterTextSplitter` | Équivalents maison, sans LangChain |
-| PostgreSQL + pgvector | Schéma présent ; production et retrieval des embeddings non raccordés |
-| Graphe de dialogue JSONB | JSONB pour les métadonnées des chunks ; messages KIM relationnels ; graphe reconstruit en mémoire |
-| Vérification de hash Public Export | Cache par nom haché, sans vérification cryptographique du contenu |
-| `<SpoilerBlock>` dynamique | Avertissement, sans composant de masquage opérationnel |
-| Docker | Commande documentée pour PostgreSQL ; pas de Dockerfile/Compose versionné |
+| Vue Composition API Frontend | Main application in native JavaScript; Vue used for the flowchart |
+| Tailwind CSS | Custom CSS, no versioned Tailwind chain |
+| `MarkdownHeaderTextSplitter` / `RecursiveCharacterTextSplitter` | Native equivalents, no LangChain |
+| PostgreSQL + pgvector | Schema present; embedding production and retrieval not wired |
+| JSONB Dialogue Graph | JSONB for chunk metadata; relational KIM messages; graph reconstructed in memory |
+| Public Export Hash Verification | Cache by hashed name, no cryptographic content verification |
+| Dynamic `<SpoilerBlock>` | Warning, no operational masking component |
+| Docker | Documented command for PostgreSQL; no versioned Dockerfile/Compose |
 
-Ce n'est pas un problème d'utiliser du JavaScript natif ou un splitter maison. Le problème est l'écart entre les garanties annoncées et celles réellement testées.
+Using native JavaScript or a custom splitter is not the problem. The problem is the gap between claimed guarantees and those actually tested.
 
-## Architecture et flux
+## Architecture and Flow
 
-Les bases à conserver sont bonnes : modules séparés, modèles de données explicites, transactions SQL par page, remplacement atomique des fichiers JSON et identité i18n `(entity_id, lang)`.
+The foundations to keep are sound: separate modules, explicit data models, per-page SQL transactions, atomic JSON file replacement, and i18n identity `(entity_id, lang)`.
 
-La cible raisonnable reste un **monolithe modulaire**, pas un ensemble prématuré de microservices :
+The reasonable target remains a **modular monolith**, not a premature set of microservices:
 
 ```text
 MediaWiki / Public Export
           |
           v
-Sources brutes versionnées + provenance
+Versioned raw sources + provenance
           |
           v
-Parsing structurel : lore / dialogue / entité
+Structural parsing: lore / dialogue / entity
           |
           v
-PostgreSQL : état courant + historique utile
+PostgreSQL: current state + useful history
           |
           +--> Chunks --> embeddings --> retrieval
-          +--> Graphe validé --> simulateur / Vue Flow
-          +--> Megafiles versionnés --> lecture locale
+          +--> Validated graph --> simulator / Flow View
+          +--> Versioned megafiles --> local reading
 ```
 
-**SOLID utile, sans surarchitecture :**
+**Useful SOLID, without over-architecture:**
 
-- **SRP :** le parser produit une structure métier ; le renderer décide ce qui est visible.
-- **DRY :** un seul parseur KIM doit alimenter SQL, graphe, simulateur et RAG.
-- **DIP :** injecter source, cleaner et repository au lieu de les construire obligatoirement dans `Scraper`.
-- **KISS :** conserver PostgreSQL et un worker simple ; Redis, Kafka ou une base graphe ne sont pas encore justifiés.
+- **SRP:** the parser produces a business structure; the renderer decides what is visible.
+- **DRY:** a single KIM parser must feed SQL, graph, simulator and RAG.
+- **DIP:** inject source, cleaner and repository instead of building them mandatorily in `Scraper`.
+- **KISS:** keep PostgreSQL and a simple worker; Redis, Kafka or a graph database are not yet justified.
 
-Exemple d'injection minimale, en réutilisant `BaseSource` :
+Example of minimal injection, reusing `BaseSource`:
 
 ```python
 def __init__(self, config, *, source=None, cleaner=None):
@@ -532,9 +532,9 @@ def __init__(self, config, *, source=None, cleaner=None):
     self.cleaner = cleaner if cleaner is not None else WikitextCleaner()
 ```
 
-**Goulots identifiables :**
+**Identifiable bottlenecks:**
 
-Le delta relit l'état complet d'un bucket pour chaque page : pour un bucket de `N` pages, cela représente `N` requêtes et potentiellement `N²` enregistrements transférés. Charger l'état une fois suffit :
+The delta rereads the complete state of a bucket for each page: for a bucket of `N` pages, this means `N` queries and potentially `N²` transferred records. Loading the state once is sufficient:
 
 ```python
 states = {
@@ -545,27 +545,27 @@ stored = states[bucket_id].get(page_title)
 fresh = stored is not None and stored["touched"] == touched
 ```
 
-GIN et HNSW existent dans le DDL. Leur coexistence ne garantit cependant pas un filtrage avant ANN. Par exemple, privilégier une expression compatible avec le GIN existant :
+GIN and HNSW exist in the DDL. Their coexistence does not guarantee filtering before ANN. For example, prefer an expression compatible with the existing GIN:
 
 ```sql
 WHERE metadata @> '{"speakers":["Amir"]}'::jsonb
 ```
 
-Aucun goulot PostgreSQL n'a été mesuré : il faudra examiner les plans et le rappel sous filtres sur une base de test. JSONB n'est pas intrinsèquement problématique ; un gros graphe intégral réécrit à chaque modification pourrait le devenir. Des nœuds/arêtes relationnels avec conditions JSONB constituent une évolution possible, pas une nécessité immédiate.
+No PostgreSQL bottleneck was measured: execution plans and filter recall on a test database will need to be examined. JSONB is not inherently problematic; a large full graph rewritten on every modification could become one. Relational nodes/edges with JSONB conditions constitute a possible evolution, not an immediate necessity.
 
-## Optimisation RAG
+## RAG Optimization
 
-La priorité n'est pas simplement d'augmenter les chunks. Elle est de récupérer des **preuves cohérentes et typées**.
+The priority is not simply to increase chunks. It is to retrieve **consistent, typed evidence**.
 
-| Contenu | Unité recommandée | Contexte à récupérer |
+| Content | Recommended Unit | Context to Retrieve |
 |---|---|---|
-| Lore | Section puis chunks sous budget tokenizer | Titre, hiérarchie, section parente |
-| Dialogue | Tours de parole d'une branche compatible | Conversation, conditions, choix précédent, voisins pertinents |
-| Statistiques | Données structurées d'une entité | Identifiant officiel, version du jeu/export, unités |
+| Lore | Section then chunks under tokenizer budget | Title, hierarchy, parent section |
+| Dialogue | Turns of speech from a compatible branch | Conversation, conditions, preceding choice, relevant neighbors |
+| Statistics | Structured entity data | Official ID, game/export version, units |
 
-Les statistiques numériques sont actuellement écartées par l'extraction i18n, qui conserve surtout nom et description : [export.py:210](warframe_lore/export.py#L210). Ne pas attendre du modèle qu'il reconstruise des valeurs absentes.
+Numerical statistics are currently excluded by the i18n extraction, which retains mainly name and description: [export.py:210](warframe_lore/export.py#L210). Do not expect the model to reconstruct missing values.
 
-Une extension simple préserverait les données techniques séparément :
+A simple extension would preserve technical data separately:
 
 ```sql
 CREATE TABLE game_entity_snapshot (
@@ -576,7 +576,7 @@ CREATE TABLE game_entity_snapshot (
 );
 ```
 
-**FR/EN : joindre sur l'identifiant officiel, jamais sur un nom traduit.**
+**FR/EN: join on the official ID, never on a translated name.**
 
 ```sql
 SELECT en.entity_id, en.name AS name_en, fr.name AS name_fr
@@ -586,17 +586,17 @@ LEFT JOIN game_entities_i18n fr
 WHERE en.lang = 'en';
 ```
 
-Associer ensuite explicitement pages wiki et entités. Les titres affichés simplifiés ne doivent pas devenir des identifiants.
+Then explicitly associate wiki pages and entities. Simplified display titles must not become identifiers.
 
-**Retrieval recommandé :**
+**Recommended retrieval:**
 
-1. Résoudre langue, entités, type de question et politique canon/spoiler.
-2. Combiner correspondances lexicales et vectorielles.
-3. Fusionner les rangs, puis éventuellement reranker.
-4. Étendre les résultats vers la section parente ou les voisins de branche compatibles.
-5. Produire une réponse citée, avec abstention si les preuves manquent.
+1. Resolve language, entities, question type and canon/spoiler policy.
+2. Combine lexical and vector matches.
+3. Merge ranks, then optionally rerank.
+4. Extend results to the parent section or compatible branch neighbors.
+5. Produce a cited response, with abstention if evidence is missing.
 
-Requête vectorielle minimale, une fois les embeddings alimentés :
+Minimal vector query, once embeddings are populated:
 
 ```sql
 SELECT c.id, c.content_markdown, c.metadata, p.source_url
@@ -608,9 +608,9 @@ ORDER BY c.embedding <=> CAST(:query_vector AS vector(384))
 LIMIT :k;
 ```
 
-Le modèle choisi doit réellement produire 384 dimensions. Versionner modèle, tokenizer, entrée encodée et pipeline ; ne pas mélanger leurs espaces vectoriels.
+The chosen model must actually produce 384 dimensions. Version the model, tokenizer, encoded input and pipeline; do not mix their vector spaces.
 
-Une fusion RRF évite de comparer directement des scores incompatibles :
+An RRF merge avoids directly comparing incompatible scores:
 
 ```python
 from collections import defaultdict
@@ -623,15 +623,15 @@ for ranking in (lexical_ids, vector_ids):
 selected = sorted(scores, key=scores.get, reverse=True)[:20]
 ```
 
-Pour KIM, ne pas développer tous les chemins possibles : utiliser des fenêtres locales compatibles avec les conditions, sinon le nombre de parcours peut exploser.
+For KIM, do not expand all possible paths: use local windows compatible with conditions, otherwise the number of traversals can explode.
 
-## Évolutions majeures
+## Major Improvements
 
-Je recommande quatre investissements, dans cet ordre.
+I recommend four investments, in this order.
 
-### 1. Ingestion rejouable
+### 1. Replayable Ingestion
 
-Conserver les sources brutes et identifier chaque dérivé par révision et version de pipeline. La publication rejouable du constat 1 permet de réparer une projection sans retélécharger le wiki.
+Retain raw sources and identify each derivation by revision and pipeline version. Replayable publication from finding 1 allows repairing a projection without re-downloading the wiki.
 
 ```python
 derivation_key = (
@@ -643,11 +643,11 @@ derivation_key = (
 )
 ```
 
-Le suivi doit distinguer téléchargé, validé, parsé, indexé et publié. Ajouter compteurs d'échecs, durées et état partiel explicite.
+Tracking must distinguish downloaded, validated, parsed, indexed and published. Add failure counters, durations and explicit partial state.
 
-### 2. Tests et évaluation
+### 2. Testing and Evaluation
 
-Aucune suite de tests ni CI versionnée n'a été trouvée. Commencer par les invariants qui protègent les données :
+No test suite or versioned CI was found. Start with the invariants that protect data:
 
 ```python
 def test_long_dialogue_respects_budget():
@@ -662,13 +662,13 @@ def test_speculation_wins():
     ) == CanonStatus.SPECULATION
 ```
 
-Compléter avec tests de reprise après échec JSON, branches terminales, réponses réseau inversées et navigation clavier. Pour le RAG : jeu de questions FR/EN, Recall@k, fidélité des citations, contradictions entre branches et latence p95.
+Complete with JSON failure recovery tests, terminal branches, inverted network responses and keyboard navigation. For RAG: FR/EN question set, Recall@k, citation fidelity, cross-branch contradictions and p95 latency.
 
-### 3. Livraisons reproductibles
+### 3. Reproducible Deliveries
 
-Versionner dépendances verrouillées, recette du bundle Vue Flow, migrations et Compose de test. Le bundle actuel est livré sans recette de reconstruction versionnée.
+Version locked dependencies, Vue Flow bundle recipe, migrations and test Compose. The current bundle is delivered without a versioned rebuild recipe.
 
-Un autre défaut de distribution est visible : `cleaner_config.json` et `init_db.sql` sont cherchés hors du paquet. Après déplacement dans des ressources embarquées :
+Another distribution defect is visible: `cleaner_config.json` and `init_db.sql` are looked up outside the package. After moving to embedded resources:
 
 ```python
 from importlib.resources import files
@@ -678,13 +678,13 @@ cleaner_json = root.joinpath("cleaner_config.json").read_text(encoding="utf-8")
 schema_sql = root.joinpath("init_db.sql").read_text(encoding="utf-8")
 ```
 
-Tester une wheel hors checkout. Pour Docker : utilisateur non-root, volumes persistants, healthchecks, secrets externes et image PostgreSQL/pgvector figée. Une exposition réseau nécessitera aussi de remplacer ou durcir le serveur HTTP local actuel.
+Test a wheel outside checkout. For Docker: non-root user, persistent volumes, healthchecks, external secrets and a pinned PostgreSQL/pgvector image. Network exposure will also require replacing or hardening the current local HTTP server.
 
-### 4. Lecture hors ligne
+### 4. Offline Reading
 
-Une PWA est pertinente pour une archive. Elle doit distinguer ressources applicatives, données versionnées et images.
+A PWA is relevant for an archive. It must distinguish application resources, versioned data and images.
 
-Exemple de stratégie Workbox, bibliothèque à introduire explicitement :
+Example Workbox strategy, a library to introduce explicitly:
 
 ```javascript
 registerRoute(
@@ -698,27 +698,27 @@ registerRoute(
 );
 ```
 
-Prévoir une politique de quota et une invalidation par version de corpus. Pour un mode hors ligne cohérent, proposer le téléchargement d'un snapshot complet plutôt que mélanger plusieurs générations mises en cache.
+Provide a quota policy and invalidation by corpus version. For a consistent offline mode, offer downloading a complete snapshot rather than mixing multiple cached generations.
 
-Les WebSockets ne sont pas prioritaires : polling conditionnel ou SSE suffisent pour annoncer une nouvelle version et suivre une ingestion unidirectionnelle.
+WebSockets are not a priority: conditional polling or SSE are sufficient to announce a new version and track unidirectional ingestion.
 
-## Vérifications et limites
+## Verifications and Limitations
 
-| Vérification exécutée | Résultat |
+| Verification Performed | Result |
 |---|---|
-| Syntaxe `app.js` | Valide |
-| Corpus local chargé | 3 175 pages |
-| Chunking KIM sur corpus local | 843 chunks, aucun dépassement de 2 500 caractères |
-| Longue réplique synthétique | Dépassement et duplication confirmés |
-| Graphe synthétique | Arête terminale et contournement des choix confirmés |
-| Canon et template imbriqué | Défauts confirmés |
-| LZMA tronqué | Asset incomplet accepté |
-| Suggestion `hunhow`, mesure ponctuelle | Environ 101 ms ; pas un benchmark p95 |
+| `app.js` syntax | Valid |
+| Local corpus loaded | 3,175 pages |
+| KIM chunking on local corpus | 843 chunks, no 2,500-character overflow |
+| Long synthetic line | Overflow and duplication confirmed |
+| Synthetic graph | Terminal edge and choice bypass confirmed |
+| Canon and nested template | Defects confirmed |
+| Truncated LZMA | Incomplete asset accepted |
+| `hunhow` suggestion, spot measurement | Approximately 101 ms; not a p95 benchmark |
 
-Aucune connexion PostgreSQL, vérification externe des endpoints DE, reconstruction de wheel ou validation navigateur multi-appareils n'a été effectuée. Les performances SQL et certains effets UX restent donc à confirmer par tests d'intégration.
+No PostgreSQL connection, external DE endpoint verification, wheel rebuild or multi-device browser validation was performed. SQL performance and certain UX effects therefore remain to be confirmed by integration tests.
 
-Deux décisions produit restent ouvertes : l'application doit-elle rester locale ou devenir multi-utilisateur, et faut-il conserver les pages retirées comme historique ? La licence mérite également clarification : `LICENSE` indique MIT, tandis que `pyproject.toml` déclare `Proprietary`.
+Two product decisions remain open: should the application remain local or become multi-user, and should retired pages be kept as history? The license also merits clarification: `LICENSE` states MIT, while `pyproject.toml` declares `Proprietary`.
 
 ## Conclusion
 
-Le projet possède un découpage modulaire exploitable, mais le standard visé se démontrera surtout par des invariants testés, une provenance conservée et une reprise fiable. Corriger d'abord **canon, sémantique KIM et synchronisation**, puis brancher un RAG mesurable, avant d'investir dans une infrastructure plus complexe.
+The project has a usable modular decomposition, but the target standard will be demonstrated primarily through tested invariants, preserved provenance and reliable recovery. First fix **canon, KIM semantics and synchronization**, then wire a measurable RAG, before investing in more complex infrastructure.

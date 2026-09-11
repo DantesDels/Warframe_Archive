@@ -1,12 +1,12 @@
-"""Source MediaWiki (wiki.warframe.com) — composition des mixins.
+"""MediaWiki source (wiki.warframe.com) — mixin composition.
 
-La classe ``MediaWikiSource`` est le point d'entrée public de la source
-MediaWiki ; elle compose par héritage multiple :
-    * ``MediaWikiCategoryMixin`` — résolution catégories/préfixes ;
-    * ``MediaWikiQueryMixin``    — fetch contenu + métadonnées delta ;
-    * ``BaseSource``             — contrat abstrait de toute source.
+The ``MediaWikiSource`` class is the public entry point of the MediaWiki
+source; it composes through multiple inheritance:
+    * ``MediaWikiCategoryMixin`` — category/prefix resolution;
+    * ``MediaWikiQueryMixin``    — content fetch + delta metadata;
+    * ``BaseSource``             — abstract contract of any source.
 
-Le transport HTTP (retries/backoff/throttle) vit dans ``http``.
+The HTTP transport (retries/backoff/throttle) lives in ``http``.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from .mediawiki_queries import MediaWikiQueryMixin
 
 
 class MediaWikiSource(MediaWikiCategoryMixin, MediaWikiQueryMixin, BaseSource):
-    """Source de données officielle de Warframe (wiki.warframe.com)."""
+    """Official Warframe data source (wiki.warframe.com)."""
 
     name = "mediawiki-warframe"
 

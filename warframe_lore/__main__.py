@@ -1,8 +1,8 @@
-"""Point d'entrée ``python -m warframe_lore`` (rétro-compatible).
+"""Entry point for ``python -m warframe_lore`` (backward-compatible).
 
-Délégue à l'interface en ligne de commande ``cephalon`` (voir ``cli.py``).
-Sans argument, ``python -m warframe_lore`` équivaut à ``cephalon run`` —
-le pipeline complet en mode delta incrémental (comportement historique).
+Delegates to the ``cephalon`` CLI (see ``cli.py``).
+Without arguments, ``python -m warframe_lore`` is equivalent to ``cephalon run``
+— the full pipeline in incremental delta mode (legacy behaviour).
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from .cli import main
 
 
 def _argv_with_default_run(argv: list[str]) -> list[str]:
-    """Injecte la sous-commande ``run`` quand aucun argument n'est passé."""
+    """Inject the ``run`` sub-command when no arguments are provided."""
     if not argv:
         return ["run"]
     return argv

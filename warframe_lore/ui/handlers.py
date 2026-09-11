@@ -1,9 +1,8 @@
-"""ApiHandler — routes HTTP ``/api/*`` et fichiers statiques (Gzip).
+"""ApiHandler — HTTP ``/api/*`` routes and static files (Gzip).
 
-Responsabilité unique : router les requêtes du frontend vers la couche données
-(``LoreStore``), le média (``MediaIndex``) et les fichiers statiques, avec
-compactage Gzip explicite (les gros documents KIM ne sont jamais envoyés en
-clair).
+Single responsibility: route frontend requests to the data layer
+(``LoreStore``), the media layer (``MediaIndex``) and static files, with
+explicit Gzip compression (large KIM documents are never sent in clear).
 """
 
 from __future__ import annotations
@@ -17,6 +16,7 @@ from urllib.parse import parse_qs, unquote
 
 from ..cleaner.formatting import cut_footer_noise, normalise_deep_headings
 from ..media import MediaIndex
+from ..timeline import children_payload, roots_payload
 from .patch_notes import _PATCH_HISTORY_HEADING, extract_patch_notes
 from .store import LoreStore
 
@@ -27,9 +27,9 @@ class ApiHandler(BaseHTTPRequestHandler):
     media: MediaIndex = None  # injecté par la fabrique
     root: Path = None        # répertoire des fichiers statiques
 
-    # ------------------------------------------------------------ verbosité
-    def log_message(self, format, *args):  # noqa: A002  (signature stdlib)
-        return  # silencieux ; les logs passent par le lanceur.
+    # ------------------------------------------------------------ verbosity
+    def log_message(self, format, *args):  # noqa: A002  (stdlib signature)
+        return  # silent; logs go through the launcher.
 
     # ---------------------------------------------------------------- routes
     def do_GET(self) -> None:
@@ -50,6 +50,23 @@ class ApiHandler(BaseHTTPRequestHandler):
             elif path == "/vendor/vue-flow.bundle.css":
                 self._send_static("vendor/vue-flow.bundle.css",
                                   content_type="text/css")
+            elif path == "/inspector/" or path.startswith("/inspector/"):
+                self._send_inspector(path)
+            elif path == "/timeline/" or path.startswith("/timeline/"):
+                self._send_timeline(path)
+            elif path == "/api/timeline/roots":
+                self._send_json(roots_payload())
+            elif path == "/api/timeline":
+                parent_id = (query.get("parent_id") or [None])[0]
+                if not parent_id:
+                    self._send_json({"error": "parent_id manquant"},
+                                    status=400)
+                    return
+                payload = children_payload(parent_id)
+                if payload is None:
+                    self._send_json({"error": "Noeud inconnu"}, status=404)
+                    return
+                self._send_json(payload)
             elif path == "/api/stats":
                 self._send_json(self.store.stats())
             elif path == "/api/buckets":
@@ -91,6 +108,38 @@ class ApiHandler(BaseHTTPRequestHandler):
                 pass
 
     # -------------------------------------------------------------- helpers
+    def _send_inspector(self, path: str) -> None:
+        """RAG Inspector (build Vue, page autonome ``/inspector/``).
+
+        ``/inspector/`` sert ``index.html`` ; les assets hachés sont servis
+        sous ``/inspector/assets/*`` depuis le dossier ``static/inspector``.
+        """
+        relative = path[len("/inspector/"):]
+        if not relative:
+            relative = "index.html"
+        content_type = "text/html"
+        if relative.endswith(".js"):
+            content_type = "text/javascript"
+        elif relative.endswith(".css"):
+            content_type = "text/css"
+        self._send_static(f"inspector/{relative}", content_type=content_type)
+
+    def _send_timeline(self, path: str) -> None:
+        """Timeline (build Vue, page autonome ``/timeline/``).
+
+        ``/timeline/`` sert ``index.html`` ; les assets hachés sont servis
+        sous ``/timeline/assets/*`` depuis le dossier ``static/timeline``.
+        """
+        relative = path[len("/timeline/"):]
+        if not relative:
+            relative = "index.html"
+        content_type = "text/html"
+        if relative.endswith(".js"):
+            content_type = "text/javascript"
+        elif relative.endswith(".css"):
+            content_type = "text/css"
+        self._send_static(f"timeline/{relative}", content_type=content_type)
+
     def _pages_for_query(self, query) -> list[dict]:
         bucket = (query.get("bucket") or [""])[0]
         if not bucket or not self.store.bucket_exists(bucket):

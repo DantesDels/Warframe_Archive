@@ -1,8 +1,8 @@
-"""Mini-couche HTTP réutilisable : retries + backoff + throttling.
+"""Small reusable HTTP layer: retries + backoff + throttling.
 
-Gère aussi les erreurs API qui remontent en HTTP 200 (champ ``error`` du
-JSON).  Encapsulée séparément pour réutilisation par d'éventuels autres
-clients (principe DRY).
+Also handles API errors that come back as HTTP 200 (the ``error`` field
+of the JSON).  Encapsulated separately so it can be reused by other
+potential clients (DRY principle).
 """
 
 from __future__ import annotations
@@ -17,11 +17,11 @@ log = logging.getLogger("warframe_lore.api.mediawiki")
 
 
 class MediaWikiSourceError(RuntimeError):
-    """Erreur non-transitoire de l'API MediaWiki."""
+    """Non-transient MediaWiki API error."""
 
 
 class RetryableHttp:
-    """GET + retries exponentiels + throttle de politesse entre requêtes."""
+    """GET + exponential retries + politeness throttle between requests."""
 
     def __init__(self, api_url: str, user_agent: str, *, timeout: float = 60.0,
                  max_retries: int = 5, retry_backoff: float = 2.0,
@@ -44,7 +44,7 @@ class RetryableHttp:
         self._last_request_ts = time.monotonic()
 
     def request(self, params: dict[str, Any]) -> dict[str, Any]:
-        """GET + retries + backoff, retourne le JSON parsé."""
+        """GET + retries + backoff, returns the parsed JSON."""
         last_exc: Exception | None = None
         for attempt in range(self.max_retries):
             self._throttle()
@@ -56,7 +56,7 @@ class RetryableHttp:
             except (requests.RequestException, ValueError) as exc:
                 last_exc = exc
                 backoff = self.retry_backoff ** attempt
-                log.warning("Requête échouée (%d/%d): %s; retente dans %.1fs",
+                log.warning("Request failed (%d/%d): %s; retrying in %.1fs",
                             attempt + 1, self.max_retries, exc, backoff)
                 time.sleep(backoff)
                 continue
@@ -67,14 +67,14 @@ class RetryableHttp:
                     time.sleep(self.retry_backoff)
                     continue
                 raise MediaWikiSourceError(
-                    f"Erreur API '{code}': {data['error'].get('info', '')}")
+                    f"API error '{code}': {data['error'].get('info', '')}")
             return data
 
         raise MediaWikiSourceError(
-            f"Requête échouée après {self.max_retries} tentatives: {last_exc}")
+            f"Request failed after {self.max_retries} attempts: {last_exc}")
 
     def paged(self, params: dict[str, Any]) -> Iterator[dict[str, Any]]:
-        """Itère sur les pages de résultats en suivant le jeton ``continue``."""
+        """Iterates over result pages following the ``continue`` token."""
         p = dict(params)
         while True:
             data = self.request(p)

@@ -1,16 +1,16 @@
-"""Couche Cleaner : transformation Wikitext -> Markdown propre pour LLM.
+"""Cleaner layer: Wikitext -> clean Markdown for LLM.
 
-Sous-modules (un fichier = une responsabilité) :
-    * html/blocks      : assainissement du brut (balises, tableaux, code) ;
-    * template_*       : détection/rendu/suppression des templates ;
-    * sections*        : filtrage des sections gameplay vs lore ;
-    * formatting       : façade mise en forme (liens, titres, dialogues) ;
-    * audio/KIM        : métadonnées audio et instructions KIM ;
-    * pipeline         : classe :class:`WikitextCleaner` (orchestration).
+Sub-modules (one file = one responsibility):
+    * html/blocks      : raw sanitization (tags, tables, code);
+    * template_*       : template detection/rendering/removal;
+    * sections*        : gameplay vs lore section filtering;
+    * formatting       : formatting facade (links, headings, dialogue);
+    * audio/KIM        : audio metadata and KIM instructions;
+    * pipeline         : :class:`WikitextCleaner` class (orchestration).
 
-Les constantes de nettoyage (templates "bruit", sections gameplay, etc.)
-sont externalisées dans ``config/cleaner_config.json`` et injectées à
-l'exécution (principe SOLID *Dependency Injection*).
+Cleaning constants (noise templates, gameplay sections, etc.) are
+externalized to ``config/cleaner_config.json`` and injected at runtime
+(SOLID *Dependency Injection* principle).
 """
 
 from __future__ import annotations

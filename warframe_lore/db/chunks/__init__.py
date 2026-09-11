@@ -1,12 +1,12 @@
-"""Découpage RAG : interface publique du sous-paquet ``chunks``.
+"""RAG chunking: public interface of the ``chunks`` sub-package.
 
-Ré-exporte le ``ChunkManager``, les constantes de taille, le type ``RAGChunk``
-et l'ancienne API ``chunk_markdown``.
+Re-exports the ``ChunkManager``, the size constants, the ``RAGChunk`` type
+and the legacy ``chunk_markdown`` API.
 
-Implémentation répartie entre :
-    * ``split``      — ``ChunkManager`` (structurel + dialogue) ;
-    * ``splitters``  — splitters récursifs + chevauchement + locuteurs ;
-    * ``patterns``   — purge des pointeurs de navigation KIM.
+Implementation split between:
+    * ``split``      — ``ChunkManager`` (structural + dialogue);
+    * ``splitters``  — recursive splitters + overlap + speakers;
+    * ``patterns``   — purging of KIM navigation pointers.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from .split import (
     ChunkManager,
     RAGChunk,
     chunk_markdown,
+    sections_from_markdown,
 )
 
 __all__ = [
@@ -29,4 +30,5 @@ __all__ = [
     "ChunkManager",
     "RAGChunk",
     "chunk_markdown",
+    "sections_from_markdown",
 ]

@@ -1,4 +1,4 @@
-"""Indentation et lignes de dialogue -> blockquotes Markdown lisibles."""
+"""Indentation and dialogue lines -> readable Markdown blockquotes."""
 
 from __future__ import annotations
 
@@ -8,10 +8,10 @@ from warframe_lore.cleaner.bullets import BULLET_TOKEN, _BULLET_LINE
 
 
 def normalise_indentation(markdown_text: str) -> str:
-    """Supprime les marqueurs d'indentation Wikitext (:, #, ;).
+    """Removes Wikitext indentation markers (:, #, ;).
 
-    ``:`` et ``;`` disparaissent (souvent vestiges), les listes numérotées
-    ``#`` deviennent des puces ``- ``.
+    ``:`` and ``;`` are dropped (often leftover artifacts), numbered lists
+    ``#`` become bullet ``- `` items.
     """
     text = markdown_text
     text = re.sub(r"^:+\s?", "", text, flags=re.MULTILINE)
@@ -21,10 +21,10 @@ def normalise_indentation(markdown_text: str) -> str:
 
 
 def format_lists_and_dialogue(markdown_text: str) -> str:
-    """Transforme les lignes de dialogue en blockquotes ``> `` lisibles.
+    """Converts dialogue lines into readable ``> `` blockquotes.
 
-    Détecte nos puces protégées par BULLET_TOKEN ; le pattern
-    ``Personnage: réplique`` devient ``> **Personnage:** réplique``.
+    Detects our BULLET_TOKEN-protected bullets; the pattern
+    ``Character: line`` becomes ``> **Character:** line``.
     """
     lines = markdown_text.split("\n")
     output_lines: list[str] = []
@@ -35,7 +35,7 @@ def format_lists_and_dialogue(markdown_text: str) -> str:
 
         if _BULLET_LINE.match(stripped_line):
             dialogue_content = stripped_line[len(BULLET_TOKEN):].strip()
-            # Retire les marqueurs restants et les guillemets externes.
+            # Strip remaining markers and outer quotes.
             dialogue_content = re.sub(r"\*\*+|_+", "", dialogue_content)
             dialogue_content = re.sub(r'^"|"$', "", dialogue_content.strip())
             output_lines.append(_format_dialogue_line(dialogue_content))
@@ -43,7 +43,7 @@ def format_lists_and_dialogue(markdown_text: str) -> str:
 
         elif stripped_line:
             if inside_dialogue_block:
-                output_lines.append("")  # ligne de démarcation après dialogue
+                output_lines.append("")  # separator line after dialogue
             inside_dialogue_block = False
             output_lines.append(line)
 
@@ -54,7 +54,7 @@ def format_lists_and_dialogue(markdown_text: str) -> str:
 
 
 def _format_dialogue_line(dialogue_content: str) -> str:
-    """Une ligne de dialogue -> blockquote, avec séparation locuteur/réplique."""
+    """A dialogue line -> blockquote, with speaker/line separation."""
     if ":" in dialogue_content:
         speaker, rest_of_line = dialogue_content.split(":", 1)
         clean_rest = re.sub(r'^"|"$', "", rest_of_line.strip())

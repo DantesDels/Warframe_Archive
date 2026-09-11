@@ -1,4 +1,4 @@
-"""État du mode delta (remplace ``sync_state.json`` local)."""
+"""Delta mode state (replaces the local ``sync_state.json``)."""
 
 from __future__ import annotations
 
@@ -12,10 +12,10 @@ from .base import Base
 
 
 class SyncStateRecord(Base):
-    """État du mode delta (remplace ``sync_state.json`` local).
+    """Delta mode state (replaces the local ``sync_state.json``).
 
-    Compare le ``touched`` de l'API au dernier ``touched`` stocké ici pour
-    décider si une page doit être re-téléchargée.
+    Compares the API ``touched`` against the last ``touched`` stored here
+    to decide whether a page must be re-downloaded.
     """
 
     __tablename__ = "sync_state"

@@ -1,8 +1,8 @@
-"""Parsing des dialogues wiki (blocquotes ``> **Locuteur:** texte``).
+"""Wiki dialogue parsing (blockquotes ``> **Speaker:** text``).
 
-Responsabilité unique : reconnaître et normaliser les répliques des pages de
-dialogue du wiki WARFRAME (KIM et quêtes) — extraction, dépollution des
-instructions d'enchaînement, découpage des conversations par sections.
+Single responsibility: recognise and normalise dialogue lines from
+WARFRAME wiki pages (KIM and quests) — extraction, cleanup of navigation
+instructions, conversation splitting by sections.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ KIM_BUCKET_ID = "Lore_Dialogues_KIM"
 
 _BLOCKQUOTE_SPEAKER = re.compile(r"^>\s*\*\*(?P<speaker>[^*:]+):\*\*\s*(?P<text>.*)$")
 
-# Boilerplate d'en-tête des pages KIM (à exclure des dialogues).
+# KIM page header boilerplate (to exclude from dialogues).
 _BOILERPLATE_LINE = re.compile(
     r"^>?\s*(\*_SPOILERS_\*|_?:|_ |Notes:|All ending conversations|"
     r"A flow chart will be included|"
@@ -30,45 +30,56 @@ _BOILERPLATE_LINE = re.compile(
     r"continues above)|"
     r"^>?\s*[^A-Za-z0-9]{0,3}\s*DFF\w+\.ogg|-\s*[A-Z]?\.?\s*Lyon\b)", re.I)
 
-# Avertissement spoiler : ``> *_SPOILERS_* _: <raison>_``
+# Spoiler warning: ``> *_SPOILERS_* _: <reason>_``
 _SPOILER_WARNING = re.compile(
     r"^>?\s*\*_SPOILERS_\*\s*_?:\s*(?P<reason>.+?)_?\s*$", re.I)
 
-# Instruction de navigation KIM en tête de ligne de dialogue (pointeurs wiki) :
+# KIM navigation instruction at the head of a dialogue line (wiki pointers):
 #   ``> **{Continues as above from "X:** ..."`` | ``> **{Same as below:}**``
 #   | ``> **{Jump above to "X:** ..."`` | ``> **{Continue with convo below:}**``
 #   | ``> **{Goes the same as above, from:}**``
-# et les variantes préfixées par une ou plusieurs conditions
-# ``> **{If ...} {If ...} {Continues ...}`` ou ``> **> {...`` / ``> > {...``.
-# Le mot-clé de navigation vit TOUJOURS dans une accolade : jamais dans le
-# texte d'une réplique ordinaire.  La fermeture de l'accolade n'est pas exigée.
+# and variants prefixed by one or more conditions
+# ``> **{If ...} {If ...} {Continues ...}`` or ``> **> {...`` / ``> > {...``.
+# The navigation keyword ALWAYS lives inside braces: never in the text of
+# an ordinary line.  Closing brace is not required.
 _KIM_POINTER_LINE = re.compile(
     r"(?im)^>[ \t]*(?:\*{1,3}[ \t]*)?(?:>[ \t]*)?(?:"
     r"\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*"
     r"|(?:\{[^{}:\n]*?\}\s*)+?\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*"
     r")")
-# Pointeur de navigation embarqué au milieu d'un message (fermé) : ``{...}``
-# contenant un mot-clé de navigation -> retiré du texte du message.  Exige la
-# fermeture de l'accolade pour ne jamais tronquer la réplique, et exclut les
-# marqueurs terminaux ``{... ends ...}`` (ex: ``{Convo. Ends. Followed by
-# jumpscare image.}``) qui pourraient contenir ``jump`` ou ``same``.
+
+# Inline navigation pointer embedded in the middle of a message (closed): ``{...}``
+# containing a navigation keyword -> removed from message text.  Requires
+# closing brace to never truncate the line, and excludes terminal markers
+# ``{... ends ...}`` (e.g.: ``{Convo. Ends. Followed by
+# jumpscare image.}``) that might contain ``jump`` or ``same``.
 _KIM_INLINE_NAV = re.compile(
     r"\{(?!.*\bends\b)[^{}\n]*?(?:continues?|contiue|same|goes|jump)[^{}\n]*\}", re.I)
-# Conditions de branche (``{If ...}``) et marqueurs de position (``{P1}``…) :
-# purgés du texte des messages (locuteur/parole).
+
+# Branch conditions (``{If ...}``) and position markers (``{P1}``…):
+# purged from message text (speaker/speech).
 _KIM_CONDITION_MARK = re.compile(r"\{\s*if\s+[^{}]*\}", re.I)
 _KIM_POSITION_MARK = re.compile(r"\{P\d+\}", re.I)
 
-# Titres de section qui délimitent une conversation KIM (``###``/``####`` …) :
+# Strict blacklist: page footer noise lines (wiki navboxes) that a
+# ``> …`` or a speaker should never turn into a dialogue line.
+_DIALOGUE_EXCLUDE_EXACT = {"quotesnav", "quotes", "sentient"}
+_DIALOGUE_EXCLUDE_RE = re.compile(r"^\s*update\s*\d+.*$", re.I)
+
+# Residual quotes to strip from the start/end of a dialogue line.
+_DIALOGUE_STRIP_CHARS = ' "”«»'
+
+
+# Section titles that delimit a KIM conversation (``###``/``####`` …):
 #   ``### Conversation 1 (Tell me about yourself / ...)``
 _KIM_SECTION_TITLE = re.compile(r"^#{3,}\s*(?P<title>.+?)\s*$")
-# En-tête de rang qui précède les conversations : ``## Rank 1 - Neutral``
+# Rank header that precedes conversations: ``## Rank 1 - Neutral``
 _KIM_RANK_TITLE = re.compile(
     r"^#{1,3}\s+Rank\s+(?P<n>\d+)\s*[-–—:]\s*(?P<label>.+)$", re.I)
-# Numéro d'une conversation dans son titre : ``Conversation 3 (...)``.
+# Conversation number within its title: ``Conversation 3 (...)``.
 _KIM_CONVO_NUMBER = re.compile(r"^Conversation\s+(\d+)\b", re.I)
 
-# Marqueur terminal d'une conversation KIM (``{Convo ends.}`` et variantes).
+# Terminal marker for a KIM conversation (``{Convo ends.}`` and variants).
 _CONVO_ENDS = re.compile(r"\{[Cc]onvo[^}\n]{0,16}ends\.?\}", re.I)
 _JUMP_ABOVE = re.compile(
     r"\[(?:Continues|Same) as above[,:]?\s*from:?\s*\"(?P<ref>[^\"]*)\",?\s*\]", re.I)
@@ -86,13 +97,13 @@ _JUMP_VAGUE = re.compile(
 
 
 def clean_kim_text(text: str) -> str:
-    """Retire les instructions d'enchaînement KIM d'un texte.
+    """Remove KIM navigation instructions from text.
 
-    Purge les conditions de branche (``{If ...}``), marqueurs de position
-    (``{P1}`` … ``{P5}``) et pointeurs de navigation fermés (``{Continues
-    ...}``, ``{Same ...}``, ``{Jump ...}``, ``{Goes ...}``) embarqués dans
-    le message.  Les didascalies (``{Smile!}``, …) et ``{Convo. ends.}``
-    (terminal) sont conservées.
+    Purges branch conditions (``{If ...}``), position markers
+    (``{P1}`` … ``{P5}``) and closed inline navigation pointers
+    (``{Continues ...}``, ``{Same ...}``, ``{Jump ...}``, ``{Goes ...}``)
+    embedded in the message.  Stage directions (``{Smile!}``, …) and
+    ``{Convo. ends.}`` (terminal) are kept.
     """
     cleaned = _KIM_INLINE_NAV.sub("", text or "")
     cleaned = _KIM_CONDITION_MARK.sub("", cleaned)
@@ -101,13 +112,13 @@ def clean_kim_text(text: str) -> str:
 
 
 def is_player_speaker(speaker: str) -> bool:
-    """Vrai si le locuteur est le personnage du joueur (Tenno)."""
+    """True if the speaker is the player character (Tenno)."""
     return bool(re.search(
         r"operator|player|\btenno\b|drifter|walley|indifference", speaker, re.I))
 
 
 def speakers(content: str) -> list[str]:
-    """Locuteurs de la page de dialogue, dans l'ordre d'apparition."""
+    """Speakers of the dialogue page, in order of appearance."""
     result: list[str] = []
     for line in content.splitlines():
         if _KIM_POINTER_LINE.match(line):
@@ -121,21 +132,26 @@ def speakers(content: str) -> list[str]:
 
 
 def parse_dialogue(content: str) -> list[dict]:
-    """Message linéaire ``[{index, speaker, text, player, lines}]`` d'une page.
+    """Linear message list ``[{index, speaker, text, player, lines}]`` from a page.
 
-    ``lines`` est le texte découpé en répliques (une entrée par ligne) pour
-    l'affichage aéré du chat.  Les lignes boilerplate et pointeurs KIM sont
-    ignorés.
+    ``lines`` is the text split into lines (one entry per line) for
+    spaced chat display.  Boilerplate and KIM pointer lines are ignored.
     """
     messages: list[dict] = []
     for index, line in enumerate(content.splitlines(), start=1):
         stripped = line.strip()
         if _BOILERPLATE_LINE.match(stripped) or _KIM_POINTER_LINE.match(line):
             continue
+        # Strict exclusion filter: page footer noise (``quotesnav``,
+        # ``Quotes``, ``Sentient``) and ``Update N`` history.
+        if (stripped.casefold() in _DIALOGUE_EXCLUDE_EXACT
+                or _DIALOGUE_EXCLUDE_RE.match(stripped)):
+            continue
         match = _BLOCKQUOTE_SPEAKER.match(stripped)
         if match:
             speaker = clean_kim_text(match.group("speaker").strip())
             text = clean_kim_text(match.group("text").strip())
+            text = text.strip(_DIALOGUE_STRIP_CHARS)
             messages.append({
                 "index": index,
                 "speaker": speaker,
@@ -147,6 +163,7 @@ def parse_dialogue(content: str) -> list[dict]:
             nested = re.match(r"^>\s*>\s*(?P<text>.+)$", stripped)
             if nested:
                 text = clean_kim_text(nested.group("text").strip())
+                text = text.strip(_DIALOGUE_STRIP_CHARS)
                 messages.append({
                     "index": index,
                     "speaker": "",
@@ -156,6 +173,7 @@ def parse_dialogue(content: str) -> list[dict]:
                 })
             elif stripped.startswith("> "):
                 text = clean_kim_text(stripped[2:].strip())
+                text = text.strip(_DIALOGUE_STRIP_CHARS)
                 if text:
                     messages.append({
                         "index": index,
@@ -168,10 +186,10 @@ def parse_dialogue(content: str) -> list[dict]:
 
 
 def spoiler_warning(content: str) -> str | None:
-    """Raison d'avertissement spoiler d'une page KIM, si présente.
+    """Spoiler warning reason from a KIM page, if present.
 
-    Les pages KIM débutent par ``> *_SPOILERS_* _: <raison or Spoiler>_``.
-    Retourne la raison (ou "Spoiler" par défaut), sinon ``None``.
+    KIM pages start with ``> *_SPOILERS_* _: <reason or Spoiler>_``.
+    Returns the reason (or "Spoiler" by default), otherwise ``None``.
     """
     for line in content.splitlines():
         m = _SPOILER_WARNING.match(line.strip())
@@ -182,51 +200,51 @@ def spoiler_warning(content: str) -> str | None:
 
 
 def looks_like_dialogue(content: str) -> bool:
-    """Vrai si le contenu semble être une transcription de dialogue."""
+    """True if the content looks like a dialogue transcription."""
     return any(line.strip().startswith("> **")
                for line in content.splitlines()[:200])
 
 
 def normalise_dialogue_ref(text: str) -> str:
-    """Forme canonique d'une réplique pour résoudre les références de saut."""
+    """Canonical form of a line to resolve jump references."""
     t = text.casefold()
-    t = re.sub(r"\{p\s*\d+\}", " ", t)          # {P1}/{P2} : pauses de page
+    t = re.sub(r"\{p\s*\d+\}", " ", t)          # {P1}/{P2}: page pauses
     t = re.sub(r"\{[^{}]*\}", " ", t)           # {…} (conditions, {Convo ends.})
     t = re.sub(r"^>+\s*", "", t)                # "> Ah" -> "Ah"
-    t = re.sub(r"[.!?]+$", "", t)               # ponctuation finale
+    t = re.sub(r"[.!?]+$", "", t)               # trailing punctuation
     t = re.sub(r"\s+", " ", t).strip()
     return t
 
 
 def normalise_ref(text: str) -> str:
-    """Normalise une chaîne pour la résolution des renvois (sauts)."""
+    """Normalise a string for reference resolution (jumps)."""
     out = _CONVO_ENDS.sub("", text)
     out = re.sub(r"\s+", " ", out).strip().strip("*").strip()
     return out.lower()[:120]
 
 
 def slug_for_id(text: str) -> str:
-    """Chaîne identifiant ASCII simple (alphabétique) depuis un texte."""
+    """Simple ASCII identifier slug (alphabetic) from text."""
     return re.sub(r"[^A-Za-z0-9]+", "", text)
 
 
 def make_snippet(content: str, query: str, radius: int = 60) -> str:
-    """Extrait un extrait nettoyé autour du hit."""
+    """Extract a cleaned snippet around the hit."""
     needle = query.casefold()
     position = content.casefold().find(needle)
     if position < 0:
         text = content[:2 * radius].strip()
     else:
         text = content[max(0, position - radius):position + radius].strip()
-    # Nettoyage artefacts wiki
+    # Wiki artifact cleanup
     text = re.sub(r"\|[-|]+\|?\s*", " ", text)      # |-|, ||, |||, |-
     text = re.sub(r"\{[^}]+\}", " ", text)           # {if...}, {Convo ends.}
-    text = re.sub(r"_[^_]+_?", " ", text)            # _italique_
+    text = re.sub(r"_[^_]+_?", " ", text)            # _italic_
     text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)  # **bold**
     text = re.sub(r"==[^=]+==", " ", text)           # ==highlight==
     text = re.sub(r"~{2}[^~]+~{2}", " ", text)      # ~~strike~~
     text = re.sub(r"\[[^\]]*\]", " ", text)          # [links / refs]
-    text = re.sub(r"[|]", " ", text)                 # pipes résiduels
+    text = re.sub(r"[|]", " ", text)                 # residual pipes
     text = re.sub(r"\s+", " ", text).strip()
     prefix = "…" if position > radius else ""
     suffix = "…" if 0 <= position < len(content) - radius else ""
@@ -234,18 +252,18 @@ def make_snippet(content: str, query: str, radius: int = 60) -> str:
 
 
 def split_kim_conversations(page_title: str, content: str) -> list[dict]:
-    """Découpe une page KIM en conversations distinctes.
+    """Split a KIM page into distinct conversations.
 
-    Chaque conversation est délimitée par un titre de section ``### …``
-    (Wiki = ``=== … ===``), typiquement ``### Conversation 1 (sujet)``,
-    éventuellement sous un en-tête de rang ``## Rank N - X``.  À l'instar de
-    ``browse.wf``, on obtient ainsi des branches de dialogue indépendantes.
+    Each conversation is delimited by a ``### …`` section title
+    (Wiki = ``=== … ===``), typically ``### Conversation 1 (topic)``,
+    optionally under a ``## Rank N - X`` header.  Like ``browse.wf``,
+    this yields independent dialogue branches.
 
     Returns:
-        Liste ordonnée de dicts ``{id, title, rank, body}`` où ``body`` est
-        le Markdown de la conversation (titre de section inclus : les parseurs
-        ``build_dialogue_graph``/``parse_dialogue`` s'en servent pour franchir
-        leur préambule).
+        Ordered list of dicts ``{id, title, rank, body}`` where ``body`` is
+        the Markdown of the conversation (section title included: the
+        ``build_dialogue_graph``/``parse_dialogue`` parsers use it to
+        skip the preamble).
     """
     character = page_title.rsplit("/", 1)[-1].strip()
     head = slug_for_id(character)
@@ -293,7 +311,7 @@ def split_kim_conversations(page_title: str, content: str) -> list[dict]:
             pending_start = index
     flush(len(lines))
 
-    # Garantit l'unicité des identifiants (titres/numérotations répétés).
+    # Guarantee uniqueness of ids (repeated titles/numbering).
     seen: set[str] = set()
     for segment in segments:
         base = segment["id"]

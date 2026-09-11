@@ -1,6 +1,6 @@
-"""Modèles de la couche Export — un fichier par classe.
+"""Export layer models -- one file per class.
 
-    * ``game_entity`` -> :class:`GameEntity` (entité localisée du jeu).
+    * ``game_entity`` -> :class:`GameEntity` (localized game entity).
 """
 
 from __future__ import annotations

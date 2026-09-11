@@ -1,4 +1,4 @@
-"""Templates "bruit" : détection et suppression (fallback premier argument)."""
+"""Noise templates: detection and removal (first-argument fallback)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from warframe_lore.cleaner.config import CleanerConfig
 
 
 def is_noise_template(template_name: str, cleaner_config: CleanerConfig) -> bool:
-    """Vrai si le template est dans les listes de bruit (infobox, nav, ...)."""
+    """True if the template is in the noise lists (infobox, nav, ...)."""
     normalized_name = template_name.strip().lower()
     if normalized_name in cleaner_config.noise_exact_names:
         return True
@@ -19,7 +19,7 @@ def is_noise_template(template_name: str, cleaner_config: CleanerConfig) -> bool
 
 
 def is_pure_noise(template_name: str, cleaner_config: CleanerConfig) -> bool:
-    """Vrai si le template est un marqueur de maintenance sans valeur."""
+    """True if the template is a valueless maintenance marker."""
     return template_name.strip().lower() in cleaner_config.pure_noise
 
 
@@ -28,10 +28,10 @@ _TEMPLATE_PATTERN = re.compile(r"\{\{((?:[^{}]|\{\{[^{}]*\}\})*)\}\}")
 
 def strip_templates_to_text(wikitext: str,
                             cleaner_config: CleanerConfig) -> str:
-    """Convertit les templates restants en leur premier argument pipe.
+    """Converts remaining templates to their first pipe argument.
 
-    Stratégie : si le template est du bruit -> rien ; sinon on garde le
-    premier argument (texte affiché) ou le nom du template en fallback.
+    Strategy: if the template is noise -> nothing; otherwise keep the
+    first argument (displayed text) or the template name as fallback.
     """
     def _replace_template(match: re.Match) -> str:
         inner_body = match.group(1)
@@ -46,7 +46,7 @@ def strip_templates_to_text(wikitext: str,
 
     previous_text = None
     current_text = wikitext
-    while previous_text != current_text:  # boucle jusqu'à point fixe (templates imbriqués)
+    while previous_text != current_text:  # loop until fixed point (nested templates)
         previous_text = current_text
         current_text = _TEMPLATE_PATTERN.sub(_replace_template, current_text)
     return current_text

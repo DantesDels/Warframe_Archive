@@ -1,7 +1,7 @@
-"""Helpers de découpage (passe 2) : récursif, chevauchement, coupe dure.
+"""Chunking helpers (pass 2): recursive, overlap, hard cut.
 
-Ces fonctions sont pures (aucun état) et réutilisées à la fois par le
-``ChunkManager`` structurel et le mode dialogue.
+These functions are pure (no state) and reused by both the structural
+``ChunkManager`` and the dialogue mode.
 """
 
 from __future__ import annotations
@@ -9,17 +9,17 @@ from __future__ import annotations
 import re
 from typing import Any
 
-# Ligne de dialogue KIM : '> **Amir:** texte' (le ':' est DANS le gras :
-# '**' + 'Amir:' + '**').  On capture le nom du locuteur.
+# KIM dialogue line: '> **Amir:** text' (the ':' is INSIDE the bold:
+# '**' + 'Amir:' + '**').  We capture the speaker name.
 _BLOCKQUOTE_SPEAKER_PATTERN = re.compile(
     r"^>\s*\*\*(?P<speaker>[^*:]+?):\*\*\s*")
 
 
 def speakers_metadata(speakers: list[str]) -> dict[str, Any]:
-    """Construit le dict ``metadata`` d'un chunk de dialogue.
+    """Builds the ``metadata`` dict of a dialogue chunk.
 
-    Renvoie ``{}`` si aucun locuteur réel (préambule / notes hors dialogue) ;
-    sinon ``{"speakers": [noms uniques, ordre d'apparition]}``.
+    Returns ``{}`` if there is no real speaker (preamble / non-dialogue
+    notes); otherwise ``{"speakers": [unique names, order of appearance]}``.
     """
     unique_speakers = list(dict.fromkeys(speakers))
     if not unique_speakers:
@@ -28,24 +28,24 @@ def speakers_metadata(speakers: list[str]) -> dict[str, Any]:
 
 
 def line_speaker(line: str) -> str | None:
-    """Extrait le nom de locuteur d'une ligne de dialogue ``> **Name:**``.
+    """Extracts the speaker name from a ``> **Name:**`` dialogue line.
 
-    Filtre strict : un vrai locuteur KIM est un nom propre court sans
-    ponctuation spéciale ni balise de navigation (``(Jump ...``, ``[Jump``,
-    ``> ...``).  Les options de dialogue et annotations des pages KIM ne
-    sont pas des locuteurs.
+    Strict filter: a real KIM speaker is a short proper name without
+    special punctuation or navigation tags (``(Jump ...``, ``[Jump``,
+    ``> ...``).  Dialogue options and KIM page annotations are not
+    speakers.
     """
     match = _BLOCKQUOTE_SPEAKER_PATTERN.match(line.strip())
     if match is None:
         return None
     candidate = match.group("speaker").strip()
-    # Exclut les balises/navigation/branches : crochets, parenthèses,
-    # chevrons, accolades, astérisques ou soulignés.
+    # Excludes tags/navigation/branches: brackets, parentheses,
+    # angle brackets, braces, asterisks or underscores.
     if not candidate or any(marker in candidate for marker in
                             ("*", "_", "]", "}", "(", "[", ">")):
         return None
-    # Un vrai nom de personnage commence par une lettre majuscule, est
-    # court (<= 24 chars) et ne contient pas de ponctuation de phrase.
+    # A real character name starts with an uppercase letter, is short
+    # (<= 24 chars) and contains no sentence punctuation.
     if not (candidate[0].isalpha() and candidate[0].isupper()):
         return None
     if len(candidate) > 24:
@@ -61,14 +61,14 @@ def recursive_character_split(
     chunk_max_characters: int,
     chunk_overlap_characters: int,
 ) -> list[str]:
-    """Splitter récursif (équivalent ``RecursiveCharacterTextSplitter``).
+    """Recursive splitter (the ``RecursiveCharacterTextSplitter`` equivalent).
 
-    1. On découpe au premier séparateur non présent puis on *fusionne* les
-       morceaux consécutifs jusqu'à approcher ``chunk_max_characters`` ;
-    2. Tout morceau resté trop grand est re-travaillé avec le séparateur
-       suivant (récursif) ;
-    3. On applique ensuite un chevauchement : chaque chunk porte la queue
-       du chunk précédent pour préserver le contexte.
+    1. It splits on the first separator found then *merges* the consecutive
+       pieces until approaching ``chunk_max_characters``;
+    2. Any piece still too large is re-processed with the next separator
+       (recursive);
+    3. Overlap is then applied: each chunk carries the tail of the previous
+       one to preserve context.
     """
     if not separators:
         return hard_split(text, chunk_max_characters, chunk_overlap_characters)
@@ -78,12 +78,12 @@ def recursive_character_split(
 
     pieces = text.split(separator)
     if len(pieces) == 1:
-        # Le séparateur courant n'est pas dans le texte : séparateur suivant.
+        # The current separator is not in the text: try the next one.
         return _recursive_character_split(
             text, remaining_separators,
             chunk_max_characters, chunk_overlap_characters)
 
-    # Fusion des morceaux en chunks proches de la taille cible.
+    # Merges the pieces into chunks close to the target size.
     merged_chunks = _merge_pieces(
         pieces, separator, chunk_max_characters, chunk_overlap_characters)
 
@@ -96,7 +96,7 @@ def recursive_character_split(
                 chunk, remaining_separators,
                 chunk_max_characters, chunk_overlap_characters))
         else:
-            # Plus de séparateurs disponibles : coupe dure avec recouvrement.
+            # No more separators available: hard cut with overlap.
             final_chunks.extend(hard_split(
                 chunk, chunk_max_characters, chunk_overlap_characters))
 
@@ -110,7 +110,7 @@ def _recursive_character_split(
     chunk_max_characters: int,
     chunk_overlap_characters: int,
 ) -> list[str]:
-    """Point d'entrée interne de la récursion (délègue à la fonction publique)."""
+    """Internal recursion entry point (delegates to the public function)."""
     return recursive_character_split(
         text, separators, chunk_max_characters, chunk_overlap_characters)
 
@@ -121,10 +121,10 @@ def _merge_pieces(
     chunk_max_characters: int,
     chunk_overlap_characters: int,
 ) -> list[str]:
-    """Assemble des morceaux consécutifs en chunks proches de la cible.
+    """Assembles consecutive pieces into chunks close to the target.
 
-    Le séparateur est recollé après chaque morceau (sauf le dernier) pour
-    ne perdre aucune information.
+    The separator is re-appended after each piece (except the last one) so
+    no information is lost.
     """
     merged_chunks: list[str] = []
     current_piece = ""
@@ -151,11 +151,11 @@ def _apply_overlap(
     chunk_max_characters: int,
     chunk_overlap_characters: int,
 ) -> list[str]:
-    """Préfixe chaque chunk (sauf le premier) par la queue du précédent.
+    """Prefixes each chunk (except the first) with the previous one's tail.
 
-    Garantit la continuité du contexte entre chunks consécutifs, sans
-    dupliquer si le chevauchement est déjà présent, et sans jamais
-    dépasser ``chunk_max_characters`` (le contexte ajouté est borné).
+    Guarantees context continuity between consecutive chunks, without
+    duplicating when the overlap is already present, and without ever
+    exceeding ``chunk_max_characters`` (the added context is bounded).
     """
     if len(chunks) <= 1 or chunk_overlap_characters <= 0:
         return chunks
@@ -169,7 +169,7 @@ def _apply_overlap(
         if chunk.startswith(previous_tail):
             result.append(chunk)
             continue
-        # Borde la queue préfixée pour rester ≤ chunk_max_characters.
+        # Bounds the prefixed tail to stay ≤ chunk_max_characters.
         room_for_overlap = max(0, chunk_max_characters - len(chunk))
         bounded_tail = previous_tail[-room_for_overlap:] if room_for_overlap else ""
         result.append(bounded_tail + chunk)
@@ -178,7 +178,7 @@ def _apply_overlap(
 
 def hard_split(text: str, chunk_max_characters: int,
                chunk_overlap_characters: int) -> list[str]:
-    """Découpe un texte très long en morceaux de taille fixe + recouvrement."""
+    """Splits a very long text into fixed-size pieces + overlap."""
     step_size = chunk_max_characters - chunk_overlap_characters
     if step_size <= 0:
         step_size = chunk_max_characters

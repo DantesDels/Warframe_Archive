@@ -1,4 +1,4 @@
-"""Un message d'une discussion KIM (ligne de dialogue parsée)."""
+"""A message from a KIM conversation (parsed dialogue line)."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from .wiki_page import WikiPage
 
 
 class KimDialogue(Base):
-    """Un message d'une discussion KIM (ligne de dialogue parsée)."""
+    """A message from a KIM conversation (parsed dialogue line)."""
 
     __tablename__ = "kim_dialogues"
 

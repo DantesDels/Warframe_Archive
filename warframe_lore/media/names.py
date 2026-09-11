@@ -1,4 +1,4 @@
-"""Normalisation des noms de fichiers et clés de correspondance."""
+"""Filename and lookup-key normalisation."""
 
 from __future__ import annotations
 
@@ -7,10 +7,10 @@ import unicodedata
 
 
 def sanitize_filename(texture_location: str) -> str:
-    """Nom de fichier local stable pour une ``textureLocation``.
+    """Stable local filename for a ``textureLocation``.
 
-    Ex: ``/Lotus/Interface/Icons/StoreIcons/Weapons/.../Lato.png!00_<hash>``
-    -> ``Lato.png__00_<hash>.png`` (unique via le hash content-addressed).
+    E.g. ``/Lotus/Interface/Icons/StoreIcons/Weapons/.../Lato.png!00_<hash>``
+    -> ``Lato.png__00_<hash>.png`` (unique via the content-addressed hash).
     """
     base = texture_location.rsplit("/", 1)[-1]
     name, _, hash_part = base.partition("!00_")
@@ -22,7 +22,7 @@ def sanitize_filename(texture_location: str) -> str:
 
 
 def normalize_key(value: str) -> str:
-    """Clé de correspondance insensible à la casse / aux accents."""
+    """Case- / accent-insensitive lookup key."""
     text = unicodedata.normalize("NFKC", value or "")
     text = text.casefold()
     text = re.sub(r"\s+", " ", text).strip()

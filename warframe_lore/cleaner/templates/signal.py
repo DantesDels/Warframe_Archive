@@ -1,4 +1,4 @@
-"""Détection des templates de signal canon/non-canon."""
+"""Detection of canon/non-canon signal templates."""
 
 from __future__ import annotations
 
@@ -8,12 +8,12 @@ from warframe_lore.cleaner.config import CleanerConfig
 
 
 def must_flag_non_canon(template_node: Template, cleaner_config: CleanerConfig) -> bool:
-    """Vrai si le template marque la conjecture du joueur (ex: Speculation)."""
+    """True if the template marks player speculation (e.g. Speculation)."""
     return _template_name_matches(template_node, cleaner_config.non_canon_templates)
 
 
 def must_flag_canon(template_node: Template, cleaner_config: CleanerConfig) -> bool:
-    """Vrai si le template confirme le canon officiel (ex: Canon, Confirmed)."""
+    """True if the template confirms official canon (e.g. Canon, Confirmed)."""
     return _template_name_matches(template_node, cleaner_config.canon_templates)
 
 

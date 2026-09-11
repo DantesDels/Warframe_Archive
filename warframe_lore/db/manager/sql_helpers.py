@@ -1,8 +1,8 @@
-"""Helpers SQL purs (aucun état) partagés par les mixins du manager.
+"""Pure SQL helpers (no state) shared by the manager mixins.
 
-Ces fonctions restent au niveau module pour être testables et réutilisables
-(parsing de timestamps wiki, normalisation du statut canon, découpage d'un
-script SQL multi-commandes).
+These functions stay at module level so they are testable and reusable
+(wiki timestamp parsing, canon status normalization, splitting a
+multi-command SQL script).
 """
 
 from __future__ import annotations
@@ -14,10 +14,10 @@ from ...output.models import CanonStatus
 
 
 def parse_timestamp(value: str | None) -> Optional[datetime]:
-    """Convertit un timestamp ISO en datetime (None si invalide).
+    """Converts an ISO timestamp into a datetime (None if invalid).
 
-    Le champ ``touched`` de l'API wiki est de la forme
-    ``2026-09-05T16:20:11Z`` (suffixe Z = UTC).
+    The ``touched`` field of the wiki API has the form
+    ``2026-09-05T16:20:11Z`` (Z suffix = UTC).
     """
     if not value:
         return None
@@ -28,18 +28,18 @@ def parse_timestamp(value: str | None) -> Optional[datetime]:
 
 
 def as_canon_status_string(canon_status: CanonStatus | str) -> str:
-    """Normalise un statut canon en sa valeur string."""
+    """Normalizes a canon status to its string value."""
     if isinstance(canon_status, CanonStatus):
         return canon_status.value
     return canon_status
 
 
 def split_sql_statements(sql_script: str) -> list[str]:
-    """Découpe un script SQL en statements individuels.
+    """Splits a SQL script into individual statements.
 
-    asyncpg interdit plusieurs commandes dans un statement préparé : on
-    scinde sur les points-virgules hors chaînes de caractères, et on ignore
-    les commentaires ``-- ...`` (qui peuvent contenir des apostrophes).
+    asyncpg forbids multiple commands in a prepared statement: the script
+    is split on semicolons outside string literals, ignoring ``-- ...``
+    comments (which may contain apostrophes).
     """
     statements: list[str] = []
     current_statement: list[str] = []
@@ -52,7 +52,7 @@ def split_sql_statements(sql_script: str) -> list[str]:
         character = sql_script[index]
         next_character = sql_script[index + 1] if index + 1 < line_length else ""
 
-        # Commentaire SQL '--' hors chaîne : on saute jusqu'au saut de ligne.
+        # SQL '--' comment outside a string: skip until the end of line.
         if character == "-" and next_character == "-" \
                 and not in_single_quote and not in_double_quote:
             while index < line_length and sql_script[index] != "\n":

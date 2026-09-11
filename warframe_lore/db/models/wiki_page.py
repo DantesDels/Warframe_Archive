@@ -1,4 +1,4 @@
-"""Table racine ``wiki_pages`` : une ligne par page de wiki."""
+"""Root table ``wiki_pages``: one row per wiki page."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from .base import Base
 
 
 class WikiPage(Base):
-    """Table racine : une ligne par page de wiki (page_id natif = PK)."""
+    """Root table: one row per wiki page (native page_id = PK)."""
 
     __tablename__ = "wiki_pages"
 
@@ -42,14 +42,14 @@ class WikiPage(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now())
 
-    # Un index unique sur le titre (retrouver une page par titre, vite).
+    # A unique index on the title (find a page by title, fast).
     __table_args__ = (
-        # Les valeurs autorisées sont calquées sur les statuts de sortie.
+        # The allowed values mirror the output statuses.
         CheckConstraint(
             "canon_status IN ('canon', 'speculation', 'community_theory')",
             name="ck_wiki_pages_canon_status"),
-        # Parité avec init_db.sql : retrouver une page par titre (+ filtre
-        # bucket/statut) doit passer par des index déclarés dans l'ORM.
+        # Parity with init_db.sql: finding a page by title (+ filter
+        # bucket/status) must go through indexes declared in the ORM.
         Index("idx_wiki_pages_title", "page_title", unique=True),
         Index("idx_wiki_pages_bucket", "category"),
         Index("idx_wiki_pages_canon", "canon_status"),

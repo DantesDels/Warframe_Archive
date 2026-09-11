@@ -1,8 +1,8 @@
-"""Construction des entrées de sortie (factories).
+"""Output entry construction (factories).
 
-Les dataclasses elles-mêmes (``OutputEntry``, ``MegafileMetadata``) vivent
-dans ``output/models/`` ; ce module expose la fabrication conforme au schéma
-JSON (champ ``canon_status`` pour segmenter canon vs théories des joueurs).
+The dataclasses themselves (``OutputEntry``, ``MegafileMetadata``) live
+in ``output/models/``; this module exposes schema-compliant construction
+(``canon_status`` field to segment canon vs player theories).
 """
 
 from __future__ import annotations
@@ -19,9 +19,9 @@ def build_output_entry(
     pageid: int | None,
     source_wiki_url: str,
 ) -> OutputEntry:
-    """Construit une :class:`OutputEntry` selon le schéma documenté.
+    """Builds an :class:`OutputEntry` conforming to the documented schema.
 
-    ``source_wiki_url`` est l'URL de base du wiki (ex:
+    ``source_wiki_url`` is the wiki base URL (e.g.
     ``https://wiki.warframe.com/wiki/``).
     """
     date_last_updated = (touched or "")[:10]  # YYYY-MM-DD

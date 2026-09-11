@@ -1,7 +1,7 @@
-"""Couche Sync : suivi de l'état delta (mode incrémental).
+"""Sync layer: delta state tracking (incremental mode).
 
-À terme, l'état est interrogé depuis la base SQL (``last_updated`` des
-pages) plutôt que depuis un fichier JSON local.
+Eventually the state will be queried from the SQL database (``last_updated``
+of pages) rather than from a local JSON file.
 """
 
 from .state import SyncState

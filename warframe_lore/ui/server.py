@@ -1,11 +1,11 @@
-"""Interface ``cephalon ui`` — lancement du serveur HTTP.
+"""``cephalon ui`` interface — HTTP server launcher.
 
-Glue de démarrage : construit le ``LoreStore`` (megafiles ``out/*.json``), le
-``MediaIndex`` (images wiki) et le ``ApiHandler`` (routes ``/api/*`` +
-statiques, Gzip), puis sert en boucle sur ``127.0.0.1``.
+Startup glue: builds the ``LoreStore`` (megafiles ``out/*.json``), the
+``MediaIndex`` (wiki images) and the ``ApiHandler`` (``/api/*`` routes +
+static files, Gzip), then serves on ``127.0.0.1``.
 
-Lancement : ``python -m warframe_lore.ui.server`` (exe PyInstaller) ou
-``cephalon ui`` (CLI).  Paramètres : ``--out``, ``--port``, ``--no-browser``.
+Launch: ``python -m warframe_lore.ui.server`` (PyInstaller exe) or
+``cephalon ui`` (CLI).  Options: ``--out``, ``--port``, ``--no-browser``.
 """
 
 from __future__ import annotations
@@ -24,13 +24,13 @@ __all__ = ["LoreStore", "serve_forever", "main"]
 
 
 def _bundle_root() -> Path:
-    """Racine des fichiers dépaquetés PyInstaller (``sys._MEIPASS``)."""
+    """Root of the unpacked PyInstaller files (``sys._MEIPASS``)."""
     meipass = getattr(sys, "_MEIPASS", None)
     return Path(meipass) if meipass else Path(__file__).resolve().parent
 
 
 def _static_dir() -> Path:
-    """Répertoire des fichiers statiques (source, sdist ou exe PyInstaller)."""
+    """Static files directory (source, sdist or PyInstaller exe)."""
     root = _bundle_root()
     for candidate in (
         root / "warframe_lore" / "ui" / "static",   # exe onefile --add-data
@@ -43,7 +43,7 @@ def _static_dir() -> Path:
 
 
 def _default_output_dir() -> Path:
-    """Dossier de megafiles à exposer : ``out/`` du cwd, du projet ou exe."""
+    """Megafile folder to expose: ``out/`` of the cwd, project or exe."""
     exe_dir = (Path(sys.executable).resolve().parent
                if getattr(sys, "frozen", False) else None)
     candidates = [
@@ -67,27 +67,27 @@ def _build_handler(store: LoreStore, media: MediaIndex | None = None) -> type[Ap
 
 def serve_forever(output_dir: Path, port: int = 0,
                   open_browser: bool = True) -> None:
-    """Démarre le serveur (bloquant). Utilisé par ``cephalon ui``.
+    """Start the server (blocking). Used by ``cephalon ui``.
 
     Args:
-        output_dir: dossier des megafiles à exposer.
-        port: port à utiliser (0 = port libre automatique).
-        open_browser: ouvrir le navigateur par défaut après démarrage.
+        output_dir: folder of the megafiles to expose.
+        port: port to use (0 = automatically free port).
+        open_browser: open the default browser after startup.
     """
     store = LoreStore(output_dir)
     media = MediaIndex(output_dir, cache_dir="cache/public_export/media")
     handler = _build_handler(store, media)
     try:
         threading.Thread(target=media.ensure, daemon=True).start()
-    except RuntimeError:  # pas de thread disponible : construction au 1er appel
+    except RuntimeError:  # no thread available: build on first call
         pass
     httpd = ThreadingHTTPServer(("127.0.0.1", port), handler)
     actual_port = httpd.server_address[1]
     url = f"http://127.0.0.1:{actual_port}/"
 
-    print(f"Cephalon UI — interface disponible sur {url}")
-    print(f"  Source de données : {output_dir.resolve()}")
-    print("  Pressez Ctrl+C pour arrêter le serveur.")
+    print(f"Cephalon UI — interface available at {url}")
+    print(f"  Data source: {output_dir.resolve()}")
+    print("  Press Ctrl+C to stop the server.")
 
     if open_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
@@ -95,31 +95,31 @@ def serve_forever(output_dir: Path, port: int = 0,
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\nArrêt de Cephalon UI.")
+        print("\nShutting down Cephalon UI.")
     finally:
         httpd.server_close()
-        print("Serveur arrêté.")
+        print("Server stopped.")
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point console ``cephalon-ui`` (autonome, pour l'exe PyInstaller)."""
+    """Console entry point ``cephalon-ui`` (standalone, for the PyInstaller exe)."""
     import argparse
     parser = argparse.ArgumentParser(
         prog="cephalon-ui",
-        description="Interface web pour parcourir le lore Warframe récupéré.",
+        description="Web interface to browse scraped Warframe lore.",
     )
     parser.add_argument("--out", type=Path, default=None,
-                        help="Dossier des megafiles (défaut: ./out)")
+                        help="Megafiles folder (default: ./out)")
     parser.add_argument("--port", type=int, default=0,
-                        help="Port à utiliser (0 = libre, défaut)")
+                        help="Port to use (0 = free, default)")
     parser.add_argument("--no-browser", action="store_true",
-                        help="N'ouvre pas le navigateur automatiquement.")
+                        help="Does not open the browser automatically.")
     args = parser.parse_args(argv)
 
     output_dir = args.out or _default_output_dir()
     if not output_dir.is_dir():
-        print(f"Attention : aucun dossier de données trouvé ({output_dir}).")
-        print("Lancez d'abord `cephalon run` pour générer les megafiles.")
+        print(f"Warning: no data folder found ({output_dir}).")
+        print("Run `cephalon run` first to generate the megafiles.")
     serve_forever(output_dir, port=args.port,
                   open_browser=not args.no_browser)
     return 0

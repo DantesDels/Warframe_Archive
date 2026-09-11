@@ -1,8 +1,7 @@
-"""Support pour le CLI ``cephalon`` : logging, config, lancement UI.
+"""Support for the ``cephalon`` CLI: logging, config, UI launcher.
 
-Constantes partagées et helpers transverses (construction de la config,
-affichage des buckets, détection de port libre, ouverture de l'interface
-web dans un process détaché).
+Shared constants and cross-cutting helpers (config building, bucket
+display, free-port detection, web UI launch in a detached process).
 """
 
 from __future__ import annotations
@@ -35,7 +34,7 @@ def setup_logging(verbose: bool) -> None:
 
 
 def build_config(args) -> tuple:
-    """Construit la config + la config buckets partagées par les commandes."""
+    """Build the config + bucket config shared by the commands."""
     config = load_config()
     if getattr(args, "database_url", None):
         config.database_url = args.database_url
@@ -53,11 +52,11 @@ def build_config(args) -> tuple:
 def print_buckets(bucket_config: BucketConfig) -> None:
     for spec in bucket_config.specs:
         print(f"[{spec.id}]")
-        print(f"  titre       : {spec.title}")
-        print(f"  fichier     : {spec.filename}")
-        print(f"  catégories  : {', '.join(spec.categories) or '-'}")
-        print(f"  inclu titres: {', '.join(spec.title_include) or '-'}")
-        print(f"  exclu titres: {', '.join(spec.title_exclude) or '-'}")
+        print(f"  title      : {spec.title}")
+        print(f"  file       : {spec.filename}")
+        print(f"  categories : {', '.join(spec.categories) or '-'}")
+        print(f"  include titles: {', '.join(spec.title_include) or '-'}")
+        print(f"  exclude titles: {', '.join(spec.title_exclude) or '-'}")
         print()
 
 
@@ -71,10 +70,10 @@ def port_free(port: int) -> bool:
 
 
 def launch_ui(config) -> None:
-    """Lance l'interface web en arrière-plan et ouvre le navigateur.
+    """Launch the web UI in the background and open the browser.
 
-    Le serveur tourne dans un process détaché (console dédiée sur Windows) et
-    presse le navigateur sur le port choisi ; ``cephalon run`` n'attend pas.
+    The server runs in a detached process (dedicated console on Windows) and
+    points the browser at the chosen port; ``cephalon run`` does not wait.
     """
     out = config.output_dir
     port = DEFAULT_UI_PORT if port_free(DEFAULT_UI_PORT) else 0
@@ -90,9 +89,9 @@ def launch_ui(config) -> None:
             stderr=subprocess.DEVNULL,
         )
     except OSError as exc:
-        print(f"Impossible de lancer l'interface web : {exc}", file=sys.stderr)
+        print(f"Could not launch the web UI: {exc}", file=sys.stderr)
         return
     if port:
-        print(f"Interface web lancée : http://127.0.0.1:{port}/")
+        print(f"Web UI launched: http://127.0.0.1:{port}/")
     else:
-        print("Interface web lancée (port libre automatique).")
+        print("Web UI launched (automatic free port).")

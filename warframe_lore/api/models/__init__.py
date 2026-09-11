@@ -1,11 +1,11 @@
-"""Modèles de données source-agnostics — un fichier par classe.
+"""Source-agnostic data models — one file per class.
 
-Ces dataclasses décrivent le contrat de données entre les couches
-(API -> scraper -> cleaner -> output), quel que soit le fournisseur
-(MediaWiki aujourd'hui, Reddit/Forums demain).
+These dataclasses describe the data contract between the layers
+(API -> scraper -> cleaner -> output), regardless of the provider
+(MediaWiki today, Reddit/Forums tomorrow).
 
-    * ``page_data``      -> :class:`PageData` ;
-    * ``touched_info``   -> :class:`TouchedInfo` ;
+    * ``page_data``      -> :class:`PageData`;
+    * ``touched_info``   -> :class:`TouchedInfo`;
     * ``category_spec``  -> :class:`CategorySpec`.
 """
 

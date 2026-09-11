@@ -1,16 +1,16 @@
-"""Interface abstraite pour toutes les sources de données.
+"""Abstract interface for all data sources.
 
-Le projet est construit pour être extensible : aujourd'hui nous ne
-consommons que le wiki MediaWiki (``MediaWikiSource``), mais demain il sera
-possible de brancher Reddit, les Forums officiels, etc.  C'est cette
-interface qui rend cette évolution possible sans toucher au reste du
-pipeline (scraper, cleaner, output).
+The project is designed to be extensible: today we only consume the
+MediaWiki wiki (``MediaWikiSource``), but tomorrow it will be possible to
+plug in Reddit, the official Forums, etc.  This interface is what makes
+that evolution possible without touching the rest of the pipeline
+(scraper, cleaner, output).
 
-Chaque nouvelle source doit :
-  * hériter de :class:`BaseSource` ;
-  * implémenter les trois méthodes abstraites (fetch_pages, check_updates,
+Each new source must:
+  * inherit from :class:`BaseSource` ;
+  * implement the three abstract methods (fetch_pages, check_updates,
     resolve_categories) ;
-  * rester un composant de communication PURE (aucun nettoyage ici).
+  * remain a PURE communication component (no cleaning here).
 """
 
 from __future__ import annotations
@@ -23,29 +23,29 @@ __all__ = ["BaseSource", "CategorySpec", "PageData", "TouchedInfo"]
 
 
 class BaseSource(ABC):
-    """Interface commune à toutes les sources de données.
+    """Common interface to all data sources.
 
-    Le pipeline (``scraper.py``) dépend uniquement de cette interface.  Cela
-    respecte le principe SOLID *Dependency Inversion* : le code de haut
-    niveau ne dépend pas d'implémentations concrètes.
+    The pipeline (``scraper.py``) depends only on this interface.  This
+    respects the SOLID *Dependency Inversion* principle: high-level code
+    does not depend on concrete implementations.
     """
 
     name: str = "base"
 
     @abstractmethod
     def fetch_pages(self, titles: list[str]) -> dict[str, PageData]:
-        """Récupère le contenu complet des pages demandées.
+        """Fetches the full content of the requested pages.
 
         Returns:
-            Mapping ``titre -> PageData`` (seules les pages trouvées).
+            Mapping ``title -> PageData`` (only the pages found).
         """
 
     @abstractmethod
     def check_updates(self, titles: list[str]) -> dict[str, TouchedInfo]:
-        """Récupère uniquement les métadonnées de modification (champ ``touched``).
+        """Fetches only the modification metadata (``touched`` field).
 
-        Utilisé pour le mode delta : on compare avec l'état local pour
-        décider quelles pages re-télécharger.
+        Used for delta mode: it is compared against the local state to
+        decide which pages to re-download.
         """
 
     @abstractmethod
@@ -53,22 +53,21 @@ class BaseSource(ABC):
         self,
         category_names: list[str],
     ) -> dict[str, set[str]]:
-        """Résout des catégories en listes de titres de pages.
+        """Resolves categories into lists of page titles.
 
         Args:
-            category_names: noms de catégories à développer.
+            category_names: names of the categories to expand.
 
         Returns:
-            Mapping ``nom_catégorie -> set de titres de pages`` (sous-catégories
-            incluses selon la source).
+            Mapping ``category_name -> set of page titles`` (subcategories
+            included depending on the source).
         """
 
     def resolve_prefix(self, prefix: str) -> set[str]:
-        """Titres (ns=0) commençant par ``prefix`` (découverte par préfixe).
+        """Titles (ns=0) starting with ``prefix`` (prefix-based discovery).
 
-        Méthode non-abstraite : les sources qui ne supportent pas la
-        découverte par préfixe retournent simplement un ensemble vide.
-        Celles qui la supportent (ex: MediaWiki ``list=allpages``) la
-        surchargent.
+        Non-abstract method: sources that do not support prefix-based
+        discovery simply return an empty set.  Those that support it (e.g.
+        MediaWiki ``list=allpages``) override it.
         """
         return set()

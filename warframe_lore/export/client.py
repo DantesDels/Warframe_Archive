@@ -1,8 +1,8 @@
-"""Client du Warframe Public Export — façade orientée utilisateur.
+"""Warframe Public Export client -- user-oriented facade.
 
-Le réseau (index/actifs) vit dans ``fetch``, l'extraction dans ``extract``,
-la synchronisation en base dans ``sync``.  Cette classe ne garde que l'état
-(configuration, répertoire de cache) et délègue.
+Networking (index/assets) lives in ``fetch``, extraction in ``extract``,
+database sync in ``sync``.  This class only holds state (configuration,
+cache directory) and delegates.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 
 class PublicExportClient:
-    """Client du Warframe Public Export avec cache local incrémental."""
+    """Warframe Public Export client with incremental local cache."""
 
     def __init__(
         self,
@@ -31,15 +31,15 @@ class PublicExportClient:
         self.categories = dict(categories or EXPORT_CATEGORIES)
         self.timeout = timeout
 
-    # ------------------------------------------------------------- réseau
+    # ------------------------------------------------------------- network
     def _http_get(self, url: str) -> bytes:
-        """GET binaire avec User-Agent navigateur + timeouts raisonnables."""
+        """Binary GET with browser User-Agent + reasonable timeouts."""
         request = urllib.request.Request(
             url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(request, timeout=self.timeout) as response:
             return response.read()
 
-    # ------------------------------------------------------------ délégation
+    # ------------------------------------------------------------ delegation
     def fetch_index(self, lang: str) -> list[str]:
         from .fetch import fetch_index
         return fetch_index(self, lang)
@@ -58,7 +58,7 @@ class PublicExportClient:
         category: str,
         payload: bytes,
     ) -> list:
-        """Extrait les :class:`GameEntity` d'un actif (délégation)."""
+        """Extracts :class:`GameEntity` instances from an asset (delegation)."""
         from .extract import extract_entities
         return extract_entities(self.categories, lang, category, payload)
 

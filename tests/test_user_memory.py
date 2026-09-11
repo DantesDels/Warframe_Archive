@@ -257,7 +257,11 @@ class Bloc2UserContextTests(unittest.TestCase):
         self.assertIn("DIRECTIVE DE CIVILITÉ", system)
         self.assertIn("Ne commence JAMAIS une réponse par une présentation",
                       system)
-        self.assertIn("Vous êtes DantesDels, Concepteur.", system)
+        # La directive ne fournit PLUS de template copiable « Vous êtes … » :
+        # l'exception d'identité est décrite abstraitement (anti-préambule).
+        self.assertIn("présente alors LUI avec son pseudonyme et son statut",
+                      system)
+        self.assertNotIn("Vous êtes DantesDels, Concepteur.", system)
         self.assertIn("ne commence par aucune présentation de toi-même",
                       system)
         self.assertIn("SEULE EXCEPTION", system)

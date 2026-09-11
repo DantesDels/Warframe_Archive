@@ -1,19 +1,31 @@
 <script setup>
 /** Timeline — lore Warframe "L'Éternisme" (Vue 3 + dagre en Web Worker).
  *
+ * - Grappe réactive : les nœuds vivent dans un ``pool`` (cache plan de toutes
+ *   les entités déjà chargées, ``{nodes, edges}`` du contrat). Le ``nodes``
+ *   réactif ne contient que le *sous-graphe visible* : une entité est visible
+ *   si son parent (ou racine) est ``expanded`` — le bouton ＋/− replie ou
+ *   rouvre les enfants, sans jamais re-télécharger (cache ``pool``).
  * - Lazy-loading par profondeur : /api/timeline/roots puis
- *   /api/timeline?parent_id={id} au clic sur un nœud avec has_children.
- * - Layout dagre délégué à dagre.worker.js ; les positions reviennent sans
- *   bloquer l'UI (tokens incrémentaux pour ignorer les résultats périmés).
+ *   /api/timeline?parent_id={id} au premier dépliage.
+ * - Layout dagre délégué à dagre.worker.js (top-down, mobile-first) ; les
+ *   positions reviennent sans bloquer l'UI (tokens incrémentaux pour ignorer
+ *   les résultats périmés).
  * - Pan/Zoom via gestes natifs (pointer drag, wheel, pinch) sur le stage.
  * - Rendu 2 temps : les nouveaux nœuds sont enfants, mesurés après le patch
  *   DOM (offsetWidth/offsetHeight), puis placés par dagre avec fade-in.
+ * - Navigation Codex : un nœud avec ``codex_slug`` mène à la fiche
+ *   ``CodexEntry`` du routeur.
  */
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 /* ------------------------------------------------------------- état réactif */
-const nodes = shallowRef(new Map())      // id -> nœud vivant {x, y, ...}
-const edges = ref([])                    // liens {source, target, label, paradox}
+const pool = new Map()                // cache plan : id -> entité chargée
+const nodes = shallowRef(new Map())   // sous-graphe visible id -> {x, y, ...}
+const edges = ref([])                 // liens {source, target, label, paradox}
 const edgePoints = shallowRef(new Map()) // "src\0tgt" -> points de routing dagre
 const loading = ref(false)
 const expanding = ref(new Set())
@@ -104,7 +116,6 @@ function postLayout(token) {
     token,
     nodes: payloadNodes,
     edges: special.concat(tree),
-    options: { rankdir: 'LR' },
   }
   try {
     worker.postMessage(lastPayload)
@@ -190,8 +201,10 @@ function makeRecord(p) {
     id: p.id,
     parent_id: p.parent_id,
     label: p.label,
-    kind: p.kind,
+    type: p.type || p.kind || 'era',
+    codex_slug: p.codex_slug || null,
     has_children: !!p.has_children,
+    expanded: !!p.expanded,
     year: p.year || '',
     note: p.note || '',
     // Dimensions réelles inconnues tant que le nœud n'est pas mesuré dans le
@@ -208,6 +221,32 @@ function makeRecord(p) {
 function setNodeEl(el, id) {
   if (el) nodeEls.set(id, el)
   else nodeEls.delete(id)
+}
+
+/* Sous-graphe visible depuis le pool : les racines sont toujours là, un
+ * enfant n'apparaît que si son parent est visible ET ``expanded`` (grappe
+ * repliée = branche coupée). Le zoom du pool reste intact -> replier puis
+ * rouvrir ne re-télécharge rien. */
+function syncVisible() {
+  const out = new Map()
+  const stack = []
+  pool.forEach((n) => {
+    if (!n.parent_id && !out.has(n.id)) {
+      out.set(n.id, n)
+      stack.push(n)
+    }
+  })
+  while (stack.length) {
+    const parent = stack.pop()
+    if (!parent.expanded) continue
+    pool.forEach((n) => {
+      if (n.parent_id === parent.id && !out.has(n.id)) {
+        out.set(n.id, n)
+        stack.push(n)
+      }
+    })
+  }
+  nodes.value = out
 }
 
 /* Rendu 2 temps, phase 1 : après le patch DOM, on mesure la taille réelle de
@@ -235,12 +274,12 @@ async function layout() {
 }
 
 function mergeNodes(list) {
-  const next = new Map(nodes.value)
+  // Ne modifie pas le graphe visible : enrichit simplement le cache ``pool``
+  // (une entité déjà connue garde ses dimensions mesurées / expanded).
   for (const p of list || []) {
-    const prev = next.get(p.id)
-    next.set(p.id, prev ? { ...prev, has_children: p.has_children } : makeRecord(p))
+    const prev = pool.get(p.id)
+    if (!prev) pool.set(p.id, makeRecord(p))
   }
-  nodes.value = next
 }
 
 function mergeEdges(list) {
@@ -263,6 +302,7 @@ async function loadRoots() {
     const payload = await fetchJson('/api/timeline/roots')
     mergeNodes(payload.nodes)
     mergeEdges(payload.edges)
+    syncVisible()
     await layout()
   } catch (err) {
     error.value = err && err.message ? String(err.message) : String(err)
@@ -271,23 +311,38 @@ async function loadRoots() {
   }
 }
 
-function expand(node) {
-  if (expanding.value.has(node.id)) return
+async function toggleExpand(node) {
+  const live = pool.get(node.id)
+  if (!live || !live.has_children || expanding.value.has(node.id)) return
+  if (live.expanded) {
+    // Repli : la branche quitte le graphe visible, le pool reste intact.
+    live.expanded = false
+    syncVisible()
+    await layout()
+    return
+  }
   expanding.value.add(node.id)
-  fetchJson(`/api/timeline?parent_id=${encodeURIComponent(node.id)}`)
-    .then(async (payload) => {
-      mergeNodes(payload.nodes)
-      mergeEdges(payload.edges)
-      const live = nodes.value.get(node.id)
-      if (live) live.has_children = false
-      await layout()
-    })
-    .catch((err) => {
-      error.value = err && err.message ? String(err.message) : String(err)
-    })
-    .finally(() => {
-      expanding.value.delete(node.id)
-    })
+  try {
+    const payload = await fetchJson(
+      `/api/timeline?parent_id=${encodeURIComponent(node.id)}`,
+    )
+    mergeNodes(payload.nodes)
+    mergeEdges(payload.edges)
+    live.expanded = true
+    syncVisible()
+    await layout()
+  } catch (err) {
+    error.value = err && err.message ? String(err.message) : String(err)
+  } finally {
+    expanding.value.delete(node.id)
+  }
+}
+
+/* Navigation Codex : seul un nœud avec codex_slug ouvre la fiche. */
+function onNodeClick(n) {
+  if (n && n.codex_slug) {
+    router.push({ name: 'CodexEntry', params: { id: n.codex_slug } })
+  }
 }
 
 /* -------------------------------------------------------------- pan / zoom */
@@ -461,7 +516,7 @@ function nodeTitle(n) {
 /* Tooltip survol des fragments (points sans label) : position fixe dans le
  * viewport, calculée depuis la boîte du nœud au survol. */
 function showTip(event, n) {
-  if (n.kind !== 'fragment') return
+  if (n.type !== 'fragment') return
   const rect = event.currentTarget.getBoundingClientRect()
   tip.value = { x: rect.left + rect.width / 2, y: rect.top - 8, text: nodeTitle(n) }
 }
@@ -528,15 +583,17 @@ onUnmounted(() => worker.terminate())
           :key="n.id"
           :ref="(el) => setNodeEl(el, n.id)"
           class="node"
-          :class="`node-${n.kind}`"
+          :class="[`node-${n.type}`, { 'node-clickable': n.codex_slug }]"
           :style="nodeStyle(n)"
           :title="nodeTitle(n)"
           @pointerenter="showTip($event, n)"
           @pointerleave="hideTip"
+          @pointerdown.stop.prevent
+          @click.stop="onNodeClick(n)"
         >
-          <span v-if="n.kind !== 'fragment'" class="node-text">
+          <span v-if="n.type !== 'fragment'" class="node-text">
             <span class="node-label">{{ n.label }}</span>
-            <span v-if="n.kind === 'era' && n.year" class="node-sub">{{ n.year }}</span>
+            <span v-if="n.type === 'era' && n.year" class="node-sub">{{ n.year }}</span>
           </span>
           <span v-else class="node-dot"></span>
           <button
@@ -545,8 +602,8 @@ onUnmounted(() => worker.terminate())
             type="button"
             :disabled="expanding.has(n.id)"
             @pointerdown.stop.prevent
-            @click.stop="expand(n)"
-          >{{ expanding.has(n.id) ? '…' : '+' }}</button>
+            @click.stop="toggleExpand(n)"
+          >{{ expanding.has(n.id) ? '…' : (n.expanded ? '−' : '+') }}</button>
         </div>
       </div>
     </div>

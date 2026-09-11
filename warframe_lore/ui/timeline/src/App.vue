@@ -3,11 +3,14 @@
  * Timeline — page autonome du Cephalon Archive.
  * Chrome fidèle à l'archive (sidebar brand + liens), drawer mobile.
  */
-import { onMounted, onUnmounted, ref } from 'vue'
-
-import Timeline from './Timeline.vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 
 const menuOpen = ref(false)
+const route = useRoute()
+const crumb = computed(() =>
+  route.name === 'CodexEntry' ? 'Codex · ' + route.params.id : 'Timeline',
+)
 const onKeydown = (event) => {
   if (event.key === 'Escape') menuOpen.value = false
 }
@@ -53,12 +56,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         <div id="breadcrumb">
           <span class="crumb">Cephalon Archive</span>
           <span class="crumb-sep">›</span>
-          <span class="crumb current">Timeline</span>
+          <span class="crumb current">{{ crumb }}</span>
         </div>
-        <span class="topbar-hint">Éternisme · ères, quêtes, fragments</span>
+        <span class="topbar-hint">Éternisme · ères, quêtes, personnages, warframes</span>
       </header>
 
-      <Timeline />
+      <router-view />
     </main>
 
     <div id="sidebar-backdrop" @click="menuOpen = false"></div>

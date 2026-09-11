@@ -196,6 +196,7 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .stage {
   position: absolute; inset: 0;
   overflow: hidden;
+  touch-action: none;   /* gestes pan/zoom natifs sans scroll/zoom navigateur */
   cursor: grab;
 }
 .stage:active { cursor: grabbing; }
@@ -274,6 +275,37 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   background: linear-gradient(135deg, rgba(226, 232, 240, 0.10), rgba(100, 116, 139, 0.08));
 }
 
+/* Personnages (Ballas, Lotus, Drifter…) : vert de jade, lien fort à l'intrigue. */
+.node-character {
+  min-width: 130px;
+  padding: 8px 13px;
+  font-size: 13px; font-weight: 700;
+  color: #5eead4;
+  border-color: rgba(94, 234, 212, 0.4);
+  background: linear-gradient(135deg, rgba(94, 234, 212, 0.12), rgba(45, 212, 191, 0.05));
+}
+
+/* Lore des Warframes (Inaros, Gara, Umbra) : bronze des étoiles filantes. */
+.node-warframe-lore {
+  min-width: 130px;
+  padding: 8px 13px;
+  font-size: 13px; font-weight: 700;
+  color: #fda4af;
+  border-color: rgba(253, 164, 175, 0.4);
+  background: linear-gradient(135deg, rgba(253, 164, 175, 0.12), rgba(244, 63, 94, 0.06));
+}
+
+/* Nœud lié au Codex : la carte entière devient un lien (curseur main). */
+.node-clickable { cursor: pointer; }
+.node-clickable::after {
+  content: '↗';
+  margin-left: 2px;
+  font-size: 11px;
+  color: var(--text-dim);
+  opacity: 0.75;
+}
+.node-clickable:hover { border-color: var(--accent); }
+
 .node-fragment {
   width: 18px; height: 18px;
   border-radius: 999px;
@@ -337,6 +369,51 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   pointer-events: none;
   white-space: normal;
 }
+
+/* ============================================================ fiche Codex */
+.codex {
+  flex: 1; min-height: 0;
+  overflow: auto;
+  padding: 24px 28px;
+  background:
+    radial-gradient(1100px 460px at 15% 0%, rgba(34, 211, 238, 0.05), transparent 60%),
+    rgba(15, 23, 42, 0.6);
+}
+
+.codex-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 18px;
+}
+
+.codex-back {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+.codex-back:hover { text-decoration: underline; }
+
+.codex-card {
+  max-width: 640px;
+  padding: 22px 26px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.06), rgba(233, 150, 255, 0.04));
+  box-shadow: var(--shadow);
+}
+
+.codex-slug {
+  display: inline-block;
+  padding: 3px 10px;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 11.5px;
+  letter-spacing: 0.4px;
+}
+
+.codex-title { margin: 12px 0 8px; color: var(--text-strong); font-size: 20px; }
+.codex-lead { color: var(--text-dim); font-size: 13.5px; }
 
 /* ============================================================ mobile < 768px */
 @media (max-width: 767.98px) {

@@ -1,0 +1,504 @@
+{
+  "nodes": [
+    {
+      "id": "era-orokin",
+      "type": "era",
+      "label": "L'Empire Orokin",
+      "codex_slug": "empire-orokin",
+      "expanded": false,
+      "parent_id": null,
+      "year": "Le Premier Monde",
+      "note": "Ballas, les Sentients et la Chute. L'Empire se divise : le cheminement principal vers l'Ancienne Guerre et la branche paradoxale de la Zariman.",
+      "has_children": true
+    },
+    {
+      "id": "era-old-war",
+      "type": "era",
+      "label": "L'Ancienne Guerre",
+      "codex_slug": "ancienne-guerre",
+      "expanded": false,
+      "parent_id": "era-orokin",
+      "year": "Ère Orokin",
+      "note": "L'Empire Orokin, les Sentients et la Guerre qui a aveuglé le Système. L'Opérateur s'éveille de ce cauchemar.",
+      "has_children": true
+    },
+    {
+      "id": "era-origin",
+      "type": "era",
+      "label": "Le Système d'Origine",
+      "codex_slug": "systeme-origine",
+      "expanded": false,
+      "parent_id": "era-old-war",
+      "year": "Présent",
+      "note": "Les Tenno face à la Renaissance du Système. Toutes les grandes quêtes contemporaines en découlent.",
+      "has_children": true
+    },
+    {
+      "id": "era-zariman",
+      "type": "era",
+      "label": "La Zariman",
+      "codex_slug": "zariman",
+      "expanded": false,
+      "parent_id": "era-orokin",
+      "year": "Système d'Origine · Paradoxe",
+      "note": "Le manifeste du Vide : le vaisseau, ses enfants et le voyage qui n'a jamais eu lieu. Cette branche éclate vers Duviri (Drifter) et 1999 (Albrecht).",
+      "has_children": true
+    },
+    {
+      "id": "node-1999",
+      "type": "era",
+      "label": "L'An 1999",
+      "codex_slug": "an-1999",
+      "expanded": false,
+      "parent_id": null,
+      "year": "Paradoxe",
+      "note": "Höllvania, la veille de l'an 1999 : la quête '1999', ses fragments et un siècle figé qui n'aboutit qu'au Néant.",
+      "has_children": true
+    },
+    {
+      "id": "node-duviri",
+      "type": "era",
+      "label": "Duviri",
+      "codex_slug": "duviri",
+      "expanded": false,
+      "parent_id": null,
+      "year": "Royaume paradoxal",
+      "note": "Le drame du Drifter pris dans la Spirale infinie entre le Vide et la réalité, quête 'The Duviri Paradox' incluse.",
+      "has_children": true
+    },
+    {
+      "id": "q-sacrifice",
+      "type": "quest",
+      "label": "The Sacrifice",
+      "codex_slug": "the-sacrifice",
+      "expanded": false,
+      "parent_id": "era-origin",
+      "year": "",
+      "note": "Excalibur Umbra, Ballas et le dernier secret des Orokin. Découle de l'Octavia's Anthem.",
+      "has_children": true
+    },
+    {
+      "id": "q-octavia",
+      "type": "quest",
+      "label": "Octavia's Anthem",
+      "codex_slug": "octavia-anthem",
+      "expanded": false,
+      "parent_id": "era-origin",
+      "year": "",
+      "note": "Le Mandachorde et l'Étoile chantée de Maprico. Suit la Guerre Intérieure, précède The Sacrifice.",
+      "has_children": true
+    },
+    {
+      "id": "q-vors",
+      "type": "quest",
+      "label": "Vor's Prize",
+      "codex_slug": "vors-prize",
+      "expanded": false,
+      "parent_id": "era-origin",
+      "year": "",
+      "note": "Les Tenno renaissent : Lotus, Vor et la première entaille dans le Système.",
+      "has_children": false
+    },
+    {
+      "id": "q-second",
+      "type": "quest",
+      "label": "The Second Dream",
+      "codex_slug": "second-dream",
+      "expanded": false,
+      "parent_id": "era-origin",
+      "year": "",
+      "note": "Le fœtus spectral : la vérité sur les Tenno, les Sentients et l'éveil de l'Opérateur.",
+      "has_children": true
+    },
+    {
+      "id": "q-within",
+      "type": "quest",
+      "label": "The War Within",
+      "codex_slug": "war-within",
+      "expanded": false,
+      "parent_id": "era-origin",
+      "year": "",
+      "note": "Les Reines éternelles, la Kuva et l'héritage Orokin du Transférance.",
+      "has_children": true
+    },
+    {
+      "id": "q-harrow",
+      "type": "quest",
+      "label": "Chains of Harrow",
+      "codex_slug": "chains-of-harrow",
+      "expanded": false,
+      "parent_id": "era-origin",
+      "year": "",
+      "note": "Rell, silence et les chaînes du Red Veil.",
+      "has_children": true
+    },
+    {
+      "id": "q-new-war",
+      "type": "quest",
+      "label": "The New War",
+      "codex_slug": "new-war",
+      "expanded": false,
+      "parent_id": "era-origin",
+      "year": "Aboutissement",
+      "note": "La guerre totale contre Ballas, les Sentients et le pacte du Drifter.",
+      "has_children": true
+    },
+    {
+      "id": "q-whispers",
+      "type": "quest",
+      "label": "Whispers in the Walls",
+      "codex_slug": "whispers-in-the-walls",
+      "expanded": false,
+      "parent_id": "era-origin",
+      "year": "",
+      "note": "Albrecht Entrati, le Requiem et la cavité dans les fondations de la réalité.",
+      "has_children": true
+    },
+    {
+      "id": "q-zariman",
+      "type": "quest",
+      "label": "Angels of the Zariman",
+      "codex_slug": "angels-of-zariman",
+      "expanded": false,
+      "parent_id": "era-zariman",
+      "year": "",
+      "note": "Le vaisseau-manifestation et le prix du voyage dans le Vide.",
+      "has_children": false
+    },
+    {
+      "id": "q-jade",
+      "type": "quest",
+      "label": "Jade Shadows",
+      "codex_slug": "jade-shadows",
+      "expanded": false,
+      "parent_id": "era-origin",
+      "year": "",
+      "note": "Une lumière tombée du ciel et son enfant.",
+      "has_children": false
+    },
+    {
+      "id": "q-deimos",
+      "type": "quest",
+      "label": "Heart of Deimos",
+      "codex_slug": "heart-of-deimos",
+      "expanded": false,
+      "parent_id": "era-origin",
+      "year": "",
+      "note": "Le cœur de l'Infestation, battant sous Deimos.",
+      "has_children": false
+    },
+    {
+      "id": "q-hex",
+      "type": "quest",
+      "label": "The Hex",
+      "codex_slug": "the-hex",
+      "expanded": false,
+      "parent_id": "node-1999",
+      "year": "",
+      "note": "Les six, la KIM et le lien qui défie les boucles.",
+      "has_children": true
+    },
+    {
+      "id": "c-ballas",
+      "type": "character",
+      "label": "Ballas",
+      "codex_slug": "ballas",
+      "expanded": false,
+      "parent_id": "era-orokin",
+      "year": "",
+      "note": "L'Exécuteur trahi : architecte des Sentients, juge des Tenno et, finalement, chrysalide de la Chute.",
+      "has_children": false
+    },
+    {
+      "id": "c-margulis",
+      "type": "character",
+      "label": "Margulis",
+      "codex_slug": "margulis",
+      "expanded": false,
+      "parent_id": "era-orokin",
+      "year": "",
+      "note": "L'Enfant guide : elle a façonné les Tenno, chanté la Transférance et payé de sa vie leur protection.",
+      "has_children": false
+    },
+    {
+      "id": "c-lotus",
+      "type": "character",
+      "label": "Lotus · Natah",
+      "codex_slug": "lotus",
+      "expanded": false,
+      "parent_id": "q-second",
+      "year": "",
+      "note": "Le visage de la guidance : Sentient au cœur partagé, cachée derrière le rêve de Margulis qu'elle a relevé.",
+      "has_children": false
+    },
+    {
+      "id": "c-teshin",
+      "type": "character",
+      "label": "Teshin",
+      "codex_slug": "teshin",
+      "expanded": false,
+      "parent_id": "q-within",
+      "year": "",
+      "note": "Le Dax des derniers devoirs : gardien du Conclave et témoin silencieux de la Guerre Intérieure.",
+      "has_children": false
+    },
+    {
+      "id": "c-drifter",
+      "type": "character",
+      "label": "Le Drifter",
+      "codex_slug": "drifter",
+      "expanded": false,
+      "parent_id": "q-new-war",
+      "year": "",
+      "note": "L'autre soi, arraché de la Zariman dans la Spirale de Duviri et ramené dans la guerre contre Ballas.",
+      "has_children": false
+    },
+    {
+      "id": "c-albrecht",
+      "type": "character",
+      "label": "Albrecht Entrati",
+      "codex_slug": "albrecht-entrati",
+      "expanded": false,
+      "parent_id": "q-whispers",
+      "year": "",
+      "note": "L'archef dément : il a pillé la cavité de la réalité, falsifié l'éternisme et préparé la veille de 1999.",
+      "has_children": false
+    },
+    {
+      "id": "wf-umbra",
+      "type": "warframe-lore",
+      "label": "Excalibur Umbra",
+      "codex_slug": "excalibur-umbra",
+      "expanded": false,
+      "parent_id": "q-sacrifice",
+      "year": "",
+      "note": "Un Dax transpercé par le destrier : la première armure qui n'a jamais accepté sa boucle.",
+      "has_children": false
+    },
+    {
+      "id": "wf-inaros",
+      "type": "warframe-lore",
+      "label": "Inaros",
+      "codex_slug": "inaros",
+      "expanded": false,
+      "parent_id": "era-origin",
+      "year": "",
+      "note": "Le seigneur des sables du Vide : sa dépouille veille encore sur le désert où il a englouti la défaite.",
+      "has_children": false
+    },
+    {
+      "id": "wf-gara",
+      "type": "warframe-lore",
+      "label": "Gara",
+      "codex_slug": "gara",
+      "expanded": false,
+      "parent_id": "era-origin",
+      "year": "",
+      "note": "La glace levée contre le Loup : son éclat a scellé le mur de Cetus et demeure dans la veillée de Saya.",
+      "has_children": false
+    },
+    {
+      "id": "f-sacrifice-excal",
+      "type": "fragment",
+      "label": "Excalibur Umbra · Ballas",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "q-sacrifice",
+      "year": "",
+      "note": "",
+      "has_children": false
+    },
+    {
+      "id": "f-sacrifice-lotus",
+      "type": "fragment",
+      "label": "Le Lotien survivant",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "q-sacrifice",
+      "year": "",
+      "note": "",
+      "has_children": false
+    },
+    {
+      "id": "f-octavia-maprico",
+      "type": "fragment",
+      "label": "Mandachorde de Maprico",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "q-octavia",
+      "year": "",
+      "note": "",
+      "has_children": false
+    },
+    {
+      "id": "f-second-sentients",
+      "type": "fragment",
+      "label": "Les Sentients · Céphalon",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "q-second",
+      "year": "",
+      "note": "",
+      "has_children": false
+    },
+    {
+      "id": "f-second-margulis",
+      "type": "fragment",
+      "label": "Margulis · l'Enfant guide",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "q-second",
+      "year": "",
+      "note": "",
+      "has_children": false
+    },
+    {
+      "id": "f-within-queens",
+      "type": "fragment",
+      "label": "Les Reines · la Kuva",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "q-within",
+      "year": "",
+      "note": "",
+      "has_children": false
+    },
+    {
+      "id": "f-within-teshin",
+      "type": "fragment",
+      "label": "Teshin · le Dax",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "q-within",
+      "year": "",
+      "note": "",
+      "has_children": false
+    },
+    {
+      "id": "f-harrow-rell",
+      "type": "fragment",
+      "label": "Rell · le Red Veil",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "q-harrow",
+      "year": "",
+      "note": "",
+      "has_children": false
+    },
+    {
+      "id": "f-whispers-requiem",
+      "type": "fragment",
+      "label": "Requiem d'Albrecht",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "q-whispers",
+      "year": "",
+      "note": "",
+      "has_children": false
+    },
+    {
+      "id": "f-newwar-pact",
+      "type": "fragment",
+      "label": "Pacte du Drifter",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "q-new-war",
+      "year": "",
+      "note": "",
+      "has_children": false
+    },
+    {
+      "id": "f-1999-hollvania",
+      "type": "fragment",
+      "label": "Höllvania · veille de 1999",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "node-1999",
+      "year": "",
+      "note": "",
+      "has_children": false
+    },
+    {
+      "id": "f-1999-indifference",
+      "type": "fragment",
+      "label": "Le Néant approche",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "node-1999",
+      "year": "",
+      "note": "",
+      "has_children": false
+    },
+    {
+      "id": "f-hex-kim",
+      "type": "fragment",
+      "label": "La KIM · les Liens",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "q-hex",
+      "year": "",
+      "note": "",
+      "has_children": false
+    },
+    {
+      "id": "f-duviri-throne",
+      "type": "fragment",
+      "label": "Le Trône du Drifter",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "node-duviri",
+      "year": "",
+      "note": "",
+      "has_children": false
+    },
+    {
+      "id": "f-duviri-thrax",
+      "type": "fragment",
+      "label": "La Spirale de Duviri",
+      "codex_slug": null,
+      "expanded": false,
+      "parent_id": "node-duviri",
+      "year": "",
+      "note": "",
+      "has_children": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "era-orokin",
+      "target": "era-zariman",
+      "type": "paradox",
+      "label": "Paradoxe d'éternisme"
+    },
+    {
+      "source": "era-zariman",
+      "target": "node-duviri",
+      "type": "paradox",
+      "label": "Le Drifter"
+    },
+    {
+      "source": "era-zariman",
+      "target": "node-1999",
+      "type": "paradox",
+      "label": "Albrecht Entrati"
+    },
+    {
+      "source": "q-within",
+      "target": "q-octavia",
+      "type": "canonical",
+      "label": "Après la Guerre Intérieure"
+    },
+    {
+      "source": "q-octavia",
+      "target": "q-sacrifice",
+      "type": "canonical",
+      "label": "La vérité sur Umbra"
+    },
+    {
+      "source": "q-new-war",
+      "target": "node-duviri",
+      "type": "paradox",
+      "label": "Portail du Drifter"
+    }
+  ]
+}

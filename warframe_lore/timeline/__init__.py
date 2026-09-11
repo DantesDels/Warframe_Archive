@@ -37,7 +37,8 @@ def _public(node: dict) -> dict:
         "id": node["id"],
         "parent_id": node["parent_id"],
         "label": node["label"],
-        "kind": node["kind"],
+        "type": node["type"],
+        "codex_slug": node.get("codex_slug"),
         "has_children": _has_children(node["id"]),
     }
     if node.get("year"):
@@ -94,3 +95,35 @@ def children_payload(parent_id: str) -> dict | None:
     if parent_id not in _ID_NODE:
         return None
     return {"nodes": children(parent_id), "edges": edges(parent_id)}
+
+
+def graph_payload() -> dict:
+    """Flat graph contract ``{nodes, edges}`` (frontend mock / fixtures).
+
+    Nodes carry the runtime-shaped ``expanded`` state (initialized false)
+    alongside their public fields.  Edges map the ``paradox`` flag onto the
+    wire contract ``type: "canonical" | "paradox"``.  The whole curated
+    dataset is exported — no orphan, no weapon.
+    """
+    nodes_out: list[dict] = []
+    for n in all_nodes():
+        nodes_out.append({
+            "id": n["id"],
+            "type": n["type"],
+            "label": n["label"],
+            "codex_slug": n["codex_slug"],
+            "expanded": False,
+            "parent_id": n["parent_id"],
+            "year": n.get("year", ""),
+            "note": n.get("note", ""),
+            "has_children": n["has_children"],
+        })
+    edges_out: list[dict] = []
+    for e in all_edges():
+        edges_out.append({
+            "source": e["source"],
+            "target": e["target"],
+            "type": "canonical" if not e["paradox"] else "paradox",
+            "label": e.get("label", ""),
+        })
+    return {"nodes": nodes_out, "edges": edges_out}

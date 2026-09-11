@@ -15,8 +15,9 @@
 import * as dagre from '@dagrejs/dagre'
 
 const DEFAULTS = {
-  rankdir: 'LR',
-  nodesep: 44,
+  // Mobile-first : flux vertical (TB), les ères en haut, le détail en bas.
+  rankdir: 'TB',
+  nodesep: 60,
   ranksep: 120,
   edgesep: 24,
   marginx: 40,

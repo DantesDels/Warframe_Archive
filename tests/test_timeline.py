@@ -10,6 +10,7 @@ from warframe_lore.timeline import (
     children,
     children_payload,
     edges,
+    graph_payload,
     node,
     paradox_edges,
     roots,
@@ -26,7 +27,7 @@ class TimelineTest(unittest.TestCase):
     def test_roots_are_arenas_with_children(self) -> None:
         self.assertTrue(self.roots, "au moins une ère racine")
         for r in self.roots:
-            self.assertEqual(r["kind"], "era")
+            self.assertEqual(r["type"], "era")
             self.assertIsNone(r["parent_id"])
             self.assertTrue(r["has_children"])
 
@@ -50,16 +51,18 @@ class TimelineTest(unittest.TestCase):
             if n["parent_id"] is not None:
                 parent = self.nodes.get(n["parent_id"])
                 self.assertIsNotNone(parent, f"parent inconnu: {node_id}")
-                if n["kind"] == "fragment":
+                if n["type"] == "fragment":
                     # Les fragments pendent sous une quête OU sous une ère
                     # fusionnée (node-1999, node-duviri).
-                    expected_kind = ("quest", "era")
+                    expected_type = ("quest", "era")
                 else:
-                    expected_kind = ("era",)  # era -> era | quest -> era
-                self.assertIn(parent["kind"], expected_kind,
+                    # Toute autre entité (era, quest, character,
+                    # warframe-lore) pend sous une ère OU une quête.
+                    expected_type = ("era", "quest")
+                self.assertIn(parent["type"], expected_type,
                               f"parent de {node_id} mal classifié")
             # Un noeud sans enfant n'expose jamais has_children=True.
-            if n["kind"] == "fragment":
+            if n["type"] == "fragment":
                 self.assertFalse(n["has_children"])
 
     def test_doublons_fusionnes(self) -> None:
@@ -68,7 +71,7 @@ class TimelineTest(unittest.TestCase):
         for gone in ("era-1999", "q-1999", "era-duviri", "q-duviri"):
             self.assertNotIn(gone, self.nodes, f"doublon encore présent: {gone}")
         for merged in ("node-1999", "node-duviri"):
-            self.assertEqual(self.nodes[merged]["kind"], "era")
+            self.assertEqual(self.nodes[merged]["type"], "era")
             self.assertIsNone(self.nodes[merged]["parent_id"])
         self.assertEqual(self.nodes["f-1999-hollvania"]["parent_id"], "node-1999")
         self.assertEqual(self.nodes["f-1999-indifference"]["parent_id"], "node-1999")
@@ -94,9 +97,15 @@ class TimelineTest(unittest.TestCase):
         self.assertIsNone(children("nimporte-quoi"))
 
     def test_grand_parent_fragments(self) -> None:
-        frags = children("q-second")
-        self.assertTrue(frags)
-        self.assertTrue(all(f["kind"] == "fragment" for f in frags))
+        kids = children("q-second")
+        self.assertTrue(kids)
+        types = {k["type"] for k in kids}
+        self.assertIn("fragment", types)
+        self.assertIn("character", types)
+        self.assertEqual(
+            {f["id"] for f in kids if f["type"] == "fragment"},
+            {"f-second-sentients", "f-second-margulis"},
+        )
 
     def test_paradox_edges_points_existants(self) -> None:
         for edge in all_edges():
@@ -143,8 +152,58 @@ class TimelineTest(unittest.TestCase):
         self.assertEqual(len(ids), len(set(ids)))
 
     def test_node_internal(self) -> None:
-        self.assertEqual(node("node-duviri")["kind"], "era")
+        self.assertEqual(node("node-duviri")["type"], "era")
         self.assertIsNone(node("absent"))
+
+    def test_codex_slugs(self) -> None:
+        for n in all_nodes():
+            self.assertIn("codex_slug", n)
+        self.assertEqual(self.nodes["era-orokin"]["codex_slug"], "empire-orokin")
+        self.assertEqual(self.nodes["c-albrecht"]["codex_slug"], "albrecht-entrati")
+        self.assertEqual(self.nodes["wf-gara"]["codex_slug"], "gara")
+        # Les fragments ne sont pas encore référencés au codex.
+        self.assertIsNone(self.nodes["f-harrow-rell"]["codex_slug"])
+
+    def test_personnages_et_lore_warframes(self) -> None:
+        by_id = {n["id"]: n for n in all_nodes()}
+        chars = {n["id"] for n in all_nodes() if n["type"] == "character"}
+        self.assertIn("c-ballas", chars)
+        self.assertIn("c-lotus", chars)
+        self.assertEqual(by_id["c-lotus"]["parent_id"], "q-second")
+        wf = {n["id"] for n in all_nodes() if n["type"] == "warframe-lore"}
+        self.assertEqual(
+            wf, {"wf-umbra", "wf-inaros", "wf-gara"},
+            "Inaros/Gara/Umbra tissent le lore des Warframes",
+        )
+        # Inaros et Gara sont liés à leurs ères.
+        self.assertEqual(by_id["wf-inaros"]["parent_id"], "era-origin")
+        self.assertEqual(by_id["wf-gara"]["parent_id"], "era-origin")
+        self.assertEqual(by_id["wf-umbra"]["parent_id"], "q-sacrifice")
+
+    def test_aucune_arme(self) -> None:
+        lower = [n["label"].lower() for n in all_nodes()] + [
+            " ".join(x["label"].lower().split()) for x in all_edges() if x.get("label")
+        ]
+        joined = " ".join(lower)
+        for prohibited in ("arma", "lame", "canon"):
+            self.assertNotIn(prohibited, joined)
+
+    def test_graph_payload(self) -> None:
+        payload = graph_payload()
+        self.assertEqual(len(payload["nodes"]), len(self.nodes))
+        self.assertEqual(len(payload["edges"]), len(all_edges()))
+        for n in payload["nodes"]:
+            for key in ("id", "type", "label", "codex_slug", "expanded",
+                        "parent_id", "year", "note", "has_children"):
+                self.assertIn(key, n)
+            self.assertIs(False, n["expanded"])
+        kinds = {n["type"] for n in payload["nodes"]}
+        self.assertEqual(kinds, {"era", "quest", "character", "warframe-lore",
+                                 "fragment"})
+        for e in payload["edges"]:
+            self.assertIn(e["type"], ("canonical", "paradox"))
+            self.assertIn(e["source"], self.nodes)
+            self.assertIn(e["target"], self.nodes)
 
 
 if __name__ == "__main__":

@@ -25,6 +25,7 @@ from .hostility import HostilityTracker, reply_for
 from .insults import comeback_for, detect_insult
 from .members import (creator_mentioned, is_member_question,
                       match_member_token, normalize_mentions, roles_question)
+from .activity import MemberActivityStore
 from .roles import Accreditation, RoleHierarchy
 from .streamer import MessageStreamer
 
@@ -61,7 +62,8 @@ class LoreMasterBot(discord.Client):
                  typing_interval: float = 5.0,
                  allowed_channels: tuple[int, ...] = (),
                  creator_discord_id: str = "",
-                 roles: RoleHierarchy | None = None, **kwargs) -> None:
+                 roles: RoleHierarchy | None = None,
+                 activity_db_path: str = ":memory:", **kwargs) -> None:
         intents = discord.Intents.default()
         intents.message_content = True
         # Member list / roles access — needed for ``author.roles`` (Clan
@@ -103,11 +105,10 @@ class LoreMasterBot(discord.Client):
         # and per-user insistence counters deciding the CREATOR-GATED answer.
         self._last_member: dict[int, dict] = {}
         self._member_refusals: dict[int, dict[str, int]] = {}
-        # Per-member interaction memory (the card comment + the reliability
-        # index are REAL functions of these counters — never LLM guesses).
-        self._member_history: dict[int, list[str]] = {}
-        self._member_activity: dict[int, int] = {}
-        self._member_history_limit = 8
+        # Persistent per-member activity (SQLite): the card comment, the
+        # reliability index and the relative assiduité are REAL functions of
+        # this ledger — they survive bot restarts.
+        self.member_activity = MemberActivityStore(activity_db_path)
 
     async def on_ready(self) -> None:
         log.info("Loremaster Oracle online: %s (%s)",
@@ -592,22 +593,16 @@ class LoreMasterBot(discord.Client):
             self._last_member[channel_id] = roster
 
     def _remember_interaction(self, user_id: int, text: str) -> None:
-        """Records a member request (bounded content + total count) so the
-        card comment and the reliability index are REAL functions of data."""
-        if not text:
-            return
-        history = self._member_history.setdefault(user_id, [])
-        history.append(text)
-        if len(history) > self._member_history_limit:
-            del history[:len(history) - self._member_history_limit]
-        self._member_activity[user_id] = self._member_activity.get(user_id,
-                                                                   0) + 1
+        """Records a member message in the persistent activity ledger (total
+        count + recent window) — the card comment, reliability and assiduité
+        are REAL, restart-proof functions of this data."""
+        self.member_activity.record(user_id, text)
 
     def _reliability(self, member_id: int) -> tuple[str, str]:
         """Real reliability index from the bot's own counters: activity
-        (total interactions), insolence strikes and hostile-probe strikes.
+        (persistent total), insolence strikes and hostile-probe strikes.
         Returns ``(label, reason)`` — a pure function, never the LLM's guess."""
-        activity = self._member_activity.get(member_id, 0)
+        activity = self.member_activity.count(member_id)
         insolence = self._insults.count(member_id)
         probes = self.hostility.count(member_id)
         if probes >= 2:
@@ -625,26 +620,28 @@ class LoreMasterBot(discord.Client):
         return "Inconstant", "activité irrégulière"
 
     def _assiduity(self, member_id: int) -> tuple[str, str]:
-        """Relative assiduité: the member's recorded activity compared to the
-        OTHER members (percentile).  A real, comparable function of the
-        per-member counters — never a LLM guess."""
-        activity = self._member_activity.get(member_id, 0)
-        others = [c for uid, c in self._member_activity.items()
-                  if uid != member_id]
+        """Relative assiduité on a 5-level scale: the member's persistent
+        activity compared to the OTHER tracked members (percentile).  A real,
+        comparable function of the per-member ledger — never a LLM guess."""
+        activity = self.member_activity.count(member_id)
+        counts = self.member_activity.all_counts()
+        others = [c for uid, c in counts.items() if uid != member_id]
         if activity == 0:
             return "Inactif", "aucune activité enregistrée"
         if not others:
-            return "Seul actif", "le seul membre dont l'activité est suivie"
+            return "Modéré", "aucune base de comparaison"
         behind = sum(1 for c in others if c < activity)
         pct = round(100 * behind / len(others))
-        if pct >= 90:
+        if pct >= 80:
             label = "Très assidu"
-        elif pct >= 70:
+        elif pct >= 60:
             label = "Assidu"
         elif pct >= 40:
             label = "Modéré"
-        else:
+        elif pct >= 20:
             label = "Peu assidu"
+        else:
+            label = "Inactif"
         return label, f"plus actif que {pct}% des membres ({activity} messages)"
 
     def _security_level(self, status: str | None) -> str:
@@ -693,7 +690,7 @@ class LoreMasterBot(discord.Client):
         interactions (via the ``comment`` round-trip)."""
         member_id = info.get("member_id") or ""
         numeric_id = int(member_id) if member_id.isdigit() else 0
-        interactions = self._member_history.get(numeric_id, [])
+        interactions = self.member_activity.recent(numeric_id)
         reliability = self._reliability(numeric_id)
         assiduity = self._assiduity(numeric_id)
         comment = ""
@@ -807,6 +804,7 @@ class LoreMasterBot(discord.Client):
         for link in self._hostile.values():
             await link.close()
         self._hostile.clear()
+        self.member_activity.close()
         await super().close()
 
 

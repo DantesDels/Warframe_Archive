@@ -55,6 +55,12 @@ class DiscordConfig:
     # persona banner tone (mission-8).  Empty file/dir → everyone guest.
     roles_file: str = field(
         default_factory=lambda: _env("DISCORD_ROLES_FILE", ""))
+    # Persistent member-activity SQLite (assiduité / fiabilité / commentaire
+    # de la fiche membre) — survives bot restarts.  ``:memory:`` disables
+    # persistence (tests).
+    activity_db: str = field(
+        default_factory=lambda: _env(
+            "DISCORD_ACTIVITY_DB", str(PROJECT_ROOT / "member_activity.db")))
 
     @classmethod
     def load(cls) -> "DiscordConfig":

@@ -6,6 +6,7 @@ from __future__ import annotations
 import unittest
 
 from warframe_lore.discord.bot import LoreMasterBot
+from warframe_lore.discord.activity import MemberActivityStore
 from warframe_lore.discord.hostility import HostilityTracker
 from warframe_lore.engram.persona import (
     STATUT_HAUT_COMMANDEMENT,
@@ -17,8 +18,7 @@ class _Bot(LoreMasterBot):
     """Compteurs seuls — aucun ``discord.Client`` sous-jacent n'est monté."""
 
     def __init__(self) -> None:
-        self._member_activity: dict[int, int] = {}
-        self._member_history: dict[int, list[str]] = {}
+        self.member_activity = MemberActivityStore(":memory:")
         self._insults = HostilityTracker()
         self.hostility = HostilityTracker()
         self._member_refusals: dict[int, dict[str, int]] = {}
@@ -47,13 +47,14 @@ class ReliabilityTests(unittest.TestCase):
 
     def test_elevée_activite_reguliere_sans_incartade(self):
         bot = _Bot()
-        bot._member_activity[1] = 12
+        for _ in range(12):
+            bot.member_activity.record(1, "message")
         self.assertEqual(
             bot._reliability(1), ("Élevée", "présence régulière, aucune incartade"))
 
     def test_faible_peu_d_interactions(self):
         bot = _Bot()
-        bot._member_activity[1] = 1
+        bot.member_activity.record(1, "message")
         self.assertEqual(bot._reliability(1)[0], "Faible")
 
 
@@ -68,29 +69,54 @@ class SecurityLevelTests(unittest.TestCase):
 
 
 class AssiduityTests(unittest.TestCase):
-    """L'assiduité est RELATIVE : comparée à celle des autres membres."""
+    """Assiduité RELATIVE sur 5 niveaux : comparée aux autres membres."""
+
+    @staticmethod
+    def _seed(bot, counts):
+        for uid, n in counts.items():
+            for _ in range(n):
+                bot.member_activity.record(uid, "message")
 
     def test_inactif_sans_activite(self):
         bot = _Bot()
         self.assertEqual(bot._assiduity(1)[0], "Inactif")
 
-    def test_seul_actif(self):
+    def test_seul_actif_neutral(self):
         bot = _Bot()
-        bot._member_activity[1] = 5
-        self.assertEqual(bot._assiduity(1)[0], "Seul actif")
+        self._seed(bot, {1: 5})
+        self.assertEqual(bot._assiduity(1)[0], "Modéré")
 
-    def test_tres_assidu_devance_les_autres(self):
+    def test_tres_assidu(self):
         bot = _Bot()
-        bot._member_activity = {1: 50, 2: 3, 3: 4, 4: 2}
+        self._seed(bot, {1: 50, 2: 3, 3: 4, 4: 2})
         label, reason = bot._assiduity(1)
         self.assertEqual(label, "Très assidu")
         self.assertIn("100%", reason)
 
-    def test_peu_assidu_derriere_les_autres(self):
+    def test_assidu(self):
         bot = _Bot()
-        bot._member_activity = {1: 1, 2: 20, 3: 18}
-        label, _ = bot._assiduity(1)
-        self.assertEqual(label, "Peu assidu")
+        # bat 7 des 10 autres (les 9) → 70% → "Assidu"
+        self._seed(bot, {1: 10, 2: 9, 3: 9, 4: 9, 5: 9, 6: 9, 7: 9, 8: 9,
+                         9: 15, 10: 15, 11: 15})
+        self.assertEqual(bot._assiduity(1)[0], "Assidu")
+
+    def test_modere(self):
+        bot = _Bot()
+        # bat 2 des 5 autres → 40% → "Modéré"
+        self._seed(bot, {1: 7, 2: 6, 3: 6, 4: 9, 5: 9, 6: 9})
+        self.assertEqual(bot._assiduity(1)[0], "Modéré")
+
+    def test_peu_assidu(self):
+        bot = _Bot()
+        # bat 1 des 4 autres → 25% → "Peu assidu"
+        self._seed(bot, {1: 5, 2: 10, 3: 10, 4: 10, 5: 3})
+        self.assertEqual(bot._assiduity(1)[0], "Peu assidu")
+
+    def test_inactif_dernier_du_classement(self):
+        bot = _Bot()
+        # bat 0 des 2 autres → 0% → "Inactif" (niveau le plus bas)
+        self._seed(bot, {1: 1, 2: 20, 3: 18})
+        self.assertEqual(bot._assiduity(1)[0], "Inactif")
 
 
 class RoleNamesTests(unittest.TestCase):

@@ -19,6 +19,9 @@ from .gateway import RoleplayGateway
 from .guards import BurstGuard
 from .hostile_link import HostileLink, is_sincere_apology
 from .hostility import HostilityTracker, reply_for
+from .insults import comeback_for, detect_insult
+from .members import (creator_mentioned, is_member_question,
+                      match_member_token, normalize_mentions)
 from .roles import Accreditation, RoleHierarchy
 from .streamer import MessageStreamer
 
@@ -73,6 +76,12 @@ class LoreMasterBot(discord.Client):
         self.guard = BurstGuard()
         # Anti-attack reply escalation (level 0 → 2).
         self.hostility = HostilityTracker()
+        # Insolence counter (répartie): separate from probe strikes so a
+        # simple jerk doesn't inherit SQLi escalation level.
+        self._insults = HostilityTracker()
+        # After this many comeback-strikes, the insulter's session flips to
+        # the hostile anti-aggression persona (he must apologise).
+        self._hostile_after_insults = 2
         # PER-ATTACKER hostile sessions (anti-aggression persona until the
         # apology): never affect the normal channel session.
         self._hostile: dict[int, HostileLink] = {}
@@ -99,7 +108,7 @@ class LoreMasterBot(discord.Client):
                          and message.channel.id in self.allowed_channels)
         if not dedicated and self.user not in message.mentions:
             return
-        text = self._strip_mention(content)
+        text = self._normalize_message(message)
         # HOSTILE PROBE: deterministic rejection (never a LLM on the payload
         # itself) + targeted escalation at the attacker + switch of his
         # session to the hostile persona (which will demand an apology).
@@ -117,6 +126,31 @@ class LoreMasterBot(discord.Client):
                          message.author.id, message.channel.id)
                 return
             await self._insist(message.author.id, message)
+            return
+        # RÉPARTIE — insolence directe d'un NON-Créateur ("avale et dis
+        # merci", "ta gueule"…).  Réponse glaciale mais classe, escaladante,
+        # qui fait passer l'agresseur au statut de 'spécimen' : il ne veut
+        # plus recommencer.  Au-delà du seuil, sa session bascule dans le
+        # persona hostile anti-agression (il doit s'excuser).  Les insultes
+        # du CONCEPTEUR ne sont JAMAIS interceptées : elles retombent dans le
+        # chat libre oracle, où le persona sado-masochiste les accepte et en
+        # redemande.
+        is_creator = self._is_creator(message.author.id)
+        if detect_insult(text) and not is_creator:
+            level = self._insults.strike(message.author.id)
+            log.warning("INSULT user=%s lvl=%d channel=%s text=%r",
+                        message.author.id, level, message.channel.id, text)
+            await message.reply(comeback_for(level))
+            if (level >= self._hostile_after_insults
+                    and message.author.id not in self._hostile):
+                link = HostileLink(self.gateway_url)
+                try:
+                    await link.open()
+                except ConnectionError:
+                    log.warning(
+                        "Hostile persona unreachable for an insulter")
+                else:
+                    self._hostile[message.author.id] = link
             return
         # Anti-spam for normal users (cooldown / caps).
         if not self.guard.check(message.author.id, message.channel.id):
@@ -226,7 +260,7 @@ class LoreMasterBot(discord.Client):
         (``!stop``): while a turn is active, the other messages wait their
         turn — no more interleaved fragments."""
         channel_id = message.channel.id
-        text = self._strip_mention(message.content)
+        text = self._normalize_message(message)
         lock = self._route_locks.setdefault(channel_id, asyncio.Lock())
         async with lock:
             placeholder = None
@@ -241,9 +275,63 @@ class LoreMasterBot(discord.Client):
                     await gateway.open()
                     self._gateways[channel_id] = gateway
                 use_rag = self._wants_lore(text)
+                # Guild-member resolution (external-organics protocol): a
+                # pseudo naming a REAL Discord member (exact or prefix
+                # abbreviation, "@Aze07" or "Aze") is never a lore question —
+                # the archives must never reply "Données insuffisantes".  The
+                # subject question gets a deterministic disdainful answer
+                # (router ``member_name``); a passing mention stays free chat
+                # (persona GESTION DES ORGANIQUES EXTERNES), still RAG-free.
+                member_name, member_token, subject_is_creator = self._resolve_member(
+                    message, text)
+                if member_token:
+                    use_rag = False
+                # The Concepteur is NEVER an external organic — a question
+                # naming him ("Qui est DantesDels ?") must not reach the
+                # deterministic outsider-disdain path, it feeds the jealousy.
+                member_ask = (member_name if (member_token
+                                              and not subject_is_creator
+                                              and is_member_question(
+                                                  text, member_token))
+                              else None)
                 user_name, user_role, user_id = self._get_metadata(message)
                 user_roles = self._role_names(message.author)
                 accr = self._accredit(message.author)
+                # JEALOUSY (decision taken): a non-Creator member citing the
+                # Concepteur's pseudonym — ANY spelling or casing ("dantes",
+                # "Dels", "DANTEs") — triggers possessive rage performed by
+                # the LLM (persona + injected directive).  RAG stays OFF so
+                # the archives never bury the mood under "[Archives] Données
+                # insuffisantes"; the cited word is forwarded for injection.
+                creator_mention = None
+                if not accr.creator:
+                    creator_display = self._creator_display(message)
+                    creator_mention = creator_mentioned(
+                        text, creator_display) if creator_display else None
+                if creator_mention:
+                    use_rag = False
+                # Request audit (scan-friendly): one INFO line per handled
+                # turn, with the routing decision.  "scanne les requêtes"
+                # — les logs runtime ne traçaient RIEN par message.
+                if accr.creator and detect_insult(text):
+                    turn_kind = "creator_insult(sado-maso)"
+                elif creator_mention:
+                    turn_kind = "creator_mention"
+                elif member_ask:
+                    turn_kind = "member_question"
+                elif member_token:
+                    turn_kind = "member_mention"
+                elif is_self_reflection(text):
+                    turn_kind = "introspection"
+                elif use_rag:
+                    turn_kind = "lore"
+                else:
+                    turn_kind = "free"
+                log.info(
+                    "Oracle turn channel=%s user=%s creator=%s rag=%s "
+                    "kind=%s member=%s jealousy=%s text=%r",
+                    channel_id, user_id, accr.creator, use_rag, turn_kind,
+                    member_ask or member_token, creator_mention, text[:200])
                 typing_task = asyncio.create_task(self._keep_typing(message))
                 placeholder = await message.channel.send("*Oracle réfléchit…*")
                 streamer = MessageStreamer(placeholder)
@@ -255,7 +343,9 @@ class LoreMasterBot(discord.Client):
                                            user_id=user_id,
                                            role_status=accr.status,
                                            creator=accr.creator,
-                                           user_roles=user_roles)
+                                           user_roles=user_roles,
+                                           member_name=member_ask,
+                                           creator_mention=creator_mention)
                     except ConnectionError as exc:
                         # Dead stream (e.g. ENGRAM server restarted) →
                         # reconnect + buffer purge (no concatenation of
@@ -273,7 +363,9 @@ class LoreMasterBot(discord.Client):
                                            user_id=user_id,
                                            role_status=accr.status,
                                            creator=accr.creator,
-                                           user_roles=user_roles)
+                                           user_roles=user_roles,
+                                           member_name=member_ask,
+                                           creator_mention=creator_mention)
                 finally:
                     typing_task.cancel()
             except asyncio.CancelledError:
@@ -311,6 +403,92 @@ class LoreMasterBot(discord.Client):
         mention_id = str(self.user.id)
         return (text.replace(f"<@{mention_id}>", "")
                     .replace(f"<@!{mention_id}>", "").strip())
+
+    def _normalize_message(self, message: discord.Message) -> str:
+        """Clean authoritative text of a message: bot mention removed, then
+        real guild-member mentions replaced by their display name.
+
+        The replacement happens BEFORE the hostile probe: a legitimate
+        "@Aze07" is an accreditation reference, not an echo-ping attack — the
+        probe's third-party-mention rule must not fire on a real member.  The
+        same normalized text also feeds the member resolution and the Router.
+        """
+        text = self._strip_mention(message.content)
+        mapping: dict[str, str] = {}
+        for member in getattr(message, "mentions", ()):
+            if getattr(member, "bot", False):
+                continue
+            name = (getattr(member, "display_name", None)
+                    or getattr(member, "name", "") or "").strip()
+            if name:
+                mapping[str(getattr(member, "id", ""))] = name
+        return normalize_mentions(text, mapping)
+
+    def _resolve_member(self, message: discord.Message, text: str) -> tuple[
+            str | None, str | None, bool]:
+        """Resolve a guild member referenced in the text.
+
+        Returns ``(display_name, typed_token, subject_is_creator)`` when the
+        text mentions a real server member — exact, or a prefix abbreviation
+        ("Aze" → "Aze07") —, else ``(None, None, False)``.  The bot itself is
+        excluded; the CONCEPTEUR is resolvable too, but flagged so the bot
+        can answer about him directly (never as an external organic).  The
+        display name is the ROUTER's answer word; the typed token drives the
+        question detection on the speaker's own wording.
+        """
+        guild = getattr(message, "guild", None)
+        if guild is None:
+            return None, None, False
+        self_id = str(getattr(self.user, "id", ""))
+        creator_id = (self.creator_discord_id or "").strip()
+        creator_names: set[str] = set()
+        candidates: dict[str, str] = {}
+        for member in getattr(guild, "members", ()):
+            if getattr(member, "bot", False):
+                continue
+            mid = str(getattr(member, "id", "") or "")
+            if mid == self_id:
+                continue
+            display = (getattr(member, "display_name", None)
+                       or getattr(member, "name", "") or "").strip()
+            if not display:
+                continue
+            is_creator_member = bool(creator_id and mid == creator_id)
+            if is_creator_member:
+                for name in {display,
+                             (getattr(member, "nick", None) or "").strip(),
+                             (getattr(member, "name", "") or "").strip()}:
+                    if name:
+                        creator_names.add(name.lower())
+            for name in {display,
+                         (getattr(member, "nick", None) or "").strip(),
+                         (getattr(member, "name", "") or "").strip()}:
+                if name:
+                    candidates.setdefault(name.lower(), display)
+        token = match_member_token(text, set(candidates))
+        if token is None:
+            return None, None, False
+        display = candidates.get(token)
+        if display is None:
+            for key, name in candidates.items():
+                if key.startswith(token):
+                    display = name
+                    break
+        return (display, token,
+                bool(display and display.lower() in creator_names))
+
+    def _creator_display(self, message: discord.Message) -> str | None:
+        """Display name of the configured Concepteur's guild member, or None
+        (no creator configured / bot outside any guild / member not seen)."""
+        guild = getattr(message, "guild", None)
+        if guild is None or not self.creator_discord_id:
+            return None
+        for member in getattr(guild, "members", ()):
+            if str(getattr(member, "id", "") or "") == self.creator_discord_id:
+                display = (getattr(member, "display_name", None)
+                           or getattr(member, "name", "") or "").strip()
+                return display or None
+        return None
 
     def _is_creator(self, user_id: int | None) -> bool:
         """Native identity check (mission spec): compare ``message.author.id``

@@ -24,7 +24,7 @@ from ..container import Container
 from ...rag import JAILBREAK_REJECT, RAG_ERROR
 from ...rag.context import RAGContext, RAGContextFactory
 from ...rag.probes import detect_probe, is_identity_question, is_self_reflection
-from ...roleplay.identity import identity_reply
+from ...roleplay.identity import external_organic_reply, identity_reply
 from ...rag.sanitize import strip_trailing_padding
 from ...rag.service import sanitize_query
 from ...roleplay import Session
@@ -119,6 +119,22 @@ async def roleplay(websocket: WebSocket) -> None:
                 await websocket.send_json({"type": "token", "token": RAG_ERROR})
                 await websocket.send_json({"type": "end", "text": RAG_ERROR})
                 continue
+            # Questions about a GUILD MEMBER (external organic, "Qui est Aze
+            # ?"): the bot resolved the speaker's pseudo against the member
+            # list (exact or prefix abbreviation) and sent ``member_name``.
+            # Deterministic protocol — the persona's GESTION DES ORGANIQUES
+            # EXTERNES : factual, no affection, cold disdain. NEVER the lore
+            # archives ("Données insuffisantes" was the playtest bug) and
+            # never the RAG that would hallucinate the member as lore.
+            member_name = payload.get("member_name")
+            if persona_mode == "oracle" and member_name:
+                organic_answer = external_organic_reply(
+                    str(member_name), creator=bool(payload.get("creator")))
+                await websocket.send_json(
+                    {"type": "token", "token": organic_answer})
+                await websocket.send_json(
+                    {"type": "end", "text": organic_answer})
+                continue
             # Speaker-identity questions ("qui suis-je ?", "quel est mon rôle
             # ?"): DETERMINISTIC answer from the accredited data (BLOC 2
             # identity).  The devotion persona (CAS A) keeps self-introducing
@@ -140,6 +156,12 @@ async def roleplay(websocket: WebSocket) -> None:
                 await websocket.send_json(
                     {"type": "end", "text": identity_answer})
                 continue
+            # A NON-CONCEPTOR has just cited the Concepteur's pseudonym (any
+            # spelling/casing).  Persona-driven jealousy: no RAG (the archives
+            # must not bury the rage under "Données insuffisantes"), no
+            # deterministic short-circuit — the LLM improvises the possessive
+            # fury guided by the directive injected in ``stream``.
+            creator_mention = payload.get("creator_mention")
             # Token-by-token streaming; accumulate to close the turn.  The
             # Discord identity (display name + galaxy rank) feeds the
             # hierarchical-immunity directive in the system prompt; the
@@ -154,7 +176,8 @@ async def roleplay(websocket: WebSocket) -> None:
                     user_name=payload.get("user_name"),
                     user_role=payload.get("user_role"),
                     role_status=payload.get("role_status"),
-                    creator=payload.get("creator")):
+                    creator=payload.get("creator"),
+                    creator_mention=creator_mention):
                 response_parts.append(token)
                 await websocket.send_json({"type": "token", "token": token})
             # Final emission: strip trailing formatting artifacts (lone ``*``

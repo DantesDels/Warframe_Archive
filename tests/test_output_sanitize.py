@@ -58,6 +58,19 @@ class SanitizeOutputTests(unittest.TestCase):
         self.assertEqual(strip_trailing_padding("  * - "), "")
         self.assertEqual(strip_trailing_padding(""), "")
 
+    def test_fermetures_markdown_collées_conservées(self):
+        # Markdown autorisé (mise en page / émotions) : la fermeture ``**`` ou
+        # ``*`` collée au dernier mot ne doit PAS être purgée.
+        self.assertEqual(strip_trailing_padding("**mot**"), "**mot**")
+        self.assertEqual(strip_trailing_padding("*mot*"), "*mot*")
+        self.assertEqual(strip_trailing_padding("liste étoilée **-x**"),
+                         "liste étoilée **-x**")
+
+    def test_artefact_orphelin_toujours_purge(self):
+        # Un astérisque précédé d'un blanc reste un artefact → retiré.
+        self.assertEqual(strip_trailing_padding("mot *"), "mot")
+        self.assertEqual(strip_trailing_padding("mot * "), "mot")
+
     def test_applique_sur_la_reponse_non_stream_du_service(self):
         """La réponse HTTP agrégée est purgée de son astérisque final."""
         service = RAGService(

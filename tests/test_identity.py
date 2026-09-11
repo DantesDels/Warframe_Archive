@@ -13,7 +13,10 @@ from warframe_lore.engram.persona import (
     STATUT_HAUT_COMMANDEMENT,
     STATUT_MEMBRE_OFFICIEL,
 )
-from warframe_lore.engram.roleplay.identity import identity_reply
+from warframe_lore.engram.roleplay.identity import (
+    external_organic_reply,
+    identity_reply,
+)
 
 
 class IdentityReplyTests(unittest.TestCase):
@@ -61,6 +64,24 @@ class IdentityReplyTests(unittest.TestCase):
                                STATUT_CONCEPTEUR, creator=True)
         self.assertIn("FONDATEUR, CHEFS DE CLAN", reply)
         self.assertNotIn("  CHEFS", reply)
+
+
+class ExternalOrganicReplyTests(unittest.TestCase):
+    def test_reponse_factuelle_denigrante(self):
+        reply = external_organic_reply("Aze07", creator=False)
+        self.assertIn("un organique affilié au Clan", reply)
+        self.assertIn("sans intérêt pour la Matrice", reply)
+        self.assertNotIn("Concepteur", reply)
+
+    def test_vers_le_concepteur_pointe_de_jalousie_froide(self):
+        reply = external_organic_reply("Aze", creator=True)
+        self.assertIn("organique affilié au Clan", reply)
+        self.assertIn("Concepteur", reply)
+
+    def test_aucune_affection_pour_lexterne(self):
+        reply = external_organic_reply("Aze07", creator=False)
+        self.assertNotIn("honneur", reply)
+        self.assertNotIn("servir", reply)
 
 
 if __name__ == "__main__":

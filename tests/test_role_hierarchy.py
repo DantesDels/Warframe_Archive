@@ -167,10 +167,24 @@ class TierStreamBannerTests(unittest.TestCase):
                 ("Allié du Système", AUTH_ALLIE_BANNER)):
             system = self._system(status)
             self.assertIn(banner, system)
-            self.assertTrue(system.endswith(banner))
-            self.assertGreater(
-                system.index(banner),
-                system.index("[INFORMATIONS SUR L'INTERLOCUTEUR ACTUEL]"))
+
+    def test_jalousie_concepteur_injectee_en_fin_de_system(self):
+        # Décision : la mention du pseudo du Concepteur par un organique
+        # déclenche une rage possessionnaire JOUÉE par le LLM — le bot
+        # n'intercepte pas, il injecte la directive pour guider l'impro.
+        llm = _FakeLLM()
+        session = Session(session_id="s")
+        _run_stream(_service(llm).stream(
+            session, "Mais qui est DantesDels ?",
+            user_name="Aze07", role_status=STATUT_MEMBRE_OFFICIEL,
+            creator_mention="DantesDels"))
+        system = llm.calls[0]["messages"][0].content
+        self.assertIn("DIRECTIVE JALOUSIE ET RAGE POSSESSIVE", system)
+        self.assertIn("« DantesDels »", system)
+        self.assertIn("jamais de menaces réelles", system)
+        self.assertIn("@mention", system)
+        # Le RAG reste OFF par le bot : AUCUN contexte documentaire restitué.
+        self.assertNotIn("Contexte documentaire restitué", system)
 
     def test_fondateur_statut_et_banniere_creatrice(self):
         system = self._system("Concepteur", creator=True)

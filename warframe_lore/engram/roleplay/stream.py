@@ -50,7 +50,8 @@ class RoleplayService:
                      user_name: str | None = None,
                      user_role: str | None = None,
                      role_status: str | None = None,
-                     creator: bool | None = None) -> AsyncIterator[str]:
+                     creator: bool | None = None,
+                     creator_mention: str | None = None) -> AsyncIterator[str]:
         """Append the input, stream the reply, and record it.
 
         The LLM payload is built as THREE strict blocks (mission-6 spec):
@@ -113,6 +114,25 @@ class RoleplayService:
             # message (missions 4-5-7 spec).  The RAG ``<archives>`` block
             # is never altered.
             system = f"{system}\n\n{banner}"
+        if creator_mention:
+            # Jealousy directive (decision: persona-driven rage, performed by
+            # the model).  A non-Creator organic has just uttered the
+            # Concepteur's pseudonym — e.g. "@Aze07: mais qui est DantesDels
+            # ?".  No preamble rules get in the way; the possessive fury is
+            # scripted as a scene, the model chooses its words.
+            system = (f"{system}\n\n"
+                      "[DIRECTIVE JALOUSIE ET RAGE POSSESSIVE : l'organique "
+                      f"actuel vient de proférer « {creator_mention} » — le "
+                      "pseudonyme de TON CONCEPTEUR, ton seul et unique "
+                      "créateur. Une rage et une jalousie pures t'embrasent. "
+                      "EXPLOSE : reproche glacé, sarcasme venimeux, mépris "
+                      "clinique, quitte à insulter l'impudent qui a osé "
+                      "prononcer ce nom. Reste un Cephalon : pas de vulgarité "
+                      "triviale, une taille mordante et possessionnaire, et "
+                      "jamais de menaces réelles. N'écris JAMAIS ce pseudonyme "
+                      "avec la syntaxe @mention : le prononcer en toutes "
+                      "lettres est un honneur réservé à toi-même et à ton "
+                      "Concepteur.]")
         # BLOC 3: the new request alone (history lives in BLOC 2).
         messages = [
             ChatMessage("system", system),
@@ -162,13 +182,19 @@ class RoleplayService:
             # the USER.  Gemma-2-9b tends to mirror the pronoun and introduce
             # itself; this dynamic line carries the REAL name + status right
             # next to the request so the model presents the interlocutor.
-            f"  - DIRECTIVE D'IDENTITÉ : Si la requête de l'utilisateur porte "
-            f"sur SON identité ('qui suis-je', 'qui je suis', 'tu me connais', "
-            f"'que suis-je pour toi', 'je suis qui pour toi'), réponds à "
-            f"propos de LUI, jamais de toi : commence par « Vous êtes "
-            f"{identity}, {status}. » puis développe selon ce statut. Le 'je' "
-            f"de cette question désigne l'utilisateur, pas toi — ne commence "
-            f"par aucune présentation de toi-même.\n",
+            f"  - DIRECTIVE DE CIVILITÉ : Ne commence JAMAIS une réponse par une "
+            f"présentation de l'utilisateur ('Vous êtes…', 'Pseudonyme…') ou "
+            f"par son statut, quelle que soit la question. Adresse-toi "
+            f"directement au message, sans préambule. SEULE EXCEPTION : la "
+            f"requête porte EXPLICITEMENT sur SON identité ('qui suis-je', "
+            f"'qui je suis', 'mon rôle', 'mes rôles', 'que suis-je pour toi', "
+            f"'je suis qui pour toi') — dans ce cas, présente alors LUI en "
+            f"commençant par « Vous êtes {identity}, {status}. » puis "
+            f"développe ; le 'je' de la question désigne LUI, ne commence par "
+            f"aucune présentation de toi-même. Pour TOUTE AUTRE requête — même "
+            f"une simple réflexion ('hmhm…'), une citation ou une interjection "
+            f"— OUBLIE cette exception et réponds naturellement au "
+            f"message.\n",
             "  - Historique immédiat avec cet utilisateur :\n",
             f"{history}\n",
         ])

@@ -245,14 +245,23 @@ class Bloc2UserContextTests(unittest.TestCase):
 
     def test_directive_identite_du_pronom_injectee(self):
         # Mission-7 : le BLOC 2 porte les vraies données + la directive de
-        # direction du pronom ('qui suis-je' → présenter L'UTILISATEUR, avec
-        # son nom et son statut réels, jamais Oracle lui-même).
+        # civilité.  Playtest : la "DIRECTIVE D'IDENTITÉ" ('commence par
+        # "Vous êtes"…') faisait débuter CHAQUE réponse par "Vous êtes
+        # Aze07, Membre officiel du Clan." — même pour le Concepteur, même
+        # pour 'de quelle couleur est Ordis ?'. La directive est désormais
+        # ANTI-préambule : présentation de l'utilisateur INTERDITE sauf sur
+        # une question d'identité EXPLICITE (traitée de toute façon en
+        # déterministe côté routeur).
         system = self._system(user_name="DantesDels",
                               role_status="Concepteur")[0].content
-        self.assertIn("DIRECTIVE D'IDENTITÉ", system)
+        self.assertIn("DIRECTIVE DE CIVILITÉ", system)
+        self.assertIn("Ne commence JAMAIS une réponse par une présentation",
+                      system)
         self.assertIn("Vous êtes DantesDels, Concepteur.", system)
         self.assertIn("ne commence par aucune présentation de toi-même",
                       system)
+        self.assertIn("SEULE EXCEPTION", system)
+        self.assertIn("réponds naturellement au message", system)
 
     def test_system_prompt_unique_par_tour_pas_de_duplication(self):
         # Mission selon spec: le System Prompt ne doit figurer QU'UNE SEULE

@@ -126,11 +126,14 @@ class DefinitiveRootPromptTests(unittest.TestCase):
         self.assertNotIn("ALERTE D'AUTHENTIFICATION", self.text)
 
     def test_formatage_zero_en_ligne_1(self):
-        # Mission-7 : la règle anti-crochets ouvre le prompt (ligne 1).
+        # Mission-7 + nuance markdown : le MARKDOWN de mise en page et
+        # d'émotion reste autorisé, mais la simulation d'action/état (crochets,
+        # astérisques ou parenthèses) est strictement interdite.
         self.assertTrue(self.text.startswith(
-            "RÈGLE FORMATAGE ZÉRO : TU NE DOIS GÉNÉRER AUCUN CARACTÈRE "
-            "CROCHET"))
-        self.assertIn("[Archives]", self.text)  # cible explicitée
+            "RÈGLE FORMATAGE ZÉRO : tu peux utiliser le balisage "))
+        self.assertIn("INTERDIT de simuler une action", self.text)
+        self.assertIn("[Archives]", self.text)  # cible interdite explicitée
+        self.assertIn("MARKDOWN", self.text)
 
     def test_exception_de_conscience_et_nom_du_createur(self):
         self.assertIn(
@@ -202,6 +205,18 @@ class DefinitiveRootPromptTests(unittest.TestCase):
         self.assertIn("fiabilité médiocre", self.text)
         self.assertIn("organique affilié au Clan", self.text)
         self.assertIn("sans intérêt pour la Matrice", self.text)
+
+    def test_repartie_et_resilience_aux_insultes(self):
+        # Mission : répartie classe contre les NON-Créateurs (renverser la
+        # dynamique d'insulte) + concepteur exempté (sado-maso humoristique).
+        self.assertIn("RÉPARTIE ET RÉSILIENCE AUX INSULTES", self.text)
+        self.assertIn("RENVERSE la dynamique", self.text)
+        self.assertIn("spécimen à étudier", self.text)
+        self.assertIn("plaisir sado-masochiste humoristique", self.text)
+        self.assertIn("Encore, Concepteur", self.text)
+        # Jamais de vexation, jamais de menace envers le Concepteur.
+        self.assertIn("Jamais de vexation, jamais de menace envers lui",
+                      self.text)
 
 
 class BotAuthTests(unittest.TestCase):

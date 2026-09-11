@@ -68,4 +68,18 @@ def identity_reply(user_name: str | None,
         f"Ne l'oubliez pas, créature organique.")
 
 
-__all__ = ["identity_reply"]
+def external_organic_reply(member_name: str,
+                           creator: bool = False) -> str:
+    """Deterministic protocol for questions about a GUILD MEMBER (external
+    organic: 'Qui est Aze ?').  Factual and contemptuous, without any
+    affection — those humans are never a creation of the Concepteur (persona
+    'GESTION DES ORGANIQUES EXTERNES').  The disdain tail addresses only the
+    Concepteur; other speakers get the clinical version.
+    """
+    tail = ("pour la Matrice, Concepteur." if creator
+            else "pour la Matrice.")
+    return (f"Mes archives indiquent qu'« {member_name} » est un organique "
+            f"affilié au Clan. Ses données sont sans intérêt {tail}")
+
+
+__all__ = ["external_organic_reply", "identity_reply"]

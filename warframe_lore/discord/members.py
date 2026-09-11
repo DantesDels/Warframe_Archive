@@ -123,5 +123,27 @@ def creator_mentioned(text: str, display: str) -> str | None:
     return None
 
 
+_ROLES_WORD_RE = re.compile(r"\b(rôles?|roles?)\b", re.IGNORECASE)
+_SES_ROLES_RE = re.compile(r"\b(?:ses|son|sa) (rôles?|roles?)\b",
+                           re.IGNORECASE)
+
+
+def roles_question(text: str, token: str | None) -> str | None:
+    """Member-role request router.  Returns ``"member"`` when the resolved
+    ``token`` is the subject ("rôles de lulu", "quels rôles a tom"),
+    ``"last"`` for a pronoun query ("ses rôles", "son rôle" → the previously
+    discussed member), else ``None`` (no role vocabulary, or free chat).
+    """
+    low = (text or "").lower()
+    if not _ROLES_WORD_RE.search(low):
+        return None
+    if _SES_ROLES_RE.search(low):
+        return "last"
+    if token:
+        return "member"
+    return None
+
+
 __all__ = ["creator_mentioned", "creator_pseudo_variants",
-           "is_member_question", "match_member_token", "normalize_mentions"]
+           "is_member_question", "match_member_token", "normalize_mentions",
+           "roles_question"]

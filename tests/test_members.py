@@ -19,6 +19,7 @@ from warframe_lore.discord.members import (
     is_member_question,
     match_member_token,
     normalize_mentions,
+    roles_question,
 )
 from warframe_lore.engram.rag.probes import detect_probe
 
@@ -132,6 +133,30 @@ class CreatorMentionedTests(unittest.TestCase):
 
     def test_display_vide_none(self):
         self.assertIsNone(creator_mentioned("DantesDels", ""))
+
+
+class RolesQuestionTests(unittest.TestCase):
+    """Routage des demandes de rôles (membre explicite vs anaphore)."""
+
+    def test_roles_de_membre_explicite(self):
+        self.assertEqual(roles_question("Regarde les rôles de lulu", "lulu"),
+                         "member")
+
+    def test_quels_roles_a_membre(self):
+        self.assertEqual(roles_question("Quels rôles a Tom.Pass ?",
+                                         "tom.pass"), "member")
+
+    def test_ses_roles_anaphore(self):
+        self.assertEqual(roles_question("Quels sont ses rôles ?", None),
+                         "last")
+
+    def test_son_role_anaphore(self):
+        self.assertEqual(roles_question("quel est son rôle ici ?", None),
+                         "last")
+
+    def test_aucun_vocabulaire_de_role(self):
+        self.assertIsNone(roles_question("comment vas-tu ?", None))
+        self.assertIsNone(roles_question("Qui est Aze ?", "aze"))
 
 
 if __name__ == "__main__":

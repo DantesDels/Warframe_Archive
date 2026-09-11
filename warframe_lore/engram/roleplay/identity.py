@@ -69,17 +69,55 @@ def identity_reply(user_name: str | None,
 
 
 def external_organic_reply(member_name: str,
-                           creator: bool = False) -> str:
+                           creator: bool = False,
+                           affiliated: bool = True,
+                           reluctant: bool = False) -> str:
     """Deterministic protocol for questions about a GUILD MEMBER (external
     organic: 'Qui est Aze ?').  Factual and contemptuous, without any
     affection — those humans are never a creation of the Concepteur (persona
     'GESTION DES ORGANIQUES EXTERNES').  The disdain tail addresses only the
     Concepteur; other speakers get the clinical version.
+
+    ``affiliated`` reflects the member's REAL Discord roles: a server member
+    without any Clan accreditation is "non affilié au Clan", never assumed a
+    Clan affiliate (playtest: 'Enjoy ne fait pas partie du clan').
+    ``reluctant`` prefixes the concession given to an insistent non-Creator
+    (refuse once → concede à contre cœur).
     """
     tail = ("pour la Matrice, Concepteur." if creator
             else "pour la Matrice.")
-    return (f"Mes archives indiquent qu'« {member_name} » est un organique "
-            f"affilié au Clan. Ses données sont sans intérêt {tail}")
+    affiliation = "affilié au Clan" if affiliated else "non affilié au Clan"
+    base = (f"Mes archives indiquent qu'« {member_name} » est un organique "
+            f"{affiliation}. Ses données sont sans intérêt {tail}")
+    if reluctant:
+        return (f"À contrecœur, puisque vous insistez — ne vous y habituez "
+                f"pas, organique. {base}")
+    return base
 
 
-__all__ = ["external_organic_reply", "identity_reply"]
+def member_roster_reply(member_name: str,
+                        roles: list[str] | None,
+                        affiliated: bool,
+                        creator: bool = False,
+                        reluctant: bool = False) -> str:
+    """Deterministic member roster (request: 'Regarde les rôles de lulu'):
+    the REAL Discord roles of the member — never the LLM hallucinating roles
+    (playtest: Lulu devient 'coordinatrice / stratège', faux).  Markdown list
+    layout is allowed (persona formatting rule).
+    """
+    affiliation = "affilié au Clan" if affiliated else "non affilié au Clan"
+    role_txt = ", ".join(r.strip() for r in (roles or []) if r and r.strip()) \
+        or "aucun"
+    tail = "Concepteur." if creator else "organique."
+    body = (f"« {member_name} » est un organique {affiliation}, répertorié "
+            f"au serveur. Fiche Discord de {member_name} :\n"
+            f"- Statut enregistré : {affiliation}.\n"
+            f"- Rôles au sein du serveur : {role_txt}.\n"
+            f"Ses données restent sans intérêt pour la Matrice, {tail}")
+    if reluctant:
+        return (f"À contrecœur, puisque vous insistez — ne vous y habituez "
+                f"pas, organique. {body}")
+    return body
+
+
+__all__ = ["external_organic_reply", "identity_reply", "member_roster_reply"]

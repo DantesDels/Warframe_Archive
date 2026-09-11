@@ -54,6 +54,9 @@ class RoleplayGateway:
                    creator: bool | None = None,
                    user_roles: list[str] | None = None,
                    member_name: str | None = None,
+                   member_roles: list[str] | None = None,
+                   member_affiliated: bool | None = None,
+                   reluctant: bool | None = None,
                    creator_mention: str | None = None) -> None:
         """Sends a message (optionally RAG-anchored) until ``end``.
 
@@ -84,6 +87,12 @@ class RoleplayGateway:
                 payload["user_roles"] = list(user_roles)
             if member_name is not None:
                 payload["member_name"] = member_name
+            if member_roles is not None:
+                payload["member_roles"] = list(member_roles)
+            if member_affiliated is not None:
+                payload["member_affiliated"] = member_affiliated
+            if reluctant is not None:
+                payload["reluctant"] = reluctant
             if creator_mention is not None:
                 payload["creator_mention"] = creator_mention
             await self._conn.send(json.dumps(payload))

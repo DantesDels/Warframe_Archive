@@ -24,7 +24,8 @@ from ..container import Container
 from ...rag import JAILBREAK_REJECT, RAG_ERROR
 from ...rag.context import RAGContext, RAGContextFactory
 from ...rag.probes import detect_probe, is_identity_question, is_self_reflection
-from ...roleplay.identity import external_organic_reply, identity_reply
+from ...roleplay.identity import (external_organic_reply, identity_reply,
+                                  member_roster_reply)
 from ...rag.sanitize import strip_trailing_padding
 from ...rag.service import sanitize_query
 from ...roleplay import Session
@@ -128,8 +129,22 @@ async def roleplay(websocket: WebSocket) -> None:
             # never the RAG that would hallucinate the member as lore.
             member_name = payload.get("member_name")
             if persona_mode == "oracle" and member_name:
-                organic_answer = external_organic_reply(
-                    str(member_name), creator=bool(payload.get("creator")))
+                member_roles = payload.get("member_roles")
+                member_affiliated = payload.get("member_affiliated")
+                if member_affiliated is None:
+                    member_affiliated = True
+                reluctant = bool(payload.get("reluctant"))
+                creator = bool(payload.get("creator"))
+                if member_roles is not None:
+                    organic_answer = member_roster_reply(
+                        str(member_name), list(member_roles),
+                        affiliated=bool(member_affiliated),
+                        creator=creator, reluctant=reluctant)
+                else:
+                    organic_answer = external_organic_reply(
+                        str(member_name), creator=creator,
+                        affiliated=bool(member_affiliated),
+                        reluctant=reluctant)
                 await websocket.send_json(
                     {"type": "token", "token": organic_answer})
                 await websocket.send_json(

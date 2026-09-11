@@ -16,6 +16,7 @@ from warframe_lore.engram.persona import (
 from warframe_lore.engram.roleplay.identity import (
     external_organic_reply,
     identity_reply,
+    member_roster_reply,
 )
 
 
@@ -82,6 +83,39 @@ class ExternalOrganicReplyTests(unittest.TestCase):
         reply = external_organic_reply("Aze07", creator=False)
         self.assertNotIn("honneur", reply)
         self.assertNotIn("servir", reply)
+
+    def test_non_affilie_pas_assume_clan(self):
+        # Playtest : « Enjoy ne fait pas partie du clan » — l'affiliation
+        # reflète les rôles Discord RÉELS, jamais une supposition.
+        reply = external_organic_reply("Enjoy", creator=False,
+                                       affiliated=False)
+        self.assertIn("non affilié au Clan", reply)
+        self.assertNotIn("organique affilié au Clan", reply)
+
+    def test_concession_contrecoeur(self):
+        reply = external_organic_reply("Tom.Pass", creator=False,
+                                       affiliated=False, reluctant=True)
+        self.assertIn("À contrecœur, puisque vous insistez", reply)
+        self.assertIn("non affilié au Clan", reply)
+
+
+class MemberRosterReplyTests(unittest.TestCase):
+    def test_fiche_roles_reels(self):
+        reply = member_roster_reply("lulu", ["Mascotte", "Allié"],
+                                    affiliated=False, creator=True)
+        self.assertIn("lulu", reply)
+        self.assertIn("Mascotte, Allié", reply)
+        self.assertIn("non affilié au Clan", reply)
+        self.assertIn("Concepteur", reply)
+
+    def test_aucun_role_annonce_aucun(self):
+        reply = member_roster_reply("lulu", [], affiliated=False)
+        self.assertIn("aucun", reply)
+
+    def test_concession_contrecoeur_roster(self):
+        reply = member_roster_reply("lulu", ["Mascotte"], affiliated=False,
+                                    reluctant=True)
+        self.assertIn("À contrecœur, puisque vous insistez", reply)
 
 
 if __name__ == "__main__":

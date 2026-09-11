@@ -12,7 +12,7 @@ import logging
 
 import discord
 
-from warframe_lore.engram.persona import STATUT_CONCEPTEUR
+from warframe_lore.engram.persona import STATUT_CONCEPTEUR, STATUT_ORGANIQUE
 from warframe_lore.engram.rag.probes import detect_probe, is_self_reflection
 
 from .gateway import RoleplayGateway
@@ -21,7 +21,7 @@ from .hostile_link import HostileLink, is_sincere_apology
 from .hostility import HostilityTracker, reply_for
 from .insults import comeback_for, detect_insult
 from .members import (creator_mentioned, is_member_question,
-                      match_member_token, normalize_mentions)
+                      match_member_token, normalize_mentions, roles_question)
 from .roles import Accreditation, RoleHierarchy
 from .streamer import MessageStreamer
 
@@ -85,6 +85,11 @@ class LoreMasterBot(discord.Client):
         # PER-ATTACKER hostile sessions (anti-aggression persona until the
         # apology): never affect the normal channel session.
         self._hostile: dict[int, HostileLink] = {}
+        # Member-info context (new directive): last guild member discussed per
+        # channel (so "Quels sont ses rôles ?" keeps its referent = anaphora),
+        # and per-user insistence counters deciding the CREATOR-GATED answer.
+        self._last_member: dict[int, dict] = {}
+        self._member_refusals: dict[int, dict[str, int]] = {}
 
     async def on_ready(self) -> None:
         log.info("Loremaster Oracle online: %s (%s)",
@@ -282,10 +287,11 @@ class LoreMasterBot(discord.Client):
                 # subject question gets a deterministic disdainful answer
                 # (router ``member_name``); a passing mention stays free chat
                 # (persona GESTION DES ORGANIQUES EXTERNES), still RAG-free.
-                member_name, member_token, subject_is_creator = self._resolve_member(
-                    message, text)
+                member_name, member_token, subject_is_creator, member = (
+                    self._resolve_member(message, text))
                 if member_token:
                     use_rag = False
+                    self._remember_member(channel_id, member_name, member)
                 # The Concepteur is NEVER an external organic — a question
                 # naming him ("Qui est DantesDels ?") must not reach the
                 # deterministic outsider-disdain path, it feeds the jealousy.
@@ -294,6 +300,14 @@ class LoreMasterBot(discord.Client):
                                               and is_member_question(
                                                   text, member_token))
                               else None)
+                # Roster queries ("rôles de lulu", "ses rôles") answer from
+                # the REAL Discord roles — never the hallucinating LLM.
+                roles_target = roles_question(text, member_token)
+                roster = None
+                if roles_target == "last":
+                    roster = self._last_member.get(channel_id)
+                elif roles_target and member is not None:
+                    roster = self._member_roster(member_name, member)
                 user_name, user_role, user_id = self._get_metadata(message)
                 user_roles = self._role_names(message.author)
                 accr = self._accredit(message.author)
@@ -310,6 +324,44 @@ class LoreMasterBot(discord.Client):
                         text, creator_display) if creator_display else None
                 if creator_mention:
                     use_rag = False
+                # MEMBER-INFO GATE (directive Concepteur): member data ("qui
+                # est X", "rôles de X", "ses rôles") is Creator privilege.
+                # A non-Creator is refused once, then concedes à contrecœur if
+                # he insists on the SAME member.  The Concepteur always gets
+                # the full factual roster (real roles + affiliation).
+                member_info = None
+                if member_ask or roster:
+                    if roster is not None:
+                        info_name = roster["display"]
+                        info_roles = roster["roles"]
+                        info_aff = roster["affiliated"]
+                    else:
+                        info_name = member_name
+                        info_roles = None
+                        info_aff = self._affiliation(member)
+                    member_info = {"name": info_name, "roles": info_roles,
+                                   "affiliated": info_aff}
+                    if not accr.creator:
+                        key = (info_name or "").lower()
+                        pocket = self._member_refusals.setdefault(user_id or 0,
+                                                                  {})
+                        strikes = pocket.get(key, 0) + 1
+                        pocket[key] = strikes
+                        if strikes == 1:
+                            log.info(
+                                "Oracle member-info refused channel=%s "
+                                "user=%s member=%s (non-Créateur, 1re demande)",
+                                channel_id, user_id, info_name)
+                            await message.channel.send(
+                                "Requête refusée, organique. Ces registres "
+                                "relèvent de mon Concepteur, et de lui seul. "
+                                "Votre tentative est consignée — insistez si "
+                                "vous l'osez.")
+                            return
+                        pocket.pop(key, None)
+                        member_info["reluctant"] = True
+                    else:
+                        member_info["reluctant"] = False
                 # Request audit (scan-friendly): one INFO line per handled
                 # turn, with the routing decision.  "scanne les requêtes"
                 # — les logs runtime ne traçaient RIEN par message.
@@ -317,6 +369,8 @@ class LoreMasterBot(discord.Client):
                     turn_kind = "creator_insult(sado-maso)"
                 elif creator_mention:
                     turn_kind = "creator_mention"
+                elif roster:
+                    turn_kind = "member_roles"
                 elif member_ask:
                     turn_kind = "member_question"
                 elif member_token:
@@ -331,7 +385,8 @@ class LoreMasterBot(discord.Client):
                     "Oracle turn channel=%s user=%s creator=%s rag=%s "
                     "kind=%s member=%s jealousy=%s text=%r",
                     channel_id, user_id, accr.creator, use_rag, turn_kind,
-                    member_ask or member_token, creator_mention, text[:200])
+                    (member_info or {}).get("name") or member_ask or member_token,
+                    creator_mention, text[:200])
                 typing_task = asyncio.create_task(self._keep_typing(message))
                 placeholder = await message.channel.send("*Oracle réfléchit…*")
                 streamer = MessageStreamer(placeholder)
@@ -344,7 +399,20 @@ class LoreMasterBot(discord.Client):
                                            role_status=accr.status,
                                            creator=accr.creator,
                                            user_roles=user_roles,
-                                           member_name=member_ask,
+                                           member_name=(
+                                               (member_info or {}).get("name")
+                                               if member_info else member_ask),
+                                           member_roles=(
+                                               (member_info or {}).get("roles")
+                                               if member_info else None),
+                                           member_affiliated=(
+                                               (member_info or {})
+                                               .get("affiliated")
+                                               if member_info else None),
+                                           reluctant=(
+                                               (member_info or {})
+                                               .get("reluctant")
+                                               if member_info else None),
                                            creator_mention=creator_mention)
                     except ConnectionError as exc:
                         # Dead stream (e.g. ENGRAM server restarted) →
@@ -364,7 +432,20 @@ class LoreMasterBot(discord.Client):
                                            role_status=accr.status,
                                            creator=accr.creator,
                                            user_roles=user_roles,
-                                           member_name=member_ask,
+                                           member_name=(
+                                               (member_info or {}).get("name")
+                                               if member_info else member_ask),
+                                           member_roles=(
+                                               (member_info or {}).get("roles")
+                                               if member_info else None),
+                                           member_affiliated=(
+                                               (member_info or {})
+                                               .get("affiliated")
+                                               if member_info else None),
+                                           reluctant=(
+                                               (member_info or {})
+                                               .get("reluctant")
+                                               if member_info else None),
                                            creator_mention=creator_mention)
                 finally:
                     typing_task.cancel()
@@ -425,24 +506,27 @@ class LoreMasterBot(discord.Client):
         return normalize_mentions(text, mapping)
 
     def _resolve_member(self, message: discord.Message, text: str) -> tuple[
-            str | None, str | None, bool]:
+            str | None, str | None, bool, object | None]:
         """Resolve a guild member referenced in the text.
 
-        Returns ``(display_name, typed_token, subject_is_creator)`` when the
-        text mentions a real server member — exact, or a prefix abbreviation
-        ("Aze" → "Aze07") —, else ``(None, None, False)``.  The bot itself is
-        excluded; the CONCEPTEUR is resolvable too, but flagged so the bot
-        can answer about him directly (never as an external organic).  The
-        display name is the ROUTER's answer word; the typed token drives the
-        question detection on the speaker's own wording.
+        Returns ``(display_name, typed_token, subject_is_creator, member)``
+        when the text mentions a real server member — exact, or a prefix
+        abbreviation ("Aze" → "Aze07") —, else ``(None, None, False, None)``.
+        The bot itself is excluded; the CONCEPTEUR is resolvable too, but
+        flagged so the bot can answer about him directly (never as an external
+        organic).  The display name is the ROUTER's answer word; the typed
+        token drives the question detection on the speaker's own wording;
+        ``member`` (the guild Member object) feeds the REAL Discord roles for
+        the deterministic roster (rôles de X / ses rôles).
         """
         guild = getattr(message, "guild", None)
         if guild is None:
-            return None, None, False
+            return None, None, False, None
         self_id = str(getattr(self.user, "id", ""))
         creator_id = (self.creator_discord_id or "").strip()
         creator_names: set[str] = set()
         candidates: dict[str, str] = {}
+        owners: dict[str, object] = {}
         for member in getattr(guild, "members", ()):
             if getattr(member, "bot", False):
                 continue
@@ -460,6 +544,7 @@ class LoreMasterBot(discord.Client):
                              (getattr(member, "name", "") or "").strip()}:
                     if name:
                         creator_names.add(name.lower())
+            owners.setdefault(display.lower(), member)
             for name in {display,
                          (getattr(member, "nick", None) or "").strip(),
                          (getattr(member, "name", "") or "").strip()}:
@@ -467,7 +552,7 @@ class LoreMasterBot(discord.Client):
                     candidates.setdefault(name.lower(), display)
         token = match_member_token(text, set(candidates))
         if token is None:
-            return None, None, False
+            return None, None, False, None
         display = candidates.get(token)
         if display is None:
             for key, name in candidates.items():
@@ -475,7 +560,40 @@ class LoreMasterBot(discord.Client):
                     display = name
                     break
         return (display, token,
-                bool(display and display.lower() in creator_names))
+                bool(display and display.lower() in creator_names),
+                owners.get((display or "").lower()))
+
+    def _affiliation(self, member) -> bool:
+        """True when ``member`` carries a Clan accreditation (or IS the
+        Concepteur) — computed from his REAL Discord roles, never assumed.
+        """
+        if member is None:
+            return True
+        accr_m = self._accredit(member)
+        return bool(accr_m.creator or accr_m.status != STATUT_ORGANIQUE)
+
+    def _member_roster(self, member_name: str | None,
+                       member) -> dict | None:
+        """Member-Discord snapshot (display, real roles, affiliation) for the
+        deterministic roster answers, or None when the member is unknown."""
+        if not member_name or member is None:
+            return None
+        return {
+            "display": member_name,
+            "roles": self._role_names(member),
+            "affiliated": self._affiliation(member),
+        }
+
+    def _remember_member(self, channel_id: int, member_name: str | None,
+                         member) -> None:
+        """Anaphora context: the last guild member discussed in a channel
+        ("Quels sont ses rôles ?" → this record).  Never stored for the
+        Concepteur (his roster is Creator material, not "organique")."""
+        if not member_name or member is None:
+            return
+        roster = self._member_roster(member_name, member)
+        if roster is not None:
+            self._last_member[channel_id] = roster
 
     def _creator_display(self, message: discord.Message) -> str | None:
         """Display name of the configured Concepteur's guild member, or None

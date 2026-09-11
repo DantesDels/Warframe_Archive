@@ -24,6 +24,11 @@ cache/
 # Config locale
 buckets.json.local
 
+# Base d'activité membre du bot (runtime)
+*.db
+*.db-shm
+*.db-wal
+
 # Env
 .env
 discord_roles.json

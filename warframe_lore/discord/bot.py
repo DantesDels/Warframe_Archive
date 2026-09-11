@@ -24,7 +24,8 @@ from .hostile_link import HostileLink, is_sincere_apology
 from .hostility import HostilityTracker, reply_for
 from .insults import comeback_for, detect_insult
 from .members import (creator_mentioned, is_member_question, leetspeak,
-                      match_member_token, normalize_mentions, roles_question)
+                      match_member_token, normalize_mentions, roles_question,
+                      self_info_request)
 from .activity import MemberActivityStore
 from .roles import Accreditation, RoleHierarchy
 from .streamer import MessageStreamer
@@ -334,6 +335,20 @@ class LoreMasterBot(discord.Client):
                 user_name, user_role, user_id = self._get_metadata(message)
                 user_roles = self._role_names(message.author)
                 accr = self._accredit(message.author)
+                # SELF-REPORT: "mon rapport", "ma fiche", or the Concepteur
+                # naming himself ("le rapport de DantesDels") → the speaker's
+                # OWN matriciel card (never the devotion litany, never the
+                # jealousy path).
+                self_report = False
+                if self_info_request(text):
+                    self_report = True
+                    member = message.author
+                    member_name = (getattr(member, "display_name", None)
+                                   or getattr(member, "name", "") or "").strip()
+                    subject_is_creator = accr.creator
+                elif (member_token and subject_is_creator and accr.creator
+                      and is_member_question(text, member_token)):
+                    self_report = True
                 # JEALOUSY (decision taken): a non-Creator member citing the
                 # Concepteur's pseudonym — ANY spelling or casing ("dantes",
                 # "Dels", "DANTEs") — triggers possessive rage performed by
@@ -354,7 +369,7 @@ class LoreMasterBot(discord.Client):
                 # EMBED card (avatar, pseudo, rôles, ID, niveau de sécurité,
                 # indice de fiabilité) + an LLM behavioural analysis grounded
                 # in the member's recorded interactions.
-                if member_ask or roster:
+                if member_ask or roster or self_report:
                     info = (dict(roster) if roster is not None
                             else self._member_roster(member_name, member))
                     if info is None:

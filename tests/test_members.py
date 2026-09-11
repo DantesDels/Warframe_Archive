@@ -20,6 +20,7 @@ from warframe_lore.discord.members import (
     match_member_token,
     normalize_mentions,
     roles_question,
+    self_info_request,
 )
 from warframe_lore.engram.rag.probes import detect_probe
 
@@ -184,6 +185,28 @@ class RolesQuestionTests(unittest.TestCase):
     def test_aucun_vocabulaire_de_role(self):
         self.assertIsNone(roles_question("comment vas-tu ?", None))
         self.assertIsNone(roles_question("Qui est Aze ?", "aze"))
+
+
+class SelfInfoRequestTests(unittest.TestCase):
+    """« Mon rapport » / « ma fiche » : le locuteur demande SA PROPRE fiche."""
+
+    def test_mon_rapport(self):
+        self.assertTrue(self_info_request("Donne moi mon rapport matriciel"))
+
+    def test_mon_propre_rapport(self):
+        self.assertTrue(self_info_request("Donne moi mon propre rapport"))
+
+    def test_ma_fiche(self):
+        self.assertTrue(self_info_request("montre ma fiche"))
+
+    def test_rapport_de_moi(self):
+        self.assertTrue(self_info_request("le rapport de moi"))
+
+    def test_rapport_d_un_tiers_pas_self(self):
+        self.assertFalse(self_info_request("le rapport de Karl"))
+
+    def test_question_banale(self):
+        self.assertFalse(self_info_request("comment vas-tu ?"))
 
 
 if __name__ == "__main__":

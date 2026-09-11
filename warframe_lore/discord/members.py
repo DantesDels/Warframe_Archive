@@ -167,6 +167,20 @@ def roles_question(text: str, token: str | None) -> str | None:
     return None
 
 
+_SELF_INFO_RE = re.compile(
+    r"\b(?:mon|ma|mes|mien|mienne)\b[^.!?]{0,30}"
+    r"\b(?:rapport|fiche|dossier|profil|matriciel|infos?|informations?)\b"
+    r"|"
+    r"\b(?:rapport|fiche|dossier)\b[^.!?]{0,30}\b(?:moi|moi[- ]même)\b",
+    re.IGNORECASE)
+
+
+def self_info_request(text: str) -> bool:
+    """True when the SPEAKER asks for their OWN matriciel report / fiche
+    ("mon rapport", "mon propre rapport", "ma fiche", "rapport de moi")."""
+    return bool(_SELF_INFO_RE.search((text or "")))
+
+
 __all__ = ["creator_mentioned", "creator_pseudo_variants",
            "is_member_question", "leetspeak", "match_member_token",
-           "normalize_mentions", "roles_question"]
+           "normalize_mentions", "roles_question", "self_info_request"]

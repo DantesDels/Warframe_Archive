@@ -206,6 +206,8 @@ class DefinitiveRootPromptTests(unittest.TestCase):
                       self.text)
         self.assertIn("glitches affectifs (tirets cadratins) sont RARES",
                       self.text)
+        self.assertIn("INTERDIT de recopier, quasi à l'identique",
+                      self.text)
         self.assertLess(i_fmt, i_nature)
 
     def test_gestion_organiques_externes(self):

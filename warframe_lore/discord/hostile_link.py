@@ -82,11 +82,14 @@ class HostileLink:
 
     async def deliver(self, message: discord.Message, apology: bool,
                       user_name: str | None = None,
-                      user_role: str | None = None) -> None:
+                      user_role: str | None = None,
+                      user_id: int | None = None,
+                      creator: bool | None = None) -> None:
         """Let the session reply — hostile persona (insistence) by default,
         initial persona (redemption) if ``apology``.
         ``user_name`` / ``user_role`` (Discord identity) feed the
-        hierarchical-immunity directive in the system prompt.
+        hierarchical-immunity directive in the system prompt; ``creator``
+        (boolean authenticated by the bot) selects the persona banner.
         """
         async with self._lock:
             if apology:
@@ -99,7 +102,9 @@ class HostileLink:
             try:
                 await self.gateway.send(sending, on_token=streamer.add,
                                         user_name=user_name,
-                                        user_role=user_role)
+                                        user_role=user_role,
+                                        user_id=user_id,
+                                        creator=creator)
             finally:
                 pass
             await streamer.finish()

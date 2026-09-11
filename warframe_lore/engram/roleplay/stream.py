@@ -11,7 +11,7 @@ from collections.abc import AsyncIterator
 
 from ..llm import LLMProvider
 from ..models import ChatMessage
-from ..persona import HOSTILE_PERSONA
+from ..persona import HOSTILE_PERSONA, auth_banner
 from ..rag.prompt import (
     HALLUCINATION_GUARD,
     HIERARCHY_BLOCK,
@@ -44,7 +44,8 @@ class RoleplayService:
                      rag_context: str | None = None,
                      persona: str = "oracle",
                      user_name: str | None = None,
-                     user_role: str | None = None) -> AsyncIterator[str]:
+                     user_role: str | None = None,
+                     creator: bool | None = None) -> AsyncIterator[str]:
         """Append the input, stream the reply, and record it.
 
         ``rag_context`` (trusted document passages) merges an external
@@ -55,9 +56,17 @@ class RoleplayService:
         ``user_name`` / ``user_role`` (Discord identity: display name + highest
         role) feed the hierarchical-immunity directive: no organic entity
         outranks the Cephalon, and any impersonation is rejected lore-wise.
+        ``creator`` is the trusted boolean derived by the Discord bot's native
+        identity check (``message.author.id``); its persona banner — Directive
+        Zéro for the Creator, protective hostility for any other organic — is
+        appended at the end of the system prompt BEFORE the LLM call.  The raw
+        ID never travels this far.  ``None`` (non-Discord client) injects no
+        banner (legacy behaviour), and the RAG ``<archives>`` block stays
+        untouched and separate from the persona directives.
         """
         session.add("user", user_text)
         base = self._base_prompt(persona)
+        banner = auth_banner(creator)
         metadata = ""
         if user_name or user_role:
             metadata = "\n\n" + HIERARCHY_BLOCK.format(
@@ -69,7 +78,6 @@ class RoleplayService:
             # out-of-character) because the defence is part of the system
             # prompt, not of the archives.
             system = f"{base}\n\n{JAILBREAK_BLOCK}{metadata}"
-            messages = self.window.to_messages(session, system)
         else:
             # Tagged XML document context, INSIDE THE SAME system message as
             # the persona and the guard (same strict structure as the RAG
@@ -79,6 +87,14 @@ class RoleplayService:
                       f"Contexte documentaire restitué ci-dessous :\n\n"
                       f"<archives>\n{rag_context}\n</archives>\n\n"
                       f"{HALLUCINATION_GUARD}{metadata}")
+        if banner:
+            # Authentication banner appended at the END of the system prompt,
+            # right before the LLM call (mission-4 spec).  The RAG
+            # ``<archives>`` block is never altered.
+            system = f"{system}\n\n{banner}"
+        if rag_context is None:
+            messages = self.window.to_messages(session, system)
+        else:
             messages = [
                 ChatMessage("system", system),
                 *self.window.bounded_turns(session),

@@ -16,10 +16,15 @@ def _env(name: str, default: str) -> str:
 
 @dataclass
 class DiscordConfig:
-    """Bot settings: token, ENGRAM WS endpoint, prefix.
+    """Bot settings: token, ENGRAM WS endpoint, prefix, creator identity.
 
     Overridable through the ``DISCORD_*`` environment variables.
     Fallback battery: ``DISCORD_TOKEN`` (secret) and ``ENGRAM_WS_URL``.
+
+    ``creator_discord_id`` (``CREATOR_DISCORD_ID``, numeric snowflake) is the
+    sole identity the persona ever trusts: the bot authenticates natively via
+    ``message.author.id`` and never asks the user for their ID.  It never
+    travels beyond the bot — ENGRAM only receives a boolean derivation.
     """
 
     token: str = field(
@@ -36,6 +41,11 @@ class DiscordConfig:
         default_factory=lambda: tuple(
             int(x) for x in _env("DISCORD_CHANNELS", "").split(",")
             if x.strip().isdigit()))
+    # Creator identity (numeric Discord snowflake). Compared against
+    # ``message.author.id``: prompt banner "Directive Zéro" vs hostile
+    # protectiveness.  Empty = feature disabled (no banner anywhere).
+    creator_discord_id: str = field(
+        default_factory=lambda: _env("CREATOR_DISCORD_ID", ""))
 
     @classmethod
     def load(cls) -> "DiscordConfig":

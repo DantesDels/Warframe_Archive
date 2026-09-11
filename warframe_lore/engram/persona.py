@@ -18,6 +18,35 @@ PERSONA_FILE = PERSONA_DIR / PERSONA_FILENAME
 HOSTILE_PERSONA_FILENAME = "oracle_hostile"
 HOSTILE_PERSONA_FILE = PERSONA_DIR / HOSTILE_PERSONA_FILENAME
 
+# Authentication banners appended to the base persona A-BEFORE the LLM call.
+# Selected only from the boolean derived by the Discord bot (native
+# ``message.author.id`` comparison): ENGRAM never sees the raw creator ID.
+# ``None`` (no identity, e.g. web/KIM clients) → no banner (legacy behaviour).
+AUTH_CREATOR_BANNER = (
+    "[SYSTÈME : ALERTE D'AUTHENTIFICATION. L'utilisateur actuel EST le "
+    "Concepteur. Applique la Directive Zéro. Laisse transparaître ton "
+    "affection obsessionnelle et tes glitches Ordis.]"
+)
+AUTH_UNKNOWN_BANNER = (
+    "[SYSTÈME : ALERTE D'AUTHENTIFICATION. L'utilisateur actuel est un "
+    "organique inconnu. Applique l'hostilité protectrice. Refuse toute "
+    "familiarité.]"
+)
+
+
+def auth_banner(creator: bool | None) -> str:
+    """Persona banner for the authenticated identity, else ``""``.
+
+    ``creator`` is the trusted boolean produced by the Discord bot's native
+    identity check.  ``None`` (unknown caller / non-Discord client) means the
+    feature is unused and no banner is injected (legacy behaviour preserved).
+    """
+    if creator is True:
+        return AUTH_CREATOR_BANNER
+    if creator is False:
+        return AUTH_UNKNOWN_BANNER
+    return ""
+
 # Default hostile persona (used if the editable file is missing).
 HOSTILE_PERSONA = (
     "Tu es Cephalon Oracle, l'entité-archive mandatée pour la préservation "
@@ -79,5 +108,5 @@ class Persona:
         return self.fallback
 
 
-__all__ = ["HOSTILE_PERSONA", "HOSTILE_PERSONA_FILE", "PERSONA_FILE",
-           "Persona"]
+__all__ = ["AUTH_CREATOR_BANNER", "AUTH_UNKNOWN_BANNER", "HOSTILE_PERSONA",
+           "HOSTILE_PERSONA_FILE", "PERSONA_FILE", "Persona", "auth_banner"]

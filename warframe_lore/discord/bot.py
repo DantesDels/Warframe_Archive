@@ -41,7 +41,8 @@ class LoreMasterBot(discord.Client):
 
     def __init__(self, gateway_url: str, prefix: str,
                  typing_interval: float = 5.0,
-                 allowed_channels: tuple[int, ...] = (), **kwargs) -> None:
+                 allowed_channels: tuple[int, ...] = (),
+                 creator_discord_id: str = "", **kwargs) -> None:
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, **kwargs)
@@ -49,6 +50,11 @@ class LoreMasterBot(discord.Client):
         self.prefix = prefix
         self.typing_interval = typing_interval
         self.allowed_channels = set(allowed_channels)
+        # Creator identity (Discord snowflake).  Authenticated natively via
+        # ``message.author.id`` — the bot NEVER asks for the ID and the raw
+        # value never travels beyond this process (ENGRAM receives only the
+        # boolean ``creator`` derived below).
+        self.creator_discord_id = (creator_discord_id or "").strip()
         self._gateways: dict[int, RoleplayGateway] = {}
         self._route_locks: dict[int, asyncio.Lock] = {}
         self._turns: dict[int, asyncio.Task] = {}
@@ -135,10 +141,11 @@ class LoreMasterBot(discord.Client):
     async def _insist(self, user_id: int, message: discord.Message) -> None:
         """Relay to the attacker's hostile session (he must apologise)."""
         link = self._hostile[user_id]
-        user_name, user_role, _ = self._get_metadata(message)
+        user_name, user_role, uid = self._get_metadata(message)
         try:
             await link.deliver(message, apology=False,
-                               user_name=user_name, user_role=user_role)
+                               user_name=user_name, user_role=user_role,
+                               user_id=uid, creator=self._is_creator(uid))
         except ConnectionError:
             # Dead hostile session: reopen it (new attempt).
             log.warning("Hostile session lost — reopening")
@@ -146,14 +153,19 @@ class LoreMasterBot(discord.Client):
             link = HostileLink(self.gateway_url)
             await link.open()
             self._hostile[user_id] = link
-            await link.deliver(message, apology=False)
+            await link.deliver(message, apology=False,
+                               user_name=user_name, user_role=user_role,
+                               user_id=uid, creator=self._is_creator(uid))
 
     async def _forgive(self, user_id: int, message: discord.Message,
                        text: str) -> None:
         """Apology accepted: back to the initial persona, then close."""
         link = self._hostile.pop(user_id)
+        user_name, user_role, uid = self._get_metadata(message)
         try:
-            await link.deliver(message, apology=True)
+            await link.deliver(message, apology=True,
+                               user_name=user_name, user_role=user_role,
+                               user_id=uid, creator=self._is_creator(uid))
         except ConnectionError:
             log.warning("Hostile session already closed at apology time")
         finally:
@@ -205,6 +217,7 @@ class LoreMasterBot(discord.Client):
                     self._gateways[channel_id] = gateway
                 use_rag = self._wants_lore(text)
                 user_name, user_role, user_id = self._get_metadata(message)
+                creator = self._is_creator(user_id)
                 typing_task = asyncio.create_task(self._keep_typing(message))
                 placeholder = await message.channel.send("*Oracle réfléchit…*")
                 streamer = MessageStreamer(placeholder)
@@ -213,7 +226,8 @@ class LoreMasterBot(discord.Client):
                         await gateway.send(text, on_token=streamer.add,
                                            rag=use_rag, user_name=user_name,
                                            user_role=user_role,
-                                           user_id=user_id)
+                                           user_id=user_id,
+                                           creator=creator)
                     except ConnectionError as exc:
                         # Dead stream (e.g. ENGRAM server restarted) →
                         # reconnect + buffer purge (no concatenation of
@@ -228,7 +242,8 @@ class LoreMasterBot(discord.Client):
                         await gateway.send(text, on_token=streamer.add,
                                            rag=use_rag, user_name=user_name,
                                            user_role=user_role,
-                                           user_id=user_id)
+                                           user_id=user_id,
+                                           creator=creator)
                 finally:
                     typing_task.cancel()
             except asyncio.CancelledError:
@@ -266,6 +281,14 @@ class LoreMasterBot(discord.Client):
         mention_id = str(self.user.id)
         return (text.replace(f"<@{mention_id}>", "")
                     .replace(f"<@!{mention_id}>", "").strip())
+
+    def _is_creator(self, user_id: int | None) -> bool:
+        """Native identity check (mission spec): compare ``message.author.id``
+        against the configured creator snowflake.  Empty config disables the
+        feature (everyone is an unknown organic).  Returns a derived boolean
+        — the raw ID is never forwarded towards ENGRAM."""
+        return bool(self.creator_discord_id and user_id is not None
+                    and str(user_id) == self.creator_discord_id)
 
     @staticmethod
     def _get_metadata(message: discord.Message) -> tuple[str | None, str | None,

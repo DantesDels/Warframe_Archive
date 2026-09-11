@@ -65,6 +65,23 @@ class MemberQuestionTests(unittest.TestCase):
         self.assertFalse(is_member_question("Aze n'arrête pas de spammer",
                                             "aze"))
 
+    def test_que_peux_tu_me_dire_sur(self):
+        self.assertTrue(is_member_question("Que peux-tu me dire sur Aze ?",
+                                           "aze"))
+
+    def test_rapport_matriciel(self):
+        self.assertTrue(is_member_question(
+            "Donne moi le rapport matriciel de Aze", "aze"))
+
+    def test_fiche_de(self):
+        self.assertTrue(is_member_question("fiche de Aze", "aze"))
+
+    def test_informations_sur(self):
+        self.assertTrue(is_member_question("informations sur Aze07", "aze07"))
+
+    def test_dis_moi_tout_sur(self):
+        self.assertTrue(is_member_question("dis-moi tout sur Aze", "aze"))
+
 
 class MentionNormalizationTests(unittest.TestCase):
     def test_mention_de_membre_ne_declenche_pas_la_sonde_hostile(self):

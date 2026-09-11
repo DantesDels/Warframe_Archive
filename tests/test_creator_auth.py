@@ -129,6 +129,10 @@ class DefinitiveRootPromptTests(unittest.TestCase):
                       self.text)
         self.assertIn("jamais de sous-titre entre parenthèses", self.text)
         self.assertIn("PLUS COMPLET et DÉTAILLÉ possible", self.text)
+        # La fiche est la réponse intégrale : aucune dévotion ne s'y intercale.
+        self.assertIn("ta réponse EST la fiche de Codex", self.text)
+        self.assertIn("AUCUN préambule de dévotion", self.text)
+        self.assertIn("backticks", self.text)
 
     def test_le_prompt_racine_finit_avant_les_balises_systeme(self):
         # La balise d'authentification est concaténée PLUS TARD par ENGRAM :

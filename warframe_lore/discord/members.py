@@ -67,17 +67,26 @@ def normalize_mentions(text: str,
 
 
 def is_member_question(text: str, token: str) -> bool:
-    """True when the member is the SUBJECT of the request ("Qui est Aze ?",
-    "Que sais-tu sur Aze ?"), as opposed to a passing mention ("Aze spamme").
-    """
+    """True when the member is the SUBJECT of an information request ("Qui
+    est Aze ?", "Que peux-tu me dire sur Aze ?", "Donne-moi le rapport
+    matriciel de Aze", "fiche de Aze", "infos sur Aze"), as opposed to a
+    passing mention ("Aze spamme")."""
     low = (text or "").lower()
     t = re.escape(token.lower())
-    ask = (rf"(^|\b)(qui est[- ]ce que|qui est|qui est-ce|que sais[- ]tu "
-           rf"(\bsur\b|\bde\b)|parle[- ]moi de|parle moi de|dis[- ]moi)"
-           rf"\s+{t}\b")
-    if re.search(ask, low):
-        return True
-    return bool(re.search(rf"^{t}\b", low) and " qui " in low)
+    patterns = (
+        # questions directes sur le membre
+        rf"qui\s+(?:est|était|es-tu)[-\s]?(?:ce\s+que\s+)?\s*{t}\b",
+        rf"que\s+sais[- ]tu\s+(?:sur|de)\s+{t}\b",
+        rf"que\s+peux[- ]tu\s+(?:me\s+)?dire\s+(?:sur|de)\s+{t}\b",
+        rf"parle(?:z)?[- ]moi\s+(?:de|d['’])\s*{t}\b",
+        rf"dis(?:[- ]moi)?\s+(?:tout\s+)?(?:sur|de)\s+{t}\b",
+        # demandes de fiche / rapport / dossier / informations
+        rf"\b(?:rapport|fiche|dossier|informations?|infos?)\b[^.!?]*\b{t}\b",
+        rf"(?:donne(?:z)?|montre(?:z)?)[- ]moi\b[^.!?]*\b{t}\b",
+        # sujet inversé ("Aze, qui est-ce ?")
+        rf"^{t}\b[^.!?]*\bqui\b",
+    )
+    return any(re.search(p, low) for p in patterns)
 
 
 _CAMEL_BOUNDARY = re.compile(r"(?<=[a-zà-ÿ])(?=[A-ZÀ-Ý])")

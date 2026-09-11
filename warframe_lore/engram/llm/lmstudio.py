@@ -46,7 +46,7 @@ class LMStudioProvider(LLMProvider, EmbeddingProvider):
 
     def __init__(self, base_url: str, chat_model: str,
                  embedding_model: str, api_key: str = "lm-studio",
-                 timeout: float = 180.0, max_tokens: int = 2048) -> None:
+                 timeout: float = 180.0, max_tokens: int = 4096) -> None:
         self.base_url = base_url.rstrip("/")
         self.chat_model = chat_model
         self.embedding_model = embedding_model

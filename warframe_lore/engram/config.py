@@ -43,8 +43,10 @@ class EngramConfig:
             "ENGRAM_CHAT_MODEL", "gemma-2-9b-it"))
     # Low temperature → faithful and deterministic responses.
     chat_temperature: float = float(_env("ENGRAM_CHAT_TEMP", "0.3"))
-    # Generation cap: stays under the 9B model context budget.
-    chat_max_tokens: int = int(_env("ENGRAM_MAX_TOKENS", "2048"))
+    # Generation cap: high enough for the exhaustive Codex files (long lore
+    # answers must not be truncated mid-sentence), still within the 9B model
+    # context budget on 8 GB VRAM.
+    chat_max_tokens: int = int(_env("ENGRAM_MAX_TOKENS", "4096"))
     embedding_model: str = field(
         default_factory=lambda: _env(
             "ENGRAM_EMBED_MODEL", "text-embedding-baai-bge-m3-568m"))

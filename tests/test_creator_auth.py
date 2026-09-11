@@ -119,6 +119,17 @@ class DefinitiveRootPromptTests(unittest.TestCase):
         self.assertIn("Données Canoniques", self.text)
         self.assertIn("Spéculations Organiques", self.text)
 
+    def test_mise_en_page_archive_du_codex(self):
+        # Fiche Codex : en-tête « ◈ ARCHIVE DU CODEX : [NOM] » (sans sous-titre
+        # entre parenthèses), chronologie complète et spécifications tactiques,
+        # avec le maximum de détails.
+        self.assertIn("◈ ARCHIVE DU CODEX", self.text)
+        self.assertIn("CHRONOLOGIE COMPLÈTE & FAITS HISTORIQUES", self.text)
+        self.assertIn("SPÉCIFICATIONS TACTIQUES & MANIFESTATIONS COMPLÈTES",
+                      self.text)
+        self.assertIn("jamais de sous-titre entre parenthèses", self.text)
+        self.assertIn("PLUS COMPLET et DÉTAILLÉ possible", self.text)
+
     def test_le_prompt_racine_finit_avant_les_balises_systeme(self):
         # La balise d'authentification est concaténée PLUS TARD par ENGRAM :
         # le fichier racine ne doit pas la contenir lui-même.

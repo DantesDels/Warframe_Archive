@@ -254,6 +254,43 @@ class Bloc2UserContextTests(unittest.TestCase):
         self.assertIn("ne commence par aucune présentation de toi-même",
                       system)
 
+    def test_system_prompt_unique_par_tour_pas_de_duplication(self):
+        # Mission selon spec: le System Prompt ne doit figurer QU'UNE SEULE
+        # fois, en tête de chaque requête — d'un tour à l'autre rien de
+        # précedent n'est réinjecté comme system message (sinon le modèle
+        # répète ses sorties). L'historique vit dans le BLOC 2, borné.
+        llm = _FakeLLM()
+        service = _service(llm)
+        session = Session(session_id="s")
+        for i in range(3):
+            _run_stream(service.stream(
+                session, f"question {i}", user_name="U"))
+        self.assertEqual(len(llm.calls), 3)
+        for i, call in enumerate(llm.calls):
+            messages = call["messages"]
+            # system + user uniquement, jamais d'accumulation.
+            self.assertEqual(len(messages), 2)
+            self.assertEqual(messages[0].role, "system")
+            self.assertEqual(messages[1].role, "user")
+            system = messages[0].content
+            # Le tronc persona et le bloc interlocuteur n'apparaissent qu'une
+            # seule fois par system.
+            self.assertEqual(system.count(_NORMAL), 1)
+            self.assertEqual(
+                system.count("[INFORMATIONS SUR L'INTERLOCUTEUR ACTUEL]"), 1)
+            # La requête courante est BLOC 3 : jamais réinjectée dans le
+            # system (elle ne figure pas non plus dans l'historique BLOC 2).
+            self.assertEqual(messages[1].content, f"question {i}")
+            self.assertNotIn(f"question {i}", system)
+            # Tour 1 : pas d'historique. Tours suivants : les échanges
+            # ANTÉRIEURS vivent uniquement dans le BLOC 2 (lignes Lui/Oracle).
+            if i == 0:
+                self.assertIn("(aucun échange antérieur)", system)
+            for j in range(i):
+                self.assertIn(f"  - Lui : question {j}", system)
+                self.assertIn("  - Oracle : ok", system)
+            self.assertNotIn(f"  - Lui : question {i}", system)
+
     def test_banniere_apres_le_bloc_2(self):
         from warframe_lore.engram.persona import AUTH_CREATOR_BANNER
         llm = _FakeLLM()

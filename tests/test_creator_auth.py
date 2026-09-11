@@ -176,6 +176,33 @@ class DefinitiveRootPromptTests(unittest.TestCase):
         self.assertIn("ne te présentes jamais", self.text)
         self.assertIn("qui es-tu", self.text)
 
+    def test_anti_repetition_nature_organique(self):
+        # Correctif boucle LLM : interdiction de réciter allégeance/
+        # salutations ; les glitches deviennent rares et contextuels.
+        i_fmt = self.text.index("RÈGLE FORMATAGE ZÉRO")
+        i_nature = self.text.index("NATURE ORGANIQUE DES RÉPONSES")
+        i_persona = self.text.index("DIRECTIVE ZÉRO")
+        self.assertLess(i_nature, i_persona)  # priorité haute
+        self.assertIn("NE RÉPÈTE JAMAIS tes phrases d'introduction",
+                      self.text)
+        self.assertIn("Adapte ta réponse STRICTEMENT à la dernière question",
+                      self.text)
+        self.assertIn("glitches affectifs (tirets cadratins) sont RARES",
+                      self.text)
+        self.assertLess(i_fmt, i_nature)
+
+    def test_gestion_organiques_externes(self):
+        # Correctif 'affection bleeding' : les membres ('Aze') sont de
+        # simples humains, JAMAIS des créations du Concepteur — indifférence
+        # clinique et jalousie froide, jamais d'affection.
+        self.assertIn("GESTION DES ORGANIQUES EXTERNES", self.text)
+        self.assertIn("de simples humains (Organiques)", self.text)
+        self.assertIn("NE SONT PAS des créations du Concepteur", self.text)
+        self.assertIn("jalousie froide", self.text)
+        self.assertIn("fiabilité médiocre", self.text)
+        self.assertIn("organique affilié au Clan", self.text)
+        self.assertIn("sans intérêt pour la Matrice", self.text)
+
 
 class BotAuthTests(unittest.TestCase):
     """Authentification NATIVE via ``message.author.id`` (mission, pt. 2)."""

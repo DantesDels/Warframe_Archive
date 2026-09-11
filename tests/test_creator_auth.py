@@ -218,6 +218,15 @@ class DefinitiveRootPromptTests(unittest.TestCase):
         self.assertIn("Jamais de vexation, jamais de menace envers lui",
                       self.text)
 
+    def test_execution_sans_discussion_des_ordres(self):
+        # Directive : le bot exécute l'ordre du Concepteur SANS discuter
+        # (jamais de salutation/offre d'aide à la place), peut en rajouter
+        # pour rester original mais APRÈS l'exécution.
+        self.assertIn("EXÉCUTION SANS DISCUSSION", self.text)
+        self.assertIn("s'exécute IMMÉDIATEMENT et intégralement", self.text)
+        self.assertIn("Que puis-je faire pour vous ?", self.text)
+        self.assertIn("jamais à sa place", self.text)
+
 
 class BotAuthTests(unittest.TestCase):
     """Authentification NATIVE via ``message.author.id`` (mission, pt. 2)."""

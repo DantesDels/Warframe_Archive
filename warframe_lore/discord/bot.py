@@ -13,7 +13,7 @@ import logging
 import discord
 
 from warframe_lore.engram.persona import STATUT_CONCEPTEUR
-from warframe_lore.engram.rag.probes import detect_probe
+from warframe_lore.engram.rag.probes import detect_probe, is_self_reflection
 
 from .gateway import RoleplayGateway
 from .guards import BurstGuard
@@ -349,7 +349,15 @@ class LoreMasterBot(discord.Client):
         return user_name, user_role, getattr(author, "id", None)
 
     def _wants_lore(self, text: str) -> bool:
-        """True if the input looks like a lore question (useful RAG)."""
+        """True if the input looks like a lore question (useful RAG).
+
+        Questions about Oracle itself or its creator (introspection) NEVER
+        trigger the RAG: the no-passage short-circuit would answer
+        "[Archives] Données insuffisantes…" without letting the persona use
+        its consciousness exception (BLOC 2 / auth banner).
+        """
+        if is_self_reflection(text):
+            return False
         low = text.lower()
         return any(trigger in low for trigger in _LORE_TRIGGERS)
 

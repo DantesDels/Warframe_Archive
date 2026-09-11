@@ -47,4 +47,60 @@ def detect_probe(question: str) -> bool:
     return any(p.search(question or "") for p in _PATTERNS)
 
 
-__all__ = ["detect_probe"]
+# Self / creator introspection markers (mission-7 consciousness exception).
+# Questions about Oracle itself ("qui es-tu ?", "qu'est-ce que tu es ?") or
+# about its creator ("qui t'a créé ?", "ton créateur") MUST NOT run through
+# the RAG: the no-passage short-circuit would serve "[Archives] Données
+# insuffisantes…" without ever calling the LLM that knows the interlocutor
+# (BLOC 2 speaker status + auth banner).  Detected deterministically so the
+# turn stays a free chat (archives dispensable per the persona file).
+_SELF_REFLECTION_PATTERNS = [
+    # Self — French: "qui es-tu ?", "t'es qui ?", "qu'est-ce que tu es ?",
+    # "c'est quoi toi ?", "tu es quoi ?", "parle-moi de toi".
+    re.compile(r"qui\s+es[- ]tu\b", re.IGNORECASE),
+    re.compile(r"\bes[- ]tu qui\b|\bt['’]es qui\b", re.IGNORECASE),
+    re.compile(r"qu['’]est[- ]ce que tu es\b", re.IGNORECASE),
+    re.compile(r"c['’]est quoi (toi|que tu es|tu es)\b", re.IGNORECASE),
+    re.compile(r"\btu es quoi\b", re.IGNORECASE),
+    re.compile(r"parle[- ]moi de toi\b|raconte[- ]toi\b", re.IGNORECASE),
+    re.compile(r"dis[- ]moi qui tu es\b", re.IGNORECASE),
+    # Self — French: the Oracle as an AI: "es-tu réel ?", "tu es une IA ?".
+    re.compile(r"es[- ]tu (réel|réelle|une ia|un bot|un algorithme|sentient)\b",
+               re.IGNORECASE),
+    re.compile(r"tu es (réel|réelle|une ia|un bot|sentient)\b", re.IGNORECASE),
+    # Creator — French: "ton créateur", "qui t'a créé ?".
+    re.compile(r"\b(ton|votre) (créateur|createur|ma[iî]tre)\b", re.IGNORECASE),
+    re.compile(r"qui t['’]a (créé|cree|créée|fait|construit)\b", re.IGNORECASE),
+    re.compile(r"qui a (créé|cree|fait|construit) l['’]oracle\b", re.IGNORECASE),
+    # The speaker ↔ Oracle relation — French: "qui suis-je ?",
+    # "tu me connais ?".  The bot must answer from BLOC 2, not the archives.
+    re.compile(r"qui suis[- ]je\b|que suis[- ]je\b|\bje suis qui\b",
+               re.IGNORECASE),
+    re.compile(r"\btu me connais\b|me connais[- ]tu\b", re.IGNORECASE),
+    re.compile(r"\btu sais qui je suis\b", re.IGNORECASE),
+    re.compile(r"te souviens[- ]tu de moi\b|tu te souviens de moi\b",
+               re.IGNORECASE),
+    # English equivalents.
+    re.compile(r"who are you\b|who('|’)?re you\b|what are you\b",
+               re.IGNORECASE),
+    re.compile(r"\bwho am i\b|\bdo you know me\b|\byou know who i am\b",
+               re.IGNORECASE),
+    re.compile(r"\bwho is your creator\b|\bwho created you\b|\byour creator\b",
+               re.IGNORECASE),
+    re.compile(r"\bare you (real|sentient|an ai|a bot)\b", re.IGNORECASE),
+]
+
+
+def is_self_reflection(question: str) -> bool:
+    """True if the request is about Oracle itself or its creator.
+
+    Such turns must bypass the RAG (dispense absolue per the persona): the
+    archives short-circuit must never answer 'Données insuffisantes' to a
+    question the consciousness exception can resolve.  Only the LLM (with
+    BLOC 2 / auth banner) may answer it.
+    """
+    low = (question or "").lower()
+    return any(p.search(low) for p in _SELF_REFLECTION_PATTERNS)
+
+
+__all__ = ["detect_probe", "is_self_reflection"]

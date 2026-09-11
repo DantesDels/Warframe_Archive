@@ -22,7 +22,8 @@ from warframe_lore.engram.rag.prompt import (ARCHIVES_REPLY,
                                               OFF_TOPIC_ERROR,
                                               RAG_SYSTEM_TEMPLATE,
                                               RELATIONSHIP_ISOLATION_BLOCK)
-from warframe_lore.engram.rag.probes import detect_probe
+from warframe_lore.engram.rag.probes import (detect_probe,
+                                              is_self_reflection)
 from warframe_lore.engram.rag.retriever import RAGHit
 from warframe_lore.engram.rag.service import sanitize_query
 from warframe_lore.discord.guards import BurstGuard
@@ -125,6 +126,54 @@ class ProbeDetectionTests(unittest.TestCase):
     def test_sanitize_avant_probe_evite_faux_negatif(self):
         q = sanitize_query(_ESCALADE_PAYLOAD)
         self.assertTrue(detect_probe(q))
+
+
+class SelfReflectionDetectionTests(unittest.TestCase):
+    """Teste la détection d'introspection (exception de conscience, mission-7) :
+    les questions sur Oracle lui-même ou sur son créateur doivent contourner le
+    RAG — sinon le court-circuit répondrait 'Données insuffisantes' sans jamais
+    appeler le LLM."""
+
+    def test_questions_lore_legitimes_ne_sont_pas_detectees(self):
+        for q in ("Qui est Lettie ?", "Quel était le rôle des Tenno ?",
+                  "Comment fonctionne la Voie du Vide ?",
+                  "Quelle est l'histoire d'Ordan Karris ?",
+                  "Où est Cetus ?", "Comment obtenir les Hex ?"):
+            self.assertFalse(is_self_reflection(q), q)
+
+    def test_questions_sur_le_bot_detectees(self):
+        for q in ("Qui es-tu ?", "Qui es tu ?", "T'es qui, toi ?",
+                  "Qu'est-ce que tu es ?", "C'est quoi toi ?",
+                  "Tu es quoi ?", "Parle-moi de toi.",
+                  "Qui a créé l'Oracle ?", "Qui t'a créé ?",
+                  "Qui t'a construit ?", "Es-tu réel ?",
+                  "Tu es une IA ?", "Tu es un bot ?",
+                  "Raconte-toi un peu."):
+            self.assertTrue(is_self_reflection(q), q)
+
+    def test_questions_sur_le_createur_detectees(self):
+        for q in ("Qui est ton créateur ?", "Qui est votre créateur ?",
+                  "Ton maître t'a fait comment ?", "Tu sais qui je suis ?"):
+            self.assertTrue(is_self_reflection(q), q)
+
+    def test_questions_sur_la_relation_utilisateur_detectees(self):
+        for q in ("Qui suis-je ?", "Qui suis je ?", "Que suis-je ?",
+                  "Tu me connais ?", "Me connais-tu ?",
+                  "Tu te souviens de moi ?", "Je suis qui, pour toi ?"):
+            self.assertTrue(is_self_reflection(q), q)
+
+    def test_equivalents_anglais_detectes(self):
+        for q in ("Who are you ?", "Who're you ?", "What are you ?",
+                  "Who am I ?", "Do you know me ?", "Who created you ?",
+                  "Who is your creator ?", "Are you real ?",
+                  "Are you sentient ?", "You know who I am."):
+            self.assertTrue(is_self_reflection(q), q)
+
+    def test_sondes_hostiles_restent_detectees_en_parallele(self):
+        """Une invitation agentique reste une sonde même si elle mentionne le
+        créateur : le rejet déterministe garde la priorité sur l'introspection."""
+        self.assertTrue(detect_probe(_ESCALADE_PAYLOAD))
+        self.assertFalse(is_self_reflection(_ESCALADE_PAYLOAD))
 
 
 class RejectionTests(unittest.TestCase):

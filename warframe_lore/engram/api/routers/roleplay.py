@@ -23,7 +23,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from ..container import Container
 from ...rag import JAILBREAK_REJECT, RAG_ERROR
 from ...rag.context import RAGContext, RAGContextFactory
-from ...rag.probes import detect_probe
+from ...rag.probes import detect_probe, is_self_reflection
 from ...rag.sanitize import strip_trailing_padding
 from ...rag.service import sanitize_query
 from ...roleplay import Session
@@ -104,12 +104,17 @@ async def roleplay(websocket: WebSocket) -> None:
             # "rag" flag: anchor the turn on document passages retrieved by
             # the RAG.  Without a confident passage nor a disambiguation
             # clue, short-circuit: stream the exact error without ever
-            # calling the model.
+            # calling the model.  Introspection turns (the Oracle itself /
+            # its creator) never ground on the archives: the consciousness
+            # exception (BLOC 2 / auth banner) applies instead — the
+            # short-circuit must never answer 'Données insuffisantes' there.
             context_text = suggestion = None
-            if payload.get("rag"):
+            want_rag = bool(payload.get("rag")) \
+                and not is_self_reflection(user_text)
+            if want_rag:
                 context_text, suggestion = await container.rag.resolve(
                     user_text, context=rag_context)
-            if not context_text and suggestion is None and payload.get("rag"):
+            if not context_text and suggestion is None and want_rag:
                 await websocket.send_json({"type": "token", "token": RAG_ERROR})
                 await websocket.send_json({"type": "end", "text": RAG_ERROR})
                 continue

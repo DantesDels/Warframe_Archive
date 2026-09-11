@@ -171,6 +171,31 @@ Robustness: a page recreated on the wiki (new id, same title) is
 properly re-assigned (cleanup of old chunks/dialogues/page) to avoid
 unique constraint violation on the title.
 
+### `warframe_lore/engram` — AI backend (FastAPI + RAG + Roleplay)
+- `config.py` `EngramConfig` (DB/LLM URLs, models, `top_k`, windows — `ENGRAM_*`).
+- `persona.py`: editable system prompt `persona/oracle` + status banners
+  (creator/commandement/membre/allié/inconnu) + status labels (mission-8).
+- `rag/`: `service.py` (RAGService — retrieval + **entity-lookup guard**
+  short-circuit), `prompt.py` (XML `<archives>` template + guards), `search.py`
+  (pgvector cosine), `aliases.py` (nickname → canonical pre-vectorization),
+  `probes.py` (SQLi/elevation detection), `sanitize.py` (trailing padding).
+- `roleplay/`: `stream.py` (3-block system prompt + banner + jealousy
+  directive), `identity.py` (deterministic speaker-identity and member-card
+  replies), `memory.py` (per-user sliding window).
+- `api/`: `routers/roleplay.py` (WS terminal + `comment` one-shot member
+  observation), `document_rag.py`, `container.py` (DI).
+
+### `warframe_lore/discord` — Loremaster bot (Oracle terminal)
+- `bot.py` `LoreMasterBot`: routing, **matriciel member cards** (Discord embed
+  from real data), creator gating (refuse once → concede à contrecœur),
+  jealousy (creator-pseudo cited), self-report, leetspeak resolution.
+- `members.py`: name resolution (exact/prefix/leetspeak), `is_member_question`,
+  `roles_question`, `self_info_request`, creator-pseudo variants.
+- `activity.py` `MemberActivityStore`: persistent SQLite activity ledger
+  (`data/member_activity/member_activity.db`) — count + recent window.
+- `roles.py` `RoleHierarchy`/`Accreditation`: status from Discord roles.
+- `gateway.py` `RoleplayGateway`: WS per channel + `comment` round-trip.
+
 ### `warframe_lore/ui` — local web interface
 - `LoreStore`: in-memory cache of megafiles `out/*.json` (meta on read,
   reloaded per request) + full-text search + structured KIM dialogues.

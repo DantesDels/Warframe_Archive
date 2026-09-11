@@ -10,10 +10,10 @@ real-time AI backend.
 The infrastructure relies on a strict separation between heavy hardware inference
 and application logic.
 
-* **Local Inference (Host):** The LLM model (Qwen3.8-27B) runs natively on the
-  host machine via LM Studio. This guarantees exclusive and unrestricted access
-  to the GPU's VRAM. The server exposes an OpenAI-compatible REST API on
-  `localhost`.
+* **Local Inference (Host):** The LLM model (`Gemma-2-9b-it`, gguf Q4_K_M)
+  runs natively on the host machine via LM Studio. This guarantees exclusive
+  and unrestricted access to the GPU's VRAM. The server exposes an
+  OpenAI-compatible REST API on `localhost` (`ENGRAM_LLM_BASE`).
 * **Containerization (Docker Compose):** Application services are isolated in
   separate containers to ensure environment reproducibility:
   * PostgreSQL database (with `pgvector` extension).
@@ -63,12 +63,19 @@ The evolution of the web interface toward an isolated native desktop application
 
 ## 5. The Loremaster (Discord Bot)
 
-A standalone client focused on narration and community education.
+A standalone Python client (`discord.py`) focused on narration and community
+education, connected to ENGRAM over WebSocket.
 
-* **Technology:** Independent server (developable in Java via the JDA framework
-  or in Python).
-* **Slash Commands (`/`):** Intuitive command interfaces for querying the
-  central API about specific time periods, factions, or characters.
-* **Advanced Formatting:** Systematic use of Discord *Embeds* to hierarchy
-  information, display lore-associated images, and neatly list sources
-  extracted by the RAG pipeline.
+* **Real-time streaming:** progressive message edits, one session per channel,
+  serialized replies (no fragment interleaving), `!stop` interruption.
+* **Document RAG anchoring:** lexical lore triggers route questions to the
+  vector store; free chat otherwise.
+* **Matriciel member cards:** Discord embeds built from real Discord data —
+  avatar, pseudo, real roles, network ID, security level (role hierarchy),
+  5-level relative assiduité, reliability index, and an LLM behavioural
+  analysis grounded in a persistent SQLite activity ledger.
+* **Creator gating & personas:** the Concepteur (native Discord ID) gets
+  creator privileges; a non-Creator is refused member info once then concedes
+  à contrecœur; hostile probes switch the attacker to a dedicated persona
+  with redemption via apology; citing the Concepteur's pseudo triggers
+  possessive jealousy.

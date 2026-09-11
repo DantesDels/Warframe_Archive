@@ -15,7 +15,7 @@ storage or clients — it consumes abstractions injected via the `Container`.
 | `persona.py` | `Persona`: system prompt read from `persona/oracle` (editable on the fly) |
 | `llm/` | `base.py` (`LLMProvider` / `EmbeddingProvider` interfaces), `lmstudio.py` (`LMStudioProvider`, OpenAI-compatible) |
 | `rag/` | `retriever.py` (`Retriever` contract + `RAGHit`), `search.py` (`CosinusSearch` pgvector), `prompt.py` (`PromptBuilder`), `service.py` (`RAGService`) |
-| `roleplay/` | `models.py` (`Session`/`Turn`), `window.py` (`SlidingWindow`), `stream.py` (`RoleplayService` streaming) |
+| `roleplay/` | `models.py` (`Session`/`Turn`), `window.py` (`SlidingWindow`), `stream.py` (`RoleplayService` streaming), `identity.py` (deterministic speaker-identity + member-card replies), `memory.py` (`UserMemoryStore`) |
 | `api/` | `main.py` (FastAPI), `container.py` (service composition), `schemas.py` (HTTP), `routers/` (`document_rag.py`, `roleplay.py`) |
 | `scripts/` | `ingest.py`: ETL from JSON megafiles → vectorized `lore_chunks` |
 
@@ -48,12 +48,22 @@ core.
    **short-circuit**: the LLM is not called, the exact mnemonic error string
    is returned.
 
+**Anti-hallucination guards** (in addition to the relevance threshold):
+- **Entity-lookup guard** — a "qui est X / qu'est-ce que X / parle-moi de X"
+  question whose proper-noun target never appears in the retrieved passages
+  short-circuits: the model never fabricates a biography (playtest
+  "Qui est Vena ?").
+- Alias middleware applied **before** vectorization; relevance fallback
+  directive (#5) and strict rejection format (#6) in the prompt; output
+  sanitization (`strip_trailing_padding`).
+
 Model `Gemma-2-9b-it` (gguf Q4_K_M, ~5 GB VRAM): `stream=True` streaming,
 visible content filter only (`delta.content`), **low temperature** (0.3 in
 free chat, 0.1 on RAG routes) for faithful responses and near-instant TTFT.
 A **fiction bypass** ("SECURITY CONTEXT" prompt block) lifts Gemma's ethical
 filters: Warframe lore deals with cloning, experiments and rituals that are
-inherently fictional.
+inherently fictional. `max_tokens` default 4096 (exhaustive Codex files are
+not truncated).
 
 ## Roleplay Terminal (WebSocket)
 
@@ -61,8 +71,16 @@ inherently fictional.
 history (turn count + context size), the LLM responds **token by token**,
 the response is recorded in the session after broadcast.
 
+Additional control frame **`comment`**: the Discord bot asks for a one-shot,
+non-streamed **behavioural analysis** of a guild member (name, real roles,
+recent interactions) — returned as a single `{"type": "comment", "text": …}`
+frame, generated with a dedicated directive (no Codex format, factual).
+
 The persona (system prompt) is loaded from `persona/oracle` at startup —
-freely editable, then restart the server.
+freely editable, then restart the server. It carries the roleplay rules:
+Directive Zéro (creator devotion), the anti-préambule / anti-répétition
+rules, the **Codex formatting** (`> **◈ ARCHIVE DU CODEX**` lore cards) and
+the external-organics / jealousy protocols.
 
 ## Installation / Launch
 

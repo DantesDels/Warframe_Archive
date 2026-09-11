@@ -56,11 +56,13 @@ class DiscordConfig:
     roles_file: str = field(
         default_factory=lambda: _env("DISCORD_ROLES_FILE", ""))
     # Persistent member-activity SQLite (assiduité / fiabilité / commentaire
-    # de la fiche membre) — survives bot restarts.  ``:memory:`` disables
-    # persistence (tests).
+    # de la fiche membre) — survives bot restarts.  Stored in a dedicated
+    # ``data/member_activity/`` folder (auto-created), never at the repo root.
+    # ``:memory:`` disables persistence (tests).
     activity_db: str = field(
         default_factory=lambda: _env(
-            "DISCORD_ACTIVITY_DB", str(PROJECT_ROOT / "member_activity.db")))
+            "DISCORD_ACTIVITY_DB",
+            str(PROJECT_ROOT / "data" / "member_activity" / "member_activity.db")))
 
     @classmethod
     def load(cls) -> "DiscordConfig":

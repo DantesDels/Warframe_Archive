@@ -46,19 +46,28 @@ package with its own README (see [Documentation](#documentation)). See
   Roleplay terminal, **local LM Studio** inference (chat + embedding).
 - **"Loremaster Oracle" Discord Bot**: live on the AETERNUM server,
   restricted to the `#oracle` channel, connected to ENGRAM via WebSocket
-  and anchored to RAG (flag `rag`, lore trigger heuristic).
+  and anchored to RAG (flag `rag`, lore trigger heuristic). Features:
+  **matriciel member cards** (Discord embed — avatar, pseudo, real roles,
+  network ID, security level, 5-level relative assiduité, reliability index
+  and a LLM behavioural analysis), **creator-gated** access (a non-Creator
+  is refused once then concedes à contrecœur), self-report
+  ("mon rapport"), leetspeak name resolution (`Al3xie` == `Alexie`) and
+  **persistent member activity** (SQLite `data/member_activity/`).
 - **Chat model**: `Gemma-2-9b-it` (gguf Q4_K_M) chosen for XML formatting
   compliance and VRAM budget (8 GB); interchangeable LLM backends
   (llm_studio, injected abstractions).
+- **Anti-hallucination hardening**: entity-lookup guard ("Qui est X ?" whose
+  target is absent from the retrieved passages → short-circuit, the LLM is
+  never called), strict relevance threshold, alias middleware and output
+  sanitization.
 - **Decoupled RAG extraction pipeline** (`warframe_lore/rag_extract`):
   asynchronous Wikitext extraction (aiohttp + mwparserfromhell) with a
   Playwright DOM fallback, Pydantic-validated `LoreChunk`, Tenacity retry
   and a 3-concurrency semaphore; standalone CLI and library.
-- **Active branch**: `feature/RAG-upgrades` (RAG improvements: semantic
-  chunking with page/section context, relevance fallback directive,
-  decoupled extraction pipeline). **Hardening branch**:
-  `hotfix/rag-pipeline-core` (state isolation, alias middleware,
-  output sanitization, logical-inference directive).
+- **Active branch**: `dev` (Discord Oracle hardening merged from
+  `feature/discord-oracle-auth`). RAG pipeline hardening also on
+  `hotfix/rag-pipeline-core` (state isolation, alias middleware, output
+  sanitization, logical-inference directive).
 
 ## Table of Contents
 
@@ -88,7 +97,7 @@ package with its own README (see [Documentation](#documentation)). See
 | FR-7 | Web Interface | Read-only local HTTP server for megafiles: overview, bucket browser, KIM dialogues, recent, full-text search, media. Gzip responses; no network access at runtime (except on-demand images). |
 | FR-8 | Document RAG | `POST /v1/rag {question, stream?}` → anchored response **+ sources** (title, excerpt, score). Name aliases (`lettie → Leticia`), disambiguation "Did you mean …?", **short-circuit** if no passage above the threshold (the LLM is not called: exact error chain, empty sources). |
 | FR-9 | Roleplay Terminal | `WS /v1/roleplay`: token-by-token streaming, session per connection, sliding memory window (turn bounds + characters), editable persona (`persona/oracle`). Flag `rag` to anchor a turn on the archives. |
-| FR-10 | Discord Bot | "Loremaster Oracle" bot: live token broadcast (message edits), lore question detection (lexical triggers) → RAG flag, automatic reconnection on dead stream, channel restriction. |
+| FR-10 | Discord Bot | "Loremaster Oracle" bot: live token broadcast (message edits), lore question detection (lexical triggers) → RAG flag, automatic reconnection on dead stream, channel restriction, **matriciel member cards** (real Discord roles, ID, security level, assiduité/fiabilité, behavioural analysis), creator-gated access, persistent member activity. |
 
 ### Non-Functional
 
@@ -96,11 +105,11 @@ package with its own README (see [Documentation](#documentation)). See
 |---|---|---|
 | NFR-1 | Fidelity | The AI must **never fabricate** data: strict abstention (short-circuit, confidence thresholds, "archives" error protocol in the prompt). |
 | NFR-2 | Performance | Near-instant TTFT (streaming); complete RAG response typically < 10-30 s on 8 GB VRAM; short-circuit ~0.5 s; network politeness 0.4 s per API call. |
-| NFR-3 | Resources | Fits within **8 GB VRAM**: `top_k = 3` (~1,000-1,500 tokens), `max_context_chars = 4500`, `max_tokens = 2048`, quantized Q4_K_M chat model (~5 GB). |
+| NFR-3 | Resources | Fits within **8 GB VRAM**: `top_k = 3` (~1,000-1,500 tokens), `max_context_chars = 4500`, `max_tokens = 4096`, quantized Q4_K_M chat model (~5 GB). |
 | NFR-4 | Robustness | HTTP retries/exponential backoff, atomic JSON publications, replayable delta, Discord reconnection < 1 s (tested), `restart: unless-stopped` for the database. |
 | NFR-5 | Locality & Security | Everything runs **locally** (dummy API key `lm-studio`, servers on `127.0.0.1`); no secrets in the repository (Discord token via environment). |
 | NFR-6 | Maintainability | SOLID + dependency injection (`Retriever` / `LLMProvider` / `EmbeddingProvider` `Protocol` abstractions), environment-based configuration, per-layer documentation. |
-| NFR-7 | Testability | 127 green unit tests + 32 subtests (16 KIM + 13 RAG/threshold + 23 security + 16 hostility + 6 rewriter + 8 hard-split + 10 semantic chunking + 20 rag_extract + 4 RAG context isolation + 5 aliases + 6 output sanitization); data audit tools; documented live validation procedure. |
+| NFR-7 | Testability | 335 green unit tests (KIM, RAG/threshold, security, hostility, rewriter, hard-split, semantic chunking, rag_extract, RAG context isolation, aliases, output sanitization, creator auth, role hierarchy, identity, members, member card, activity persistence, user memory); data audit tools; documented live validation procedure. |
 | NFR-8 | Ethics | Lore deals with dark subjects (cloning, experiments…): the model must be able to describe them because they are **explicitly fictional** ("SECURITY CONTEXT" prompt block). |
 
 ## Requirements
@@ -580,7 +589,7 @@ ships `buckets.json`, `persona/oracle`, `config/cleaner_config.json`).
 | `ENGRAM_LLM_KEY` | `lm-studio` | Dummy API key (everything is local) |
 | `ENGRAM_CHAT_MODEL` | `gemma-2-9b-it` | Chat model |
 | `ENGRAM_CHAT_TEMP` | `0.3` | Free chat temperature |
-| `ENGRAM_MAX_TOKENS` | `2048` | Generation bound |
+| `ENGRAM_MAX_TOKENS` | `4096` | Generation bound |
 | `ENGRAM_EMBED_MODEL` | `text-embedding-baai-bge-m3-568m` | Embeddings |
 | `ENGRAM_EMBED_DIM` | `1024` | Vector dimension (HNSW index) |
 | `ENGRAM_TOP_K` | `3` | Returned neighbors |
@@ -599,6 +608,9 @@ ships `buckets.json`, `persona/oracle`, `config/cleaner_config.json`).
 | `DISCORD_PREFIX` | `!` | Command prefix |
 | `DISCORD_CHANNELS` | *(all)* | Restricted channel IDs (comma-separated) |
 | `DISCORD_TYPING` | `5` | "typing…" indicator interval (s) |
+| `CREATOR_DISCORD_ID` | *(empty)* | Creator's native Discord snowflake (only identity the persona trusts; enables the Directive Zéro banner, jealousy and creator-gated member cards) |
+| `DISCORD_ROLES_FILE` | `discord_roles.json` | Role hierarchy (name → snowflake, by category) for status accreditation |
+| `DISCORD_ACTIVITY_DB` | `data/member_activity/member_activity.db` | Persistent member-activity SQLite (assiduité / fiabilité / commentaire) |
 
 ### Minimal Launch (End-to-End Path)
 
@@ -680,7 +692,7 @@ DISCORD_TOKEN=... python -m warframe_lore.discord.main --channels <ID>
 | "…the little mouse in the nursery rhyme a green mouse?" | short-circuit `[Archives] Insufficient data…`, 0 sources (no more false "Aurax Vertec" suggestion) |
 | "…that PS5 story just before?" (anaphora) | reuses the previous question for search: hits 0.63 / 0.60 / 0.58 instead of ~0.51 noise |
 | Multi-user resilience | serialized responses (no more fragment interleaving) + `!stop` interrupts reasoning (live validated) |
-| Unit tests | 127 passed + 32 subtests (16 KIM + 13 RAG/threshold + 23 security + 16 hostility + 6 rewriter + 8 hard-split + 10 semantic + 20 rag_extract + 4 RAG context isolation + 5 aliases + 6 output sanitization) |
+| Unit tests | 335 passed (KIM, RAG/threshold, security, hostility, rewriter, hard-split, semantic chunking, rag_extract, RAG context isolation, aliases, output sanitization, creator auth, role hierarchy, identity, members, member card, activity persistence, user memory) |
 
 ### Live Validation — 7-Request Benchmark (September 2026)
 
@@ -727,6 +739,20 @@ de queue, directive d'extraction logique dans le system prompt).
   into free discussion. Responses are **serialized**: if multiple
   users type simultaneously, each waits its turn (no more fragment
   interleaving), and the streaming buffer is flushed between turns.
+- **Matriciel member cards** — "qui est X ?", "rapport matriciel de X",
+  "rôles de X", "ses rôles", "mon rapport" (self-report) resolve a real
+  Discord member (exact, prefix, or leetspeak: `Al3xie` == `Alexie`) and
+  answer with a Discord **embed**: `RAPPORT MATRICIEL`, pseudo + network ID,
+  real Discord roles (bullets), security level (from the role hierarchy),
+  a 5-level **assiduité** relative to the other members, a reliability index,
+  and an LLM **behavioural analysis** grounded in the member's recorded
+  interactions. Member activity is persisted in
+  `data/member_activity/member_activity.db` (SQLite, survives restarts).
+- **Creator gating** — the Concepteur always gets a member card; a
+  non-Creator is **refused once** ("Requête refusée, organique… insistez si
+  vous l'osez.") then **concedes à contrecœur** if he insists on the same
+  member. A non-Creator citing the Concepteur's pseudonym triggers the
+  persona's **possessive jealousy** instead.
 - **Commands**: `!ping` — "Oracle ready." ; `!reset` — new session;
   `!stop` (or `!cancel`) — **interrupts the current response** (reasoning
   stopped server-side, message finalized "…response interrupted") ;
@@ -959,6 +985,30 @@ trials below.
     `RAG_SYSTEM_TEMPLATE` and `HALLUCINATION_GUARD`.
     *Result:* 127 green tests + 32 subtests.
 
+19. **Discord Oracle hardening (matriciel cards, gating, anti-hallucination).**
+    *Playtest bugs:* "Qui est Vena ?" hallucinated a Warframe biography
+    (the entity was absent from the archives); "rôles de lulu" made the LLM
+    invent roles ("coordinatrice, stratège"); member questions leaked the
+    canned `[Violation d'accès]` template; the persona repeated glitch
+    formulas verbatim; "mon rapport" devolved into a devotion litany.
+    *Changes (merged into `dev` from `feature/discord-oracle-auth`):*
+    (a) **matriciel member card** — a Discord embed built from REAL Discord
+    data (avatar, pseudo, roles via `is_default()`, network ID, security
+    level from the role hierarchy, a 5-level **assiduité** relative to the
+    other members, a reliability index, and an LLM behavioural analysis
+    grounded in a **persistent SQLite activity ledger**);
+    (b) **creator gating** — member info is Concepteur privilege; a
+    non-Creator is refused once then concedes à contrecœur;
+    (c) **self-report** ("mon rapport", "le rapport de DantesDels") and
+    **leetspeak** resolution (`Al3xie` == `Alexie`);
+    (d) **anti-hallucination guard** — an entity-lookup question ("qui est
+    X") whose target never appears in the retrieved passages short-circuits
+    (the LLM is never called);
+    (e) **Codex formatting** — lore answers as `> **◈ ARCHIVE DU CODEX**`
+    cards, exhaustive, no devotion interleaved; anti-préambule
+    ("Vous êtes X" banned) and anti-copy-paste rules; `max_tokens` raised to
+    4096. *Result:* 335 green tests.
+
 ### Figures and Validations
 
 | Measurement | Value |
@@ -966,7 +1016,7 @@ trials below.
 | Local corpus (audit) | ~3,175 pages |
 | Vectorized chunks in database | 9,159 (`bge-m3`, 1024d) |
 | KIM chunking verified | 843 chunks, no 2,500-char overflow |
-| Unit tests | 127 passed (16 KIM + 13 RAG/threshold + 23 security + 16 hostility + 6 rewriter + 8 hard-split + 10 semantic + 20 rag_extract + 4 RAG context isolation + 5 aliases + 6 output sanitization) + 32 subtests |
+| Unit tests | 335 passed (KIM, RAG/threshold, security, hostility, rewriter, hard-split, semantic chunking, rag_extract, RAG context isolation, aliases, output sanitization, creator auth, role hierarchy, identity, members, member card, activity persistence, user memory) |
 | Anti-SQLi (live) | real attacker payloads → deterministic rejection without LLM; 429 beyond quota; `Lettie` intact |
 | "Lettie" retrieval (live) | 0.598 / 0.581 / 0.577 (Leticia) |
 | "Orokin" retrieval (live) | 0.611 / 0.600 / 0.595 |

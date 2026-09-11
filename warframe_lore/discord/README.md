@@ -78,6 +78,34 @@ Also available via the `loremaster` console script.
   markers: *pardon, excusez-moi, désolé, sorry, mea culpa…*) restores the
   oracle persona and closes the hostile session (`_forgive`).
 
+## 5. Matriciel Member Cards
+
+The bot answers server-member information with a Discord **embed** built from
+**real Discord data** (never the hallucinating LLM):
+
+```
+RAPPORT MATRICIEL
+IDENTIFIANT : Aze07
+Identifiant Réseau : #194814251502796800
+Rôles et Accréditations      ← real roles (bullets, @everyone excluded)
+Niveau de Sécurité           ← from the role hierarchy (discord_roles.json)
+Assiduité                    ← 5 levels, relative to the other members
+Indice de Fiabilité          ← activity − insolence/probes
+Analyse comportementale      ← LLM observation, grounded in recorded activity
+```
+
+- **Triggers**: "qui est X ?", "rapport matriciel de X", "rôles de X",
+  "ses rôles" (anaphora), "mon rapport" (self-report). Names resolve exact,
+  by prefix, or **leetspeak** (`Al3xie` == `Alexie`).
+- **Creator gating**: the Concepteur always gets the card; a non-Creator is
+  **refused once** then **concedes à contrecœur** if he insists on the same
+  member. A non-Creator citing the Concepteur's pseudo triggers the persona
+  **jealousy** instead.
+- **Persistence**: member activity (message count + recent texts) is stored
+  in SQLite at `data/member_activity/member_activity.db`
+  (`DISCORD_ACTIVITY_DB`), so the assiduité / fiabilité / behavioural
+  analysis survive bot restarts. `:memory:` disables persistence (tests).
+
 ## 5. Verify
 
 - In Discord, type a message on a channel where the bot is present → Oracle
@@ -97,11 +125,15 @@ Also available via the `loremaster` console script.
 
 | File | Role |
 |---|---|
-| `config.py` | `DiscordConfig` (token, WS, prefix, authorized channels) |
-| `gateway.py` | `RoleplayGateway` — WS connection per channel, token broadcast, `set_persona` (switch to hostile persona) |
+| `config.py` | `DiscordConfig` (token, WS, prefix, authorized channels, creator ID, roles file, activity DB path) |
+| `gateway.py` | `RoleplayGateway` — WS connection per channel, token broadcast, `set_persona` (switch to hostile persona), `comment` (one-shot member-card comment) |
 | `streamer.py` | `MessageStreamer` — message editing with buffering (anti-429) |
 | `guards.py` | `BurstGuard` — anti-spam (user cooldown, per-channel cap, ban) |
-| `hostility.py` | Targeted escalation (`reply_for`, level 0→2) + `HostilityTracker` |
+| `hostility.py` | Targeted escalation (`reply_for`, level 0→2) + `HostilityTracker` (strike/count) |
 | `hostile_link.py` | Hostile session per attacker (`is_apology`, persona switch/return) |
-| `bot.py` | `LoreMasterBot` — `discord.Client`, routing, probe detection (`_handle_probe`/`_insist`/`_forgive`) |
+| `insults.py` | Répartie (classy insult comebacks) + `detect_insult` |
+| `members.py` | Member-name resolution (exact/prefix/leetspeak), `is_member_question`, `roles_question`, `self_info_request`, creator-pseudo detection |
+| `roles.py` | `RoleHierarchy` + `Accreditation` (status from Discord roles, mission-8) |
+| `activity.py` | `MemberActivityStore` — persistent SQLite activity ledger (count + recent window) |
+| `bot.py` | `LoreMasterBot` — `discord.Client`, routing, member card (embed), gating, probe detection, jealousy, self-report |
 | `main.py` | Console entry point (`launch_bot` shared with CLI `cephalon bot run`) |

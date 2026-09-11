@@ -50,6 +50,7 @@ class RoleplayGateway:
                    user_name: str | None = None,
                    user_role: str | None = None,
                    user_id: int | None = None,
+                   role_status: str | None = None,
                    creator: bool | None = None) -> None:
         """Sends a message (optionally RAG-anchored) until ``end``.
 
@@ -72,6 +73,8 @@ class RoleplayGateway:
                 payload["user_role"] = user_role
             if user_id is not None:
                 payload["user_id"] = user_id
+            if role_status is not None:
+                payload["role_status"] = role_status
             if creator is not None:
                 payload["creator"] = creator
             await self._conn.send(json.dumps(payload))
@@ -115,6 +118,15 @@ class RoleplayGateway:
                     "WS connection closed — restart the gateway")
             await self._conn.send(json.dumps(
                 {"type": "persona", "mode": mode}))
+
+    async def reset(self, user_id: int | str) -> None:
+        """Wipes the user's short-term memory server-side (``!reset``)."""
+        async with self._send_lock:
+            if not self.active:
+                raise ConnectionError(
+                    "WS connection closed — restart the gateway")
+            await self._conn.send(json.dumps(
+                {"type": "reset", "user_id": user_id}))
 
     async def _read_loop(self) -> None:
         """Reads the incoming frames and queues them."""

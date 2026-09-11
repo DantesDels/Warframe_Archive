@@ -11,7 +11,11 @@ from collections.abc import AsyncIterator
 
 from ..llm import LLMProvider
 from ..models import ChatMessage
-from ..persona import HOSTILE_PERSONA, auth_banner
+from ..persona import (
+    HOSTILE_PERSONA,
+    STATUT_ORGANIQUE,
+    banner_for,
+)
 from ..rag.prompt import (
     HALLUCINATION_GUARD,
     HIERARCHY_BLOCK,
@@ -45,33 +49,44 @@ class RoleplayService:
                      persona: str = "oracle",
                      user_name: str | None = None,
                      user_role: str | None = None,
+                     role_status: str | None = None,
                      creator: bool | None = None) -> AsyncIterator[str]:
         """Append the input, stream the reply, and record it.
 
-        ``rag_context`` (trusted document passages) merges an external
-        context into the prompt: small-model order (context, persona,
-        anti-hallucination guard, then dialogue window).
-        ``persona`` selects the session persona: ``"oracle"``
-        (default) or ``"hostile"`` (anti-aggression mode, see ``persona.py``).
-        ``user_name`` / ``user_role`` (Discord identity: display name + highest
-        role) feed the hierarchical-immunity directive: no organic entity
-        outranks the Cephalon, and any impersonation is rejected lore-wise.
-        ``creator`` is the trusted boolean derived by the Discord bot's native
-        identity check (``message.author.id``); its persona banner — Directive
-        Zéro for the Creator, protective hostility for any other organic — is
-        appended at the end of the system prompt BEFORE the LLM call.  The raw
-        ID never travels this far.  ``None`` (non-Discord client) injects no
-        banner (legacy behaviour), and the RAG ``<archives>`` block stays
-        untouched and separate from the persona directives.
+        The LLM payload is built as THREE strict blocks (mission-6 spec):
+
+        * BLOC 1 — System Prompt: the persona root (``persona/oracle`` or
+          the hostile fallback) + the security/guard blocks, and the RAG
+          ``<archives>`` context when provided.
+        * BLOC 2 — speaker context, generated dynamically:
+          ``[INFORMATIONS SUR L'INTERLOCUTEUR ACTUEL]`` with the display
+          name, the Clan status and the immediate history with this user.
+        * BLOC 3 — the new request, sent as the final user message.
+
+        ``rag_context`` (trusted document passages) anchors the turn on the
+        archives — its XML block is never altered (RAG integrity).
+        ``user_name`` / ``user_role`` (Discord identity) additionally feed
+        the hierarchical-immunity directive (BLOC 1).
+        ``role_status`` is the bot-side accreditation (mission-8): the
+        highest configured role of the speaker ('Concepteur', 'Haut
+        Commandement', 'Membre officiel du Clan', 'Allié du Système' or
+        'Organique non-affilié (Invité)'), injected in BLOC 2.
+        ``creator`` (trusted boolean) selects the banner: Directive Zéro for
+        the Concepteur, status-aware tone for the other tiers, contempt for
+        an unknown organic.  It is appended at the ABSOLUTE end of the
+        system prompt, right before the BLOC 3 user message (mission-5
+        spec).  ``None`` (non-Discord client) injects no banner, and no
+        speaker block when no identity either.
         """
         session.add("user", user_text)
         base = self._base_prompt(persona)
-        banner = auth_banner(creator)
+        banner = banner_for(creator, role_status)
         metadata = ""
         if user_name or user_role:
             metadata = "\n\n" + HIERARCHY_BLOCK.format(
                 user_name=user_name or "l'inconnu organique",
                 user_role=user_role or "aucun grade")
+        # BLOC 1: persona + security guards + (RAG archives when provided).
         if rag_context is None:
             # Free chat: ALWAYS locked by the anti-jailbreak block — a user
             # cannot hijack the persona (prompt injection, role escalation,
@@ -87,18 +102,22 @@ class RoleplayService:
                       f"Contexte documentaire restitué ci-dessous :\n\n"
                       f"<archives>\n{rag_context}\n</archives>\n\n"
                       f"{HALLUCINATION_GUARD}{metadata}")
+        # BLOC 2: speaker context (pseudo, accredited status, immediate
+        # history).
+        if user_name is not None or role_status is not None or session.turns:
+            system = f"{system}\n\n{self._speaker_bloc(user_name, role_status,
+                                                       session)}"
         if banner:
-            # Authentication banner appended at the END of the system prompt,
-            # right before the LLM call (mission-4 spec).  The RAG
-            # ``<archives>`` block is never altered.
+            # Authentication banner appended at the ABSOLUTE end of the
+            # system prompt — after BLOC 2, right before the BLOC 3 user
+            # message (missions 4-5-7 spec).  The RAG ``<archives>`` block
+            # is never altered.
             system = f"{system}\n\n{banner}"
-        if rag_context is None:
-            messages = self.window.to_messages(session, system)
-        else:
-            messages = [
-                ChatMessage("system", system),
-                *self.window.bounded_turns(session),
-            ]
+        # BLOC 3: the new request alone (history lives in BLOC 2).
+        messages = [
+            ChatMessage("system", system),
+            ChatMessage("user", user_text),
+        ]
         tokens: list[str] = []
         # Document-anchored turn: constrained temperature (extractive).
         temperature = (min(self.temperature, 0.1) if rag_context
@@ -114,3 +133,30 @@ class RoleplayService:
             response = RAG_ERROR
             yield response
         session.add("assistant", response)
+
+    def _speaker_bloc(self, user_name: str | None,
+                      role_status: str | None,
+                      session: Session) -> str:
+        """BLOC 2 payload (exact mission-6/8 format):
+
+        ``[INFORMATIONS SUR L'INTERLOCUTEUR ACTUEL]``
+          - Pseudonyme : {display_name}
+          - Statut : {statut accordé par la hiérarchie Discord}
+          - Historique immédiat avec cet utilisateur :
+          {historique_formate}
+
+        The status derives from the bot-side role accreditation (mission-8):
+        only the DERIVED label travels, never the raw role IDs.  History
+        renders the sliding window of past exchanges, exclusive of the
+        current request (BLOC 3).
+        """
+        status = role_status or STATUT_ORGANIQUE
+        lines = self.window.render_history(session)
+        history = "\n".join(lines) if lines else "  (aucun échange antérieur)"
+        return "".join([
+            "[INFORMATIONS SUR L'INTERLOCUTEUR ACTUEL]\n",
+            f"  - Pseudonyme : {user_name or 'Inconnu'}\n",
+            f"  - Statut : {status}\n",
+            "  - Historique immédiat avec cet utilisateur :\n",
+            f"{history}\n",
+        ])

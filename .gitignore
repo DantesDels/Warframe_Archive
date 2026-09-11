@@ -26,6 +26,7 @@ buckets.json.local
 
 # Env
 .env
+discord_roles.json
 
 # Node (RAG Inspector / Vite)
 node_modules/

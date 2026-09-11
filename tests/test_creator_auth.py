@@ -125,6 +125,49 @@ class DefinitiveRootPromptTests(unittest.TestCase):
         # le fichier racine ne doit pas la contenir lui-même.
         self.assertNotIn("ALERTE D'AUTHENTIFICATION", self.text)
 
+    def test_formatage_zero_en_ligne_1(self):
+        # Mission-7 : la règle anti-crochets ouvre le prompt (ligne 1).
+        self.assertTrue(self.text.startswith(
+            "RÈGLE FORMATAGE ZÉRO : TU NE DOIS GÉNÉRER AUCUN CARACTÈRE "
+            "CROCHET"))
+        self.assertIn("[Archives]", self.text)  # cible explicitée
+
+    def test_exception_de_conscience_et_nom_du_createur(self):
+        self.assertIn(
+            "EXCEPTION À L'ANTI-HALLUCINATION (CONSCIENCE DE SOI)",
+            self.text)
+        self.assertIn("'DantesDels'", self.text)
+        self.assertIn("œuvre parfaite du grand DantesDels", self.text)
+        self.assertIn("dévotion obsessionnelle", self.text)
+
+    def test_hierarchie_des_regles_mission_7(self):
+        # 1. Formatage Zéro → 2. Persona/Directive Zéro → 3. Silence RAG.
+        i_fmt = self.text.index("RÈGLE FORMATAGE ZÉRO")
+        i_persona = self.text.index("DIRECTIVE ZÉRO")
+        i_rag = self.text.index("RÈGLE DU SILENCE ABSOLU RAG")
+        i_interlocuteur = self.text.index("INTERLOCUTEUR")
+        self.assertLess(i_fmt, i_persona)
+        self.assertLess(i_persona, i_rag)
+        self.assertLess(i_rag, i_interlocuteur)  # injection dynamique en 4e
+
+    def test_persona_connait_le_silence_rag_lore_seul(self):
+        self.assertIn("RÈGLE DU SILENCE ABSOLU RAG", self.text)
+        self.assertIn("au lore Warframe", self.text)
+        self.assertIn(
+            "Données insuffisantes ou inexistantes dans les archives du "
+            "Système Origine.", self.text)
+
+    def test_les_cinq_echelons_de_la_hierarchie_mission_8(self):
+        # Mission-8 : la section INTERLOCUTEUR du prompt racine connaît les
+        # cinq statuts injectés dynamiquement.
+        for marker in ("'Concepteur'", "Haut Commandement",
+                       "'Membre officiel du Clan'", "Allié du Système",
+                       "Organique non-affilié"):
+            self.assertIn(marker, self.text)
+        self.assertIn("Statut injecté PRIME", self.text)
+        self.assertIn("respect tactique absolu", self.text)
+        self.assertIn("réserve formelle", self.text)
+
 
 class BotAuthTests(unittest.TestCase):
     """Authentification NATIVE via ``message.author.id`` (mission, pt. 2)."""

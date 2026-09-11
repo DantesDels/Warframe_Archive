@@ -12,12 +12,14 @@ import logging
 
 import discord
 
+from warframe_lore.engram.persona import STATUT_CONCEPTEUR
 from warframe_lore.engram.rag.probes import detect_probe
 
 from .gateway import RoleplayGateway
 from .guards import BurstGuard
 from .hostile_link import HostileLink, is_sincere_apology
 from .hostility import HostilityTracker, reply_for
+from .roles import Accreditation, RoleHierarchy
 from .streamer import MessageStreamer
 
 log = logging.getLogger("warframe_lore.discord.bot")
@@ -42,9 +44,13 @@ class LoreMasterBot(discord.Client):
     def __init__(self, gateway_url: str, prefix: str,
                  typing_interval: float = 5.0,
                  allowed_channels: tuple[int, ...] = (),
-                 creator_discord_id: str = "", **kwargs) -> None:
+                 creator_discord_id: str = "",
+                 roles: RoleHierarchy | None = None, **kwargs) -> None:
         intents = discord.Intents.default()
         intents.message_content = True
+        # Member list / roles access — needed for ``author.roles`` (Clan
+        # hierarchy accreditation, missions 6 & 8).
+        intents.members = True
         super().__init__(intents=intents, **kwargs)
         self.gateway_url = gateway_url
         self.prefix = prefix
@@ -55,6 +61,10 @@ class LoreMasterBot(discord.Client):
         # value never travels beyond this process (ENGRAM receives only the
         # boolean ``creator`` derived below).
         self.creator_discord_id = (creator_discord_id or "").strip()
+        # Discord role hierarchy (mission-8): ranked name→ID map evaluated
+        # against ``message.author.roles``; it yields the speaker status and
+        # the persona banner tone.  Only the DERIVED status/creator travel.
+        self.roles = roles if roles is not None else RoleHierarchy()
         self._gateways: dict[int, RoleplayGateway] = {}
         self._route_locks: dict[int, asyncio.Lock] = {}
         self._turns: dict[int, asyncio.Task] = {}
@@ -142,10 +152,12 @@ class LoreMasterBot(discord.Client):
         """Relay to the attacker's hostile session (he must apologise)."""
         link = self._hostile[user_id]
         user_name, user_role, uid = self._get_metadata(message)
+        accr = self._accredit(message.author)
         try:
             await link.deliver(message, apology=False,
                                user_name=user_name, user_role=user_role,
-                               user_id=uid, creator=self._is_creator(uid))
+                               user_id=uid, role_status=accr.status,
+                               creator=accr.creator)
         except ConnectionError:
             # Dead hostile session: reopen it (new attempt).
             log.warning("Hostile session lost — reopening")
@@ -155,17 +167,20 @@ class LoreMasterBot(discord.Client):
             self._hostile[user_id] = link
             await link.deliver(message, apology=False,
                                user_name=user_name, user_role=user_role,
-                               user_id=uid, creator=self._is_creator(uid))
+                               user_id=uid, role_status=accr.status,
+                               creator=accr.creator)
 
     async def _forgive(self, user_id: int, message: discord.Message,
                        text: str) -> None:
         """Apology accepted: back to the initial persona, then close."""
         link = self._hostile.pop(user_id)
         user_name, user_role, uid = self._get_metadata(message)
+        accr = self._accredit(message.author)
         try:
             await link.deliver(message, apology=True,
                                user_name=user_name, user_role=user_role,
-                               user_id=uid, creator=self._is_creator(uid))
+                               user_id=uid, role_status=accr.status,
+                               creator=accr.creator)
         except ConnectionError:
             log.warning("Hostile session already closed at apology time")
         finally:
@@ -174,10 +189,20 @@ class LoreMasterBot(discord.Client):
 
     async def _handle_command(self, message: discord.Message) -> None:
         text = message.content[len(self.prefix):].strip().lower()
-        if text in ("ping", "reset"):
-            if text == "reset" and message.channel.id in self._gateways:
-                gw = self._gateways.pop(message.channel.id)
+        if text == "reset":
+            # Wipe the SPEAKER's short-term memory server-side (mission-6),
+            # then close the channel session like before.
+            gw = self._gateways.get(message.channel.id)
+            if gw is not None:
+                try:
+                    await gw.reset(message.author.id)
+                except ConnectionError:
+                    log.warning("Reset: gateway already closed (channel %s)",
+                                message.channel.id)
+                self._gateways.pop(message.channel.id, None)
                 await gw.close()
+            await message.channel.send("Oracle prêt.")
+        elif text == "ping":
             await message.channel.send("Oracle prêt.")
         elif text in ("stop", "cancel"):
             # Interrupts the current reply (active reasoning): the WS stream
@@ -217,7 +242,7 @@ class LoreMasterBot(discord.Client):
                     self._gateways[channel_id] = gateway
                 use_rag = self._wants_lore(text)
                 user_name, user_role, user_id = self._get_metadata(message)
-                creator = self._is_creator(user_id)
+                accr = self._accredit(message.author)
                 typing_task = asyncio.create_task(self._keep_typing(message))
                 placeholder = await message.channel.send("*Oracle réfléchit…*")
                 streamer = MessageStreamer(placeholder)
@@ -227,7 +252,8 @@ class LoreMasterBot(discord.Client):
                                            rag=use_rag, user_name=user_name,
                                            user_role=user_role,
                                            user_id=user_id,
-                                           creator=creator)
+                                           role_status=accr.status,
+                                           creator=accr.creator)
                     except ConnectionError as exc:
                         # Dead stream (e.g. ENGRAM server restarted) →
                         # reconnect + buffer purge (no concatenation of
@@ -243,7 +269,8 @@ class LoreMasterBot(discord.Client):
                                            rag=use_rag, user_name=user_name,
                                            user_role=user_role,
                                            user_id=user_id,
-                                           creator=creator)
+                                           role_status=accr.status,
+                                           creator=accr.creator)
                 finally:
                     typing_task.cancel()
             except asyncio.CancelledError:
@@ -289,6 +316,24 @@ class LoreMasterBot(discord.Client):
         — the raw ID is never forwarded towards ENGRAM."""
         return bool(self.creator_discord_id and user_id is not None
                     and str(user_id) == self.creator_discord_id)
+
+    def _accredit(self, author) -> Accreditation:
+        """Speaker accreditation (mission-8): highest configured role of the
+        author, plus the native creator override.
+
+        ``message.author.roles`` → :meth:`RoleHierarchy.accredit` (role IDs
+        are evaluated but never forwarded).  The configured creator snowflake
+        stays the authoritative rank: whoever owns it is the Concepteur,
+        whatever the roles say.  The status string and the ``creator``
+        boolean are the ONLY values that ever leave the bot.
+        """
+        role_ids = (str(getattr(role, "id", ""))
+                    for role in getattr(author, "roles", ()))
+        accr = self.roles.accredit(role_ids)
+        user_id = str(getattr(author, "id", "") or "")
+        if self.creator_discord_id and user_id == self.creator_discord_id:
+            return Accreditation(status=STATUT_CONCEPTEUR, creator=True)
+        return accr
 
     @staticmethod
     def _get_metadata(message: discord.Message) -> tuple[str | None, str | None,

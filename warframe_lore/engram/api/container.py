@@ -17,7 +17,7 @@ from ..llm import LMStudioProvider
 from ..persona import Persona
 from ..rag import (AliasResolver, CosinusSearch, HybridSearch,
                    PromptBuilder, RAGService, QueryRewriter)
-from ..roleplay import RoleplayService, SlidingWindow
+from ..roleplay import (RoleplayService, SlidingWindow, UserMemoryStore)
 from .ratelimit import SlidingWindowLimiter
 
 
@@ -65,6 +65,12 @@ class Container:
             hostile_prompt=Persona(self.config.system_prompt)
                 .system_prompt(mode="hostile"),
             temperature=self.config.chat_temperature,
+        )
+        # Per-user short-term memory: sliding pairs, inactivity expiry, LRU.
+        self.memory = UserMemoryStore(
+            max_pairs=self.config.memory_pairs,
+            expiry_seconds=self.config.memory_expiry_seconds,
+            max_users=self.config.memory_max_users,
         )
         # Anti-DDoS / anti-abuse: max rate per IP (HTTP RAG + WS Roleplay).
         self.rag_limiter = SlidingWindowLimiter(

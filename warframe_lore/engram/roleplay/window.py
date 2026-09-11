@@ -38,3 +38,21 @@ class SlidingWindow:
             retained.append(message)
         retained.reverse()
         return retained
+
+    def render_history(self, session: Session,
+                       exclude_current: bool = True) -> list[str]:
+        """Past exchanges rendered as speaker lines (BLOC 2 payload).
+
+        ``exclude_current`` drops the trailing user turn (the request being
+        answered — BLOC 3), so the ``historique`` block only carries prior
+        exchanges.  Each retained exchange is one line:
+        ``  - Lui : ...`` / ``  - Oracle : ...``.
+        """
+        turns = self.bounded_turns(session)
+        if exclude_current and turns and turns[-1].role == "user":
+            turns = turns[:-1]
+        lines: list[str] = []
+        for turn in turns:
+            speaker = "Lui" if turn.role == "user" else "Oracle"
+            lines.append(f"  - {speaker} : {turn.content}")
+        return lines

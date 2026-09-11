@@ -84,12 +84,14 @@ class HostileLink:
                       user_name: str | None = None,
                       user_role: str | None = None,
                       user_id: int | None = None,
+                      role_status: str | None = None,
                       creator: bool | None = None) -> None:
         """Let the session reply — hostile persona (insistence) by default,
         initial persona (redemption) if ``apology``.
         ``user_name`` / ``user_role`` (Discord identity) feed the
-        hierarchical-immunity directive in the system prompt; ``creator``
-        (boolean authenticated by the bot) selects the persona banner.
+        hierarchical-immunity directive in the system prompt;
+        ``role_status`` (the accredited hierarchy rank) and ``creator``
+        (authenticated boolean) drive the BLOC 2 status and the banner.
         """
         async with self._lock:
             if apology:
@@ -104,6 +106,7 @@ class HostileLink:
                                         user_name=user_name,
                                         user_role=user_role,
                                         user_id=user_id,
+                                        role_status=role_status,
                                         creator=creator)
             finally:
                 pass

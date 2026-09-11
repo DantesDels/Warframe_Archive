@@ -2,7 +2,9 @@
 
 Handles the real-time connection: user text reception, token-by-token LLM
 response streaming, and session history (sliding window).
-One session per WebSocket connection.
+One session per user (``message.author.id``, plus persona slice) via the
+shared :class:`UserMemoryStore` — memory, not stateless channels; anonymous
+clients keep a per-connection fallback session.
 
 State isolation: conversational RAG memory (anaphora) lives in ONE
 :class:`RAGContext` per connection — created here, never on the shared
@@ -50,6 +52,14 @@ async def roleplay(websocket: WebSocket) -> None:
     # different ``user_id`` on the same connection clears the context.
     rag_context: RAGContext = RAGContext()
 
+    def active_session(user_id) -> Session:
+        # PER-USER short-term memory (mission-6): keyed by the Discord
+        # ``message.author.id`` (+ persona slice).  Anonymous clients keep
+        # the per-connection fallback session.
+        if user_id is None:
+            return session
+        return container.memory.get(user_id, persona_mode)
+
     async def send_error(message: str) -> None:
         await websocket.send_json({"type": "error", "message": message})
 
@@ -64,6 +74,10 @@ async def roleplay(websocket: WebSocket) -> None:
                 mode = payload.get("mode")
                 if mode in ("oracle", "hostile"):
                     persona_mode = mode
+                continue
+            if payload.get("type") == "reset":
+                # Wipe the user's short-term memory (Discord ``!reset``).
+                container.memory.forget(payload.get("user_id"))
                 continue
             if payload.get("type") != "message":
                 continue
@@ -103,13 +117,16 @@ async def roleplay(websocket: WebSocket) -> None:
             # Discord identity (display name + galaxy rank) feeds the
             # hierarchical-immunity directive in the system prompt; the
             # boolean ``creator`` (derived by the bot, never the raw ID)
-            # selects the authentication banner (Directive Zéro / hostile
-            # protectiveness).
+            # selects the persona banner; ``role_status`` (bot-side role
+            # accreditation, mission-8) drives the BLOC 2 status.  Session =
+            # the per-user memory cell.
             response_parts: list[str] = []
             async for token in container.roleplay.stream(
-                    session, user_text, context_text, persona=persona_mode,
+                    active_session(user_id), user_text, context_text,
+                    persona=persona_mode,
                     user_name=payload.get("user_name"),
                     user_role=payload.get("user_role"),
+                    role_status=payload.get("role_status"),
                     creator=payload.get("creator")):
                 response_parts.append(token)
                 await websocket.send_json({"type": "token", "token": token})

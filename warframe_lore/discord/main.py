@@ -63,6 +63,7 @@ def launch_bot(token: str | None, ws: str | None = None,
         typing_interval=typing_interval or config.typing_interval,
         allowed_channels=channels,
         creator_discord_id=config.creator_discord_id,
+        roles=config.build_roles(),
     )
     # Auto-start the local infrastructure: PostgreSQL (docker compose) then
     # ENGRAM (uvicorn).  The spawned ENGRAM child is stopped with the bot.

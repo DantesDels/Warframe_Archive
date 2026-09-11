@@ -80,6 +80,17 @@ class EngramConfig:
     max_history_turns: int = int(_env("ENGRAM_MAX_TURNS", "20"))
     # ~1100 tokens (fr): below the model's strict 1000-1500 token limit.
     max_context_chars: int = int(_env("ENGRAM_MAX_CTX_CHARS", "4500"))
+
+    # --- Per-user short-term memory (mission-6) ---
+    # Sliding window kept per ``message.author.id``: the X last
+    # request/reply pairs of each speaker.
+    memory_pairs: int = int(_env("ENGRAM_MEMORY_PAIRS", "4"))
+    # Inactivity expiry: a silent user's history is wiped after Y minutes.
+    memory_expiry_seconds: float = float(
+        _env("ENGRAM_MEMORY_EXPIRY", "1800"))
+    # LRU cap: bounds the store so memory never saturates the process.
+    memory_max_users: int = int(_env("ENGRAM_MEMORY_MAX_USERS", "64"))
+
     system_prompt: str = field(
         default_factory=lambda: (
             "Tu es Oracle, voix du Cephalon de l'archive WARFRAME. Réponds en "

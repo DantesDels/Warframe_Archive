@@ -23,7 +23,7 @@ from .guards import BurstGuard
 from .hostile_link import HostileLink, is_sincere_apology
 from .hostility import HostilityTracker, reply_for
 from .insults import comeback_for, detect_insult
-from .members import (creator_mentioned, is_member_question,
+from .members import (creator_mentioned, is_member_question, leetspeak,
                       match_member_token, normalize_mentions, roles_question)
 from .activity import MemberActivityStore
 from .roles import Accreditation, RoleHierarchy
@@ -541,10 +541,13 @@ class LoreMasterBot(discord.Client):
                          (getattr(member, "name", "") or "").strip()}:
                 if name:
                     candidates.setdefault(name.lower(), display)
+                    # Leetspeak normalisation: « Alexie » doit résoudre
+                    # « Al3xie » (clé normalisée en plus de la forme brute).
+                    candidates.setdefault(leetspeak(name.lower()), display)
         token = match_member_token(text, set(candidates))
         if token is None:
             return None, None, False, None
-        display = candidates.get(token)
+        display = candidates.get(token) or candidates.get(leetspeak(token))
         if display is None:
             for key, name in candidates.items():
                 if key.startswith(token):
@@ -697,7 +700,6 @@ class LoreMasterBot(discord.Client):
             comment = await gateway.comment(
                 member_name=info.get("display") or "",
                 roles=info.get("roles") or [],
-                affiliated=bool(info.get("affiliated")),
                 interactions=interactions,
                 creator=creator,
                 reluctant=bool(info.get("reluctant")),

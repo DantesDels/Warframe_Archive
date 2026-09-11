@@ -122,15 +122,17 @@ def member_roster_reply(member_name: str,
 
 def member_comment_request(member_name: str,
                            roles: list[str] | None,
-                           affiliated: bool | None,
                            interactions: list[str] | None,
                            creator: bool = False,
                            reluctant: bool = False) -> str:
     """User-side prompt for the LLM-generated member-card comment: the raw
-    material (pseudo, rôles, affiliation, interactions récentes) that the
-    model turns into a short in-character observation.  Kept a pure builder so
-    the router owns the LLM call and the persona prompt."""
-    affiliation = "affilié au Clan" if affiliated else "non affilié au Clan"
+    material (pseudo, rôles RÉELS, interactions récentes) that the model turns
+    into a short in-character observation.  Kept a pure builder so the router
+    owns the LLM call and the persona prompt.
+
+    The comment must stay FACTUAL: no "affilié au Clan" is asserted — the
+    actual roles are listed and speak for themselves (a member without the
+    « CLAN » role must never be described as a clan member)."""
     role_txt = ", ".join(r.strip() for r in (roles or [])
                          if r and r.strip()) or "aucun"
     history = "\n".join(f"- {t}" for t in (interactions or [])[-8:]) \
@@ -140,11 +142,12 @@ def member_comment_request(member_name: str,
         audience += " (tu as cédé à contrecœur après son insistance)"
     return (
         f"Fiche membre : {member_name}.\n"
-        f"Rôles : {role_txt}.\n"
-        f"Statut : {affiliation}.\n"
+        f"Rôles réels : {role_txt}.\n"
         f"Interactions récentes avec ce membre :\n{history}\n"
         f"Destinataire : {audience}.\n"
-        f"Rédige ton observation sur ce membre.")
+        f"Rédige ton observation, fondée UNIQUEMENT sur les rôles réels et les "
+        f"interactions ci-dessus. N'affirme AUCUNE affiliation ni appartenance "
+        f"au Clan : les rôles parlent d'eux-mêmes.")
 
 
 __all__ = ["external_organic_reply", "identity_reply", "member_comment_request",

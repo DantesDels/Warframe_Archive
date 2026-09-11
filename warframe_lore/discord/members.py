@@ -24,6 +24,17 @@ peut-être pas son ses vont entre chez depuis pendant avant après vers très
 
 _WORD_RE = re.compile(r"[a-zà-ÿ][\wà-ÿ]*", re.IGNORECASE)
 
+# Leetspeak normalisation (chiffres → lettres courantes) : « Al3xie » et
+# « Alexie » désignent le même membre.  Appliquée au MATCHING seulement —
+# le token renvoyé reste le mot réellement tapé (présent dans le texte).
+_LEET_MAP = {ord("3"): "e", ord("1"): "l", ord("0"): "o",
+             ord("4"): "a", ord("5"): "s", ord("7"): "t"}
+
+
+def leetspeak(text: str) -> str:
+    """Normalised form of a name/token (digits folded to letters)."""
+    return (text or "").translate(_LEET_MAP)
+
 
 def match_member_token(text: str, candidate_names: set[str] | list[str],
                        min_len: int = 3) -> str | None:
@@ -31,20 +42,23 @@ def match_member_token(text: str, candidate_names: set[str] | list[str],
 
     ``candidate_names`` are the member display/nick/user names (any casing).
     Resolution priority: exact match, then longest prefix abbreviation
-    (min ``min_len`` chars) that is not a French stopword.  The returned
-    token is the LOWERCASED word actually typed by the user.
+    (min ``min_len`` chars) that is not a French stopword.  Matching is
+    leetspeak-insensitive (« alexie » == « al3xie »); the returned token is
+    the LOWERCASED word actually typed by the user.
     """
-    cand = {str(c).strip().lower() for c in (candidate_names or ())
+    cand = {leetspeak(str(c).strip().lower()) for c in (candidate_names or ())
             if str(c).strip()}
-    words = {w for w in _WORD_RE.findall((text or "").lower()) if len(w) >= min_len}
+    words = {w for w in _WORD_RE.findall((text or "").lower())
+             if len(w) >= min_len}
     for w in words:
-        if w in cand:
+        if leetspeak(w) in cand:
             return w
     for w in sorted(words, key=len, reverse=True):
         if w in _FR_STOPWORDS:
             continue
+        nw = leetspeak(w)
         for key in cand:
-            if key.startswith(w):
+            if key.startswith(nw):
                 return w
     return None
 
@@ -154,5 +168,5 @@ def roles_question(text: str, token: str | None) -> str | None:
 
 
 __all__ = ["creator_mentioned", "creator_pseudo_variants",
-           "is_member_question", "match_member_token", "normalize_mentions",
-           "roles_question"]
+           "is_member_question", "leetspeak", "match_member_token",
+           "normalize_mentions", "roles_question"]

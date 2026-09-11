@@ -38,6 +38,16 @@ class MatchMemberTokenTests(unittest.TestCase):
         # 'Lettie' n'est pas un membre → le lore RAG reste applicable.
         self.assertIsNone(match_member_token("Qui est Lettie ?", ["Aze07"]))
 
+    def test_leetspeak_resolu(self):
+        # « Alexie » (orthographe lisible) désigne « Al3xie » (pseudo 1337).
+        self.assertEqual(match_member_token("Donne moi le rapport de Alexie",
+                                            ["Al3xie"]), "alexie")
+
+    def test_leetspeak_retourne_le_mot_tape(self):
+        # Le token renvoyé est le mot réellement tapé, pas sa forme normalisée.
+        self.assertEqual(match_member_token("qui est Al3xie ?", ["Al3xie"]),
+                         "al3xie")
+
     def test_mots_de_fonction_jamais_abreves(self):
         # 'est' n'échappe jamais au stopword pour matcher 'Esteban'.
         self.assertIsNone(match_member_token("Quel est le rôle des Tenno ?",

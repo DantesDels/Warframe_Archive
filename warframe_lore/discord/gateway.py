@@ -125,7 +125,7 @@ class RoleplayGateway:
                     return
 
     async def comment(self, member_name: str, roles: list[str],
-                      affiliated: bool, interactions: list[str],
+                      interactions: list[str],
                       creator: bool, reluctant: bool) -> str:
         """One-shot member-card comment: sends a ``comment`` frame and waits
         for the single ``comment`` reply (non-streamed)."""
@@ -135,7 +135,6 @@ class RoleplayGateway:
                     "WS connection closed — restart the gateway")
             payload = {"type": "comment", "member_name": member_name,
                        "member_roles": list(roles),
-                       "member_affiliated": affiliated,
                        "interactions": list(interactions),
                        "creator": creator, "reluctant": reluctant}
             await self._conn.send(json.dumps(payload))

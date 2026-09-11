@@ -121,27 +121,28 @@ class MemberRosterReplyTests(unittest.TestCase):
 
 class MemberCommentRequestTests(unittest.TestCase):
     """Matériau de la fiche membre : le commentaire est généré par le modèle
-    à partir des interactions réelles du membre (jamais une formule figée)."""
+    à partir des rôles RÉELS et des interactions (jamais une formule figée,
+    jamais une affiliation affirmée d'office)."""
 
     def test_contient_le_materiau_brut(self):
         request = member_comment_request(
-            "Aze07", ["CHEF DE CLAN", "PRIME"], affiliated=False,
+            "Aze07", ["CHEF DE CLAN", "PRIME"],
             interactions=["Qui est Arthur ?", "Parle-moi de Vena"])
         self.assertIn("Fiche membre : Aze07", request)
         self.assertIn("CHEF DE CLAN, PRIME", request)
-        self.assertIn("non affilié au Clan", request)
+        self.assertIn("Rôles réels", request)
+        self.assertIn("N'affirme AUCUNE affiliation", request)
+        self.assertNotIn("affilié au Clan", request)
         self.assertIn("- Qui est Arthur ?", request)
         self.assertIn("- Parle-moi de Vena", request)
 
     def test_aucune_interaction_explicite(self):
-        request = member_comment_request("lulu", [], affiliated=True,
-                                         interactions=None)
+        request = member_comment_request("lulu", [], interactions=None)
         self.assertIn("(aucune interaction enregistrée)", request)
 
     def test_audience_concepteur_et_concession(self):
         request = member_comment_request(
-            "Tom.Pass", [], affiliated=True,
-            interactions=[], creator=True, reluctant=True)
+            "Tom.Pass", [], interactions=[], creator=True, reluctant=True)
         self.assertIn("ton Concepteur", request)
         self.assertIn("cédé à contrecœur", request)
 

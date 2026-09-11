@@ -45,19 +45,21 @@ async def _member_comment(container: Container, payload: dict) -> str:
     user_msg = member_comment_request(
         member_name=str(payload.get("member_name", "")),
         roles=list(payload.get("member_roles") or []),
-        affiliated=payload.get("member_affiliated"),
         interactions=[str(i) for i in (payload.get("interactions") or [])],
         creator=bool(payload.get("creator")),
         reluctant=bool(payload.get("reluctant")),
     )
     system = (
         container.roleplay.system_prompt + "\n\n"
-        "DIRECTIVE FICHE MEMBRE : Rédige UNIQUEMENT ton observation sur ce "
+        "DIRECTIVE FICHE MEMBRE : Rédige UNIQUEMENT une observation sur ce "
         "membre, en 2 à 4 phrases, au ton de Cephalon (glacial, précis, un "
-        "brin dédaigneux), fondée sur ses interactions récentes. Sois bref, "
-        "original et factuel : jamais de formule figée, jamais de salutation, "
-        "aucune simulation d'action. Mets en page avec un MARKDOWN léger "
-        "(gras sur les points saillants)."
+        "brin dédaigneux), fondée STRICTEMENT sur ses rôles réels et ses "
+        "interactions fournies ci-dessous. INTERDIT d'utiliser le format "
+        "« ARCHIVE DU CODEX » : pas de titre, pas de champ, pas de « ◈ », pas "
+        "de balise `>`, pas de liste — juste tes phrases. N'AFFIRME aucune "
+        "affiliation ni appartenance au Clan que ses rôles ne montrent pas. "
+        "Jamais de formule figée, jamais de salutation, aucune simulation "
+        "d'action."
     )
     messages = [ChatMessage("system", system),
                 ChatMessage("user", user_msg)]

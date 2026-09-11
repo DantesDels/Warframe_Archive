@@ -168,6 +168,14 @@ class DefinitiveRootPromptTests(unittest.TestCase):
         self.assertIn("respect tactique absolu", self.text)
         self.assertIn("réserve formelle", self.text)
 
+    def test_direction_du_pronom_identite_interlocuteur(self):
+        # Mission-7 : 'qui suis-je' porte sur L'UTILISATEUR (pseudonyme +
+        # statut du BLOC 2), jamais sur Oracle lui-même.
+        self.assertIn("DIRECTION DU PRONOM", self.text)
+        self.assertIn("Le 'je' de sa question désigne LUI", self.text)
+        self.assertIn("ne te présentes jamais", self.text)
+        self.assertIn("qui es-tu", self.text)
+
 
 class BotAuthTests(unittest.TestCase):
     """Authentification NATIVE via ``message.author.id`` (mission, pt. 2)."""

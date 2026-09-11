@@ -106,8 +106,7 @@ class DefinitiveRootPromptTests(unittest.TestCase):
         self.assertIn("CAS B : L'utilisateur est un inconnu", self.text)
         # Le glitch textuel se coupe par tiret cadratin (—), sans balises.
         self.assertIn("—", self.text)
-        self.assertIn("Je pourrais carboniser ce réseau pour vous garder ici—",
-                      self.text)
+        self.assertIn("un tiret cadratin (—)", self.text)
 
     def test_inconnu_interdiction_concepteur(self):
         self.assertIn("parasites organiques", self.text)

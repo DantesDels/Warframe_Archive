@@ -67,6 +67,53 @@ class SecurityLevelTests(unittest.TestCase):
         self.assertEqual(bot._security_level(None), "Accès Invité Restreint")
 
 
+class AssiduityTests(unittest.TestCase):
+    """L'assiduité est RELATIVE : comparée à celle des autres membres."""
+
+    def test_inactif_sans_activite(self):
+        bot = _Bot()
+        self.assertEqual(bot._assiduity(1)[0], "Inactif")
+
+    def test_seul_actif(self):
+        bot = _Bot()
+        bot._member_activity[1] = 5
+        self.assertEqual(bot._assiduity(1)[0], "Seul actif")
+
+    def test_tres_assidu_devance_les_autres(self):
+        bot = _Bot()
+        bot._member_activity = {1: 50, 2: 3, 3: 4, 4: 2}
+        label, reason = bot._assiduity(1)
+        self.assertEqual(label, "Très assidu")
+        self.assertIn("100%", reason)
+
+    def test_peu_assidu_derriere_les_autres(self):
+        bot = _Bot()
+        bot._member_activity = {1: 1, 2: 20, 3: 18}
+        label, _ = bot._assiduity(1)
+        self.assertEqual(label, "Peu assidu")
+
+
+class RoleNamesTests(unittest.TestCase):
+    """``_role_names`` doit filtrer @everyone (méthode ``is_default()``) sans
+    jeter les vrais rôles."""
+
+    def test_vrais_roles_conserves(self):
+        class Role:
+            def __init__(self, name, default):
+                self.name = name
+                self._default = default
+
+            def is_default(self):
+                return self._default
+
+        class Member:
+            roles = [Role("@everyone", True), Role("CHEF DE CLAN", False),
+                     Role("PRIME", False)]
+
+        self.assertEqual(LoreMasterBot._role_names(Member()),
+                         ["CHEF DE CLAN", "PRIME"])
+
+
 class MemberEmbedTests(unittest.TestCase):
     def test_fiche_complete_bien_construite(self):
         bot = _Bot()
@@ -78,7 +125,9 @@ class MemberEmbedTests(unittest.TestCase):
             "avatar": "https://cdn.discordapp.com/avatars/1/a.png",
             "member_id": "4829",
         }
-        embed = bot._member_embed(info, ("Élevée", "régulière"), "observation")
+        embed = bot._member_embed(info, ("Élevée", "régulière"),
+                                  ("Assidu", "plus actif que 80% des membres"),
+                                  "observation")
         data = embed.to_dict()
         self.assertIn("RAPPORT MATRICIEL", data["title"])
         self.assertIn("Aze07", data["title"])
@@ -89,6 +138,7 @@ class MemberEmbedTests(unittest.TestCase):
         self.assertIn("PRIME", fields["Rôles et Accréditations"])
         self.assertEqual(fields["Identifiant Réseau"], "#4829")
         self.assertIn("Commandement Tactique", fields["Niveau de Sécurité"])
+        self.assertIn("Assidu", fields["Assiduité"])
         self.assertIn("Élevée", fields["Indice de Fiabilité"])
         self.assertIn("observation",
                       fields["Analyse comportementale de la Matrice"])

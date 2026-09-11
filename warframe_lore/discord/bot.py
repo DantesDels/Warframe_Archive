@@ -121,6 +121,10 @@ class LoreMasterBot(discord.Client):
         if message.author.bot or not message.content:
             return
         content = message.content.strip()
+        # Per-member interaction memory (feeds the member-card comment and the
+        # reliability/assiduité indices): recorded for EVERY human message the
+        # bot sees, so activity is real and comparable across members.
+        self._remember_interaction(message.author.id, content)
         if content.startswith("(") or content.startswith("//"):
             # Out-of-character (parentheses / double slash): never reply.
             return
@@ -131,9 +135,6 @@ class LoreMasterBot(discord.Client):
                          and message.channel.id in self.allowed_channels)
         if not dedicated and self.user not in message.mentions:
             return
-        # Per-member interaction memory (feeds the member-card comment and the
-        # reliability index — real functions of recorded requests).
-        self._remember_interaction(message.author.id, content)
         text = self._normalize_message(message)
         # HOSTILE PROBE: deterministic rejection (never a LLM on the payload
         # itself) + targeted escalation at the attacker + switch of his
@@ -623,12 +624,35 @@ class LoreMasterBot(discord.Client):
             return "Moyenne", "présence correcte"
         return "Inconstant", "activité irrégulière"
 
+    def _assiduity(self, member_id: int) -> tuple[str, str]:
+        """Relative assiduité: the member's recorded activity compared to the
+        OTHER members (percentile).  A real, comparable function of the
+        per-member counters — never a LLM guess."""
+        activity = self._member_activity.get(member_id, 0)
+        others = [c for uid, c in self._member_activity.items()
+                  if uid != member_id]
+        if activity == 0:
+            return "Inactif", "aucune activité enregistrée"
+        if not others:
+            return "Seul actif", "le seul membre dont l'activité est suivie"
+        behind = sum(1 for c in others if c < activity)
+        pct = round(100 * behind / len(others))
+        if pct >= 90:
+            label = "Très assidu"
+        elif pct >= 70:
+            label = "Assidu"
+        elif pct >= 40:
+            label = "Modéré"
+        else:
+            label = "Peu assidu"
+        return label, f"plus actif que {pct}% des membres ({activity} messages)"
+
     def _security_level(self, status: str | None) -> str:
         """"Niveau de Sécurité" flavour label from the accredited status."""
         return _SECURITY_LEVELS.get(status, _SECURITY_LEVELS[STATUT_ORGANIQUE])
 
     def _member_embed(self, info: dict, reliability: tuple[str, str],
-                      comment: str) -> discord.Embed:
+                      assiduity: tuple[str, str], comment: str) -> discord.Embed:
         """Well-formed member card (Discord embed): profile picture beside
         the pseudo, roles as bullets, network ID, security level, reliability
         index and the LLM behavioural analysis."""
@@ -650,6 +674,9 @@ class LoreMasterBot(discord.Client):
         embed.add_field(name="Niveau de Sécurité",
                         value=self._security_level(info.get("status")),
                         inline=True)
+        a_label, a_reason = assiduity
+        embed.add_field(name="Assiduité",
+                        value=f"{a_label} — {a_reason}", inline=True)
         label, reason = reliability
         embed.add_field(name="Indice de Fiabilité",
                         value=f"{label} — {reason}", inline=True)
@@ -665,10 +692,10 @@ class LoreMasterBot(discord.Client):
         LLM-generated behavioural analysis grounded in the member's recorded
         interactions (via the ``comment`` round-trip)."""
         member_id = info.get("member_id") or ""
-        interactions = (self._member_history.get(int(member_id), [])
-                        if member_id.isdigit() else [])
-        reliability = self._reliability(
-            int(member_id) if member_id.isdigit() else 0)
+        numeric_id = int(member_id) if member_id.isdigit() else 0
+        interactions = self._member_history.get(numeric_id, [])
+        reliability = self._reliability(numeric_id)
+        assiduity = self._assiduity(numeric_id)
         comment = ""
         try:
             comment = await gateway.comment(
@@ -681,7 +708,7 @@ class LoreMasterBot(discord.Client):
             )
         except ConnectionError:
             log.warning("Member card comment unavailable — card sans analyse")
-        embed = self._member_embed(info, reliability, comment)
+        embed = self._member_embed(info, reliability, assiduity, comment)
         await message.channel.send(embed=embed)
 
     def _creator_display(self, message: discord.Message) -> str | None:
@@ -738,17 +765,22 @@ class LoreMasterBot(discord.Client):
 
     @staticmethod
     def _role_names(author) -> list[str]:
-        """Non-default Discord role names of the speaker (order preserved).
+        """Non-default Discord role names of a member (order preserved).
 
-        Sent to ENGRAM only for the deterministic speaker-identity answers
-        ("quels sont mes rôles sur ce serveur ?") — the @everyone default and
-        empty names are dropped; snowflakes never travel.
+        Drops the @everyone default (``Role.is_default()`` is a METHOD in
+        discord.py 2.x — calling it, not truth-testing the bound method) and
+        empty names; snowflakes never travel.
         """
-        return [
-            role.name for role in getattr(author, "roles", ())
-            if role.name.strip()
-            and not getattr(role, "is_default", False)
-        ]
+        names: list[str] = []
+        for role in getattr(author, "roles", ()):
+            name = (getattr(role, "name", "") or "").strip()
+            if not name or name == "@everyone":
+                continue
+            is_default = getattr(role, "is_default", None)
+            if callable(is_default) and is_default():
+                continue
+            names.append(name)
+        return names
 
     def _wants_lore(self, text: str) -> bool:
         """True if the input looks like a lore question (useful RAG).

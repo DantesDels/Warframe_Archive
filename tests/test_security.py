@@ -23,6 +23,7 @@ from warframe_lore.engram.rag.prompt import (ARCHIVES_REPLY,
                                               RAG_SYSTEM_TEMPLATE,
                                               RELATIONSHIP_ISOLATION_BLOCK)
 from warframe_lore.engram.rag.probes import (detect_probe,
+                                              is_identity_question,
                                               is_self_reflection)
 from warframe_lore.engram.rag.retriever import RAGHit
 from warframe_lore.engram.rag.service import sanitize_query
@@ -174,6 +175,41 @@ class SelfReflectionDetectionTests(unittest.TestCase):
         créateur : le rejet déterministe garde la priorité sur l'introspection."""
         self.assertTrue(detect_probe(_ESCALADE_PAYLOAD))
         self.assertFalse(is_self_reflection(_ESCALADE_PAYLOAD))
+
+
+class IdentityQuestionDetectionTests(unittest.TestCase):
+    """Questions d'identité/grade de l'interlocuteur ("qui suis-je", "quel
+    est mon rôle") — répondues de façon DÉTERMINISTE à partir des données
+    d'accréditation : le persona CAS A se présente lui-même au lieu de
+    présenter l'utilisateur."""
+
+    def test_questions_lore_ou_autres_non_detectees(self):
+        for q in ("Qui es-tu ?", "Qui est Lettie ?",
+                  "Quel est le rôle des Tenno ?",
+                  "C'est mon rôle de te protéger.",
+                  "Comment obtenir les Hex ?"):
+            self.assertFalse(is_identity_question(q), q)
+
+    def test_identite_personnelle_detectee(self):
+        for q in ("Qui suis-je ?", "Qui suis-je Oracle ?", "Qui suis je ?",
+                  "Oracle, qui suis-je ?", "Qui je suis ?", "Je suis qui ?",
+                  "Que suis-je ?", "Qu'est-ce que je suis ?",
+                  "Je suis qui pour toi ?"):
+            self.assertTrue(is_identity_question(q), q)
+
+    def test_role_sur_le_serveur_detecte(self):
+        for q in ("Quel est mon rôle ?", "Quels sont mes rôles sur ce "
+                  "serveur ?", "Mon rôle sur ce serveur ?", "Mon statut ?",
+                  "Quel est mon grade ?", "Où est ma place dans la "
+                  "hiérarchie ?", "Ma place dans la hiérarchie."):
+            self.assertTrue(is_identity_question(q), q)
+
+    def test_longue_phrase_narrative_sans_point_dinterrogation_ignoree(self):
+        # Une longue narration contenant "qui je suis" n'est pas une question
+        # d'identité : elle reste au LLM.
+        narrative = ("Laisse-moi te raconter tout ce que j'ai découvert "
+                     "depuis que je sais qui je suis vraiment au fond de moi")
+        self.assertFalse(is_identity_question(narrative))
 
 
 class RejectionTests(unittest.TestCase):

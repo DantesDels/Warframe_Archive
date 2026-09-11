@@ -51,7 +51,8 @@ class RoleplayGateway:
                    user_role: str | None = None,
                    user_id: int | None = None,
                    role_status: str | None = None,
-                   creator: bool | None = None) -> None:
+                   creator: bool | None = None,
+                   user_roles: list[str] | None = None) -> None:
         """Sends a message (optionally RAG-anchored) until ``end``.
 
         The ``_send_lock`` covers the ENTIRE reply: if a second message
@@ -77,6 +78,8 @@ class RoleplayGateway:
                 payload["role_status"] = role_status
             if creator is not None:
                 payload["creator"] = creator
+            if user_roles is not None:
+                payload["user_roles"] = list(user_roles)
             await self._conn.send(json.dumps(payload))
             while True:
                 frame = await self._queue.get()

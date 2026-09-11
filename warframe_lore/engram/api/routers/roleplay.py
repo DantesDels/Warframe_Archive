@@ -23,7 +23,8 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from ..container import Container
 from ...rag import JAILBREAK_REJECT, RAG_ERROR
 from ...rag.context import RAGContext, RAGContextFactory
-from ...rag.probes import detect_probe, is_self_reflection
+from ...rag.probes import detect_probe, is_identity_question, is_self_reflection
+from ...roleplay.identity import identity_reply
 from ...rag.sanitize import strip_trailing_padding
 from ...rag.service import sanitize_query
 from ...roleplay import Session
@@ -117,6 +118,27 @@ async def roleplay(websocket: WebSocket) -> None:
             if not context_text and suggestion is None and want_rag:
                 await websocket.send_json({"type": "token", "token": RAG_ERROR})
                 await websocket.send_json({"type": "end", "text": RAG_ERROR})
+                continue
+            # Speaker-identity questions ("qui suis-je ?", "quel est mon rôle
+            # ?"): DETERMINISTIC answer from the accredited data (BLOC 2
+            # identity).  The devotion persona (CAS A) keeps self-introducing
+            # instead of presenting the speaker — the LLM is never called
+            # here.  Anonymous clients (no identity payload) fall back to the
+            # LLM turn below; the hostile persona keeps its insistence (the
+            # attacker must apologise, whatever the question).
+            identity_answer = None
+            if persona_mode == "oracle" and is_identity_question(user_text):
+                identity_answer = identity_reply(
+                    user_name=payload.get("user_name"),
+                    user_role=payload.get("user_role"),
+                    user_roles=payload.get("user_roles"),
+                    role_status=payload.get("role_status"),
+                    creator=bool(payload.get("creator")))
+            if identity_answer:
+                await websocket.send_json(
+                    {"type": "token", "token": identity_answer})
+                await websocket.send_json(
+                    {"type": "end", "text": identity_answer})
                 continue
             # Token-by-token streaming; accumulate to close the turn.  The
             # Discord identity (display name + galaxy rank) feeds the

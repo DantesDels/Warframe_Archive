@@ -103,4 +103,57 @@ def is_self_reflection(question: str) -> bool:
     return any(p.search(low) for p in _SELF_REFLECTION_PATTERNS)
 
 
-__all__ = ["detect_probe", "is_self_reflection"]
+# Speaker-identity / speaker-rank questions ("qui suis-je ?", "quel est mon
+# rôle ?", "mon statut sur ce serveur ?").  RAG case: answered DETERMINISTICALLY
+# from the accredited data (BLOC 2 identity) because models with devotion
+# personas (CAS A) systematically self-introduce instead of presenting the
+# speaker.  Deliberately NOT covering "tu me connais" / "qui es-tu" (those stay
+# conversational LLM turns).  False-positive risk is limited to short turns
+# (the router only intercepts when the text is short or ends with '?').
+_IDENTITY_PATTERNS = [
+    # Speaker's own identity.
+    re.compile(r"qui suis[- ]je\b|\bqui je suis\b|\bje suis qui\b",
+               re.IGNORECASE),
+    re.compile(r"que suis[- ]je\b|qu['’]est[- ]ce que je suis\b",
+               re.IGNORECASE),
+    re.compile(r"qui suis[- ]je pour toi\b|\bje suis qui pour toi\b",
+               re.IGNORECASE),
+    # Speaker's role(s) / rank / status on the server.
+    re.compile(r"\b(m[eo]n|m[eo]s)\s+r[ôo]les?\b", re.IGNORECASE),
+    re.compile(r"\bmon(s)? (rang|grade|statut|position)\b", re.IGNORECASE),
+    re.compile(r"(quelle est ma place|o[uù] est ma place|"
+               r"ma place dans la hi['é]rarchie)\b", re.IGNORECASE),
+]
+
+_QUESTION_START = re.compile(r"^(qui|que|quel|quelle|quels|quelles|"
+                             r"o[uù]|comment|pourquoi|"
+                             r"est[- ]ce|qu['’]est[- ]ce)\b",
+                             re.IGNORECASE)
+# "Mon rôle sur ce serveur." / "Ma place dans la hiérarchie." — short turns
+# opening on a possessive are identity asks, even without '?'.
+_POSSESSIVE_START = re.compile(r"^(mes?|ma|mon)\s", re.IGNORECASE)
+_QUESTION_MAX_LEN = 60
+
+
+def is_identity_question(question: str) -> bool:
+    """True if the request asks about the SPEAKER'S identity or rank
+    ("qui suis-je ?", "quel est mon rôle ?", "mon grade sur ce serveur ?").
+
+    Detected as authentic questions only: '?' anywhere, OR a question word /
+    possessive opening on a short turn — so long narratives holding
+    "qui je suis" or statements like "c'est mon rôle de …" are left to the
+    LLM.  The answer is served deterministically (never the archives, never
+    the model's devotion hijack).
+    """
+    text = (question or "").strip()
+    low = text.lower()
+    if not any(p.search(low) for p in _IDENTITY_PATTERNS):
+        return False
+    if "?" in text:
+        return True
+    if len(text) > _QUESTION_MAX_LEN:
+        return False
+    return bool(_QUESTION_START.match(low) or _POSSESSIVE_START.match(low))
+
+
+__all__ = ["detect_probe", "is_identity_question", "is_self_reflection"]

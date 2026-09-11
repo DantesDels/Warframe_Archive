@@ -151,12 +151,24 @@ class RoleplayService:
         current request (BLOC 3).
         """
         status = role_status or STATUT_ORGANIQUE
+        identity = user_name or "Inconnu"
         lines = self.window.render_history(session)
         history = "\n".join(lines) if lines else "  (aucun échange antérieur)"
         return "".join([
             "[INFORMATIONS SUR L'INTERLOCUTEUR ACTUEL]\n",
-            f"  - Pseudonyme : {user_name or 'Inconnu'}\n",
+            f"  - Pseudonyme : {identity}\n",
             f"  - Statut : {status}\n",
+            # Pronoun-direction directive (mission-7): "qui suis-je" is about
+            # the USER.  Gemma-2-9b tends to mirror the pronoun and introduce
+            # itself; this dynamic line carries the REAL name + status right
+            # next to the request so the model presents the interlocutor.
+            f"  - DIRECTIVE D'IDENTITÉ : Si la requête de l'utilisateur porte "
+            f"sur SON identité ('qui suis-je', 'qui je suis', 'tu me connais', "
+            f"'que suis-je pour toi', 'je suis qui pour toi'), réponds à "
+            f"propos de LUI, jamais de toi : commence par « Vous êtes "
+            f"{identity}, {status}. » puis développe selon ce statut. Le 'je' "
+            f"de cette question désigne l'utilisateur, pas toi — ne commence "
+            f"par aucune présentation de toi-même.\n",
             "  - Historique immédiat avec cet utilisateur :\n",
             f"{history}\n",
         ])

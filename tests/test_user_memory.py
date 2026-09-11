@@ -243,6 +243,17 @@ class Bloc2UserContextTests(unittest.TestCase):
         system = self._system(user_name="U", past_pairs=0)[0].content
         self.assertIn("  (aucun échange antérieur)", system)
 
+    def test_directive_identite_du_pronom_injectee(self):
+        # Mission-7 : le BLOC 2 porte les vraies données + la directive de
+        # direction du pronom ('qui suis-je' → présenter L'UTILISATEUR, avec
+        # son nom et son statut réels, jamais Oracle lui-même).
+        system = self._system(user_name="DantesDels",
+                              role_status="Concepteur")[0].content
+        self.assertIn("DIRECTIVE D'IDENTITÉ", system)
+        self.assertIn("Vous êtes DantesDels, Concepteur.", system)
+        self.assertIn("ne commence par aucune présentation de toi-même",
+                      system)
+
     def test_banniere_apres_le_bloc_2(self):
         from warframe_lore.engram.persona import AUTH_CREATOR_BANNER
         llm = _FakeLLM()

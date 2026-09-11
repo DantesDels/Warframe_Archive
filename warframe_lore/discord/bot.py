@@ -242,6 +242,7 @@ class LoreMasterBot(discord.Client):
                     self._gateways[channel_id] = gateway
                 use_rag = self._wants_lore(text)
                 user_name, user_role, user_id = self._get_metadata(message)
+                user_roles = self._role_names(message.author)
                 accr = self._accredit(message.author)
                 typing_task = asyncio.create_task(self._keep_typing(message))
                 placeholder = await message.channel.send("*Oracle réfléchit…*")
@@ -253,7 +254,8 @@ class LoreMasterBot(discord.Client):
                                            user_role=user_role,
                                            user_id=user_id,
                                            role_status=accr.status,
-                                           creator=accr.creator)
+                                           creator=accr.creator,
+                                           user_roles=user_roles)
                     except ConnectionError as exc:
                         # Dead stream (e.g. ENGRAM server restarted) →
                         # reconnect + buffer purge (no concatenation of
@@ -270,7 +272,8 @@ class LoreMasterBot(discord.Client):
                                            user_role=user_role,
                                            user_id=user_id,
                                            role_status=accr.status,
-                                           creator=accr.creator)
+                                           creator=accr.creator,
+                                           user_roles=user_roles)
                 finally:
                     typing_task.cancel()
             except asyncio.CancelledError:
@@ -347,6 +350,20 @@ class LoreMasterBot(discord.Client):
         top_role = getattr(author, "top_role", None)
         user_role = top_role.name if top_role is not None else None
         return user_name, user_role, getattr(author, "id", None)
+
+    @staticmethod
+    def _role_names(author) -> list[str]:
+        """Non-default Discord role names of the speaker (order preserved).
+
+        Sent to ENGRAM only for the deterministic speaker-identity answers
+        ("quels sont mes rôles sur ce serveur ?") — the @everyone default and
+        empty names are dropped; snowflakes never travel.
+        """
+        return [
+            role.name for role in getattr(author, "roles", ())
+            if role.name.strip()
+            and not getattr(role, "is_default", False)
+        ]
 
     def _wants_lore(self, text: str) -> bool:
         """True if the input looks like a lore question (useful RAG).

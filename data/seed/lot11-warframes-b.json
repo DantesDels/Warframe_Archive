@@ -1,0 +1,594 @@
+[
+  {
+    "id": "follie",
+    "titre": "Follie",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      },
+      {
+        "cible": "arbiters_of_hexis",
+        "type": "énigme_inkblot"
+      }
+    ],
+    "contenu": "Follie, la joyeuse macabre, est une ombragraphe : elle donne vie à l'encre. Chaque esquisse de son carnet devient arme vivante, croquis tactiques et effigies de sa propre image — des silhouettes que la peur fait naître du trait et que la guerre fait couler.\n\nDans les ruines du Relais Vespérale (Vesper Relay) sur Vénus, un tableau colossal étend son ombre sur le Système d'origine : entrer dans la toile, c'est pénétrer un chaos de peinture et dévoiler une histoire tragique longtemps perdue dans l'ombre. La Chasse de Follie y poursuit les Tenno, les forçant à parachever des canevas épars et à fuir une proie impossible.\n\nAspirant Zorba, incapable de déchiffrer l'ancien script Hexis, garde les lettres de son maître Kozai et supplie les Tenno de chercher la vérité dans l'épave du Relais; l'encre noire d'Atramentum, récoltée au milieu des ballons encrés, s'échange dans l'enclave des Arbitres.\n\nPerspective forcée, Ombragraphe, Autoportrait, Plein air : ses encres ralentissent l'ennemi, dénudent boucliers et armures, et font du champ de bataille une toile vivante — jusqu'au rayon Enkaus qui dissout l'encre fatale des faibles."
+  },
+  {
+    "id": "koumei",
+    "titre": "Koumei",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      }
+    ],
+    "contenu": "Koumei, la Dame des Dés, tisse les fils du destin pour déchaîner la destruction et assurer sa propre survie. Pour les vertueux, elle est une oracle; pour les vils, un jeu de hasard périlleux. Sa volonté tombe comme une sentence à six faces sur le champ de bataille.\n\nElle porte les Cinq Destinées, un jeu de cinq dés qui divine l'avenir : un triple six déchaîne l'exacte pleine mesure de son pouvoir, quand un tirage chaotique n'offre qu'un sort incertain. Kumihimo, Omikuji, Omamori et Bunraku font du champ de bataille un autel où chaque issue est déjà écrite.\n\nSur Terre, sa châsse résonne des Visions de Saya : Cetus hanté par l'Infestation qui monte de la mer pendant que Vay Hek ricane. Les Tenno y défendent le sanctuaire de Koumei, portent ses offrandes et repoussent l'oni infesté — un culte rendu à la fortune autant qu'à la protection des siens, la Défense du Sanctuaire.\n\nSes armes signatures, le fusil Higasa et la lame-pique Amanata, accompagnent chaque coup de dés; chaque balle, chaque estoc, est pesé par les Dés divins avant d'atteindre sa cible."
+  },
+  {
+    "id": "mag",
+    "titre": "Mag",
+    "kind": "warframe",
+    "year": "Guerre Ancienne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "conception"
+      },
+      {
+        "cible": "margulis",
+        "type": "transference"
+      },
+      {
+        "cible": "aoi",
+        "type": "version_future"
+      }
+    ],
+    "contenu": "Warframe de manipulation magnétique, Mag condensa les métaux et les champs de bataille en armes courbes. Précurseur fantasque du Proto Mag de 1999, elle servit les Tenno dès le premier jour de la Guerre Ancienne dans les théâtres de fer de l'Empire."
+  },
+  {
+    "id": "mesa",
+    "titre": "Mesa",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "alad_v",
+        "type": "coordonnées_mutalistes"
+      }
+    ],
+    "contenu": "Reine du pistolet par réflexe, Mesa est l'Ouest côté Système : ses balles se comptent plus vite que les battements de cils. Sa sérénité de lignée et ses ruades de précision font d'elle une seule ligne de mire, debout au milieu du salon.\n\nLa quête Patient Zero, tissée autour des expériences mutalistes d'Alad V, rendit ses reliques aux Tenno comme une poignée de secondes. Depuis, chaque duel qu'elle arme se termine avant que le pistolet ait fini de parler."
+  },
+  {
+    "id": "mirage",
+    "titre": "Mirage",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "cephalon_suda",
+        "type": "quête_des_messages_cachés"
+      },
+      {
+        "cible": "hunhow",
+        "type": "dernière_illusion_contre"
+      }
+    ],
+    "contenu": "Mirage clona rire et lumière jusqu'à faire disparaître la peur. Avant la chute, elle tint seule un bastion contre une armada de Sentients, jouant des miroirs et des ombres si parfaitement que la guerre crut combattre mille Frame pour une seule.\n\nSa dernière représentation ne fut jamais écrite. Cephalon Suda, qui avait recueilli les fragments de sa légende dans les Messages Cachés, compte parmi les rares consciences à l'honneur d'entretenir sa mémoire — un tour dont la crédulité des Sentients n'a pas survécu."
+  },
+  {
+    "id": "nekros",
+    "titre": "Nekros",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "lephantis",
+        "type": "carapaces_récoltées"
+      }
+    ],
+    "contenu": "Gardien des bas-fonds et seigneur des dépouilles, Nekros convoque les ombres des tombés pour prolonger la bataille. Sa fauche d'ossements glane sur les champs ce que la guerre ne rend jamais.\n\nSes pièces furent extraites des trois mâchoires de Léphantis, l'arme biologique de la Guerre Ancienne. Intendant de la peur, il rappelle que même la mort travaille pour le Tenno — avec un contrat."
+  },
+  {
+    "id": "nezha",
+    "titre": "Nezha",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      }
+    ],
+    "contenu": "Lance de feu et de vitesse, Nezha glisse dans l'ombre de son anneau, aussi droite qu'une équerre et deux fois plus rapide. Sa lance fissure les rangs ; son anneau emprisonne les élans ; sa jauge de flux la propulse plus loin que la raison.\n\nFaçonnée sur la souche commune de l'Helminth, elle ne doit sa légende à aucune histoire d'ailleurs — juste à des jambes qui n'ont jamais appris à rester immobiles."
+  },
+  {
+    "id": "nidus",
+    "titre": "Nidus",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_vivante"
+      },
+      {
+        "cible": "technocyte",
+        "type": "matrice_infestée"
+      },
+      {
+        "cible": "ergo_glast",
+        "type": "sauvé_par_le_gambit"
+      }
+    ],
+    "contenu": "Frame d'infestation volontaire, Nidus est un abcès qui marche : un hôte de larves et de croissance mutante rompu aux salles morbides de la guerre. Sa masse porte la preuve que l'Infestation peut devenir une alliée — à condition de l'avoir intoxiquée d'abord.\n\nNée des souches du fléau, matrice vivante du Technocyte, elle fut longtemps réputée intrarécupérable. C'est Ergo Glast et son Gambit des Infestés qui la récupérèrent comme arme, transformant l'outrage en champ de bataille."
+  },
+  {
+    "id": "nokko",
+    "titre": "Nokko",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      },
+      {
+        "cible": "solaris_united",
+        "type": "gardien_des_profondeurs"
+      }
+    ],
+    "contenu": "Nokko, le subversif fongique, fait proliférer la pourriture et la renaissance en égale mesure. Cet espiègle gardien, aux racines solides et aux champignons retors, veille sur un monde que l'humain a oublié : le sol profond.\n\nSous Fortuna, il défend les Profondeurs (Deepmines) contre la profanation du Corpus et leur industrie sans racine. C'est l'énigmatique Nightcap, un Solaris gorgé de mycélium, qui confie aux Tenno les primes de ce royaume souterrain vivant — le Vallis d'en dessous respire grâce à des gestes mycorhiziens.\n\nSon corps n'est jamais tout à fait mort : le Déclin Vital le renvoie, quand le coup fatal est porté, à sa forme de jeune pousse (Sprodling), lui laissant une course contre la montre vers l'un de ses champignons plantés. Si la pousse s'endort, elle attend que les Tenno la raniment.\n\nStinkbrain endort ses ennemis de spores virales, Brightbonnet régénère l'énergie du groupe, Reroot le fait renaître intouchable, Sporespring rebondit de proie en proie; l'archgun Arbucep seconde ses proliférations cosmiques."
+  },
+  {
+    "id": "nova",
+    "titre": "Nova",
+    "kind": "warframe",
+    "year": "Guerre Ancienne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "conception"
+      },
+      {
+        "cible": "margulis",
+        "type": "transference"
+      },
+      {
+        "cible": "kaya",
+        "type": "version_future"
+      }
+    ],
+    "contenu": "Warframe de la plasma et de l'antimatière, Nova plie l'espace et en fait un instrument de la fin. Ses augmentations gravitationnelles permirent aux Tenno de déplacer des flottes entières — ou de les annuler dans un silence étoilé."
+  },
+  {
+    "id": "nyx",
+    "titre": "Nyx",
+    "kind": "warframe",
+    "year": "Guerre Ancienne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "conception"
+      },
+      {
+        "cible": "margulis",
+        "type": "transference"
+      },
+      {
+        "cible": "eleanor",
+        "type": "version_future"
+      }
+    ],
+    "contenu": "Warframe de psionique et de chaos, Nyx retourne les esprits comme on plierait un livre. Héritière d'une lenteur d'esprit pamprée de l'Orokin, elle fut la réponse du collège d'acier aux champs de bataille où seule la frayeur pouvait gagner."
+  },
+  {
+    "id": "oberon",
+    "titre": "Oberon",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      }
+    ],
+    "contenu": "Chevalier de la sylve, Oberon porte la couronne des cervidés et le blâme des épines : il soigne là où les autres détruisent, et pousse ses alliés comme une pousse au printemps. Sa magie de forêt s'irrigue de rétablissement autant que de colère.\n\nIssu de la souche de l'Helminth comme toute la lignée, il veille sur les équilibres plus que sur les trônes. On ne sait toujours pas si sa place est au conseil des Tenno ou dans le cœur des forêts — il n'a, lui, jamais eu de doute sur la réponse."
+  },
+  {
+    "id": "octavia",
+    "titre": "Octavia",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "hunhow",
+        "type": "hymne_qui_l_a_fléchi"
+      },
+      {
+        "cible": "cephalon_suda",
+        "type": "partition_recue"
+      }
+    ],
+    "contenu": "Octavia transforme la musique en mécanique : ses mélodies réparent des alliés, désarmant des adversaires, et transforment la guerre en ballet. Les données de sa symphonie ne vivent qu'entre ses partitions et les tympans des chasseurs de grilles.\n\nDans l'Anthem d'Octavia, une mélodie particulière ouvrit le silence de Hunhow lui-même, un instant rendu à l'écoute. Cephalon Suda, recueillit ensuite les fragments de cette partition, persuadée que la science y cachait un poème."
+  },
+  {
+    "id": "oraxia",
+    "titre": "Oraxia",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      },
+      {
+        "cible": "albrecht",
+        "type": "gardienne_du_savant"
+      }
+    ],
+    "contenu": "\"Élégance sinistre tissée d'une polyvalence mortelle : l'évolution du prédateur parfait. La crainte a pour nom Oraxia.\" L'araignée est chasseuse avant d'être arme : elle traque, file, enlace; son venin est l'instrument d'une faim patiente.\n\nOraxia fut la gardienne d'Albrecht Entrati durant son séjour dans Duviri, laissée à l'Étape du Savant (Scholar's Landing), l'une des îles perdues du royaume flottant. Après le départ de l'architecte, l'île et sa gardienne s'évanouirent mystérieusement dans le silence.\n\nDans Isleweaver, le retour du royaume flottant confronte l'incursion de l'Indifférence — la ressuscitée Neci Rusalka a apporté le Murmur parmi les îles. Recouvrer la chasseresse perdue, c'est affronter la trace sombre du Savant, l'ombre qu'il a laissée derrière lui, et le Drifter dans la lumière des faits.\n\nBaiser de Miséricorde, Étreinte Tissée, Couvée de la Veuve, Enjambée de Soie : chaque pas de soie et chaque piqûre rappelle pourquoi on la surnomme la Mère des Araignées, ses fils de soie et ses araignées d'ombre en première ligne."
+  },
+  {
+    "id": "protea",
+    "titre": "Protea",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "parvos_granum",
+        "type": "gardienne_temporelle"
+      },
+      {
+        "cible": "nef_anyo",
+        "type": "héritage_du_roi"
+      }
+    ],
+    "contenu": "Protégée éternelle et sachant tout du temps, Protea fut façonnée comme gardienne privée de Parvos Granum, le fondateur mythique du Corpus. Sa capacité à manipuler les instants faisait d'elle la sentinelle impossible à surprendre.\n\nRêve d'archive d'un roi du commerce, elle incarna les principes du Corpus avant qu'ils ne deviennent un contrat. Ses reliques de fortune, dispersées dans les boîtes du présent, ravivent dans le Système une mémoire : Nef Anyo, héritier du nom, la réclame parfois aux vitrines du temps."
+  },
+  {
+    "id": "qorvex",
+    "titre": "Qorvex",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "gardien_radioactif"
+      },
+      {
+        "cible": "loid",
+        "type": "veille_du_sanctum"
+      }
+    ],
+    "contenu": "Colosse oublié du Sanctum, Qorvex est une tour de béton et de radium qui irradie la raison : une Firewall de sécurité conçue par Albrecht Entrati contre les rôdeurs du Néant, plus proche d'un bunker que d'un alcôve de rêve.\n\nSes poings fissurent tout ce qui touche à la contamination des laboratoires. On le rencontra écriant contre les échos de la mécanique, veillant aux côtés de Loid ces couloirs où l'ancien Neuronomicon n'est plus qu'une cendre radioactive."
+  },
+  {
+    "id": "revenant",
+    "titre": "Revenant",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "hunhow",
+        "type": "eidolons_ses_enfants"
+      },
+      {
+        "cible": "gara",
+        "type": "même_sentient_partagé"
+      }
+    ],
+    "contenu": "Revenant baigne dans une lumière ambre et des voiles de spectre : il émane de ceux qu'il soulève, des fragments tombés d'un grand Sentient. Sa lente puissance contraint les Éidolons, ces restes d'un maître sans visage qui hantent les caves de la Nuit.\n\nSa mélodie est celle d'une autorité prise — celle dont Gara fut la première abeille, l'explosion de verre qui érigea Cephalon. Lui, il danse entre les ruines, dressant à son tour des armées de spectres : l'ombre d'un massacre, et son auréole."
+  },
+  {
+    "id": "rhino",
+    "titre": "Rhino",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "margulis",
+        "type": "apprivoisée_par_la_transférence"
+      },
+      {
+        "cible": "davis",
+        "type": "codex_de_la_première_preuve"
+      }
+    ],
+    "contenu": "Avant Margulis, avant la Transférence codifiée, il existait une sauvagerie sans brides : celle des Warframes dont les premiers réveils n'avaient pas encore rencontré de main d'enfant. Rhino fut la première preuve écrite — la brute qui fracassa sa cellule, que Davis décrivit dans son codex, et qu'une simple présence calma comme on calme un naufrage.\n\nDevant une main d'enfant, la colère cessa d'être une arme. Margulis codifia cette découverte ; Rhino, lui, resta le symbole massif de ce premier échange — celui qui a rendu le Tenno possible."
+  },
+  {
+    "id": "saryn",
+    "titre": "Saryn",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "conception"
+      },
+      {
+        "cible": "margulis",
+        "type": "transference"
+      },
+      {
+        "cible": "protoframe_minerva",
+        "type": "version_future"
+      }
+    ],
+    "contenu": "Warframe du poison et de l'épidémie, Saryn transforme la biologie en programme de dissolution. Issue des laboratoires secrets de l'Orokin pour répondre à l'Infestation, elle devient la réponse la plus radicale : tout ce qui touche à sa contagion partage son sort."
+  },
+  {
+    "id": "sevagoth",
+    "titre": "Sevagoth",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "cephalon_cy",
+        "type": "compagnon_de_navigation"
+      }
+    ],
+    "contenu": "Le Tempestarii ne revint jamais au port. Capitaine devenu Frame, Sevagoth choisit de sombrer avec son équipage dans la tempête qu'il commandait, éternisant le navire et sa légende dans le même naufrage.\n\nSous sa cape de tempête gronde une ombre qu'il maîtrise mal — celle de l'équipage mort et des promesses non tenues. Cephalon Cy, qui a connu l'ancienneté des équipages disparus, sait que certains capitaines ne gouvernent plus que des courants."
+  },
+  {
+    "id": "styanax",
+    "titre": "Styanax",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "kahl_175",
+        "type": "libéré_par_veilbreaker"
+      }
+    ],
+    "contenu": "Lancier du Veilbreaker et chevalier de la dernière marche, Styanax tient la ligne là où les autres reculent : lance, bouclier et cri de ralliement. Son chœur écarte les rangs comme une porte.\n\nLibéré dans le sillage des missions de Kahl, il veille sur la Garrison comme une ombre de bronze. Il n'a qu'une promesse — tenir — et il n'a jamais manqué à l'appel."
+  },
+  {
+    "id": "temple",
+    "titre": "Temple",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "conception"
+      },
+      {
+        "cible": "margulis",
+        "type": "transference"
+      },
+      {
+        "cible": "flare",
+        "type": "version_future"
+      }
+    ],
+    "contenu": "Warframe-musicienne, Temple synchronise la douleur et le mouvement dans un concert armé. Guidée par une voix d'acier et une guitare nommée Lizzie, elle transforme chaque champ de bataille en scène — et chaque scène en démolition."
+  },
+  {
+    "id": "titania",
+    "titre": "Titania",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "margulis",
+        "type": "collègue_archimédienne"
+      }
+    ],
+    "contenu": "Créée par l'Archimédienne Silvana dans le secret du Bosquet Argenté, Titania naquit d'une forêt sacrée que la loi orokin interdisait de toucher. Silvana brisa les décrets pour la faire naître ; la Frame garde depuis la fragilité et la fureur d'un écosystème offensé.\n\nFée mécanique vouée à l'enchantement et au glaive, elle partage avec Margulis le triste privilège des Archimédiennes : être jugées pour avoir aimé ce qu'elles protégeaient."
+  },
+  {
+    "id": "trinity",
+    "titre": "Trinity",
+    "kind": "warframe",
+    "year": "Guerre Ancienne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "conception"
+      },
+      {
+        "cible": "margulis",
+        "type": "transference"
+      },
+      {
+        "cible": "lettie",
+        "type": "version_future"
+      }
+    ],
+    "contenu": "Warframe de bienveillance armée, Trinity redistribue la vie de ses ennemis vers ses alliés — une violence toute entière tournée vers le soin. Issue des hôpitaux de guerre de l'Orokin, ses réseaux de suture firent tenir les escouades au bord du néant."
+  },
+  {
+    "id": "uriel",
+    "titre": "Uriel",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      }
+    ],
+    "contenu": "Uriel, le Warframe du Diable, porte un feu purificateur destiné à brûler ce qui demeure de la supercherie orokin. Ses convocations infligent des dégâts démesurés, étourdissent, profanent les dépouilles et nourrissent sa rage de ses propres démons ressuscités.\n\nLa quête de La Vieille Paix (The Old Peace) ramène les Tenno sur les champs de bataille d'autrefois pour revivre leurs combats autour de Tau; le sentier d'Albrecht mène au-delà du Système d'origine, et déterrer les secrets enfouis est mortel. Le Réfractoire Sombre (Dark Refractory) y ouvre l'accès aux épreuves de la Descente et de la Rébellion de Perita.\n\nIl partage la scène de la Triade du Diable avec les Protoframes Marie Leroux, Lyon Allard et Roathe, figures d'une vieille guerre que la tradition de l'honneur titré (Honoria) rappelle encore.\n\nSa compétence Remedium, infusée dans la souche Helminth, répand une guérison mordante et fait de lui un fléau autant qu'un remède : le diable, lui aussi, sait soigner les siens."
+  },
+  {
+    "id": "valkyr",
+    "titre": "Valkyr",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "alad_v",
+        "type": "torturée_par"
+      }
+    ],
+    "contenu": "Frame conçue pour la douleur avant même sa capture, Valkyr porta longtemps une armure de colère que nul n'osait approcher. Alad V la désarticula pour comprendre les Warframes, la réduisant à ses nerfs et à ses cris, puis fit de la protection sa plus belle cicatrice.\n\nElle ne peut plus regarder un laboratoire sans sentir l'acide. Mais sa fureur, taillée dans les tortures de son prisonnier, est devenue l'attaque la plus sauvage de l'arsenal Tenno — une vengeance que même les griffes racontent."
+  },
+  {
+    "id": "vauban",
+    "titre": "Vauban",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      }
+    ],
+    "contenu": "Visionnaire du génie, Vauban couvre la guerre de mécanismes : tourelles, vortex, apesanteur. Il ne tire que rarement — il laisse les pièges faire le travail de la grammaire.\n\nCollectées à coups d'alertes et de primes, ses esquisses n'obéissent qu'à la logique. Né sur la souche commune de l'Helminth, il est le schéma qui a décidé que l'ingéniosité valait bien un tir."
+  },
+  {
+    "id": "volt",
+    "titre": "Volt",
+    "kind": "warframe",
+    "year": "Guerre Ancienne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "conception"
+      },
+      {
+        "cible": "margulis",
+        "type": "transference"
+      },
+      {
+        "cible": "amir",
+        "type": "version_future"
+      }
+    ],
+    "contenu": "Warframe de foudre et de vitesse, Volt canalise l'électricité du cosmos dans des rafales qui précèdent le combat lui-même. Sa légende reste celle d'un éclair discipliné : les Tenno l'opposèrent aux flottes pour que les orages de l'Empire finissent par obéir."
+  },
+  {
+    "id": "voruna",
+    "titre": "Voruna",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "yuvan",
+        "type": "continuité_revendiquée"
+      },
+      {
+        "cible": "tuvul",
+        "type": "verrou_de_la_mémoire"
+      }
+    ],
+    "contenu": "Gardienne de Lua, Voruna fut forgée dans les derniers jours de l'Empire, là où la Continuité de Yuvan semblait encore la seule voie pour survivre. Sa loyauté envers son Tenno fut plus forte que toutes les promesses : elle s'offrit en sacrifice pour que la garde demeure.\n\nSa légende lève une dernière fois les noms oubliés, et bute sur le verrou que Tuvul scella dans la mémoire orokin. Ère de chute, elle demeure la sentinelle des secrets — celle qui a choisi la fidélité plutôt que le trône."
+  },
+  {
+    "id": "wisp",
+    "titre": "Wisp",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      }
+    ],
+    "contenu": "Phalène de guerre et visage de néant, Wisp distribue ses points de clarté : chaque échantillon de vide qu'elle relance soulage ou décompose. Sa durée, sa résilience et son mystère en font la spectatrice la plus inviolable du champ de bataille.\n\nSes fragments furent arrachés à un amas sentient des cieux de Jupiter ; de cette récolte, elle garde la lenteur d'une lumière qui n'appartient qu'à elle. Sur la souche de l'Helminth, elle brille à sa façon — discrète, et définitive."
+  },
+  {
+    "id": "wukong",
+    "titre": "Wukong",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      }
+    ],
+    "contenu": "Moine aux mille visages et bastonnier sans égal, Wukong manie la crosse du bâton comme d'autres le plain-chant : sa réplique le double, son nuage le déplace, sa fureur ne dure que le temps d'un éclair. Sa magie divise les rangs et rassemble les ennemis sur une seule pensée.\n\nForge sur la souche de l'Helminth comme ses jumelles, il ne doit sa réputation qu'à ses faits d'armes — l'archive ne conte aucune autre origine. Dans le ciel comme dans le fracas, il reste celui qui rit le plus tard, et rit le mieux."
+  },
+  {
+    "id": "xaku",
+    "titre": "Xaku",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "indifference",
+        "type": "fracassés_par_le_vide"
+      },
+      {
+        "cible": "zariman",
+        "type": "naufragés_du_bord"
+      }
+    ],
+    "contenu": "Xaku n'est pas une Frame : c'est une colère collective, un assemblage de squelettes fracturés réunis par la volonté de ceux qui ont échoué. Ses membres sont des souvenirs de plusieurs abîmes, cousus d'une énergie qui ne devrait pas se rassembler.\n\nLe fracas du Vide qui les disloqua les a un temps transformés en murmures. Réunis dans le bord du Néant comme les naufragés d'un vaisseau sans rivage, ils se sont reconstruits : à la mesure de leurs fragments, et de leur colère commune."
+  },
+  {
+    "id": "yareli",
+    "titre": "Yareli",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "the_ventkids",
+        "type": "sainte_patronne"
+      },
+      {
+        "cible": "roky",
+        "type": "idole_des_enfants"
+      },
+      {
+        "cible": "grand_mere",
+        "type": "vieille_amitié"
+      }
+    ],
+    "contenu": "Sainte patronne des enfants dans le vent, Yareli fut contée aux Ventkids comme une légende d'anthologie : une protectrice des planches, des ribambelles et des cieux sans surveillance. Son amitié ancienne avec la Grand-Mère Entrati ajouta au mythe une page de complicité.\n\nSes hydroaïdes de K-drive filent sur le carrelage comme sur les dunes ; sous l'eau, elle roule les remous en lames. Avec Roky et la bande des Ventkids, Yareli incarne la liberté la plus simple : celle qui n'a jamais eu besoin de permission."
+  },
+  {
+    "id": "zephyr",
+    "titre": "Zephyr",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      }
+    ],
+    "contenu": "Maîtresse des goûts et des ailes, Zephyr dévie les volées, court les rafales et retombe comme un clin d'œil sur la brise. Ses turbulences désarment les escadres ; ses descentes écrasent les positions assiégées.\n\nTissée sur la souche commune de l'Helminth, elle n'exige de l'air qu'une seule chose : le droit de le plier. Son paradoxe est simple — aussi légère qu'une plume, aussi tranchante qu'un ouragan."
+  }
+]

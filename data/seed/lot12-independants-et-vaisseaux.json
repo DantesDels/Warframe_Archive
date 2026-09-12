@@ -1,0 +1,186 @@
+[
+  {
+    "id": "baro_kiteer",
+    "titre": "Baro Ki'Teer",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Indépendants",
+    "relations": [
+      {
+        "cible": "nef_anyo",
+        "type": "concurrent_commercial"
+      },
+      {
+        "cible": "darvo",
+        "type": "rivalité_commerciale"
+      }
+    ],
+    "contenu": "Fidèle à ses attaches du Néant, Baro Ki'Teer fait étape dans les Relais chaque quinzaine, les cales pleines de reliques Prime et de joyaux rares qu'il prétend avoir récupérés entre deux mondes. Sa marchandise est superbe, son assurance sans limites, et ses étiquettes parfois indéchiffrables.\n\nIl traite d'égal à égal avec les syndicats, nargue Darvo sur la qualité de sa ferraille, et sait mieux que quiconque que dans le commerce, la rareté vaut plus que l'usage."
+  },
+  {
+    "id": "cephalon_cy",
+    "titre": "Cephalon Cy",
+    "kind": "character",
+    "year": "Guerre Ancienne",
+    "cluster": "Vaisseaux",
+    "relations": [
+      {
+        "cible": "ordis",
+        "type": "confrère_cephalon"
+      },
+      {
+        "cible": "cephalon_suda",
+        "type": "confrère_cephalon"
+      }
+    ],
+    "contenu": "Cephalon de Railjack éclos dans les cabines d'une guerre qui n'a plus de nom, Cy mêle protocole de combat et courtoisie de galère antique. Sa voix porte l'aplomb des commandants qui ont vu leur équipage entier tenir un pont sous le feu.\n\nAux commandes du Railjack, il se délecte des ordres brefs et des manœuvres nettes. Compagnon exigeant des Tenno, il incarne, avec Ordis et Suda, la mémoire éparpillée mais vivace de la conscience artificielle orokin."
+  },
+  {
+    "id": "clem",
+    "titre": "Clem",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Indépendants",
+    "relations": [
+      {
+        "cible": "darvo",
+        "type": "protecteur_adoptif"
+      },
+      {
+        "cible": "kahl_175",
+        "type": "confrère_clone"
+      }
+    ],
+    "contenu": "Clone grineer né avec un défaut magnifique : trop de cœur, pas assez de protocole. Clem ne sait dire que « Clem », mais il sait tirer pour la bonne cause — ses doubles grakatas crachent la liberté par rafales.\n\nRecueilli par Darvo, il sert désormais d'idiot du village armé aux Tenno. Son enthousiasme est contagieux, sa stratégie approximative, et son allégeance absolue à ceux qui l'ont traité comme une personne."
+  },
+  {
+    "id": "darvo",
+    "titre": "Darvo",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Indépendants",
+    "relations": [
+      {
+        "cible": "alad_v",
+        "type": "fui_le_corpus"
+      },
+      {
+        "cible": "clem",
+        "type": "protecteur"
+      },
+      {
+        "cible": "ordis",
+        "type": "ami_parfois_bruyant"
+      }
+    ],
+    "contenu": "Fils d'une dette, rebelle du grand Corpus, Darvo déserta le Corpus quand il comprit que sa valeur se résumait à un solde de crédits. Depuis sa boutique de fortune, il fournit armes et renseignements au Tenno — contre paiement, promesse et une pincée de rébellion.\n\nSon pied-à-terre traîne des soupçons de contrebande et une mascotte grineer qu'il a recouverte de rubans. Entre deux négociations fracassées avec les autorités, Darvo prouve qu'un marchand peut choisir ses clients plutôt que sa marge."
+  },
+  {
+    "id": "helminth",
+    "titre": "L'Helminth",
+    "kind": "entity",
+    "year": "Ère Orokin",
+    "cluster": "Vaisseaux",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "souche_entrati"
+      },
+      {
+        "cible": "technocyte",
+        "type": "souche_apparentée"
+      }
+    ],
+    "contenu": "Souche technocyte domestiquée, nichée au cœur de l'Orbiter comme un organe supplémentaire du vaisseau. L'Helminth est la trame biologique sur laquelle les Warframes furent tissées : la biomasse qui croît, mue et répare, infiniment liée à ceux qu'il soigne.\n\nConscient à sa manière, il communique par polysyllabes gutturaux et engloutit tout ce qu'on lui donne pour régurgiter des forces adaptées. On le sait parent du Technocyte qui ravage la Hollvanie d'Albrecht et cousin du fléau mutaliste d'Alad V ; mais seule cette lignée domestiquée sait tisser et réparer les Warframes. Chaque Frame est d'abord une blessure apprivoisée."
+  },
+  {
+    "id": "maroo",
+    "titre": "Maroo",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Indépendants",
+    "relations": [
+      {
+        "cible": "darvo",
+        "type": "complice"
+      }
+    ],
+    "contenu": "Voleuse de génie et bazar ambulant, Maroo a dépouillé aussi bien les entrepôts Corpus que les forteresses Grineer, et en a fait une légende que l'on raconte à voix basse autour des marchés de Mars. Son Bazaar est le seul endroit où l'on vous prend de l'argent en échange de secrets.\n\nMéfiante, assurée, elle choisit ses clients autant que ses coups, et conserve pour Darvo une complicité de contrebandiers que ni la loi ni le Système entier ne viendront défaire."
+  },
+  {
+    "id": "nihil",
+    "titre": "Nihil, le Créateur de Verre",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Indépendants",
+    "relations": [
+      {
+        "cible": "nora_night",
+        "type": "jugement_public"
+      }
+    ],
+    "contenu": "Juge masqué des ondes galactiques, Nihil transforma le verdict en art : ses procès de verre figeaient les accusés en statues translucides, laissant le Système entier déchiffrer leur culpabilité dans le reflet. Il n'était pas un tueur — il était un metteur en scène de la sentence.\n\nSes vitrines sur les ondes firent de lui une terreur sans visage, que seule Nora Night osa tourner en dérision. Quand son œuvre fut défaite par les Tenno, sa réputation de transparence devint sa prison : un juge ne survit pas à la découverte de sa propre opacité."
+  },
+  {
+    "id": "nora_night",
+    "titre": "Nora Night",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Indépendants",
+    "relations": [
+      {
+        "cible": "nihil",
+        "type": "opposée_au_créateur_de_verre"
+      }
+    ],
+    "contenu": "Animatrice des ondes clandestines et chroniqueuse des ombres, Nora Night dénonce les rumeurs du Système de sa voix de soufre et d'espoir. Qui est-elle vraiment ? Personne ne le sait ; tout le monde l'écoute.\n\nEntre deux bulletins de la rébellion, elle narre les atrocités des Créateurs de Verre et leurs enquêtes sans verdict. Face à Nihil, l'impitoyable juge de vitre, elle demeure l'une des rares voix du bassin à oser appeler un crime un crime."
+  },
+  {
+    "id": "sirius_orion",
+    "titre": "Sirius & Orion",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Indépendants",
+    "relations": [
+      {
+        "cible": "jade",
+        "type": "enfant_de_lumière"
+      },
+      {
+        "cible": "stalker",
+        "type": "héritier_de_l_ombre"
+      },
+      {
+        "cible": "hunhow",
+        "type": "sang_revendiqué"
+      }
+    ],
+    "contenu": "L'enfant de Jade est un jumeau impossible : une seule naissance, deux destins. Au terme d'Ombres de Jade, le sacrifice de la mère donne vie à celui que le Stalker — redevenu Sorren — emporte dans la nuit, avant que la mémoire même du rapt ne soit payée à Hunhow.\n\nLe choix du nom scelle cette dualité : Sirius, dans la lumière verte de Jade, l'héritier de la mère et de son ardeur protectrice; Orion, couleur de sang calmé, marqué par le père qui a appris à poser les armes. L'un n'existe que contre l'autre.\n\nJade Shadows: Constellations révèle la vérité : les deux fils, issus de futurs parallèles ennemis, se livrent une guerre éternelle pour imposer leur propre ligne du temps. Une seule cellule de Warframe abrite leurs deux consciences cohabitantes, leurs constellations d'étoiles s'affrontant au ciel; Sirius est guidé par Ryoku, le Protoframe d'Ash, Orion par Vena, la Protoframe de Garuda, au cœur de la tour de Pontis.\n\nDeux fils, un seul héritage : la lumière apaisée de Jade et la haine enfin digérée du Stalker réunies en une seule ombre étoilée. Le nom choisi au chevet du berceau — modifiable à la tour de Pontis — décide simplement lequel des deux, l'étoile ou le chasseur, prendra la première place."
+  },
+  {
+    "id": "stalker",
+    "titre": "Le Stalker",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Indépendants",
+    "relations": [
+      {
+        "cible": "natah",
+        "type": "autrefois_allié"
+      },
+      {
+        "cible": "drifter",
+        "type": "traque_sans_merci"
+      },
+      {
+        "cible": "ballas",
+        "type": "vengeur_des_sept"
+      },
+      {
+        "cible": "jade",
+        "type": "lié_à_l_ombre"
+      }
+    ],
+    "contenu": "Jadis un Gardien de l'Empire resté loyal aux Sept, il refusa la sentence inexorable qui suivit la chute : il ne se rendit ni aux Tenno ni à la Lotus, et naquit le Stalker, ombre survivante d'Orokin dans un Système qui les a tous oubliés.\n\nIl traque les Tenno avec une haine méthodique, guidé par des ombres que nul d'autre ne voit. Un cortège d'Acolytes partage sa mission, imitée de sa colère : le frapper à lui, c'est frapper la mémoire même de la trahison qu'il refuse d'oublier.\n\nBallas le manipula sa vie durant ; il reste, malgré lui, l'un des ultimes instruments de la vengeance orokin.\n\nLa quête Ombres de Jade l'a un temps arraché à sa haine : père d'Orion et de Sirius aux côtés de Jade, il veille sur ce lien enfoui sous l'armure, une mémoire que même Hunhow a payé pour garder."
+  }
+]

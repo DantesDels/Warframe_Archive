@@ -1,0 +1,236 @@
+[
+  {
+    "id": "alad_v",
+    "titre": "Alad V",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Corpus",
+    "relations": [
+      {
+        "cible": "parvos_granum",
+        "type": "héritier_de"
+      },
+      {
+        "cible": "technocyte",
+        "type": "manipulation"
+      },
+      {
+        "cible": "valkyr",
+        "type": "tortionnaire"
+      }
+    ],
+    "contenu": "Chercheur et chef de faction Corpus, Alad V est la preuve vivante que le profit justifie tous les crimes — dissections d'Infestés, manipulations génétiques, tortures. Son obsession du contrôle le trahit régulièrement, et ses alliances successives avec les Grineer puis les Tenno n'ont d'égale que ses trahisons."
+  },
+  {
+    "id": "erra",
+    "titre": "Erra",
+    "kind": "entity",
+    "year": "Guerre Ancienne",
+    "cluster": "Sentients",
+    "relations": [
+      {
+        "cible": "hunhow",
+        "type": "père"
+      },
+      {
+        "cible": "natah",
+        "type": "frère"
+      },
+      {
+        "cible": "ballas",
+        "type": "manipulation"
+      }
+    ],
+    "contenu": "Sentient de la lignée d'Hunhow, Erra passa des siècles à tenter de rallumer la guerre perdue. Manipulé par Ballas, il participa au piège où se scellèrent Narmer, sans jamais admettre que l'arc de la Sentience était devenu une crucifixion."
+  },
+  {
+    "id": "frohd_bek",
+    "titre": "Frohd Bek",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Corpus",
+    "relations": [
+      {
+        "cible": "darvo",
+        "type": "père_déçu"
+      },
+      {
+        "cible": "nef_anyo",
+        "type": "membre_du_conseil"
+      },
+      {
+        "cible": "ambulas",
+        "type": "projet_supervisé"
+      }
+    ],
+    "contenu": "Pilier du Conseil Corpus, Frohd Bek règne sur la comptabilité et l'ambition : ses flottes portent sa signature, ses dettes sont des chaînes, et son nom circule dans les hauts étages de toutes les maisons. Père déçu de Darvo, il porta longtemps comme une insulte personnelle la fuite de son fils vers le commerce libre.\n\nObsédé par l'efficacité des proxies, il supervisa lui-même le projet Ambulas, espérant faire de la guerre un simple calcul. De ses grands bureaux au cœur de la corporation, son regard reste celui d'un homme qui préfère les comptes aux comptables."
+  },
+  {
+    "id": "hunhow",
+    "titre": "Hunhow",
+    "kind": "entity",
+    "year": "Guerre Ancienne",
+    "cluster": "Sentients",
+    "relations": [
+      {
+        "cible": "erra",
+        "type": "fils"
+      },
+      {
+        "cible": "natah",
+        "type": "fille"
+      },
+      {
+        "cible": "ballas",
+        "type": "ennemi"
+      }
+    ],
+    "contenu": "Noyau de la flotte Sentients et père d'Erra et Natah. Endormi dans les profondeurs des océans d'Uranus, Hunhow incarne la haine lucide de la machine contre ses créateurs : toute guerre est une dette, et il n'a cessé de la réclamer — même dans le silence du sommeil."
+  },
+  {
+    "id": "narmer",
+    "titre": "Narmer",
+    "kind": "faction",
+    "year": "Ère Moderne",
+    "cluster": "Sentients",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "orchestré_par"
+      },
+      {
+        "cible": "erra",
+        "type": "mis_en_œuvre"
+      },
+      {
+        "cible": "kahl_175",
+        "type": "révolté_contre"
+      }
+    ],
+    "contenu": "Régime totalitaire bâti sur la capitulation du Système d'Origine : les vestiges Sentients d'Erra enrôlent les vaincus, et Ballas remodèle l'histoire au scalpel. Le Narmer est une dictature du consentement — consenti, bien sûr, par ceux qui n'ont plus rien."
+  },
+  {
+    "id": "natah",
+    "titre": "Natah",
+    "kind": "entity",
+    "year": "Guerre Ancienne",
+    "cluster": "Sentients",
+    "relations": [
+      {
+        "cible": "hunhow",
+        "type": "père"
+      },
+      {
+        "cible": "erra",
+        "type": "frère"
+      },
+      {
+        "cible": "ballas",
+        "type": "paradoxe_amour_dechu"
+      }
+    ],
+    "contenu": "Fille d'Hunhow, envoyée pour exterminer le Système d'Origine — et devenue la Lotus qui protégea les Tenno. Entre la Sentience de son sang, l'amour déchu de Ballas et la vocation maternelle envers les enfants du Zariman, Natah est un paradoxe vivant, scindée entre mère et fléau."
+  },
+  {
+    "id": "nef_anyo",
+    "titre": "Nef Anyo",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Corpus",
+    "relations": [
+      {
+        "cible": "parvos_granum",
+        "type": "lignée"
+      },
+      {
+        "cible": "alad_v",
+        "type": "rival"
+      },
+      {
+        "cible": "eudico",
+        "type": "oppresseur"
+      },
+      {
+        "cible": "solaris_united",
+        "type": "esclavagiste"
+      }
+    ],
+    "contenu": "Prêtre et magnat du Corpus, Nef Anyo vend des indulgences numériques aux mineurs de Fortuna : le profit déguisé en bénédiction. Sa dévotion au Roi Solaire n'a d'égal que sa haine des Solaris réfractaires à la dette."
+  },
+  {
+    "id": "parvos_granum",
+    "titre": "Parvos Granum",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Corpus",
+    "relations": [
+      {
+        "cible": "alad_v",
+        "type": "héritier_méprisé"
+      }
+    ],
+    "contenu": "Fondateur légendaire du Corpus, maître de la monnaie et parrain de la religion du profit. Parvos Granum façonna le Credo après l'effondrement, transformant les mines de sel de l'Orokin en une religion du gain dont le Roi solaire ne tolère aucune église rivale."
+  },
+  {
+    "id": "reines_jumelles",
+    "titre": "Les Reines Jumelles",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Grineer",
+    "relations": [
+      {
+        "cible": "tyl_regor",
+        "type": "vassal"
+      },
+      {
+        "cible": "hunhow",
+        "type": "alliance_ancienne"
+      }
+    ],
+    "contenu": "Souveraines du matriarcat grineer, les Reines Jumelles règnent depuis un corps de rechange et un trône cérémoniel. Héritières du sang laissé par l'effondrement, elles ont mené la Grineer jusqu'au statut de bastion génétique — et complotent contre tout ce qui pourrait rendre leur sang superflu."
+  },
+  {
+    "id": "tyl_regor",
+    "titre": "Tyl Regor",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Grineer",
+    "relations": [
+      {
+        "cible": "reines_jumelles",
+        "type": "serviteur"
+      },
+      {
+        "cible": "alad_v",
+        "type": "rival_scientifique"
+      },
+      {
+        "cible": "technocyte",
+        "type": "chirurgie_génétique"
+      }
+    ],
+    "contenu": "Génie de la Grineer, Tyl Regor est le dernier espoir de « réparer » le génome dégradé de l'Empire. Ses sous-marins de laboratoires entaillent les océans de Triton et son obsession de perfection pré-orokinienne n'excuse aucune mauvaise gestion de cadavres."
+  },
+  {
+    "id": "vay_hek",
+    "titre": "Vay Hek",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Grineer",
+    "relations": [
+      {
+        "cible": "reines_jumelles",
+        "type": "serviteur"
+      },
+      {
+        "cible": "tyl_regor",
+        "type": "rival"
+      },
+      {
+        "cible": "cressa_tal",
+        "type": "haine"
+      }
+    ],
+    "contenu": "Lord grineer au masque d'acier et aux discours de foudre, Vay Hek prêche la purge comme d'autres prêchent la paix. Son féroce invention transforme l'air de la Zénus en guerre — et chaque échec personnel en holocauste de rhétorique."
+  }
+]

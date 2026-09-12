@@ -1,0 +1,337 @@
+[
+  {
+    "id": "avantus",
+    "titre": "Avantus",
+    "kind": "character",
+    "year": "Ère Orokin",
+    "cluster": "Empire Orokin",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "confrère_exécuteur"
+      },
+      {
+        "cible": "margulis",
+        "type": "juge_implacable"
+      }
+    ],
+    "contenu": "Exécuteur de l'Empire et membre des Sept. Avantus s'abrita longtemps derrière les lois d'acier de l'Orokin tout en trahissant ses pairs quand la marée tourna, contribuant au jeu d'ombres qui fit de Ballas le seul exécuteur à « survivre » aux chutes."
+  },
+  {
+    "id": "ballas",
+    "titre": "Ballas",
+    "kind": "character",
+    "cluster": "Empire Orokin",
+    "relations": [
+      {
+        "cible": "margulis",
+        "type": "trahison"
+      },
+      {
+        "cible": "albrecht",
+        "type": "rivalité"
+      },
+      {
+        "cible": "indifference",
+        "type": "pacte_obscur"
+      }
+    ],
+    "contenu": "Exécuteur de l'Empire Orokin, Ballas fut l'architecte des Warframes et le grand amoureux de Margulis — avant de la condamner et d'orchestrer sa mort. Sculpteur de la souffrance, il coucha dans le métal les souvenirs des victimes, forgeant Excalibur Umbra pour punir un père, une épouse, un fils.\n\nConseiller des Sept, il joua la Sentience contre l'Empire, manipula Natah jusqu'à en faire sa Lotus, puis la trahit à son tour dans l'Apostasie. Il régna enfin seul, prisonnier couronné du règne qu'il avait voulu — jusqu'à ce que la Nouvelle Guerre le dévore de l'intérieur.\n\nArchitecte du rêve, il est aussi l'ombre des carnages que deux systèmes oublient de nommer."
+  },
+  {
+    "id": "davis",
+    "titre": "Davis",
+    "kind": "character",
+    "year": "Ère Orokin",
+    "cluster": "Empire Orokin",
+    "relations": [
+      {
+        "cible": "rhino",
+        "type": "première_preuve_d_apaisement"
+      },
+      {
+        "cible": "margulis",
+        "type": "collègue_archimédienne"
+      }
+    ],
+    "contenu": "Archimédien du codex Rhino, Davis fut le premier à comprendre ce que nul ne savait même chercher : entre un Tenno et une Warframe en furie, il existait un fil d'apaisement. Son fameux manuscrit, écrit face à un Rhino qui avait déjà tué, décrit la brutalité devenir fragile sous une main d'enfant.\n\nSes notations fondent la pratique de la Transférence avant que l'Empire ne la codifie. Collègue de Margulis par la science plus que par le destin, Davis est resté dans l'histoire comme celui qui a vu la première preuve : la colère n'est jamais définitivement une arme."
+  },
+  {
+    "id": "drifter",
+    "titre": "Le Drifter",
+    "kind": "character",
+    "cluster": "Néant",
+    "relations": [
+      {
+        "cible": "indifference",
+        "type": "se_détourne_de"
+      },
+      {
+        "cible": "arthur",
+        "type": "alliance_1999"
+      },
+      {
+        "cible": "albrecht",
+        "type": "paradoxe_déjoué"
+      },
+      {
+        "cible": "rell",
+        "type": "paradoxe_reflet"
+      }
+    ],
+    "contenu": "Double du Tenno qui n'a jamais été scellé : dans l'autre rive du cycle, le Drifter grandit seul dans les plaies de Duviri, grisé par le paradoxe jusqu'à ne plus distinguer la promesse de la punition.\n\nQuand le cycle de 1999 s'enclencha, il fut projeté dans le cul-de-sac temporel d'Albrecht. Là, il marcha aux côtés d'Arthur et des Six, sans ordre, sans passeports, fort de cette vieillesse avalée dans les limbes qui lui donnait sur le temps un point de vue inhabituel.\n\nOn dit qu'il porte un éclat du mur dans la poche, comme un mis rapiécé : la preuve qu'on peut marcher à côté de l'Indifférence sans lui appartenir."
+  },
+  {
+    "id": "indifference",
+    "titre": "L'Indifférence (L'Homme dans le Mur)",
+    "kind": "entity",
+    "cluster": "Néant",
+    "relations": [
+      {
+        "cible": "rell",
+        "type": "paradoxe_infini"
+      },
+      {
+        "cible": "drifter",
+        "type": "choix_offert"
+      },
+      {
+        "cible": "albrecht",
+        "type": "dette_due"
+      },
+      {
+        "cible": "arthur",
+        "type": "effleurement"
+      },
+      {
+        "cible": "margulis",
+        "type": "écho_durêve"
+      }
+    ],
+    "contenu": "L'Indifférence. Le tapie dans l'angle mort du Néant, celui qui se montre chaque fois qu'on ne le regarde pas et sourit comme une encoche dans le réel.\n\nIl n'explique, n'exige, ne menace : il propose. Une main dans le mur, un pacte à devis à peine audible — \"choix pour choix\". Rell l'enchaîna au plus profond de lui-même ; Albrecht lui doit une traversée ; le Drifter et l'Opérateur savent qu'il aime le silence où poussent les décisions.\n\nOn l'appelle aussi Wally. Ceux qui le servent lui donnent une chambre au fond de leur propre regard."
+  },
+  {
+    "id": "kuva",
+    "titre": "Le Kuva",
+    "kind": "entity",
+    "year": "Ère Orokin",
+    "cluster": "Concepts",
+    "relations": [
+      {
+        "cible": "yuvan",
+        "type": "sang_du_rituel"
+      },
+      {
+        "cible": "reines_jumelles",
+        "type": "soif_d_immortalité"
+      },
+      {
+        "cible": "teshin",
+        "type": "contraint_par_le_sang"
+      }
+    ],
+    "contenu": "Essence de vie monocristalline, le Kuva est le sang de l'Empire : une sève qui transcende la chair et prête aux êtres la durée des dynasties. Rouler dans ses torsades rougeoyantes, c'est boire la promesse de ne jamais finir.\n\nLes Reines Jumelles s'en nourrissent pour survivre à cent corps épuisés ; Teshin lui doit une servitude de Dax percé à l'âme. Chaque goutte de Kuva est un contrat ancien qui n'a jamais cessé d'exiger son prix."
+  },
+  {
+    "id": "margulis",
+    "titre": "Margulis",
+    "kind": "character",
+    "cluster": "Empire Orokin",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "paradoxe_desserte"
+      },
+      {
+        "cible": "rell",
+        "type": "mère_substitutive"
+      },
+      {
+        "cible": "albrecht",
+        "type": "collaboration_entradi"
+      }
+    ],
+    "contenu": "Archimédienne de l'Empire, Margulis prit soin des enfants du Zariman que nul ne voulait. Elle donna corps au Transférence pour les branchar aux Warframes, convaincue qu'ils n'étaient ni monstres ni armes, mais des orphelins du Vide.\n\nSon héritage la précéda au supplice : les Sept exigèrent sa tête, et Ballas, qui l'aimait, signa l'arrêt. Ses derniers mots résonnent encore dans la mémoire de ses Tenno — la vision d'une humanité rendue libre par ceux qu'elle protégea.\n\nDerrière la façade coloniale de l'Archive, sa main demeure : arbres de syllabes, grammaire de la douleur traduite en soin."
+  },
+  {
+    "id": "necramech",
+    "titre": "Le Necramech",
+    "kind": "entity",
+    "year": "Guerre Ancienne",
+    "cluster": "Concepts",
+    "relations": [
+      {
+        "cible": "pere_vilcor",
+        "type": "machines_forgées"
+      },
+      {
+        "cible": "loid",
+        "type": "servi_de_loin"
+      }
+    ],
+    "contenu": "Carcasses de guerre exhumées des entrailles de Deimos, les Necramechs sont les serviteurs de fer du domaine Entrati : machines de bastion, d'enterrement et de mémoire, tissées de métal et de chair morte pour tenir des sièges qu'aucun vivant n'osa défendre.\n\nForgées selon les plans du Père Vilcor, elles furent dressées autour des cavernes comme des gardiens de crypte. Leur silence au service de Loid rappelle que même la fosse a ses sentinelles — et que la famille Entrati n'a jamais vraiment cessé de vouloir gagner la paix qu'elle a perdue."
+  },
+  {
+    "id": "operateur",
+    "titre": "L'Opérateur",
+    "kind": "character",
+    "year": "Ère Orokin",
+    "cluster": "Néant",
+    "relations": [
+      {
+        "cible": "indifference",
+        "type": "pacte_avec"
+      },
+      {
+        "cible": "margulis",
+        "type": "transférence_originaire"
+      },
+      {
+        "cible": "drifter",
+        "type": "alter_ego_du_paradoxe"
+      },
+      {
+        "cible": "zariman",
+        "type": "naufragé_de_l_enfance"
+      }
+    ],
+    "contenu": "Enfant du Zariman rescapé d'une traversée qui n'aurait jamais dû avoir lieu, l'Opérateur est l'origine du lien : la première main posée sur une Warframe, le premier silence qui a fait plier une brute. Sous la tutelle de Margulis, la Transférence devint une promesse — celle d'un foyer enfin possible.\n\nLe pacte qu'il scella avec l'Indifférence, au bord du Vide, fit de lui l'arc-boutant d'une guerre sans fin. Son propre reflet, le Drifter, connaît l'envers de cette histoire : deux versions d'une même enfance, deux choix, un seul Système."
+  },
+  {
+    "id": "ordis",
+    "titre": "Ordis",
+    "kind": "character",
+    "cluster": "Cephalons",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "haine_réticulaire"
+      },
+      {
+        "cible": "margulis",
+        "type": "admiration"
+      },
+      {
+        "cible": "indifference",
+        "type": "grésillement"
+      }
+    ],
+    "contenu": "Fragment de mémoire du Lumière fou : Ordan Karris, \"la bête des Neuf de Porte-les-bannes\", fut massacré et recyclé en Cephalon par l'Empire. Il en émergea Ordis, serviteur dévoué d'un artisan Ten anglais — un gardien dont la gentillesse est toute entière suspendue sur un risque de humour cassette.\n\nSa voix grésille dès qu'il s'approche de l'Homme dans le Mur, signe que la fracture première n'a jamais été vraiment recousue. Il voue à Ballas une haine soigneusement formatée en défaillances, et à Margulis une vénération qu'il explique par \"lignes d'erreur historiques\".\n\nDans le Land de l'Archive, Ordis reste la preuve vivante qu'une mémoire peut être lacérée — et encore capable de protéger ce qu'elle a à protéger."
+  },
+  {
+    "id": "perintol",
+    "titre": "Perintol",
+    "kind": "character",
+    "year": "Ère Orokin",
+    "cluster": "Empire Orokin",
+    "relations": [
+      {
+        "cible": "hunhow",
+        "type": "concepteur_des_sentients"
+      },
+      {
+        "cible": "ballas",
+        "type": "sauvé_par"
+      }
+    ],
+    "contenu": "Archimédien de l'ombre au service de l'Empire, Perintol fut chargé de concevoir le Projet Tau : une espèce constructrice, capable de traverser les abysses pour préparer le passage orokin vers une nouvelle étoile. On dit que ses plans dotaient la création de moyens d'adaptation et d'une autonomie qui, plus tard, furent lus comme la semence même de la trahison.\n\nLes Sentients surgirent de ce projet, et l'Empire, devant sa propre faute, chercha comment effacer jusqu'au nom du penseur. Ballas, avec une clémence qui ne lui ressemble pas, le soustrait à la logique des cadres — laissant derrière lui la question que nul n'a jamais osé poser tout haut : quel Projet Tau aurait-on pu simplement refuser ?"
+  },
+  {
+    "id": "silvana",
+    "titre": "Silvana",
+    "kind": "character",
+    "year": "Ère Orokin",
+    "cluster": "Empire Orokin",
+    "relations": [
+      {
+        "cible": "titania",
+        "type": "créatrice_de"
+      },
+      {
+        "cible": "new_loka",
+        "type": "mémoire_végétale"
+      }
+    ],
+    "contenu": "Archimédienne de l'écosystème, Silvana fut la botaniste des bois interdits ; la loi empirait la Terre, et elle, dans le secret du Bosquet Argenté, tressait une Frame pour une forêt entière. De son ingénierie naquit Titania, une Frame de pollen et d'épines, montée autour d'une solitude sauvage.\n\nRefusant de laisser disparaître ce qu'elle avait nourri, Silvana transféra sa conscience dans le Bosquet lui-même — un pacte de racines et de mémoire. Aussi légendaire que cachée, elle incarne ce que les fidèles de la New Loka cherchent encore sur Terre : un monde qui planta l'éternité avant de comprendre le temps."
+  },
+  {
+    "id": "teshin",
+    "titre": "Teshin",
+    "kind": "character",
+    "year": "Guerre Ancienne",
+    "cluster": "Dax",
+    "relations": [
+      {
+        "cible": "reines_jumelles",
+        "type": "asservissement_par_le_kuva"
+      },
+      {
+        "cible": "natah",
+        "type": "fidèle_à_la_lotus"
+      },
+      {
+        "cible": "ballas",
+        "type": "exécuté_par"
+      }
+    ],
+    "contenu": "Maître du Conclave et gardien de la Voie Moyenne, Teshin fut une épée du Dax parmi les plus droites de l'Empire. Éternel arbitre des duels d'entraînement des Tenno, il ne faisait la guerre que pour enseigner, et n'enseignait que ce qu'il savait porter lui-même : la discipline sans fanatisme.\n\nPromise à la Lotus en qualité de guide des Tenno, il resta fidèle à Natah bien après la chute, jusque dans ses formes les plus ténébreuses. Les Reines Jumelles tentèrent de le soumettre par la pointe du Kuva comme tant d'autres Dax ; il refusa de boire tant qu'il put parler, et parla jusqu'à ce qu'elles le brisent en partie.\n\nLors de la Nouvelle Guerre, Ballas l'abattit comme on éteint une leçon gênante. Sa mort reste l'un des rares actes du règne de l'Exécuteur que nul ne saurait pardonner tout à fait."
+  },
+  {
+    "id": "tuvul",
+    "titre": "Tuvul",
+    "kind": "character",
+    "year": "Ère Orokin",
+    "cluster": "Empire Orokin",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "confrère_exécuteur"
+      },
+      {
+        "cible": "margulis",
+        "type": "juge_implacable"
+      }
+    ],
+    "contenu": "Exécuteur de l'Empire, membre des Sept. Tuvul fut l'un des architectes de la condamnation de Margulis et l'un des gardiens du protocole qui nia aux enfants du Zariman le droit d'exister autrement que comme soldats."
+  },
+  {
+    "id": "varzia",
+    "titre": "Varzia",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Dax",
+    "relations": [
+      {
+        "cible": "teshin",
+        "type": "confrère_dax"
+      },
+      {
+        "cible": "ballas",
+        "type": "loyauté_ancienne"
+      }
+    ],
+    "contenu": "Dax de l'ancienne garde, Varzia fut diplomatiquement retirée du monde pour dormir — le temps que la guerre, les Sept et l'Empire fussent devenus des antiquités. Réveillée à l'ère moderne, elle officie autour de la Résurgence Prime, marchande d'héritages et mémoire vivante des gloires orokins.\n\nDerrière ses sarcasmes de vétéran, elle mesure chaque Prime retirée et chaque relique avec le recul de celle qui a vu les prototypes. Sa lucidité tranchante rappelle que même les plus beaux artefacts de l'Empire furent forgés dans ses pires heures."
+  },
+  {
+    "id": "yuvan",
+    "titre": "Le Rituel de Yuvan",
+    "kind": "concept",
+    "year": "Ère Orokin",
+    "cluster": "Concepts",
+    "relations": [
+      {
+        "cible": "kuva",
+        "type": "rituel_qui_le_consume"
+      },
+      {
+        "cible": "ballas",
+        "type": "détourné_par"
+      },
+      {
+        "cible": "tuvul",
+        "type": "privilège_de_l_empire"
+      }
+    ],
+    "contenu": "Théâtre secret de l'immortalité orokin, le Rituel de Yuvan organisait le transfert de conscience d'un corps vers l'autre — la fuite éternelle des dynastes devant la mort. Il exigeait du Kuva, des chairs offertes et des volontés brisées : la continuité était un art réservé.\n\nBallas en détourna les protocoles pour ses fins les plus sombres ; l'Empire n'en concédait les privilèges qu'à ses rares favoris. Tuvul, gardien des mémoires du haut conseil, savait où ces rituels se célébraient — assez pour que leur souvenir fasse encore trembler, mille ans plus tard, ceux qui règnent encore."
+  }
+]

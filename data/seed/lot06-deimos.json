@@ -1,0 +1,275 @@
+[
+  {
+    "id": "bird_3",
+    "titre": "Bird 3",
+    "kind": "entity",
+    "year": "Ère Moderne",
+    "cluster": "Deimos",
+    "relations": [
+      {
+        "cible": "the_cavia",
+        "type": "compagnie_d_innocence"
+      },
+      {
+        "cible": "tagfer",
+        "type": "nid_partagé"
+      }
+    ],
+    "contenu": "Membre le plus naïf de la Cavia, Bird 3 s'émerveille de tout ce que le Sanctum a pu lui apprendre — la lumière, les ruines, les questions que les autres n'osent plus se poser. Son innocence n'est pas un défaut : c'est un radiateur de curiosité dans un lieu qui n'en produisait plus.\n\nIl niche dans les failles du laboratoire avec Tagfer, partageant le froid et les confidences comme de vieux oisillons perdus. Là où les autres voient une machine de deuil, lui regarde quelque chose qui recommence."
+  },
+  {
+    "id": "famille_entrati",
+    "titre": "La Famille Entrati",
+    "kind": "faction",
+    "year": "Ère Orokin",
+    "cluster": "Deimos",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "patriarche"
+      },
+      {
+        "cible": "loid",
+        "type": "service_gardien"
+      },
+      {
+        "cible": "otak",
+        "type": "entourage"
+      }
+    ],
+    "contenu": "Dynastie orokin des Entrati, branche écartelée entre le Gouffre et la décomposition : la Mère, le Père, la Fille, le Fils et la Grand-mère ne se parlent que par intermédiaires nécraloïdes. Sur Deimos, leurs querelles de table ont la gravité d'éclipses."
+  },
+  {
+    "id": "fibonacci",
+    "titre": "Fibonacci",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Deimos",
+    "relations": [
+      {
+        "cible": "the_cavia",
+        "type": "dirige"
+      },
+      {
+        "cible": "albrecht",
+        "type": "collaborateur"
+      },
+      {
+        "cible": "loid",
+        "type": "allié"
+      }
+    ],
+    "contenu": "Chef des Cavia, Fibonacci plane entre chiffres et insomnies : une machine à croyances trop accueillante pour ne pas engloutir quelques idées reçues. Son optimisme géométrique cache une générosité sans limite envers son immortelle table ronde."
+  },
+  {
+    "id": "fille_kermerros",
+    "titre": "Fille Kermerros",
+    "kind": "character",
+    "year": "Ère Orokin",
+    "cluster": "Deimos",
+    "relations": [
+      {
+        "cible": "famille_entrati",
+        "type": "membre"
+      },
+      {
+        "cible": "albrecht",
+        "type": "curiosité"
+      },
+      {
+        "cible": "otak",
+        "type": "compagnon_de_laboratoire"
+      }
+    ],
+    "contenu": "Bibliothécaire des cavernes et collectionneuse de difformités, Fille Kermerros transforma les soupiraux du domaine en cabinets de curiosités. Elle aimait les questions bizarres, les champignons coquets et les machines qui ronronnent faux.\n\nÉpouse de tête d'Albrecht dans leurs querelles savantes, elle croisa plus d'une fois le petit Otak rôdant dans les laboratoires, et lui apprit que la science est une conversation dont on ne voit jamais l'autre bord."
+  },
+  {
+    "id": "fils_tyl",
+    "titre": "Fils Tyl",
+    "kind": "character",
+    "year": "Ère Orokin",
+    "cluster": "Deimos",
+    "relations": [
+      {
+        "cible": "famille_entrati",
+        "type": "membre"
+      },
+      {
+        "cible": "albrecht",
+        "type": "sang_revendiqué"
+      },
+      {
+        "cible": "mere_gomati",
+        "type": "fils_de_la_mère"
+      }
+    ],
+    "contenu": "Enfant terrible de la lignée, Fils Tyl revendiqua le sang d'Entrati avec plus d'insolence que de respect. Il se donnait en spectacle, mordait les règles familiales, puis se glissait dans les ombres du domaine comme si la maison entière lui devait l'existence.\n\nSa complicité paradoxale avec Albrecht et son culte du nom suffisaient à faire grincer les dents de Gomati. Aujourd'hui encore, au Cayman parfois, son rire flotte dans les couloirs — celui d'un fils qui n'a jamais cessé de revendiquer tout ce qu'on lui a donné."
+  },
+  {
+    "id": "grand_mere",
+    "titre": "Grand-Mère",
+    "kind": "character",
+    "year": "Ère Orokin",
+    "cluster": "Deimos",
+    "relations": [
+      {
+        "cible": "famille_entrati",
+        "type": "membre"
+      },
+      {
+        "cible": "dagath",
+        "type": "conte_de_naberus"
+      },
+      {
+        "cible": "yareli",
+        "type": "vieille_amitié"
+      }
+    ],
+    "contenu": "Frontière de dentelle et de menhirs, Grand-Mère est la mémoire survivante de la Maison Entrati. Elle a vu le Néant ronger un monde, les Necramechs mourir debout, et les tableaux de famille repartir pour des salles qui n'existent plus.\n\nChaque Naberus, elle raconte des histoires où la mort porte un masque : celle de Dagath, être la plus tragique de ses contes, celle des voiles d'aliénation et des amants transformés. Dépositaire des regrets du domaine, elle repose derrière sa écritoire comme une dernière aiguille de l'horloge familiale."
+  },
+  {
+    "id": "kalymos",
+    "titre": "Kalymos",
+    "kind": "entity",
+    "year": "Ère Moderne",
+    "cluster": "Deimos",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "compagnon_du_savant"
+      },
+      {
+        "cible": "loid",
+        "type": "protégée_par"
+      }
+    ],
+    "contenu": "Kalymos est le Kavat d'Albrecht Entrati, compagne de laboratoire, de routine et de silence. À travers les veilles du Sanctum et les trajets dans le Néant, elle traverse les protocoles de 1999 comme une mémoire vivante : une présence féline qui sait ce que les humains oublient.\n\nLoid, gardien des secrets de l'Entrati, lui voue une affection de vieux serviteur — la seule, peut-être, qui reste intacte dans ces couloirs. Murmure d'un monde devenu ruine, elle témoigne encore, à sa manière, que le passé ne part jamais tout entier."
+  },
+  {
+    "id": "loid",
+    "titre": "Loid",
+    "kind": "character",
+    "cluster": "Deimos",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "service_fidèle"
+      },
+      {
+        "cible": "indifference",
+        "type": "veille_discrète"
+      },
+      {
+        "cible": "ordis",
+        "type": "correspondance"
+      }
+    ],
+    "contenu": "Loid, assistant d'Albrecht Entrati et gardien du Sanctum de Deimos, traversa des siècles d'isolement pour tenir la promesse faite à son maître. Quand le temps voulut le prendre, il accepta la nécroïse — devenant thing-à-la-fois-mémoire et reliquat, chair morte docile au service des Vivants.\n\nSa loyauté est sa seule arme : il dresse le Vatican des secrets de la famille Entrati, hante les couloirs techrot, et veille sur l'échelle de l'âme des Cavia. Il correspond avec Ordis, autre gardien d'une mémoire morcelée, comme deux vigies nocturnes se répondent d'un phare à l'autre.\n\nLoin des fastes, Loid est le symptôme de la dette Entrati : un homme qui n'a jamais cessé de passer le balai derrière le temps."
+  },
+  {
+    "id": "mere_gomati",
+    "titre": "Mère Gomati",
+    "kind": "character",
+    "year": "Ère Orokin",
+    "cluster": "Deimos",
+    "relations": [
+      {
+        "cible": "famille_entrati",
+        "type": "membre"
+      },
+      {
+        "cible": "pere_vilcor",
+        "type": "époux"
+      },
+      {
+        "cible": "fils_tyl",
+        "type": "mère"
+      }
+    ],
+    "contenu": "Patriarche ferme de la Maison Entrati, Mère Gomati gouverna les jardins et les serres du domaine avec une autorité de botaniste militaire. Elle cultivait la chair et le venin comme d'autres cultivent le blé, et retenait chaque secret que ses enfants n'avaient pas encore volés.\n\nÉpouse de Père Vilcor et mère de Fils Tyl, elle voyait dans l'obsession d'Albrecht pour le Néant une dette de famille. Sous sa main, le domaine d'Entrati n'était pas une demeure : c'était un conservatoire de branches destinées à ne jamais se casser seules."
+  },
+  {
+    "id": "otak",
+    "titre": "Otak",
+    "kind": "character",
+    "year": "Ère Orokin",
+    "cluster": "Deimos",
+    "relations": [
+      {
+        "cible": "loid",
+        "type": "collègue_nécraloïde"
+      },
+      {
+        "cible": "albrecht",
+        "type": "créateur"
+      },
+      {
+        "cible": "technocyte",
+        "type": "mutations_deimos"
+      }
+    ],
+    "contenu": "Nécraloïde affecté aux caves de recherche de Deimos, sous les ordres d'Albrecht Entrati. Petit, nerveux et incroyablement verbeux, Otak a survécu aux siècles dans le Sanctum Anatomica en reconstruisant sans cesse les machines de son maître, et il voue sa mémoire méthodique à la mémoire du sanctum."
+  },
+  {
+    "id": "pere_vilcor",
+    "titre": "Père Vilcor",
+    "kind": "character",
+    "year": "Ère Orokin",
+    "cluster": "Deimos",
+    "relations": [
+      {
+        "cible": "famille_entrati",
+        "type": "membre"
+      },
+      {
+        "cible": "mere_gomati",
+        "type": "épouse"
+      },
+      {
+        "cible": "necramech",
+        "type": "machines_forgées"
+      }
+    ],
+    "contenu": "Occultiste et architecte des cérémonies, Père Vilcor noircissait les cahiers du domaine de rituels usés et de machines trop jeunes. Il est l'homme des forges : c'est lui qui fit naître les Necramechs, gardiens d'os et de métal dressés pour que la maison ne tombe jamais seule.\n\nÉpoux de Gomati et maître des armures du domaine, il enseigna aux siens que la mort fait partie de la famille. Lorsque Deimos fut rongé, ses machines tinrent le seul rempart digne de ce nom."
+  },
+  {
+    "id": "tagfer",
+    "titre": "Tagfer",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Deimos",
+    "relations": [
+      {
+        "cible": "the_cavia",
+        "type": "compagnon_endurci"
+      },
+      {
+        "cible": "fibonacci",
+        "type": "collègue_râleur"
+      }
+    ],
+    "contenu": "Vétéran de la Cavia, Tagfer est la cicatrice du groupe : sarcastique, loyal, effroyablement humain, il a appris à rire de ce qui le hante. La perte de Minn, sa sœur d'ombre, lui a légué une tristesse qu'il porte comme une charge de combat.\n\nAvec Bird 3, il cherche un nid d'amnésie ; avec Fibonacci, il échange des insultes et des vieilleries. Sa dureté est une porte blindée — derrière, il n'y a qu'un homme qui aimerait arrêter de compter les départs."
+  },
+  {
+    "id": "the_cavia",
+    "titre": "The Cavia",
+    "kind": "faction",
+    "year": "Ère Moderne",
+    "cluster": "Deimos",
+    "relations": [
+      {
+        "cible": "fibonacci",
+        "type": "dirigé_par"
+      },
+      {
+        "cible": "albrecht",
+        "type": "créés_par"
+      },
+      {
+        "cible": "indifference",
+        "type": "écoutent"
+      }
+    ],
+    "contenu": "Suivants nécraloïdes des laboratoires d'Albrecht, les Cavia sont des bouts de mémoire mutante animés par la curiosité. Entre purs calculs et pur délire, ils servent eux-mêmes de cobayes — et de plus fidèles bibliothèques."
+  }
+]

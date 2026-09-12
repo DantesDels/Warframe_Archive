@@ -1,0 +1,530 @@
+[
+  {
+    "id": "ash",
+    "titre": "Ash",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "conception"
+      },
+      {
+        "cible": "margulis",
+        "type": "transference"
+      },
+      {
+        "cible": "ryoku",
+        "type": "version_future"
+      }
+    ],
+    "contenu": "Warframe de l'assassinat pur, Ash se déplace dans les ombres comme une parole inachevée. Son code — ne laisser aucune trace — en fit l'arme officieuse de la fin du collège d'acier, et sa légende celle du silence qui précède l'absence."
+  },
+  {
+    "id": "atlas",
+    "titre": "Atlas",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "technocyte",
+        "type": "golem_jordas_abattu"
+      }
+    ],
+    "contenu": "Atlas plie le monde à sa volonté sans jamais demander son poids au climat : son poing, disent les mythologies, a fait plier des planètes entières. Sa légende prédatrice lui vint du Précepte de Jordas — la quête d'un vaisseau infesté qui força le dernier des Tenno à tracer sa route dans la pourriture.\n\nRien ne l'arrête, dit-on, que ce qui se dérobe. Sa silhouette, soudée à la roche, est celle d'un monde qui a trouvé depuis longtemps la réponse à la question « et si tu tombes ? »."
+  },
+  {
+    "id": "banshee",
+    "titre": "Banshee",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      }
+    ],
+    "contenu": "Banshee est le cri sans infirmier : la Frame du silence armé, dont la voix retourne la douleur contre ceux qui la causent. Née d'une lignée technocyte comme toutes ses sœurs, elle n'eut jamais besoin d'un grand récit — sa seule présence suffit à faire taire un arsenal.\n\nSa discipline tient moins de la force que de l'écoute d'un monde qui crie, et du choix d'y répondre par une note juste. Dans le fracas des champs de bataille, elle reste le poème que les échos redoutent."
+  },
+  {
+    "id": "baruuk",
+    "titre": "Baruuk",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      }
+    ],
+    "contenu": "Moine des déserts et pacificateur sans regard, Baruuk retient sa colère jusqu'à ce que sa colère devienne un ouragan. Sa discipline est un sceau : tant qu'il n'a pas raison, il n'a pas besoin de vaincre.\n\nIssu de la souche de l'Helminth, il incarne l'ascèse en pleine guerre. Ceux qui croisent son apathie finissent par comprendre que le calme, chez lui, est une arme de destruction massive différée."
+  },
+  {
+    "id": "caliban",
+    "titre": "Caliban",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "erra",
+        "type": "créé_par"
+      },
+      {
+        "cible": "narmer",
+        "type": "désavoué_par"
+      }
+    ],
+    "contenu": "Dernier espoir mécanique du Narmer, Caliban fut configuré par la faction de veuves et d'acolytes qui rassembla la force derrière la seconde Naissance de Ballas : une contradiction faite métal, conçu par Erra pour créer des sentinelles, avant que l'armée lui tourne le dos.\n\nSes mains génèrent des griffes d'ordre et dispersent une poussière d'asservissement : instrument des Serviteurs, il incarne la haine du Symbole sans avoir de nom à lui. Après l'effondrement du Narmer, abandonné par ses maîtres, il a fini par se chercher."
+  },
+  {
+    "id": "chroma",
+    "titre": "Chroma",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "cephalon_simaris",
+        "type": "quête_du_nouvel_étrange"
+      },
+      {
+        "cible": "hunhow",
+        "type": "peau_d_un_sentient"
+      }
+    ],
+    "contenu": "Chroma est un dragon d'écailles, une Frame plus proche d'une bête que d'un soldat, cherchant un prédateur digne de ses griffes. Sa quête, celle du Nouvel Étrange, fut lançée par Cephalon Simaris pour attirer la créature vers sa chasse.\n\nL'énergie de sa peau se teinte à volonté, comme s'il avait incorporé quelque chose de plus ancien — un fragment d'être venu d'ailleurs. On dit qu'il a été obtenu après une lutte contre un ennemi de la guerre ancienne : une ascendance qui rappelle qu'Hunhow et ses enfants ne sont jamais totalement poussière."
+  },
+  {
+    "id": "citrine",
+    "titre": "Citrine",
+    "kind": "warframe",
+    "year": "Guerre Ancienne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "technocyte",
+        "type": "infestation_relâchée"
+      },
+      {
+        "cible": "otak",
+        "type": "fragments_de_mémoire"
+      }
+    ],
+    "contenu": "Citrine veilla, durant la Guerre Ancienne, sur Belric et Rania — deux êtres que la guerre ne séparerait pas. Leur ultime stratégie contre l'avancée des Sentients fut une bio-bombe, qui relâcha l'Infestation sur Deimos ; la Citrine se tint là où le fléau se répandit.\n\nLe tunnel qu'elle ouvrit dans le Vide n'était pas une victoire : c'était l'incarnation conceptuelle de leur amour, éternisée en pierre précieuse. Les fragments de sa mémoire, vendus par Otak au marché du Necralisk, restent la preuve qu'un sacrifice peut survivre sous forme de bijou."
+  },
+  {
+    "id": "cyte-09",
+    "titre": "Cyte-09",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "conception"
+      },
+      {
+        "cible": "margulis",
+        "type": "transference"
+      },
+      {
+        "cible": "quincy",
+        "type": "version_future"
+      }
+    ],
+    "contenu": "Warframe-sniper contemporaine, spécialisée dans la neutralisation à distance et la chasse aux points faibles. Son artillerie confidentielle et son œil balistique en font la réponse moderne du Système d'Origine aux silhouettes indésirables — parfois une seule cartouche suffit."
+  },
+  {
+    "id": "dagath",
+    "titre": "Dagath",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "grand_mere",
+        "type": "conte_de_naberus"
+      },
+      {
+        "cible": "teshin",
+        "type": "autrefois_cavalière_dax"
+      }
+    ],
+    "contenu": "La Sans-Visage, dit la Grand-Mère Entrati lors des veillées de Naberus : une cavalière Dax qui, par dévotion envers deux amants orokins présumés traîtres, fut punie par l'Empire jusqu'à perdre son visage. Sa monture de froid et son crâne de cendre errent dans les vents, cherchant une dernière grâce.\n\nAbyss of Dagath réveilla sa légende à l'ère moderne, lorsque ses indices permirent de reconstituer la Frame oubliée. Son silence n'est pas une absence : c'est l'écho d'une punition qui ne sait toujours pas quoi pleurer."
+  },
+  {
+    "id": "dante",
+    "titre": "Dante",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "archives_du_sanctum"
+      },
+      {
+        "cible": "the_cavia",
+        "type": "mémoire_conservée"
+      },
+      {
+        "cible": "fibonacci",
+        "type": "collaborateur"
+      }
+    ],
+    "contenu": "Premier scribe d'une bibliothèque orokine dont le nom s'est perdu, Dante fut retrouvé dans les salles du Sanctum d'Albrecht Entrati. Sa plume corrigea les marges de mille traités ; sa mémoire, elle, refuse de se fermer.\n\nRelativement aux Cavia, il est la preuve vivante qu'un savant peut être une Frame — la curiosité faite chair et encrier. Auprès de Fibonacci, il échange calculs et poésie, comme si la connaissance elle-même avait besoin d'un lecteur pour durer."
+  },
+  {
+    "id": "ember",
+    "titre": "Ember",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "zariman",
+        "type": "retour_de_kaleen"
+      },
+      {
+        "cible": "margulis",
+        "type": "même_cohorte_archimédienne"
+      }
+    ],
+    "contenu": "Ember a hérité des cendres de l'Archimédienne Kaleen, la femme qui regarda le retour du Zariman sans jamais s'en remettre. Sa brûlure princière est une mémoire : celle d'une traversée où les enfants parlèrent de fantômes, et où l'Empire préféra brûler les questions plutôt que d'y répondre.\n\nChaque déflagration d'Ember porte la douleur d'une archive fermée à jamais. De son héritage, elle ne garde qu'une flamme : celle de ceux qui veulent éteindre, pour toujours, ce qui les hante."
+  },
+  {
+    "id": "equinox",
+    "titre": "Equinox",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "tyl_regor",
+        "type": "fragments_d_uranus"
+      }
+    ],
+    "contenu": "Crépuscule et aurore en un seul châssis, Equinox alterne les deux versants d'une même méditation : la lumière qui répare, l'ombre qui se resserre. Sa nature double en fait la seule Frame capable de changer de guerre à mi-combat.\n\nSes composants furent prélevés des profondeurs d'Uranus, là où Tyl Regor scellait la chair des oasis. Deux faces, une seule vérité : l'équilibre est une arme, à condition de savoir lequel des deux gagne."
+  },
+  {
+    "id": "excalibur",
+    "titre": "Excalibur",
+    "kind": "warframe",
+    "year": "Guerre Ancienne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "conception"
+      },
+      {
+        "cible": "margulis",
+        "type": "transference"
+      },
+      {
+        "cible": "arthur",
+        "type": "version_future"
+      }
+    ],
+    "contenu": "La toute première Warframe, prototype des guerriers du collège d'acier. Forgée par l'Orokin à partir de la chair excisée d'un humain, puis liée au premier Tenno par la Transférence de Margulis, Excalibur survécut à la Guerre Ancienne comme les codices d'un testament écrit en lames."
+  },
+  {
+    "id": "frost",
+    "titre": "Frost",
+    "kind": "warframe",
+    "year": "Guerre Ancienne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "conception"
+      },
+      {
+        "cible": "margulis",
+        "type": "transference"
+      },
+      {
+        "cible": "velemir",
+        "type": "version_future"
+      }
+    ],
+    "contenu": "Warframe du pergélisol, Frost fige les assauts dans un gel docile et matriciel. Épaulier des défenses ultimes de l'Orokin, il compacta neiges et armées dans des cathédrales de givre où même les Sentients apprirent à ralentir."
+  },
+  {
+    "id": "gara",
+    "titre": "Gara",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "hunhow",
+        "type": "sentient_affronté"
+      },
+      {
+        "cible": "ostrons",
+        "type": "sacrifiée_pour"
+      }
+    ],
+    "contenu": "Gara fige la lumière en cristal et la vérité en verre. Lorsque le grand Sentient fondit sur Cetus, elle ne chercha pas à le vaincre — elle se brisa sur lui, engloutissant la bête dans une explosion de verre qui pétrifia la guerre elle-même.\n\nDepuis, l'immense carcasse hante la plaine comme l'Éidolon, et le verre qui la recouvre est le dernier souvenir d'une Frame qui choisit le sacrifice plutôt que la fuite. Cetus vit à l'ombre d'un geste que personne sur Terre n'a oublié."
+  },
+  {
+    "id": "garuda",
+    "titre": "Garuda",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "conception"
+      },
+      {
+        "cible": "margulis",
+        "type": "transference"
+      },
+      {
+        "cible": "vena",
+        "type": "version_future"
+      }
+    ],
+    "contenu": "Warframe du sang et des griffes, Garuda est le reflet vénéneux d'une terrible justice. Construite après la Guerre Ancienne par des lignées obscures, elle punit avec une précision chirurgicale la vie de ceux qui méprisent la vie — et se repaît du sang qu'elle répand."
+  },
+  {
+    "id": "gauss",
+    "titre": "Gauss",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      }
+    ],
+    "contenu": "Gauss est la promesse du dépassement : couronné de vitesse et de frottement, il convertit l'élan en bouclier, puis en arme. Dans les couloirs où la guerre se gagne au millimètre, il est celui qui arrive avant sa propre ombre.\n\nFaçonné sur la même souche technocyte que l'arsenal entier, il incarne l'idée que la réaction peut devenir résolution. Sa course n'a pas de fin affichée — seulement une ligne sans cesse repoussée par sa propre lumière."
+  },
+  {
+    "id": "grendel",
+    "titre": "Grendel",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      }
+    ],
+    "contenu": "Grendel est l'appétit philosophique : sa masse engloutit les problèmes comme d'autres les examinent, et sa voix, disent les rapports, est celle d'un juge bien nourri. Sa légende le promène de salle en salle, citadelle de théorie et de semelle.\n\nComme toutes les Warframes, il fut tissé sur la souche de l'Helminth — une œuvre du même alphabet. Sa brutalité gourmande porte une leçon : certaines batailles se gagnent non par la finesse, mais par l'indigestion."
+  },
+  {
+    "id": "gyre",
+    "titre": "Gyre",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "zariman",
+        "type": "quête_des_anges_de_zariman"
+      }
+    ],
+    "contenu": "Gyration de courant et de canon, Gyre enroule les racines électromagnétiques dans une valse qui ne souffre aucun neutralisant. Ses projections dansantes et sa torsion des champs font d'elle une scène vivante sous tension.\n\nDécouverte au fil des Anges de Zariman, elle tira sa résistance des bords du Vide — métamorphose de la foudre et de l'abîme. Là où d'autres voient un silence, Gyre entend le léger fredonnement de tout ce qui charge."
+  },
+  {
+    "id": "harrow",
+    "titre": "Harrow",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "rell",
+        "type": "opérateur"
+      },
+      {
+        "cible": "indifference",
+        "type": "veille_contre"
+      },
+      {
+        "cible": "ballas",
+        "type": "méprisé_par"
+      }
+    ],
+    "contenu": "Harrow fut forgé autour de Rell, l'enfant du Zariman que personne ne savait entendre. Soudé au châssis par une volonté que l'Orokin jugeait impie, il tressa ses chaînes dans l'espoir de contenir la Voix qui le hantait — la paroi vivante que nul autre ne percevait.\n\nDans les Chaînes d'Harrow, son sacrifice chanté maintint un rempart contre l'Indifférence. Le mouvement de ses chaînes accompagne un chœur immobile : celui d'un enfant qui a choisi de veiller pour que les autres dorment."
+  },
+  {
+    "id": "hildryn",
+    "titre": "Hildryn",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "vox_solaris",
+        "type": "butin_de_l_exploiteur"
+      },
+      {
+        "cible": "little_duck",
+        "type": "commandes_d_assaut"
+      }
+    ],
+    "contenu": "Hildryn survit dans les abysses de la geste de Vénus, où le vide est une maison et la gravité une option. Ses boucliers monumentaux font d'elle une muraille portable ; ses armes portent le prix de l'exploration. Sa double pratique d'arme et d'ingénierie assemble les champs de force comme d'autres lisent les contrats.\n\nVox Solaris et Little Duck ont vu plus d'un proxy tomber sous ses feux sur la Vallée. Elle est la preuve que la Vallée peut produire des légendes — à condition de s'en armer une."
+  },
+  {
+    "id": "hydroid",
+    "titre": "Hydroid",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "vay_hek",
+        "type": "reliques_du_conseil"
+      }
+    ],
+    "contenu": "Capitaine des profondeurs, Hydroid commande les flots comme une armée : son corps d'eau s'écoule autour des projectiles et ses sirènes écrasent les rivages. Sa patience est celle des marées — elle finit toujours par engloutir.\n\nSes reliques furent remises depuis les terrasses du Conseil Vay Hek, sur l'Oro : un paiement d'eau et de fer pour un duel que la terre n'a pas oublié. Sous la surface, il garde le butin arraché à la mer."
+  },
+  {
+    "id": "inaros",
+    "titre": "Inaros",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "créé_par"
+      },
+      {
+        "cible": "baro_kiteer",
+        "type": "quête_du_roi_des_sables"
+      }
+    ],
+    "contenu": "Dans les sables de Mars, les colons murmurent encore le nom du roi qui tint le désert debout contre la faim, la guerre et l'oubli. Inaros, Frame protectrice façonnée sous Ballas, donna son corps aux dunes pour que les villes respirent.\n\nSon tombeau fut longtemps gardé par des prêtres de sable, et la rumeur de ses richesses attira jusqu'à Baro Ki'Teer. Celui qui le ranime hérite de plus qu'une Frame : il hérite d'une promesse tenue depuis des générations martiennes."
+  },
+  {
+    "id": "ivara",
+    "titre": "Ivara",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      }
+    ],
+    "contenu": "Chasseuse silencieuse du Tenno, Ivara fige le vent et tend des arcs d'énergie, de tissu et de glace. Ses pièges l'habillent d'invisibilité ; sa flèche, de prudence. Née sur la souche de construction de l'Helminth comme ses sœurs, elle incarne la patience armée.\n\nSes arcs portent des flèches qui ne préviennent jamais — et ceux qui la cherchent ne retrouvent en général qu'une volée de plumes. Dans l'ombre des grilles, Ivara est la preuve qu'une guerre peut se gagner sans un seul bruit."
+  },
+  {
+    "id": "jade",
+    "titre": "Jade",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "stalker",
+        "type": "lié_à_l_ombre"
+      },
+      {
+        "cible": "drifter",
+        "type": "quête_ombres_de_jade"
+      }
+    ],
+    "contenu": "Jade est la lumière d'une grossesse impossible : un écho de vie porté au cœur de la guerre, arraché aux abysses par la quête Ombres de Jade. Le Stalker, son compagnon d'ombre, veilla sur la naissance d'Orion et de Sirius — une paternité que même Hunhow dut payer d'un sacrifice de mémoire pour garder secrète.\n\nFrame-mère plus que dévastatrice, elle transforme l'offrande en égide. Reliant le destin du Stalker à une famille enfin possible, Jade incarne ce que la guerre n'aurait jamais dû permettre : une clause d'humanité dans un contrat de mort."
+  },
+  {
+    "id": "khora",
+    "titre": "Khora",
+    "kind": "warframe",
+    "year": "Ère Moderne",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "cephalon_simaris",
+        "type": "assauts_du_sanctuaire"
+      },
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      }
+    ],
+    "contenu": "Tisseuse de chaînes et dompteuse de bêtes, Khora frappe avec deux longueurs d'avance : son Kavat de métal la seconde, sa lanière ochre le cercle autour d'elle. Son mobilier d'acier fait de la scène une toile.\n\nRécoltée au fil des Assauts du Sanctuaire, sous l'œil de Cephalon Simaris, elle fut forgée sur la souche de l'Helminth comme ses sœurs. Là où les autres traquent leurs cibles, elle les enroule — et n'en laisse que des nœuds propres."
+  },
+  {
+    "id": "kullervo",
+    "titre": "Kullervo",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ballas",
+        "type": "sept_crimes_allégués"
+      },
+      {
+        "cible": "drifter",
+        "type": "écho_de_duviri"
+      }
+    ],
+    "contenu": "Condamné à Duviri pour sept crimes que seuls ses chants décrivent, Kullervo paya pour une rancune que l'Empire préféra ne pas instruire. Sa voix portée dans la boucle du Domaine raconte la faute de l'Orokin — la leur, pas la sienne.\n\nChargé de lames et de justice mal réglée, il retourna aux Tenno depuis le cœur même du paradoxe. Le Drifter, qui a connu les cycles de Duviri, l'a vu se souvenir d'un crime qu'il n'a jamais commis."
+  },
+  {
+    "id": "lavos",
+    "titre": "Lavos",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "kuva",
+        "type": "alchimie_de_la_transmutation"
+      }
+    ],
+    "contenu": "Géolier devenu transmutateur, Lavos apprit à changer le plomb en or très longtemps avant de changer les gardes en givre. Sa science alchimique, raffinée du vitriol et du sel, fit de lui l'un des rares prêtres de la transmutation que l'Empire n'osa jamais nommer.\n\nQuand sa prison tomba, il ne libéra pas les sbires : il les dissolut, renvoya la matière au creuset, et garda la porte comme il l'avait toujours gardée. Sa familiarité avec le Kuva, essence de vie et de changement, fait de lui le contrebandier de l'alchimie orokin — celui qui sait que tout peut devenir autre chose, à condition d'en accepter le prix."
+  },
+  {
+    "id": "limbo",
+    "titre": "Limbo",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "ordis",
+        "type": "quête_du_théorème_de_limbo"
+      },
+      {
+        "cible": "indifference",
+        "type": "faille_paradoxale"
+      }
+    ],
+    "contenu": "Avant de devenir une planète de poche, Limbo fut un théorème : un artisan qui voulait trancher l'espace en papiers, selon les plans d'une mathématique du vide interdite aux sages.\n\nSa bande-annonce écrite de sa main enseigne les abscisses d'une dimension parallèle. La quête de son théorème, relayée par Ordis, finit par déchirer une faille : au-delà du brouillard, une main et un grimoire.Certains disent que le maître de la faille regarde encore les entres-neuf du monde — du côté d'un paradoxe qu'il a forcé pour l'étudier."
+  },
+  {
+    "id": "loki",
+    "titre": "Loki",
+    "kind": "warframe",
+    "year": "Ère Orokin",
+    "cluster": "warframes",
+    "relations": [
+      {
+        "cible": "helminth",
+        "type": "souche_de_construction"
+      },
+      {
+        "cible": "ash",
+        "type": "confrère_de_la_furtivité"
+      }
+    ],
+    "contenu": "Passeur d'images et maître du leurre, Loki fait porter ses mensonges par les ennemis eux-mêmes. Téléportation, déguisement, décimation : sa ruse est plus ancienne que la plupart des dynasties, et son école de furtivité partage ses bancs avec Ash.\n\nFaçonné sur la souche de l'Helminth comme ses sœurs, il demeure le stratagème incarné : celui qui ne gagne jamais de face, et qui n'a jamais besoin d'expliquer comment."
+  }
+]

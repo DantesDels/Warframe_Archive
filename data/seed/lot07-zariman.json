@@ -1,0 +1,151 @@
+[
+  {
+    "id": "archimedienne_yonta",
+    "titre": "L'Archimédienne Yonta",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Zariman",
+    "relations": [
+      {
+        "cible": "zariman",
+        "type": "archimédienne_du_bord"
+      },
+      {
+        "cible": "cavalero",
+        "type": "collègue_du_bord"
+      }
+    ],
+    "contenu": "Archimédienne de la cohorte du Zariman, Yonta était chargée de documenter le grand saut — de mesurer l'abîme au lieu de l'éviter. Quand la coque se mit à parler, elle choisit la fermeture : sceller dans sa capsule le savoir qu'elle pouvait encore protéger, quitte à s'y laisser ensevelir.\n\nC'est sous une strate de silence volontaire qu'elle a été retrouvée, météore de méthode au milieu d'un naufrage. Compagne de bloc de Cavalero, elle a rejoint les Holdfasts, gardienne résolue des récits que personne d'autre ne veut entendre."
+  },
+  {
+    "id": "cavalero",
+    "titre": "Cavalero",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Zariman",
+    "relations": [
+      {
+        "cible": "zariman",
+        "type": "passager"
+      },
+      {
+        "cible": "the_holdfasts",
+        "type": "rescapé"
+      },
+      {
+        "cible": "quinn",
+        "type": "équipier"
+      }
+    ],
+    "contenu": "Armurier du Zariman, Cavalero a fabriqué les armes qu'il devait espérer inutiles : bâtons, lames et canons qui équipaient un vaisseau de cérémonie devenu vaisseau de cauchemar. Ses mains portent l'habileté, son regard la mémoire de ceux qui ne sont jamais rentrés.\n\nRendu aux siens par-delà le Vide, rescapé parmi les Holdfasts, il coordonne avec Quinn les reliques du périple. Chaque arme qu'il livre est une promesse : que cette fois-ci, il y aura quelqu'un pour la tenir."
+  },
+  {
+    "id": "hombask",
+    "titre": "Hombask",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Zariman",
+    "relations": [
+      {
+        "cible": "zariman",
+        "type": "passagère_du_retour"
+      },
+      {
+        "cible": "the_holdfasts",
+        "type": "rescapée"
+      },
+      {
+        "cible": "cavalero",
+        "type": "confidente_des_souvenirs"
+      }
+    ],
+    "contenu": "Survivante du Zariman et décoratrice de son vaisseau, Hombask transforme les couloirs du bord en jardin d'arrière-saison. Ses arrangements infusent dans chaque bac un rite de normalité — un geste à la fois triste et gracieux.\n\nRescapée parmi les Holdfasts, confidente de Cavalero sur l'étal des souvenirs, elle a fait du décor une thérapie. Sur un vaisseau qui ne rentre pas, elle continue à fleurir les fenêtres."
+  },
+  {
+    "id": "quinn",
+    "titre": "Quinn",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Zariman",
+    "relations": [
+      {
+        "cible": "the_holdfasts",
+        "type": "dirige"
+      },
+      {
+        "cible": "zariman",
+        "type": "officier"
+      }
+    ],
+    "contenu": "Pilote vétéran du Zariman devenu porte-voix des Holdfasts, Quinn coordonne les recherches à bord du vaisseau fantôme. Sa méthode est une patience d'acier : on ne presse jamais un mort qui travaille encore."
+  },
+  {
+    "id": "rell",
+    "titre": "Rell",
+    "kind": "character",
+    "cluster": "Zariman",
+    "relations": [
+      {
+        "cible": "indifference",
+        "type": "enchaînement_pur"
+      },
+      {
+        "cible": "drifter",
+        "type": "paradoxe_frère"
+      },
+      {
+        "cible": "margulis",
+        "type": "confié_à"
+      }
+    ],
+    "contenu": "De tous les enfants du Zariman, Rell fut le seul à ne jamais fermer les yeux sur la Paroi. Autiste et abandonné, il convertit sa peur en roue de prière et sa solitude en geôle : il retint l'Homme dans le Mur dans une fragmentature de lui-même, scellant à jamais ce que le reste du vaisseau s'évertuait à oublier.\n\nCaché à l'abri de toute surveillance, il incarna le sacrifice silencieux que nul Archimédien n'osa nommer. Margulis avait juré de les aimer tous ; Rell la prit au mot, à sa manière, en aimant le monde tel qu'elle l'avait rêvé — un monde où la peur ne se propage plus.\n\nSon esprit devint la serrure. Sa porte, un Harrow."
+  },
+  {
+    "id": "the_holdfasts",
+    "titre": "The Holdfasts",
+    "kind": "faction",
+    "year": "Ère Moderne",
+    "cluster": "Zariman",
+    "relations": [
+      {
+        "cible": "quinn",
+        "type": "dirigés_par"
+      },
+      {
+        "cible": "zariman",
+        "type": "habitants"
+      },
+      {
+        "cible": "rell",
+        "type": "compagnons_de_souvenir"
+      }
+    ],
+    "contenu": "Équipage fragmenté du Zariman, revenu du Néant pour entretenir le vaisseau et sa mémoire : pilotes, officiers, ménestraux et blessés. Les Holdfasts sont les échos de ceux qui n'ont pas survécu — et les derniers hôtes du bord."
+  },
+  {
+    "id": "zariman",
+    "titre": "Le Zariman 10-0",
+    "kind": "vaisseau",
+    "year": "Ère Orokin",
+    "cluster": "Zariman",
+    "relations": [
+      {
+        "cible": "rell",
+        "type": "passager_hantise"
+      },
+      {
+        "cible": "drifter",
+        "type": "paradoxe_équipage"
+      },
+      {
+        "cible": "indifference",
+        "type": "infesté_par"
+      },
+      {
+        "cible": "margulis",
+        "type": "orphelins_confiés"
+      }
+    ],
+    "contenu": "Vaisseau dit \"Zariman 10-0\", perdu dans le Néant pendant un saut interstellaire et revenu sans aucun adulte survivant — seulement des enfants imprégnés de l'énergie du Vide. Ses corridors, parasités par l'Indifférence, devinrent le berceau maudit des premiers Tenno."
+  }
+]

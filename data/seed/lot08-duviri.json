@@ -1,0 +1,144 @@
+[
+  {
+    "id": "acrithis",
+    "titre": "Acrithis",
+    "kind": "character",
+    "year": "Intemporel",
+    "cluster": "Duviri",
+    "relations": [
+      {
+        "cible": "dominus_thrax",
+        "type": "lectrice_du_roi"
+      },
+      {
+        "cible": "kullervo",
+        "type": "chroniqueuse_de_sa_dette"
+      }
+    ],
+    "contenu": "Mémoire errante de Duviri, Acrithis raconte les fables du Domaine comme une archiviste qui aurait perdu la fin des livres. Sa hutte sent l'encre et le cyclamen ; ses récits, eux, sentent le souvenir corrompu.\n\nElle sait où mène chaque chemin de la boucle, et choisit parfois de le taire. De la dette de Kullervo aux caprices du roi, elle déroule les récits avec une précision de scribe — sauf qu'à Duviri, rien n'est écrit deux fois de la même manière."
+  },
+  {
+    "id": "bombastine",
+    "titre": "Bombastine",
+    "kind": "character",
+    "year": "Intemporel",
+    "cluster": "Duviri",
+    "relations": [
+      {
+        "cible": "dominus_thrax",
+        "type": "sujet_jaloux"
+      },
+      {
+        "cible": "mathila",
+        "type": "badinage"
+      },
+      {
+        "cible": "luscinia",
+        "type": "fausse_joie_contre"
+      }
+    ],
+    "contenu": "Poète de cour et tourment habillé de rimes, Bombastine flatte le roi du matin et le déteste le soir. Il compose des odes au rebond, guette les fautes de goût, et jalouse l'attention que le Drifter reçoit avant lui.\n\nSa verve est une hache à double tranchant : capable de réjouir Mathila d'un mot, il peut tout aussi bien moquer Luscinia pour cacher sa propre fêlure. À Duviri, même les compliments sont des duels."
+  },
+  {
+    "id": "dominus_thrax",
+    "titre": "Dominus Thrax",
+    "kind": "character",
+    "year": "Intemporel",
+    "cluster": "Duviri",
+    "relations": [
+      {
+        "cible": "drifter",
+        "type": "jeu_éternel"
+      },
+      {
+        "cible": "indifference",
+        "type": "emprise_du_vide"
+      }
+    ],
+    "contenu": "Roi pris dans sa propre parabole, Dominus Thrax règne sur Duviri d'un pardon qui se renouvelle chaque aube. Il est la première couronne du paradoxe : Fourier-ciel, cheval de givre, châteaux de cartes et condamnés remis en scène tant que le Drifter n'a pas appris les gestes qui apaisent.\n\nSa colère et sa clémence sont les deux faces d'une même boucle, façonnée par l'Indifférence autant que par les rêves qui le hantent. Chaque nouveau cycle rejoue sa fin ; chaque fin le rejoue, jusqu'à ce qu'un autre choix ouvre un trou dans la tapisserie."
+  },
+  {
+    "id": "luscinia",
+    "titre": "Luscinia",
+    "kind": "character",
+    "year": "Intemporel",
+    "cluster": "Duviri",
+    "relations": [
+      {
+        "cible": "dominus_thrax",
+        "type": "sujet_endeuillé"
+      },
+      {
+        "cible": "kullervo",
+        "type": "même_déchirure"
+      },
+      {
+        "cible": "sythel",
+        "type": "chagrin_mêlé"
+      }
+    ],
+    "contenu": "Deuil suspendu dans un corps de spectre, Luscinia pleure une chair qui n'existe plus et chante des berceuses grises. Au fil des cycles, son chagrin a pris l'épaisseur d'un royaume : celui de ceux qui ne sont plus, dressé contre l'oubli du roi.\n\nElle reconnaît en Kullervo la même faute jamais commise, la même blessure jamais close. Sa voix plaintive est la preuve que même dans la boucle, certaines peines refusent de se rejouer avec indulgence."
+  },
+  {
+    "id": "mathila",
+    "titre": "Mathila",
+    "kind": "character",
+    "year": "Intemporel",
+    "cluster": "Duviri",
+    "relations": [
+      {
+        "cible": "dominus_thrax",
+        "type": "sujet_réjoui"
+      },
+      {
+        "cible": "drifter",
+        "type": "accueil_de_joie"
+      },
+      {
+        "cible": "bombastine",
+        "type": "taquinerie"
+      }
+    ],
+    "contenu": "Rieuse incorrigible du Domaine, Mathila accueille chaque cycle comme une première représentation. Sa joie déborde sur les chemins d'eau et les théâtres de brume, là où le chagrin du roi ne semble jamais l'atteindre.\n\nElle taquine Bombastine sans méchanceté et ouvre grands ses bras au Drifter, comme si chaque retour était une nouvelle visite. Sous cette gaieté, elle est l'une des rares à ne jamais regarder le château à la même heure."
+  },
+  {
+    "id": "orowyrms",
+    "titre": "Les Orowyrms",
+    "kind": "entity",
+    "year": "Intemporel",
+    "cluster": "Duviri",
+    "relations": [
+      {
+        "cible": "dominus_thrax",
+        "type": "émotions_matérialisées"
+      },
+      {
+        "cible": "drifter",
+        "type": "chevauchés_par"
+      }
+    ],
+    "contenu": "Dragons de Duviri, les Orowyrms naissent des émotions de Dominus Thrax comme des convulsions d'orage : chaque fureur, chaque deuil du roi enfante un serpent de ciel. Leur vol tisse la boucle elle-même.\n\nLe Drifter, passé par les cycles, les a chevauchés autant qu'il les a calmés : abattre un Orowyrm, c'est offrir à Thrax un instant de silence. Ce sont les derniers grands animaux de l'âme — et les seuls témoins que le paradoxe respire."
+  },
+  {
+    "id": "sythel",
+    "titre": "Sythel",
+    "kind": "character",
+    "year": "Intemporel",
+    "cluster": "Duviri",
+    "relations": [
+      {
+        "cible": "dominus_thrax",
+        "type": "sujet_apeuré"
+      },
+      {
+        "cible": "luscinia",
+        "type": "crainte_partagée"
+      },
+      {
+        "cible": "drifter",
+        "type": "crainte_recueillie"
+      }
+    ],
+    "contenu": "Craintif et délicat, Sythel traverse le Domaine en évitant l'ombre du roi et les miroirs trop grossiers. Il confond les échos des souvenirs et les pas sur la herbe, et cherche dans la présence du Drifter un répit que la boucle n'offre jamais tout à fait.\n\nAvec Luscinia, il partage l'effroi des choses qui crient sous la toile. Sa peur n'est pas de la lâcheté : c'est la mémoire d'un monde qui, à Duviri, sait que chaque cri a été entendu."
+  }
+]

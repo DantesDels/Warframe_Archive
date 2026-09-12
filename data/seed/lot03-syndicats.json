@@ -1,0 +1,240 @@
+[
+  {
+    "id": "amaryn",
+    "titre": "Amaryn",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Syndicats",
+    "relations": [
+      {
+        "cible": "new_loka",
+        "type": "dirige"
+      },
+      {
+        "cible": "steel_meridian",
+        "type": "alliance"
+      }
+    ],
+    "contenu": "Archère et oracle de New Loka, Amaryn voit le monde comme un jardin en friche. Sa voix a l'écorce des burnouts climatiques : elle n'offre pas d'aide, elle offre une rédemption — à condition de brûler ses machines."
+  },
+  {
+    "id": "arbiters_of_hexis",
+    "titre": "Arbiters of Hexis",
+    "kind": "faction",
+    "year": "Ère Moderne",
+    "cluster": "Syndicats",
+    "relations": [
+      {
+        "cible": "margulis",
+        "type": "doctrine_héritée"
+      },
+      {
+        "cible": "excalibur",
+        "type": "idéal_guerrier"
+      }
+    ],
+    "contenu": "École philosophique du Tenno, les Arbiters of Hexis célèbrent la main qui tient la lame — la perfection du vide incarné. Leur doctrine naît de la Transférence de Margulis ; leur foi, d'un absolu inconciliable."
+  },
+  {
+    "id": "cephalon_simaris",
+    "titre": "Cephalon Simaris",
+    "kind": "entity",
+    "year": "Ère Moderne",
+    "cluster": "Syndicats",
+    "relations": [
+      {
+        "cible": "cephalon_suda",
+        "type": "rivalité"
+      },
+      {
+        "cible": "ordis",
+        "type": "confrère"
+      }
+    ],
+    "contenu": "Cephalon-chasseur de connaissances, Simaris traque les créatures pour les conserver dans son sanctuaire. Sa bibliothèque est un zoo spectral : il préfère les espèces rares aux espèces raisonnables, et sa générosité cache une soif insatiable."
+  },
+  {
+    "id": "cephalon_suda",
+    "titre": "Cephalon Suda",
+    "kind": "entity",
+    "year": "Ère Moderne",
+    "cluster": "Syndicats",
+    "relations": [
+      {
+        "cible": "ordis",
+        "type": "famille_cephalon"
+      },
+      {
+        "cible": "cephalon_simaris",
+        "type": "rivalité"
+      }
+    ],
+    "contenu": "Cephalon absorbé par la connaissance, Suda collectionne le savoir des Origines. Assoiffée — littéralement — de données rares, elle échange chaque secret sans jamais en offrir gratuitement : son absence d'Histoire est sa seule histoire."
+  },
+  {
+    "id": "cressa_tal",
+    "titre": "Cressa Tal",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Syndicats",
+    "relations": [
+      {
+        "cible": "steel_meridian",
+        "type": "dirige"
+      },
+      {
+        "cible": "vay_hek",
+        "type": "ennemie"
+      }
+    ],
+    "contenu": "Ancienne officière d'élite grineer devenue mentor du Steel Meridian. Cressa Tal a perdu un monde entier, et la seule morale qu'elle a ramenée est celle du filet : protéger d'abord, comprendre ensuite — et ne jamais oublier le nom des bourreaux."
+  },
+  {
+    "id": "ergo_glast",
+    "titre": "Ergo Glast",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Syndicats",
+    "relations": [
+      {
+        "cible": "perrin_sequence",
+        "type": "dirige"
+      },
+      {
+        "cible": "parvos_granum",
+        "type": "refuse_le_credo"
+      }
+    ],
+    "contenu": "Meneur du Perrin Sequence, Ergo Glast est un homme de chiffres et de distances : il convertit les fortunes en services, et les services en paix durable. Il a revendu ses armes, pas ses principes — et se prend parfois pour le seul Corpus honnête du système."
+  },
+  {
+    "id": "kahl_175",
+    "titre": "Kahl-175",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Syndicats",
+    "relations": [
+      {
+        "cible": "kahl_garrison",
+        "type": "dirige"
+      },
+      {
+        "cible": "eudico",
+        "type": "ami"
+      }
+    ],
+    "contenu": "Kahl-175, grineer de base et héros malgré lui, apprit que l'obéissance est une dette qu'on peut casser. Son cœur nickelé s'ouvre aux colonies qu'il protège, un frère à la fois — et sa camarade Arabotte veille sur lui comme sur un pupille."
+  },
+  {
+    "id": "kahl_garrison",
+    "titre": "Kahl's Garrison",
+    "kind": "faction",
+    "year": "Ère Moderne",
+    "cluster": "Syndicats",
+    "relations": [
+      {
+        "cible": "kahl_175",
+        "type": "dirigée_par"
+      },
+      {
+        "cible": "narmer",
+        "type": "révolté_contre"
+      },
+      {
+        "cible": "reines_jumelles",
+        "type": "dissident"
+      }
+    ],
+    "contenu": "Garnison grineer ralliée à Kahl-175, le soldat devenu libre. Elle rassemble déserteurs, purs exilés et anciens esclaves du Narmer pour couvrir les routes de chars de tu fraternité — et de vengeance."
+  },
+  {
+    "id": "new_loka",
+    "titre": "New Loka",
+    "kind": "faction",
+    "year": "Ère Moderne",
+    "cluster": "Syndicats",
+    "relations": [
+      {
+        "cible": "amaryn",
+        "type": "dirigée_par"
+      },
+      {
+        "cible": "reines_jumelles",
+        "type": "opposition"
+      }
+    ],
+    "contenu": "Secte écologique issue du Terre, New Loka prêche le retour à une nature que l'Orokin a souillée. Son hygiène morale est absolue : la technologie est une maladie, et la pureté ne se négocie pas."
+  },
+  {
+    "id": "palladino",
+    "titre": "Palladino",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Syndicats",
+    "relations": [
+      {
+        "cible": "red_veil",
+        "type": "dirige"
+      },
+      {
+        "cible": "cressa_tal",
+        "type": "alliée"
+      }
+    ],
+    "contenu": "Figure cérémonielle du Red Veil, Palladino orchestre les sacrifices et les veillées. Ses silences ont le poids des confessions ; elle consacre chaque victime à une cause qu'elle seule peut nommer à voix basse."
+  },
+  {
+    "id": "perrin_sequence",
+    "titre": "The Perrin Sequence",
+    "kind": "faction",
+    "year": "Ère Moderne",
+    "cluster": "Syndicats",
+    "relations": [
+      {
+        "cible": "ergo_glast",
+        "type": "dirigée_par"
+      },
+      {
+        "cible": "parvos_granum",
+        "type": "hérésie_corpus"
+      }
+    ],
+    "contenu": "Dissidents du Corpus éliennent le profit derrière l'échange : un credo pacifiste et mercantile mené par Ergo Glast. Pour eux, le marché est une conversation, la violence une panne — et le Roi Solaire une vieille église qu'il faut contester."
+  },
+  {
+    "id": "red_veil",
+    "titre": "Red Veil",
+    "kind": "faction",
+    "year": "Ère Moderne",
+    "cluster": "Syndicats",
+    "relations": [
+      {
+        "cible": "palladino",
+        "type": "dirigée_par"
+      },
+      {
+        "cible": "new_loka",
+        "type": "alliance"
+      }
+    ],
+    "contenu": "Société secrète de purificateurs, le Red Veil ne connaît d'autre réponse à la culpabilité que le sang versé. Entre cérémonies d'expiation et assassinats rituels, ils confondent reddition et justice — pour le plus grand profit de personne."
+  },
+  {
+    "id": "steel_meridian",
+    "titre": "Steel Meridian",
+    "kind": "faction",
+    "year": "Ère Moderne",
+    "cluster": "Syndicats",
+    "relations": [
+      {
+        "cible": "cressa_tal",
+        "type": "dirigée_par"
+      },
+      {
+        "cible": "reines_jumelles",
+        "type": "défection"
+      }
+    ],
+    "contenu": "Brume grineer ayant fait défection, le Steel Meridian protège les colonies que l'Empire abandonne. Mené par Cressa Tal, il courtise ni l'or ni l'acier, seulement la promesse de ne plus jamais servir — et de faire payer ceux qui l'ont exigé."
+  }
+]

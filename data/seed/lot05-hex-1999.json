@@ -1,0 +1,461 @@
+[
+  {
+    "id": "albrecht",
+    "titre": "Albrecht Entrati",
+    "kind": "character",
+    "cluster": "1999",
+    "relations": [
+      {
+        "cible": "indifference",
+        "type": "dette_envers_la_paroi"
+      },
+      {
+        "cible": "loid",
+        "type": "confiance_absolue"
+      },
+      {
+        "cible": "drifter",
+        "type": "paradoxe_1999"
+      },
+      {
+        "cible": "arthur",
+        "type": "concepteur"
+      },
+      {
+        "cible": "ballas",
+        "type": "méfiance"
+      }
+    ],
+    "contenu": "Albrecht Entrati, découvreur du Vide et premier à en franchir la lisière vivant. Sa traversée ouvrit une porte : il en rapporta des pages de notes, une main offerte, et la Paroi — l'entité qu'il nomma l'Indifférence, et qui ne rend jamais ce qu'elle prête.\n\nSa vie entière se replia sur une seule promesse : solder la dette contractée auprès de l'Homme dans le Mur. Dans le Sanctum de Deimos, puis dans la boucle de 1999, il bricola le temps comme d'autres bricolent la cendre — laissant au Drifter, à Loid et à Arthur les clés d'une mécanique dont il fut à la fois l'horloger et le prisonnier.\n\nSes notes courent sur les murs de Höllvania : avertissements, arpèges de glace, géométrie du retour."
+  },
+  {
+    "id": "amir",
+    "titre": "Amir Beckett",
+    "kind": "character",
+    "cluster": "1999",
+    "year": "1999",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "pacte_technocyte"
+      },
+      {
+        "cible": "volt",
+        "type": "precurseur_biologique"
+      },
+      {
+        "cible": "arthur",
+        "type": "freres_d_armes"
+      },
+      {
+        "cible": "lettie",
+        "type": "soins"
+      }
+    ],
+    "contenu": "Amir Beckett, Proto-Volt, est la décharge de l'équipe : irritable, vif, une rage électrique trop proche de la peau. Le Technocyte d'Albrecht a transformé son système nerveux en génératrice, et chaque émotion forte fait crépiter des arcs entre ses paumes.\n\nSon tempérament explosif est autant une malédiction qu'une arme : il discipline sa foudre pour tempêter les machines, court-circuiter le Scaldra et illuminer les tunnels de Höllvania. Lettie l'astreint à des contrôles réguliers ; Arthur canalise ses colères en tactique.\n\nPrototype du futur Volt, il vit chaque combat comme une surcharge qu'il apprend à contenir — un éclair qui cherche encore son câble."
+  },
+  {
+    "id": "aoi",
+    "titre": "Aoi Morohoshi",
+    "kind": "character",
+    "cluster": "1999",
+    "year": "1999",
+    "relations": [
+      {
+        "cible": "arthur",
+        "type": "romance_passee"
+      },
+      {
+        "cible": "eleanor",
+        "type": "amitié"
+      },
+      {
+        "cible": "albrecht",
+        "type": "pacte_technocyte"
+      },
+      {
+        "cible": "mag",
+        "type": "precurseur_biologique"
+      }
+    ],
+    "contenu": "Aoi Morohoshi, Proto-Mag du Hex, est l'aiguille de l'équipe : agile, mordante, toujours en train de calculer trois coups d'avance. Digne héritière d'une famille de magasins d'arcade de la Mandra centrale, elle fut convertie par les échantillons Helminth d'Albrecht après avoir démontré une maîtrise brutale du champ magnétique.\n\nSon pass-avec-Arthur est un pouls intact : une romance passée qui saigne encore dans chaque conversation sur les toits, chaque mission où leurs mains se frôlent sans se toucher. Eleanor est sa plus proche confidente, et le lien télépathique des jumeaux lui sert de miroir pour décoder ce qu'Arthur ne dit jamais.\n\nElle incarne la vitesse du flux magnétique — polarité, traction, éclat — et le souvenir d'une époque où Höllvania était encore un futur possible."
+  },
+  {
+    "id": "arthur",
+    "titre": "Arthur Nightingale",
+    "kind": "character",
+    "cluster": "1999",
+    "year": "1999",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "pacte_technocyte"
+      },
+      {
+        "cible": "drifter",
+        "type": "alliance_1999"
+      },
+      {
+        "cible": "indifference",
+        "type": "écho_marginal"
+      },
+      {
+        "cible": "eleanor",
+        "type": "lien_fraternel_telepathique"
+      },
+      {
+        "cible": "aoi",
+        "type": "romance_passee"
+      },
+      {
+        "cible": "excalibur",
+        "type": "precurseur_biologique"
+      },
+      {
+        "cible": "scaldra",
+        "type": "guerre_urbaine"
+      },
+      {
+        "cible": "technocyte",
+        "type": "infection_rongeante"
+      }
+    ],
+    "contenu": "Né en Britannia, Arthur Nightingale fut soldat avant d'être protoframe. Officier aux mains sales, il porte le poids d'une guerre que personne n'a demandé à nommer. Sa sœur Eleanor, elle, entendait des voix depuis l'enfance — voix devenues esprits, puis armes. Ensemble, ils rejoignirent la cité-état de Höllvania, cernée par le foyer du Techrot.\n\nAlbrecht Entrati le rencontra au plus fort de la contagion et lui proposa un marché : se soumettre à un échantillon de la souche Helminth pour devenir une arme vivante — un protoframe. Les six acceptèrent. Leur transformation reste incomplète : Arthur garde sa mémoire et sa personnalité, mais aussi les accès de maladie d'une symbiose qui les dévore lentement de l'intérieur, comme la peste elle-même.\n\nChef du groupe, il incarne la décision froide : planifier le prochain coup contre le Scaldra pendant qu'Eleanor lui glisse à l'oreille ce que les autres pensent réellement. Son passé avec Aoi n'est jamais tout à fait refermé — une romance éteinte dans les brûlures de l'incendie urbain — et seuls les murs de la Mandra centrale savent combien de nuits il a veillé la fièvre d'Amir.\n\nPrototype biologique de l'Excalibur des temps futurs, Arthur demeure le premier d'entre eux : celui qui a choisi de se laisser infecter pour que le groupe existe."
+  },
+  {
+    "id": "eleanor",
+    "titre": "Eleanor Nightingale",
+    "kind": "character",
+    "cluster": "1999",
+    "year": "1999",
+    "relations": [
+      {
+        "cible": "arthur",
+        "type": "lien_fraternel_telepathique"
+      },
+      {
+        "cible": "aoi",
+        "type": "amitié"
+      },
+      {
+        "cible": "albrecht",
+        "type": "pacte_technocyte"
+      },
+      {
+        "cible": "nyx",
+        "type": "precurseur_biologique"
+      }
+    ],
+    "contenu": "Eleanor Nightingale, Proto-Nyx et sœur d'Arthur, porte l'esprit du groupe : une télépathie aussi intime que terrifiante, capable de lire les pensées comme d'autres lisent les journaux. C'est par elle que le Hex garde une colonne de vérité dans la cacophonie de la guerre.\n\nDévastée par le même poison que son frère, elle canalise sa souffrance en une psyché armée : contrôle, distraction, asservissement des volontés Scaldra. Son lien unique avec Arthur dépasse la famille — elle sent sa douleur physique, ses mensonges, et parfois ses rêves, dans une communion réciproque qu'ils ne décrivent jamais aux autres.\n\nSous la lumière de la Mandra, Eleanor reste la plus vulnérable et la plus indispensable : celle qui fait du groupe une seule voix, et de sa propre anxiété un bouclier."
+  },
+  {
+    "id": "flare",
+    "titre": "Flare Varleon",
+    "kind": "character",
+    "cluster": "1999",
+    "year": "1999",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "pacte_technocyte"
+      },
+      {
+        "cible": "temple",
+        "type": "precurseur_biologique"
+      },
+      {
+        "cible": "arthur",
+        "type": "freres_d_armes"
+      },
+      {
+        "cible": "kaya",
+        "type": "amitié"
+      }
+    ],
+    "contenu": "Flare Varleon, Proto-Temple, porte Höllvania en riff : guitare Lizzie en bandoulière, une présence qui transforme chaque avenue en scène. Convertie par les échantillons Helminth d'Albrecht, elle mêle son flux musical aux ondes technocytes pour faire vibrer — et démolir — le Scaldra.\n\nSa partition est une déclaration : plus la ville brûle, plus elle joue fort. Elle rejoint le Hex depuis la mandra underground, avec l'amitié de Kaya pour seule caution, et la musique pour seul manifeste.\n\nProto-Temple des futurs étoiles, Flare démontre que l'art peut être une arme de destruction massive — quand il est joué au bon volume."
+  },
+  {
+    "id": "kaya",
+    "titre": "Kaya Velasco",
+    "kind": "character",
+    "cluster": "1999",
+    "year": "1999",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "pacte_technocyte"
+      },
+      {
+        "cible": "nova",
+        "type": "precurseur_biologique"
+      },
+      {
+        "cible": "arthur",
+        "type": "freres_d_armes"
+      },
+      {
+        "cible": "flare",
+        "type": "amitié"
+      },
+      {
+        "cible": "lettie",
+        "type": "collegue"
+      }
+    ],
+    "contenu": "Kaya Velasco, Proto-Nova, est l'esprit des dimensions de la Mandra : toute en calcul, en reflets, en anticipations. Le Technocyte d'Albrecht a plié sa perception du temps ; elle vit quelques secondes d'avance, et cette avance sauve le groupe plus souvent que les fusils.\n\nDétentrice de l'Archimédée, elle jongle avec la gravité quantique comme avec ses pensées vélocement. Elle lie entre eux les protoframes de la Round Table — Flare, Vena, Velemir — et prend Lettie au mot sur l'hygiène des contaminants.\n\nPrototype de la future Nova, elle est la preuve qu'avec un peu d'obscurité bien calculée, on peut plier l'univers à sa vitesse."
+  },
+  {
+    "id": "lettie",
+    "titre": "Leticia Garcia",
+    "kind": "character",
+    "cluster": "1999",
+    "year": "1999",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "pacte_technocyte"
+      },
+      {
+        "cible": "trinity",
+        "type": "precurseur_biologique"
+      },
+      {
+        "cible": "arthur",
+        "type": "freres_d_armes"
+      },
+      {
+        "cible": "amir",
+        "type": "soins"
+      },
+      {
+        "cible": "technocyte",
+        "type": "endiguement"
+      }
+    ],
+    "contenu": "Leticia Garcia, \"Lettie\", Proto-Trinity et médecin du Hex, est la garde-malade de la contamination. Son humanité s'attache à la vie quand tout le reste ne voit que des soldats : elle panse, suture, désinfecte, et surtout étudie le Technocyte qui la consume pour le retourner contre lui-même.\n\nIssue du système de santé de la Mandra, elle fut convertie par Albrecht pour sa résistance étonnante aux prions. Son Proto-Trinity rayonne : soins, maillage, réanimation — le socle silencieux sur lequel repose la survie du groupe.\n\nElle dit souvent qu'un médecin n'a pas le droit de mourir avant son dernier patient. Elle prépare donc un antidote en même temps qu'un linceul."
+  },
+  {
+    "id": "major-noz",
+    "titre": "Major N.O.Z.",
+    "kind": "character",
+    "cluster": "1999",
+    "year": "1999",
+    "relations": [
+      {
+        "cible": "scaldra",
+        "type": "commande"
+      },
+      {
+        "cible": "arthur",
+        "type": "obsession"
+      },
+      {
+        "cible": "technocyte",
+        "type": "peur"
+      },
+      {
+        "cible": "vena",
+        "type": "ennemi"
+      }
+    ],
+    "contenu": "Le Major N.O.Z. est le visage du Scaldra : un officier calculateur dont les lunettes réfléchissent la ville en flammes. Sa certitude est toute simple : le Technocyte doit être incinéré, et quiconque s'y oppose l'est avec lui.\n\nIl ne voit pas le Hex comme des héros mais comme une contamination supplémentaire. Son obsession pour Arthur dépasse la stratégie — une guerre personnelle, muette, une chasse qui embrase les toits de Höllvania.\n\nSes rapports de purge sont impitoyables ; sa seule peur, avouée nulle part, est la voix de l'Homme dans le Mur qui lui murmure que ce qu'il brûle ne meurt jamais vraiment."
+  },
+  {
+    "id": "protoframe_minerva",
+    "titre": "Minerva Hendricks",
+    "kind": "character",
+    "year": "1999",
+    "cluster": "1999",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "pacte_technocyte"
+      },
+      {
+        "cible": "saryn",
+        "type": "precurseur_biologique"
+      },
+      {
+        "cible": "arthur",
+        "type": "freres_d_armes"
+      },
+      {
+        "cible": "kaya",
+        "type": "collegue"
+      },
+      {
+        "cible": "velemir",
+        "type": "collegue"
+      }
+    ],
+    "contenu": "Minerva Hendricks, Proto-Saryn et spécialiste des armes de la Round Table. Chaque courbe, chaque munition qu'elle manufacture est un compromis entre savoir biologique et souffrance contenue : elle neutralise avec le poison ce que le Scaldra ne sait incendier."
+  },
+  {
+    "id": "quincy",
+    "titre": "Quincy Isaacs",
+    "kind": "character",
+    "cluster": "1999",
+    "year": "1999",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "pacte_technocyte"
+      },
+      {
+        "cible": "cyte-09",
+        "type": "precurseur_biologique"
+      },
+      {
+        "cible": "arthur",
+        "type": "freres_d_armes"
+      },
+      {
+        "cible": "scaldra",
+        "type": "traque"
+      }
+    ],
+    "contenu": "Quincy Isaacs, Proto-Cyte-09, est le tireur d'élite taciturne du Hex. Ses mots se comptent en munitions : dire moins pour viser juste. Le Technocyte d'Albrecht a fusionné son œil à une balistique d'acier — chaque cartouche se souvient de sa trajectoire, chaque silhouette devient une cible prioritaire.\n\nDes toits de Höllvania, il efface les officiers Scaldra avant même que l'alarme soit tirée. Sa précision est sa façon de parler, sa façon d'aimer le groupe : il protège depuis l'ombre ce que les autres défendent à découvert.\n\nPrototype du futur Cyte-09, il est celui que l'on n'entend jamais — et qui ne rate jamais."
+  },
+  {
+    "id": "ryoku",
+    "titre": "Ryoku",
+    "kind": "character",
+    "cluster": "1999",
+    "year": "1999",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "pacte_technocyte"
+      },
+      {
+        "cible": "ash",
+        "type": "precurseur_biologique"
+      },
+      {
+        "cible": "vena",
+        "type": "rivale"
+      },
+      {
+        "cible": "arthur",
+        "type": "mentor"
+      }
+    ],
+    "contenu": "Ryoku, Proto-Ash, est le sabre posé dans un coin de la Mandra : silencieux, revenu d'un futur où tout a été perdu. Le Technocyte d'Albrecht a fait de lui l'ombre de lui-même — un assassin dont on ne sait jamais s'il vient d'arriver ou de partir.\n\nSon mentorat d'Arthur est une transmission à rebours : l'aîné du futur apprend au chef du présent à tuer sans laisser de traces, à négocier avec la mort comme avec un collège. Sa rivalité avec Vena est restée intacte, aussi vive qu'un duel à la première heure.\n\nPrototype du futur Ash, Ryoku démontre qu'un couteau invisible vaut parfois une armée entière."
+  },
+  {
+    "id": "scaldra",
+    "titre": "Les Scaldra",
+    "kind": "faction",
+    "cluster": "1999",
+    "year": "1999",
+    "relations": [
+      {
+        "cible": "major-noz",
+        "type": "commandee_par"
+      },
+      {
+        "cible": "arthur",
+        "type": "chasse"
+      },
+      {
+        "cible": "technocyte",
+        "type": "purge"
+      },
+      {
+        "cible": "aoi",
+        "type": "opposition"
+      },
+      {
+        "cible": "quincy",
+        "type": "traque"
+      },
+      {
+        "cible": "amir",
+        "type": "opposition"
+      }
+    ],
+    "contenu": "Les Scaldra sont la main militaire de la Mandra et de Höllvania : une milice d'incinération dont le seul vocabulaire est le feu. Officiellement, ils purgent la ville du Technocyte ; en réalité, ils brûlent tout ce qui ressemble à une dissidence, un survivant, un souvenir.\n\nDe l'artillerie lourde aux jóvenes en tenue de flame constante, le Scaldra quadrille les quartiers, impose des quarantaines armées et traque le Hex comme une vermine. Leur doctrine, résumée par le Major N.O.Z. : \"aucun contaminé ne franchira la ligne\".\n\nPour le Hex, le Scaldra est moins un ennemi qu'un incinérateur : on ne négocie pas — on court, on tire, et on espère que l'essence est finie."
+  },
+  {
+    "id": "technocyte",
+    "titre": "Le Technocyte originel",
+    "kind": "entity",
+    "cluster": "1999",
+    "year": "1999",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "souche_etudiee"
+      },
+      {
+        "cible": "scaldra",
+        "type": "purge"
+      },
+      {
+        "cible": "arthur",
+        "type": "infection_rongeante"
+      },
+      {
+        "cible": "lettie",
+        "type": "endiguement"
+      },
+      {
+        "cible": "indifference",
+        "type": "paradoxe_vivant"
+      }
+    ],
+    "contenu": "Le Technocyte originel — ou \"Techrot\" — est la souche de l'Infestation avant qu'elle ne devienne légende : un prion-musique qui réécrit la chair, la transformer en agrégats de graisse, de métal et de souvenirs mal accordés.\n\nC'est l'arme que les voix de la Mandra appellent le paradoxe vivant : née de la même matrice que les protoframes, elle tend le même piège que l'Indifférence avec laquelle Albrecht a troqué son savoir. Elle chante, elle s'insinue, elle fusionne la matière comme un quatuor infernal.\n\nLe Scaldra la brûle, le Hex la combat, et les futurs Tenno en feront la légende des Infestés. Mais ici, en 1999, elle est encore une ponctuation d'angoisse dans le brouillard de Höllvania."
+  },
+  {
+    "id": "velemir",
+    "titre": "Velemir",
+    "kind": "character",
+    "cluster": "1999",
+    "year": "1999",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "pacte_technocyte"
+      },
+      {
+        "cible": "frost",
+        "type": "precurseur_biologique"
+      },
+      {
+        "cible": "arthur",
+        "type": "freres_d_armes"
+      },
+      {
+        "cible": "lettie",
+        "type": "collegue"
+      }
+    ],
+    "contenu": "Velemir, Proto-Frost, traîne le froid de la vieille Europe dans la Mandra : docteur carabin, sale caractère, une patience de glacier. Le Technocyte d'Albrecht a scellé en lui un pergélisol intérieur qui ralentit toute infection — et toute conversation.\n\nGarde d'un stock de médicaments et d'une mémoire de l'avant-contagion, il veille sur Lettie comme sur une junior, et sur Arthur comme sur un patient impossible. Sa fureur givrée nettoie certains corridors entiers sans un mot.\n\nPrototype du futur Frost, Velemir est la preuve que même la glace peut être un acte de soin."
+  },
+  {
+    "id": "vena",
+    "titre": "Vena",
+    "kind": "character",
+    "cluster": "1999",
+    "year": "1999",
+    "relations": [
+      {
+        "cible": "albrecht",
+        "type": "pacte_technocyte"
+      },
+      {
+        "cible": "garuda",
+        "type": "precurseur_biologique"
+      },
+      {
+        "cible": "ryoku",
+        "type": "rivale"
+      },
+      {
+        "cible": "arthur",
+        "type": "freres_d_armes"
+      }
+    ],
+    "contenu": "Vena, Proto-Garuda, est l'effusion de sang de la Round Table : une combattante pour qui chaque blessure est une ressource. Issue d'un futur alternatif, elle rejoint le Hex avec la ferveur d'une croisade personnelle contre l'Indifférence — et le Technocyte d'Albrecht lui rend la guerre plus douce encore.\n\nSa rivalité avec Ryoku est un duel permanent, souriant et sans merci, que seul Arthur parvient à canaliser en mission commune. Elle fusionne la rage garudienne au goutte-à-goutte de la technique : griffes, plasma, et un appétit de combat qui stupéfie même le Scaldra.\n\nPrototype de la future Garuda, Vena est la preuve que la douleur, bien distribuée, est une monnaie d'échange fiable."
+  }
+]

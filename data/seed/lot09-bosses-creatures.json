@@ -1,0 +1,218 @@
+[
+  {
+    "id": "ambulas",
+    "titre": "Ambulas",
+    "kind": "entity",
+    "year": "Ère Moderne",
+    "cluster": "Corpus",
+    "relations": [
+      {
+        "cible": "frohd_bek",
+        "type": "créé_par"
+      },
+      {
+        "cible": "nef_anyo",
+        "type": "compagnon_de_secteur"
+      }
+    ],
+    "contenu": "Plateforme majeure du projet Animus, Ambulas fut développée sous la supervision de Frohd Bek : une machine d'exosquelette dotée d'une IA d'apprentissage, conçue pour voler les données de combat au corps à corps et les revendre au plus offrant.\n\nChaque unité détruite laisse à ses copies la mémoire de ses combats, transformant la machine ordinaire en adversaire plus informé. Projet-témoin du Conseil, il illustre à lui seul ce que le Corpus appelle « progrès » : une guerre qui apprend à se payer elle-même."
+  },
+  {
+    "id": "captain_vor",
+    "titre": "Captain Vor",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Grineer",
+    "relations": [
+      {
+        "cible": "reines_jumelles",
+        "type": "allégeance_stratégique"
+      },
+      {
+        "cible": "indifference",
+        "type": "clé_de_janus_obsession"
+      },
+      {
+        "cible": "kela_de_thaym",
+        "type": "rivalité"
+      }
+    ],
+    "contenu": "Officier grineer dont l'orgueil dépasse les paliers de fidelité, Vor a traqué le Tenno des chantiers de l'ossuaire aux cavernes de la Terre, persuadé qu'un simple code perdu — la Clé de Janus — suffirait à percer les secrets de l'ennemi.\n\nRallié aux Reines pour ce qu'elles gouvernent, il n'en a jamais renié l'obsession personnelle : chaque défaite lui apparaît comme un maillon d'une chaîne encore plus vaste. Face aux arènes de Kela de Thaym, il se vit en stratège ; elle, en pionnière. Leurs honneurs se toisent plus qu'ils ne s'embrassent."
+  },
+  {
+    "id": "jackal",
+    "titre": "Jackal",
+    "kind": "entity",
+    "year": "Ère Moderne",
+    "cluster": "Corpus",
+    "relations": [
+      {
+        "cible": "nef_anyo",
+        "type": "prototype_déployé"
+      }
+    ],
+    "contenu": "Proxy d'assaut déployé au cœur des chantiers de Vénus, Jackal est un quadrupède mécanique dont la silhouette annonçait déjà la lignée des machines de guerre Corpus. Premier de son gabarit, il patrouille sous les ordres informatiques de Nef Anyo avec une régularité sans humanité.\n\nAbattu par le Tenno sans que sa programmation ne demande ni pardon ni merci, sa carcasse hante encore les couloirs de la Vallée. De ses boucles d'acier et de ses canons à éclats, il demeure le prototype d'une logique que le Corpus n'a jamais vraiment réussi à oublier."
+  },
+  {
+    "id": "kela_de_thaym",
+    "titre": "Kela de Thaym",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Grineer",
+    "relations": [
+      {
+        "cible": "reines_jumelles",
+        "type": "loyauté_des_arènes"
+      },
+      {
+        "cible": "captain_vor",
+        "type": "rivale"
+      },
+      {
+        "cible": "vay_hek",
+        "type": "concurrence_des_lord"
+      }
+    ],
+    "contenu": "Reine de Sedna et maîtresse du Rathuum, Kela de Thaym a transformé la justice grineer en spectacle : des arènes où les condamnés s'affrontent jusqu'à la dilution. Sa affection pour les rituels et son dédain pour les innovations made ses tribunaux aussi célèbres que sa pluie d'artillerie.\n\nLoyale aux Reines, elle y tient aussi durement sa place : face à Vor, elle ne voit qu'un prétentieux perdu dans ses clés ; face à Vay Hek, une concurrence de terres et de mascottes. Dans l'empire du clone, ces trois voix partagent le même ton, jamais le même siège."
+  },
+  {
+    "id": "lech_kril",
+    "titre": "Lech Kril",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Grineer",
+    "relations": [
+      {
+        "cible": "reines_jumelles",
+        "type": "loyauté_de_lieutenant"
+      },
+      {
+        "cible": "sargas_ruk",
+        "type": "état-major_commun"
+      }
+    ],
+    "contenu": "Lieutenant de fer, Lech Kril commande par glaçons et protocoles : sa patte d'acier cisèle le sol et son arme gelée paralyse une escouade. Ancienne figure des hautes terres, il sert les Reines sans question ni fantaisie.\n\nAux états-majors grineer, son froid complète la fournaise de Ruk : deux manières de plier le monde, une seule allégeance. Sa patience est celle d'un glacier — lente, et décisive."
+  },
+  {
+    "id": "lephantis",
+    "titre": "Léphantis",
+    "kind": "entity",
+    "year": "Guerre Ancienne",
+    "cluster": "Infestés",
+    "relations": [
+      {
+        "cible": "technocyte",
+        "type": "arme_biologique_orokin"
+      },
+      {
+        "cible": "hunhow",
+        "type": "conçu_contre"
+      }
+    ],
+    "contenu": "Le Léphantis n'est pas une créature naturellement née de l'Infestation : c'est une arme biologique forgée par l'Orokin pendant la Guerre Ancienne, un colosse à trois gueules conçu pour faire plier la flotte des Sentients avec la chair elle-même.\n\nNoyau de contre-attaque plus vieux que la mémoire moderne, il fut éveillé et rêveur sur un ancien berceau de guerre. Sa mâchoire triplée résonne d'un plan orokin : contre Hunhow et sa descendance, les anciens n'opposèrent pas la machine, mais l'infection parfaite."
+  },
+  {
+    "id": "phorid",
+    "titre": "Phorid",
+    "kind": "entity",
+    "year": "Ère Moderne",
+    "cluster": "Infestés",
+    "relations": [
+      {
+        "cible": "technocyte",
+        "type": "émanation_du_fléau"
+      },
+      {
+        "cible": "lephantis",
+        "type": "confrère_de_la_souche"
+      }
+    ],
+    "contenu": "Fureur ramassée du fléau, Phorid court les tunnels infestés comme une douleur qui aurait appris à marcher. Sa gueule atrophiée suit les odeurs des Tenno ; son cri déchire comme un cambrioleur.\n\nÉmanation la plus simple de la souche technocyte, il partage avec Léphantis la même stature d'antiques fléaux. Il n'a ni nom ni stratégie : rien qu'un appétit — et une leçon pour quiconque joue avec la pourriture."
+  },
+  {
+    "id": "prelat_zelote",
+    "titre": "Le Prélat Zélote",
+    "kind": "entity",
+    "year": "Ère Moderne",
+    "cluster": "Infestés",
+    "relations": [
+      {
+        "cible": "nora_night",
+        "type": "affaire_d_arlo"
+      },
+      {
+        "cible": "technocyte",
+        "type": "dévotion_rongée"
+      }
+    ],
+    "contenu": "Prêtre du culte d'Arlo, le Prélat Zélote dirigea les fidèles de la Crue et de la Lumière sans jamais remarquer qu'il avait déjà été dévoré. Sa dévotion, tordue par l'Infestation, fit de lui le saint d'une cause déjà morte.\n\nL'affaire d'Arlo, révélée par Nora Night sur les ondes, dévoila ce qu'il était devenu : un monument de croyance rongée. Il demeure l'exemple le plus net de la manière dont le fléau emprunte parfois les voix de l'espoir."
+  },
+  {
+    "id": "ropalolyst",
+    "titre": "Le Ropalolyst",
+    "kind": "entity",
+    "year": "Ère Moderne",
+    "cluster": "Sentients",
+    "relations": [
+      {
+        "cible": "natah",
+        "type": "contrôlé_par"
+      },
+      {
+        "cible": "hunhow",
+        "type": "lignée_sentiente"
+      }
+    ],
+    "contenu": "Erreur volante faite chair, le Ropalolyst est un colosse sentient suspendu au-dessus des cieux de Jupiter, son corps d'oiseau de métal crachant des ombres de guerre. Après la Nouvelle Guerre, on le retrouve sous l'influence de Natah, veillant les restes de la flotte.\n\nNé des mêmes abysses que la lignée d'Hunhow, il incarne la terreur sentiente : une chose qui ne comprend ni la retraite ni la paix."
+  },
+  {
+    "id": "sargas_ruk",
+    "titre": "Sargas Ruk",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Grineer",
+    "relations": [
+      {
+        "cible": "reines_jumelles",
+        "type": "loyauté_du_général"
+      },
+      {
+        "cible": "vay_hek",
+        "type": "collègue_commandant"
+      }
+    ],
+    "contenu": "Général des feux du Système, Sargas Ruk tonne depuis les confins des champs de bataille : sa haine des Tenno vaut la loyauté qu'il porte aux Reines. Sa voix récite les litanies de la flamme ; ses épaules crachent l'incendie.\n\nCommandant brutal aux côtés de Vay Hek, il tient la ligne grineer comme une forge. Pour lui, chaque bataille est un foyer — et les Tenno, la paille qu'il veut voir finir en cendres."
+  },
+  {
+    "id": "the_sergeant",
+    "titre": "Le Sergent",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Corpus",
+    "relations": [
+      {
+        "cible": "nef_anyo",
+        "type": "administration_corpus"
+      }
+    ],
+    "contenu": "Gérant des annexes Corpus de Phobos, le Sergent est un fonctionnaire d'une médiocrité si parfaite qu'elle en est historique. Son matériel est dépareillé, ses patrouilles mal calculées, et sa défaite si régulière que les Tenno viennent parfois lui rendre visite comme on consulte une curiosité.\n\nS'il impressionne par son incompétence, il impressionne surtout Nef Anyo par sa longévité : même battu cent fois, il demeure en poste. Sa seule vraie force, peut-être, est de prouver que dans la hiérarchie Corpus, les échecs peuvent aussi devenir des reliques."
+  },
+  {
+    "id": "wolf_of_saturn_six",
+    "titre": "Le Loup de Saturne Six",
+    "kind": "character",
+    "year": "Ère Moderne",
+    "cluster": "Grineer",
+    "relations": [
+      {
+        "cible": "reines_jumelles",
+        "type": "fugitif_du_bagne"
+      },
+      {
+        "cible": "nora_night",
+        "type": "icône_des_ondes"
+      }
+    ],
+    "contenu": "Brute grineer échappée du Bagne de Saturne Six, le Loup de Saturne est un fugitif que la machine militaire n'a jamais rattrapé. Sa carrure imposante, son masque de fer et sa haine méthodique en font l'une des rares créatures que les Reines hésitent à renvoyer en cage.\n\nChasseur de Tenno devenu icône de la résistance Nightwave, il traverse la galaxie comme une pointe de colère. Ses apparitions, contées par Nora Night, ont transformé une brute en légende — et un simple prisonnier en instrument que nul ne contrôle."
+  }
+]

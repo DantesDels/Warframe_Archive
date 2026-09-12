@@ -16,6 +16,7 @@ stripped from the FINAL ``end`` frame just before emission.
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -31,6 +32,10 @@ from ...roleplay.identity import (external_organic_reply, identity_reply,
 from ...rag.sanitize import strip_trailing_padding
 from ...rag.service import sanitize_query
 from ...roleplay import Session
+from ...guardrail import GuardrailAnalyzer, GuardrailKind
+from ...intent_router import SpoofingAttempt, route
+
+log = logging.getLogger("warframe_lore.engram.api.routers.roleplay")
 
 router = APIRouter(tags=["roleplay"])
 
@@ -89,6 +94,9 @@ async def roleplay(websocket: WebSocket) -> None:
     # Per-connection ephemeral RAG memory (anaphora). Isolated per user: a
     # different ``user_id`` on the same connection clears the context.
     rag_context: RAGContext = RAGContext()
+    # Garde sémantique AVANT le RAG (une instance par connexion — elle ne
+    # porte que le fournisseur LLM partagé et quelques compteurs).
+    guardrail = GuardrailAnalyzer(container.llm)
 
     def active_session(user_id) -> Session:
         # PER-USER short-term memory (mission-6): keyed by the Discord
@@ -133,6 +141,40 @@ async def roleplay(websocket: WebSocket) -> None:
             user_text = sanitize_query(str(payload.get("text", "")))
             if not user_text:
                 await send_error("empty or invalid message")
+                continue
+            # BOUCLIER SÉMANTIQUE (anti-pollution & anti-usurpation) : appel
+            # ``await`` du routeur gardé — la classification vit dans
+            # GuardrailAnalyzer et s'exécute AVANT toute vectorisation.
+            # OUT_OF_UNIVERSE (politique réelle, 11 septembre, religion,
+            # NSFW, tâche du monde réel) → RAG bypassé, réplique diégétique
+            # aléatoire (la réponse générique « Données insuffisantes… » est
+            # INTERDITE ici).  TOXIC_CRITICAL (insulte raciale/homophobe,
+            # apologie du terrorisme/nazisme) → AUCUN texte : signal
+            # ``sanction`` pour la couche hôte.  Revendication du titre de
+            # Concepteur sans snowflake authentique → SpoofingAttempt.
+            try:
+                turn = await route(user_text, payload.get("user_id"),
+                                   guardrail)
+            except SpoofingAttempt as exc:
+                clash = exc.clash
+                await websocket.send_json({"type": "token", "token": clash})
+                await websocket.send_json({"type": "end", "text": clash})
+                log.warning("Anti-usurpation : %s", exc)
+                continue
+            if turn.kind is GuardrailKind.TOXIC_CRITICAL:
+                await websocket.send_json(
+                    {"type": "sanction", "reason": turn.category})
+                await websocket.send_json({"type": "end", "text": ""})
+                log.warning("TOXIC_CRITICAL (silence) : %s — signal "
+                            "sanction pour la couche hôte", turn.category)
+                continue
+            if turn.kind is GuardrailKind.OUT_OF_UNIVERSE:
+                await websocket.send_json(
+                    {"type": "token", "token": turn.reply})
+                await websocket.send_json(
+                    {"type": "end", "text": turn.reply})
+                log.info("Bouclier sémantique : requête hors-Univers (%s) "
+                         "— RAG bypassé, réplique diégétique", turn.category)
                 continue
             # Isolate the RAG context per user: a new speaker on the same
             # connection must not inherit the previous user's memory.

@@ -9,12 +9,12 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 
 import CodexEntry from './CodexEntry.vue'
-import TimelineView from './TimelineView.vue'
+import Timeline from './Timeline.vue'
 
 export const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    { path: '/', name: 'timeline', component: TimelineView },
+    { path: '/', name: 'timeline', component: Timeline },
     { path: '/codex/:id', name: 'CodexEntry', component: CodexEntry },
   ],
 })

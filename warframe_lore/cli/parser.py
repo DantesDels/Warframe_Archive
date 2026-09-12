@@ -31,8 +31,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
 
     # --- run
-    p_run = sub.add_parser("run", help="Run the full pipeline "
-                                       "(incremental delta).")
+    p_run = sub.add_parser("run", help="Run the full pipeline (incremental "
+                                       "delta), build the Timeline and "
+                                       "launch the web UI.")
     p_run.add_argument("--force", action="store_true",
                        help="Re-process all pages (ignore the delta).")
     p_run.add_argument("--skip-sql", action="store_true",

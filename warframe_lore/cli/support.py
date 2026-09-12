@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import logging
 import os
+import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -67,6 +69,84 @@ def port_free(port: int) -> bool:
         except OSError:
             return False
     return True
+
+
+# ---------------------------------------------------------- timeline build
+# La Timeline (``/timeline/`` dans l'UI) est une app Vue/ELK servie depuis
+# ``ui/static/timeline``. Elle est construite depuis le vault Obsidian :
+#   1. ``scripts/extractor.js`` (Node) lit ``data/vault/`` et écrit
+#      ``data/timeline/graph.json`` (racine du projet) ;
+#   2. Vite compile l'app vers ``ui/static/timeline/`` (graph.json inclus).
+TIMELINE_DIR = PROJECT_ROOT / "warframe_lore" / "ui" / "timeline"
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _print_safe(text: str) -> None:
+    """Affiche ``text`` sans planter sur les consoles non-UTF-8 (cp1252)."""
+    try:
+        encoding = sys.stdout.encoding or "utf-8"
+        sys.stdout.buffer.write((text + "\n").encode(encoding, "replace"))
+        sys.stdout.buffer.flush()
+    except (AttributeError, UnicodeEncodeError):
+        print(text, flush=True)
+
+
+def _timeline_step(step: str, *cmd: str) -> bool:
+    """Exécute une étape de la construction Timeline et affiche sa sortie."""
+    _print_safe(f"Timeline: {step} ...")
+    try:
+        proc = subprocess.run(
+            [str(a) for a in cmd],
+            cwd=str(TIMELINE_DIR),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except OSError as exc:
+        print(f"Timeline: {step} impossible à lancer ({exc}).",
+              file=sys.stderr)
+        return False
+    out = (_ANSI_RE.sub("", proc.stdout or "")).strip()
+    if out:
+        _print_safe(out)
+    if proc.returncode != 0:
+        print(f"Timeline: {step} a échoué (exit {proc.returncode}).",
+              file=sys.stderr)
+        return False
+    print(f"Timeline: {step} terminé.")
+    return True
+
+
+def build_timeline() -> bool:
+    """Génère la Timeline (extraction Obsidian + build Vue/Vite).
+
+    Intégrée à ``cephalon run`` : le résultat est servi automatiquement par
+    l'interface sur ``/timeline/``. Retourne False (sans lever) si Node, le
+    dossier ou npm install font défaut — ``run`` continue quand même.
+    """
+    node = shutil.which("node")
+    if node is None:
+        print("Timeline: Node.js introuvable — construction ignorée.",
+              file=sys.stderr)
+        return False
+    if not TIMELINE_DIR.is_dir():
+        print(f"Timeline: dossier introuvable ({TIMELINE_DIR}) — "
+              "construction ignorée.", file=sys.stderr)
+        return False
+    vite_bin = TIMELINE_DIR / "node_modules" / "vite" / "bin" / "vite.js"
+    if not vite_bin.is_file():
+        print("Timeline: Vite non installé (npm install) — construction "
+              "ignorée.", file=sys.stderr)
+        return False
+
+    ok = _timeline_step("extraction Obsidian", node, "scripts/extractor.js")
+    if ok:
+        ok = _timeline_step("build Vite", node, vite_bin, "build")
+    if ok:
+        print("Timeline prête — servie sur /timeline/ de l'interface.")
+    return ok
 
 
 def launch_ui(config) -> None:

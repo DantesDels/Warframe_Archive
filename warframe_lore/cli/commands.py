@@ -19,6 +19,7 @@ from .support import (
     PROJECT_DEFAULT_DB_INIT_SQL,
     VERSION,
     build_config,
+    build_timeline,
     launch_ui,
     print_buckets,
 )
@@ -57,6 +58,7 @@ def _cmd_run(args) -> int:
         return 130
     print("Synchronisation completed successfully.")
     if not getattr(args, "no_ui", False):
+        build_timeline()
         launch_ui(config)
     return 0
 

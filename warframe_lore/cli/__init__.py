@@ -2,8 +2,9 @@
 
 Available commands (``cephalon`` prefix):
     * ``cephalon run``      : run the full pipeline (incremental delta,
-                              keeps existing content, inserts only new
-                              records) then launch the local web UI (browser).
+                              keeping existing content, inserting only new
+                              records) then build the Timeline and launch the
+                              local web UI (browser).
     * ``cephalon diff``     : preview the pages to update, without writing
                               (dry-run).
     * ``cephalon status``   : current state (pages, chunks, canon, last sync).

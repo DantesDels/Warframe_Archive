@@ -1,0 +1,5230 @@
+{
+  "nodes": [
+    {
+      "id": "acrithis",
+      "type": "entity",
+      "label": "Acrithis",
+      "year": "Intemporel",
+      "note": "",
+      "codex_slug": "acrithis",
+      "cluster": "Duviri",
+      "parentId": "cluster:duviri"
+    },
+    {
+      "id": "alad_v",
+      "type": "entity",
+      "label": "Alad V",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "alad_v",
+      "cluster": "Corpus",
+      "parentId": "cluster:corpus"
+    },
+    {
+      "id": "albrecht",
+      "type": "entity",
+      "label": "Albrecht Entrati",
+      "year": "",
+      "note": "",
+      "codex_slug": "albrecht",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "amaryn",
+      "type": "entity",
+      "label": "Amaryn",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "amaryn",
+      "cluster": "Syndicats",
+      "parentId": "cluster:syndicats"
+    },
+    {
+      "id": "ambulas",
+      "type": "entity",
+      "label": "Ambulas",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "ambulas",
+      "cluster": "Corpus",
+      "parentId": "cluster:corpus"
+    },
+    {
+      "id": "amir",
+      "type": "entity",
+      "label": "Amir Beckett",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "amir",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "aoi",
+      "type": "entity",
+      "label": "Aoi Morohoshi",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "aoi",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "arbiters_of_hexis",
+      "type": "entity",
+      "label": "Arbiters of Hexis",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "arbiters_of_hexis",
+      "cluster": "Syndicats",
+      "parentId": "cluster:syndicats"
+    },
+    {
+      "id": "archimedienne_yonta",
+      "type": "entity",
+      "label": "L'Archimédienne Yonta",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "archimedienne_yonta",
+      "cluster": "Zariman",
+      "parentId": "cluster:zariman"
+    },
+    {
+      "id": "arthur",
+      "type": "entity",
+      "label": "Arthur Nightingale",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "arthur",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "ash",
+      "type": "entity",
+      "label": "Ash",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "ash",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "atlas",
+      "type": "entity",
+      "label": "Atlas",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "atlas",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "avantus",
+      "type": "entity",
+      "label": "Avantus",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "avantus",
+      "cluster": "Empire Orokin",
+      "parentId": "cluster:empire-orokin"
+    },
+    {
+      "id": "ballas",
+      "type": "entity",
+      "label": "Ballas",
+      "year": "",
+      "note": "",
+      "codex_slug": "ballas",
+      "cluster": "Empire Orokin",
+      "parentId": "cluster:empire-orokin"
+    },
+    {
+      "id": "banshee",
+      "type": "entity",
+      "label": "Banshee",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "banshee",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "baro_kiteer",
+      "type": "entity",
+      "label": "Baro Ki'Teer",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "baro_kiteer",
+      "cluster": "Indépendants",
+      "parentId": "cluster:independants"
+    },
+    {
+      "id": "baruuk",
+      "type": "entity",
+      "label": "Baruuk",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "baruuk",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "bird_3",
+      "type": "entity",
+      "label": "Bird 3",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "bird_3",
+      "cluster": "Deimos",
+      "parentId": "cluster:deimos"
+    },
+    {
+      "id": "bombastine",
+      "type": "entity",
+      "label": "Bombastine",
+      "year": "Intemporel",
+      "note": "",
+      "codex_slug": "bombastine",
+      "cluster": "Duviri",
+      "parentId": "cluster:duviri"
+    },
+    {
+      "id": "caliban",
+      "type": "entity",
+      "label": "Caliban",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "caliban",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "captain_vor",
+      "type": "entity",
+      "label": "Captain Vor",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "captain_vor",
+      "cluster": "Grineer",
+      "parentId": "cluster:grineer"
+    },
+    {
+      "id": "cavalero",
+      "type": "entity",
+      "label": "Cavalero",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "cavalero",
+      "cluster": "Zariman",
+      "parentId": "cluster:zariman"
+    },
+    {
+      "id": "cephalon_cy",
+      "type": "entity",
+      "label": "Cephalon Cy",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "cephalon_cy",
+      "cluster": "Vaisseaux",
+      "parentId": "cluster:vaisseaux"
+    },
+    {
+      "id": "cephalon_simaris",
+      "type": "entity",
+      "label": "Cephalon Simaris",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "cephalon_simaris",
+      "cluster": "Syndicats",
+      "parentId": "cluster:syndicats"
+    },
+    {
+      "id": "cephalon_suda",
+      "type": "entity",
+      "label": "Cephalon Suda",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "cephalon_suda",
+      "cluster": "Syndicats",
+      "parentId": "cluster:syndicats"
+    },
+    {
+      "id": "chroma",
+      "type": "entity",
+      "label": "Chroma",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "chroma",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "citrine",
+      "type": "entity",
+      "label": "Citrine",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "citrine",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "clem",
+      "type": "entity",
+      "label": "Clem",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "clem",
+      "cluster": "Indépendants",
+      "parentId": "cluster:independants"
+    },
+    {
+      "id": "cluster:1999",
+      "type": "cluster",
+      "label": "1999 · 1999–1999",
+      "index": 0
+    },
+    {
+      "id": "cluster:cephalons",
+      "type": "cluster",
+      "label": "Cephalons",
+      "index": 1
+    },
+    {
+      "id": "cluster:cetus",
+      "type": "cluster",
+      "label": "Cetus",
+      "index": 2
+    },
+    {
+      "id": "cluster:concepts",
+      "type": "cluster",
+      "label": "Concepts",
+      "index": 3
+    },
+    {
+      "id": "cluster:corpus",
+      "type": "cluster",
+      "label": "Corpus",
+      "index": 4
+    },
+    {
+      "id": "cluster:dax",
+      "type": "cluster",
+      "label": "Dax",
+      "index": 5
+    },
+    {
+      "id": "cluster:deimos",
+      "type": "cluster",
+      "label": "Deimos",
+      "index": 6
+    },
+    {
+      "id": "cluster:duviri",
+      "type": "cluster",
+      "label": "Duviri",
+      "index": 7
+    },
+    {
+      "id": "cluster:empire-orokin",
+      "type": "cluster",
+      "label": "Empire Orokin",
+      "index": 8
+    },
+    {
+      "id": "cluster:fortuna",
+      "type": "cluster",
+      "label": "Fortuna",
+      "index": 9
+    },
+    {
+      "id": "cluster:grineer",
+      "type": "cluster",
+      "label": "Grineer",
+      "index": 10
+    },
+    {
+      "id": "cluster:independants",
+      "type": "cluster",
+      "label": "Indépendants",
+      "index": 11
+    },
+    {
+      "id": "cluster:infestes",
+      "type": "cluster",
+      "label": "Infestés",
+      "index": 12
+    },
+    {
+      "id": "cluster:neant",
+      "type": "cluster",
+      "label": "Néant",
+      "index": 13
+    },
+    {
+      "id": "cluster:sentients",
+      "type": "cluster",
+      "label": "Sentients",
+      "index": 14
+    },
+    {
+      "id": "cluster:syndicats",
+      "type": "cluster",
+      "label": "Syndicats",
+      "index": 15
+    },
+    {
+      "id": "cluster:vaisseaux",
+      "type": "cluster",
+      "label": "Vaisseaux",
+      "index": 16
+    },
+    {
+      "id": "cluster:warframes",
+      "type": "cluster",
+      "label": "Warframes",
+      "index": 18
+    },
+    {
+      "id": "cluster:zariman",
+      "type": "cluster",
+      "label": "Zariman",
+      "index": 17
+    },
+    {
+      "id": "cressa_tal",
+      "type": "entity",
+      "label": "Cressa Tal",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "cressa_tal",
+      "cluster": "Syndicats",
+      "parentId": "cluster:syndicats"
+    },
+    {
+      "id": "cyte-09",
+      "type": "entity",
+      "label": "Cyte-09",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "cyte-09",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "dagath",
+      "type": "entity",
+      "label": "Dagath",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "dagath",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "dante",
+      "type": "entity",
+      "label": "Dante",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "dante",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "darvo",
+      "type": "entity",
+      "label": "Darvo",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "darvo",
+      "cluster": "Indépendants",
+      "parentId": "cluster:independants"
+    },
+    {
+      "id": "davis",
+      "type": "entity",
+      "label": "Davis",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "davis",
+      "cluster": "Empire Orokin",
+      "parentId": "cluster:empire-orokin"
+    },
+    {
+      "id": "dominus_thrax",
+      "type": "entity",
+      "label": "Dominus Thrax",
+      "year": "Intemporel",
+      "note": "",
+      "codex_slug": "dominus_thrax",
+      "cluster": "Duviri",
+      "parentId": "cluster:duviri"
+    },
+    {
+      "id": "drifter",
+      "type": "entity",
+      "label": "Le Drifter",
+      "year": "",
+      "note": "",
+      "codex_slug": "drifter",
+      "cluster": "Néant",
+      "parentId": "cluster:neant"
+    },
+    {
+      "id": "eleanor",
+      "type": "entity",
+      "label": "Eleanor Nightingale",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "eleanor",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "ember",
+      "type": "entity",
+      "label": "Ember",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "ember",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "equinox",
+      "type": "entity",
+      "label": "Equinox",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "equinox",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "ergo_glast",
+      "type": "entity",
+      "label": "Ergo Glast",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "ergo_glast",
+      "cluster": "Syndicats",
+      "parentId": "cluster:syndicats"
+    },
+    {
+      "id": "erra",
+      "type": "entity",
+      "label": "Erra",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "erra",
+      "cluster": "Sentients",
+      "parentId": "cluster:sentients"
+    },
+    {
+      "id": "eudico",
+      "type": "entity",
+      "label": "Eudico",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "eudico",
+      "cluster": "Fortuna",
+      "parentId": "cluster:fortuna"
+    },
+    {
+      "id": "excalibur",
+      "type": "entity",
+      "label": "Excalibur",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "excalibur",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "famille_entrati",
+      "type": "entity",
+      "label": "La Famille Entrati",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "famille_entrati",
+      "cluster": "Deimos",
+      "parentId": "cluster:deimos"
+    },
+    {
+      "id": "fibonacci",
+      "type": "entity",
+      "label": "Fibonacci",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "fibonacci",
+      "cluster": "Deimos",
+      "parentId": "cluster:deimos"
+    },
+    {
+      "id": "fille_kermerros",
+      "type": "entity",
+      "label": "Fille Kermerros",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "fille_kermerros",
+      "cluster": "Deimos",
+      "parentId": "cluster:deimos"
+    },
+    {
+      "id": "fils_tyl",
+      "type": "entity",
+      "label": "Fils Tyl",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "fils_tyl",
+      "cluster": "Deimos",
+      "parentId": "cluster:deimos"
+    },
+    {
+      "id": "flare",
+      "type": "entity",
+      "label": "Flare Varleon",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "flare",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "follie",
+      "type": "entity",
+      "label": "Follie",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "follie",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "frohd_bek",
+      "type": "entity",
+      "label": "Frohd Bek",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "frohd_bek",
+      "cluster": "Corpus",
+      "parentId": "cluster:corpus"
+    },
+    {
+      "id": "frost",
+      "type": "entity",
+      "label": "Frost",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "frost",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "gara",
+      "type": "entity",
+      "label": "Gara",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "gara",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "garuda",
+      "type": "entity",
+      "label": "Garuda",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "garuda",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "gauss",
+      "type": "entity",
+      "label": "Gauss",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "gauss",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "grand_mere",
+      "type": "entity",
+      "label": "Grand-Mère",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "grand_mere",
+      "cluster": "Deimos",
+      "parentId": "cluster:deimos"
+    },
+    {
+      "id": "grendel",
+      "type": "entity",
+      "label": "Grendel",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "grendel",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "gyre",
+      "type": "entity",
+      "label": "Gyre",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "gyre",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "hai_luk",
+      "type": "entity",
+      "label": "Hai-Luk",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "hai_luk",
+      "cluster": "Cetus",
+      "parentId": "cluster:cetus"
+    },
+    {
+      "id": "harrow",
+      "type": "entity",
+      "label": "Harrow",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "harrow",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "helminth",
+      "type": "entity",
+      "label": "L'Helminth",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "helminth",
+      "cluster": "Vaisseaux",
+      "parentId": "cluster:vaisseaux"
+    },
+    {
+      "id": "hildryn",
+      "type": "entity",
+      "label": "Hildryn",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "hildryn",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "hok",
+      "type": "entity",
+      "label": "Hok",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "hok",
+      "cluster": "Cetus",
+      "parentId": "cluster:cetus"
+    },
+    {
+      "id": "hombask",
+      "type": "entity",
+      "label": "Hombask",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "hombask",
+      "cluster": "Zariman",
+      "parentId": "cluster:zariman"
+    },
+    {
+      "id": "hunhow",
+      "type": "entity",
+      "label": "Hunhow",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "hunhow",
+      "cluster": "Sentients",
+      "parentId": "cluster:sentients"
+    },
+    {
+      "id": "hydroid",
+      "type": "entity",
+      "label": "Hydroid",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "hydroid",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "inaros",
+      "type": "entity",
+      "label": "Inaros",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "inaros",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "indifference",
+      "type": "entity",
+      "label": "L'Indifférence (L'Homme dans le Mur)",
+      "year": "",
+      "note": "",
+      "codex_slug": "indifference",
+      "cluster": "Néant",
+      "parentId": "cluster:neant"
+    },
+    {
+      "id": "ivara",
+      "type": "entity",
+      "label": "Ivara",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "ivara",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "jackal",
+      "type": "entity",
+      "label": "Jackal",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "jackal",
+      "cluster": "Corpus",
+      "parentId": "cluster:corpus"
+    },
+    {
+      "id": "jade",
+      "type": "entity",
+      "label": "Jade",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "jade",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "kahl_175",
+      "type": "entity",
+      "label": "Kahl-175",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "kahl_175",
+      "cluster": "Syndicats",
+      "parentId": "cluster:syndicats"
+    },
+    {
+      "id": "kahl_garrison",
+      "type": "entity",
+      "label": "Kahl's Garrison",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "kahl_garrison",
+      "cluster": "Syndicats",
+      "parentId": "cluster:syndicats"
+    },
+    {
+      "id": "kalymos",
+      "type": "entity",
+      "label": "Kalymos",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "kalymos",
+      "cluster": "Deimos",
+      "parentId": "cluster:deimos"
+    },
+    {
+      "id": "kaya",
+      "type": "entity",
+      "label": "Kaya Velasco",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "kaya",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "kela_de_thaym",
+      "type": "entity",
+      "label": "Kela de Thaym",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "kela_de_thaym",
+      "cluster": "Grineer",
+      "parentId": "cluster:grineer"
+    },
+    {
+      "id": "khora",
+      "type": "entity",
+      "label": "Khora",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "khora",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "konzu",
+      "type": "entity",
+      "label": "Konzu",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "konzu",
+      "cluster": "Cetus",
+      "parentId": "cluster:cetus"
+    },
+    {
+      "id": "koumei",
+      "type": "entity",
+      "label": "Koumei",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "koumei",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "kullervo",
+      "type": "entity",
+      "label": "Kullervo",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "kullervo",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "kuva",
+      "type": "entity",
+      "label": "Le Kuva",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "kuva",
+      "cluster": "Concepts",
+      "parentId": "cluster:concepts"
+    },
+    {
+      "id": "lavos",
+      "type": "entity",
+      "label": "Lavos",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "lavos",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "lech_kril",
+      "type": "entity",
+      "label": "Lech Kril",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "lech_kril",
+      "cluster": "Grineer",
+      "parentId": "cluster:grineer"
+    },
+    {
+      "id": "legs",
+      "type": "entity",
+      "label": "Legs",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "legs",
+      "cluster": "Fortuna",
+      "parentId": "cluster:fortuna"
+    },
+    {
+      "id": "lephantis",
+      "type": "entity",
+      "label": "Léphantis",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "lephantis",
+      "cluster": "Infestés",
+      "parentId": "cluster:infestes"
+    },
+    {
+      "id": "lettie",
+      "type": "entity",
+      "label": "Leticia Garcia",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "lettie",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "limbo",
+      "type": "entity",
+      "label": "Limbo",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "limbo",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "little_duck",
+      "type": "entity",
+      "label": "Little Duck",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "little_duck",
+      "cluster": "Fortuna",
+      "parentId": "cluster:fortuna"
+    },
+    {
+      "id": "loid",
+      "type": "entity",
+      "label": "Loid",
+      "year": "",
+      "note": "",
+      "codex_slug": "loid",
+      "cluster": "Deimos",
+      "parentId": "cluster:deimos"
+    },
+    {
+      "id": "loki",
+      "type": "entity",
+      "label": "Loki",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "loki",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "luscinia",
+      "type": "entity",
+      "label": "Luscinia",
+      "year": "Intemporel",
+      "note": "",
+      "codex_slug": "luscinia",
+      "cluster": "Duviri",
+      "parentId": "cluster:duviri"
+    },
+    {
+      "id": "mag",
+      "type": "entity",
+      "label": "Mag",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "mag",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "maitre_teasonai",
+      "type": "entity",
+      "label": "Le Maître Teasonai",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "maitre_teasonai",
+      "cluster": "Cetus",
+      "parentId": "cluster:cetus"
+    },
+    {
+      "id": "major-noz",
+      "type": "entity",
+      "label": "Major N.O.Z.",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "major-noz",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "margulis",
+      "type": "entity",
+      "label": "Margulis",
+      "year": "",
+      "note": "",
+      "codex_slug": "margulis",
+      "cluster": "Empire Orokin",
+      "parentId": "cluster:empire-orokin"
+    },
+    {
+      "id": "maroo",
+      "type": "entity",
+      "label": "Maroo",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "maroo",
+      "cluster": "Indépendants",
+      "parentId": "cluster:independants"
+    },
+    {
+      "id": "mathila",
+      "type": "entity",
+      "label": "Mathila",
+      "year": "Intemporel",
+      "note": "",
+      "codex_slug": "mathila",
+      "cluster": "Duviri",
+      "parentId": "cluster:duviri"
+    },
+    {
+      "id": "mere_gomati",
+      "type": "entity",
+      "label": "Mère Gomati",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "mere_gomati",
+      "cluster": "Deimos",
+      "parentId": "cluster:deimos"
+    },
+    {
+      "id": "mesa",
+      "type": "entity",
+      "label": "Mesa",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "mesa",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "mirage",
+      "type": "entity",
+      "label": "Mirage",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "mirage",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "nakak",
+      "type": "entity",
+      "label": "Nakak",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "nakak",
+      "cluster": "Cetus",
+      "parentId": "cluster:cetus"
+    },
+    {
+      "id": "narmer",
+      "type": "entity",
+      "label": "Narmer",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "narmer",
+      "cluster": "Sentients",
+      "parentId": "cluster:sentients"
+    },
+    {
+      "id": "natah",
+      "type": "entity",
+      "label": "Natah",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "natah",
+      "cluster": "Sentients",
+      "parentId": "cluster:sentients"
+    },
+    {
+      "id": "necramech",
+      "type": "entity",
+      "label": "Le Necramech",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "necramech",
+      "cluster": "Concepts",
+      "parentId": "cluster:concepts"
+    },
+    {
+      "id": "nef_anyo",
+      "type": "entity",
+      "label": "Nef Anyo",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "nef_anyo",
+      "cluster": "Corpus",
+      "parentId": "cluster:corpus"
+    },
+    {
+      "id": "nekros",
+      "type": "entity",
+      "label": "Nekros",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "nekros",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "new_loka",
+      "type": "entity",
+      "label": "New Loka",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "new_loka",
+      "cluster": "Syndicats",
+      "parentId": "cluster:syndicats"
+    },
+    {
+      "id": "nezha",
+      "type": "entity",
+      "label": "Nezha",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "nezha",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "nidus",
+      "type": "entity",
+      "label": "Nidus",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "nidus",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "nihil",
+      "type": "entity",
+      "label": "Nihil, le Créateur de Verre",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "nihil",
+      "cluster": "Indépendants",
+      "parentId": "cluster:independants"
+    },
+    {
+      "id": "nokko",
+      "type": "entity",
+      "label": "Nokko",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "nokko",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "nora_night",
+      "type": "entity",
+      "label": "Nora Night",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "nora_night",
+      "cluster": "Indépendants",
+      "parentId": "cluster:independants"
+    },
+    {
+      "id": "nova",
+      "type": "entity",
+      "label": "Nova",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "nova",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "nyx",
+      "type": "entity",
+      "label": "Nyx",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "nyx",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "oberon",
+      "type": "entity",
+      "label": "Oberon",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "oberon",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "octavia",
+      "type": "entity",
+      "label": "Octavia",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "octavia",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "onkko",
+      "type": "entity",
+      "label": "Onkko",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "onkko",
+      "cluster": "Cetus",
+      "parentId": "cluster:cetus"
+    },
+    {
+      "id": "operateur",
+      "type": "entity",
+      "label": "L'Opérateur",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "operateur",
+      "cluster": "Néant",
+      "parentId": "cluster:neant"
+    },
+    {
+      "id": "oraxia",
+      "type": "entity",
+      "label": "Oraxia",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "oraxia",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "ordis",
+      "type": "entity",
+      "label": "Ordis",
+      "year": "",
+      "note": "",
+      "codex_slug": "ordis",
+      "cluster": "Cephalons",
+      "parentId": "cluster:cephalons"
+    },
+    {
+      "id": "orowyrms",
+      "type": "entity",
+      "label": "Les Orowyrms",
+      "year": "Intemporel",
+      "note": "",
+      "codex_slug": "orowyrms",
+      "cluster": "Duviri",
+      "parentId": "cluster:duviri"
+    },
+    {
+      "id": "ostrons",
+      "type": "entity",
+      "label": "Les Ostrons",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "ostrons",
+      "cluster": "Cetus",
+      "parentId": "cluster:cetus"
+    },
+    {
+      "id": "otak",
+      "type": "entity",
+      "label": "Otak",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "otak",
+      "cluster": "Deimos",
+      "parentId": "cluster:deimos"
+    },
+    {
+      "id": "palladino",
+      "type": "entity",
+      "label": "Palladino",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "palladino",
+      "cluster": "Syndicats",
+      "parentId": "cluster:syndicats"
+    },
+    {
+      "id": "parvos_granum",
+      "type": "entity",
+      "label": "Parvos Granum",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "parvos_granum",
+      "cluster": "Corpus",
+      "parentId": "cluster:corpus"
+    },
+    {
+      "id": "pere_vilcor",
+      "type": "entity",
+      "label": "Père Vilcor",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "pere_vilcor",
+      "cluster": "Deimos",
+      "parentId": "cluster:deimos"
+    },
+    {
+      "id": "perintol",
+      "type": "entity",
+      "label": "Perintol",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "perintol",
+      "cluster": "Empire Orokin",
+      "parentId": "cluster:empire-orokin"
+    },
+    {
+      "id": "perrin_sequence",
+      "type": "entity",
+      "label": "The Perrin Sequence",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "perrin_sequence",
+      "cluster": "Syndicats",
+      "parentId": "cluster:syndicats"
+    },
+    {
+      "id": "phorid",
+      "type": "entity",
+      "label": "Phorid",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "phorid",
+      "cluster": "Infestés",
+      "parentId": "cluster:infestes"
+    },
+    {
+      "id": "prelat_zelote",
+      "type": "entity",
+      "label": "Le Prélat Zélote",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "prelat_zelote",
+      "cluster": "Infestés",
+      "parentId": "cluster:infestes"
+    },
+    {
+      "id": "protea",
+      "type": "entity",
+      "label": "Protea",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "protea",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "protoframe_minerva",
+      "type": "entity",
+      "label": "Minerva Hendricks",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "protoframe_minerva",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "qorvex",
+      "type": "entity",
+      "label": "Qorvex",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "qorvex",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "quincy",
+      "type": "entity",
+      "label": "Quincy Isaacs",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "quincy",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "quinn",
+      "type": "entity",
+      "label": "Quinn",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "quinn",
+      "cluster": "Zariman",
+      "parentId": "cluster:zariman"
+    },
+    {
+      "id": "red_veil",
+      "type": "entity",
+      "label": "Red Veil",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "red_veil",
+      "cluster": "Syndicats",
+      "parentId": "cluster:syndicats"
+    },
+    {
+      "id": "reines_jumelles",
+      "type": "entity",
+      "label": "Les Reines Jumelles",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "reines_jumelles",
+      "cluster": "Grineer",
+      "parentId": "cluster:grineer"
+    },
+    {
+      "id": "rell",
+      "type": "entity",
+      "label": "Rell",
+      "year": "",
+      "note": "",
+      "codex_slug": "rell",
+      "cluster": "Zariman",
+      "parentId": "cluster:zariman"
+    },
+    {
+      "id": "revenant",
+      "type": "entity",
+      "label": "Revenant",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "revenant",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "rhino",
+      "type": "entity",
+      "label": "Rhino",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "rhino",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "roky",
+      "type": "entity",
+      "label": "Roky",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "roky",
+      "cluster": "Fortuna",
+      "parentId": "cluster:fortuna"
+    },
+    {
+      "id": "ropalolyst",
+      "type": "entity",
+      "label": "Le Ropalolyst",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "ropalolyst",
+      "cluster": "Sentients",
+      "parentId": "cluster:sentients"
+    },
+    {
+      "id": "rude_zuud",
+      "type": "entity",
+      "label": "Rude Zuud",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "rude_zuud",
+      "cluster": "Fortuna",
+      "parentId": "cluster:fortuna"
+    },
+    {
+      "id": "ryoku",
+      "type": "entity",
+      "label": "Ryoku",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "ryoku",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "sargas_ruk",
+      "type": "entity",
+      "label": "Sargas Ruk",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "sargas_ruk",
+      "cluster": "Grineer",
+      "parentId": "cluster:grineer"
+    },
+    {
+      "id": "saryn",
+      "type": "entity",
+      "label": "Saryn",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "saryn",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "scaldra",
+      "type": "entity",
+      "label": "Les Scaldra",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "scaldra",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "sevagoth",
+      "type": "entity",
+      "label": "Sevagoth",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "sevagoth",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "silvana",
+      "type": "entity",
+      "label": "Silvana",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "silvana",
+      "cluster": "Empire Orokin",
+      "parentId": "cluster:empire-orokin"
+    },
+    {
+      "id": "sirius_orion",
+      "type": "entity",
+      "label": "Sirius & Orion",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "sirius_orion",
+      "cluster": "Indépendants",
+      "parentId": "cluster:independants"
+    },
+    {
+      "id": "smokefinger",
+      "type": "entity",
+      "label": "Smokefinger",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "smokefinger",
+      "cluster": "Fortuna",
+      "parentId": "cluster:fortuna"
+    },
+    {
+      "id": "solaris_united",
+      "type": "entity",
+      "label": "Solaris United",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "solaris_united",
+      "cluster": "Fortuna",
+      "parentId": "cluster:fortuna"
+    },
+    {
+      "id": "stalker",
+      "type": "entity",
+      "label": "Le Stalker",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "stalker",
+      "cluster": "Indépendants",
+      "parentId": "cluster:independants"
+    },
+    {
+      "id": "steel_meridian",
+      "type": "entity",
+      "label": "Steel Meridian",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "steel_meridian",
+      "cluster": "Syndicats",
+      "parentId": "cluster:syndicats"
+    },
+    {
+      "id": "styanax",
+      "type": "entity",
+      "label": "Styanax",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "styanax",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "sythel",
+      "type": "entity",
+      "label": "Sythel",
+      "year": "Intemporel",
+      "note": "",
+      "codex_slug": "sythel",
+      "cluster": "Duviri",
+      "parentId": "cluster:duviri"
+    },
+    {
+      "id": "tagfer",
+      "type": "entity",
+      "label": "Tagfer",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "tagfer",
+      "cluster": "Deimos",
+      "parentId": "cluster:deimos"
+    },
+    {
+      "id": "technocyte",
+      "type": "entity",
+      "label": "Le Technocyte originel",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "technocyte",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "temple",
+      "type": "entity",
+      "label": "Temple",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "temple",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "teshin",
+      "type": "entity",
+      "label": "Teshin",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "teshin",
+      "cluster": "Dax",
+      "parentId": "cluster:dax"
+    },
+    {
+      "id": "the_business",
+      "type": "entity",
+      "label": "The Business",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "the_business",
+      "cluster": "Fortuna",
+      "parentId": "cluster:fortuna"
+    },
+    {
+      "id": "the_cavia",
+      "type": "entity",
+      "label": "The Cavia",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "the_cavia",
+      "cluster": "Deimos",
+      "parentId": "cluster:deimos"
+    },
+    {
+      "id": "the_holdfasts",
+      "type": "entity",
+      "label": "The Holdfasts",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "the_holdfasts",
+      "cluster": "Zariman",
+      "parentId": "cluster:zariman"
+    },
+    {
+      "id": "the_quills",
+      "type": "entity",
+      "label": "The Quills",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "the_quills",
+      "cluster": "Cetus",
+      "parentId": "cluster:cetus"
+    },
+    {
+      "id": "the_sergeant",
+      "type": "entity",
+      "label": "Le Sergent",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "the_sergeant",
+      "cluster": "Corpus",
+      "parentId": "cluster:corpus"
+    },
+    {
+      "id": "the_ventkids",
+      "type": "entity",
+      "label": "The Ventkids",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "the_ventkids",
+      "cluster": "Fortuna",
+      "parentId": "cluster:fortuna"
+    },
+    {
+      "id": "ticker",
+      "type": "entity",
+      "label": "Ticker",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "ticker",
+      "cluster": "Fortuna",
+      "parentId": "cluster:fortuna"
+    },
+    {
+      "id": "titania",
+      "type": "entity",
+      "label": "Titania",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "titania",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "trinity",
+      "type": "entity",
+      "label": "Trinity",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "trinity",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "tuvul",
+      "type": "entity",
+      "label": "Tuvul",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "tuvul",
+      "cluster": "Empire Orokin",
+      "parentId": "cluster:empire-orokin"
+    },
+    {
+      "id": "tyl_regor",
+      "type": "entity",
+      "label": "Tyl Regor",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "tyl_regor",
+      "cluster": "Grineer",
+      "parentId": "cluster:grineer"
+    },
+    {
+      "id": "uriel",
+      "type": "entity",
+      "label": "Uriel",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "uriel",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "valkyr",
+      "type": "entity",
+      "label": "Valkyr",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "valkyr",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "varzia",
+      "type": "entity",
+      "label": "Varzia",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "varzia",
+      "cluster": "Dax",
+      "parentId": "cluster:dax"
+    },
+    {
+      "id": "vauban",
+      "type": "entity",
+      "label": "Vauban",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "vauban",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "vay_hek",
+      "type": "entity",
+      "label": "Vay Hek",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "vay_hek",
+      "cluster": "Grineer",
+      "parentId": "cluster:grineer"
+    },
+    {
+      "id": "velemir",
+      "type": "entity",
+      "label": "Velemir",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "velemir",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "vena",
+      "type": "entity",
+      "label": "Vena",
+      "year": "1999",
+      "note": "",
+      "codex_slug": "vena",
+      "cluster": "1999",
+      "parentId": "cluster:1999"
+    },
+    {
+      "id": "veso_r",
+      "type": "entity",
+      "label": "Veso R",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "veso_r",
+      "cluster": "Corpus",
+      "parentId": "cluster:corpus"
+    },
+    {
+      "id": "volt",
+      "type": "entity",
+      "label": "Volt",
+      "year": "Guerre Ancienne",
+      "note": "",
+      "codex_slug": "volt",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "voruna",
+      "type": "entity",
+      "label": "Voruna",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "voruna",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "vox_solaris",
+      "type": "entity",
+      "label": "Vox Solaris",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "vox_solaris",
+      "cluster": "Fortuna",
+      "parentId": "cluster:fortuna"
+    },
+    {
+      "id": "wisp",
+      "type": "entity",
+      "label": "Wisp",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "wisp",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "wolf_of_saturn_six",
+      "type": "entity",
+      "label": "Le Loup de Saturne Six",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "wolf_of_saturn_six",
+      "cluster": "Grineer",
+      "parentId": "cluster:grineer"
+    },
+    {
+      "id": "wukong",
+      "type": "entity",
+      "label": "Wukong",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "wukong",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "xaku",
+      "type": "entity",
+      "label": "Xaku",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "xaku",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "yareli",
+      "type": "entity",
+      "label": "Yareli",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "yareli",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    },
+    {
+      "id": "yuvan",
+      "type": "entity",
+      "label": "Le Rituel de Yuvan",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "yuvan",
+      "cluster": "Concepts",
+      "parentId": "cluster:concepts"
+    },
+    {
+      "id": "zariman",
+      "type": "entity",
+      "label": "Le Zariman 10-0",
+      "year": "Ère Orokin",
+      "note": "",
+      "codex_slug": "zariman",
+      "cluster": "Zariman",
+      "parentId": "cluster:zariman"
+    },
+    {
+      "id": "zephyr",
+      "type": "entity",
+      "label": "Zephyr",
+      "year": "Ère Moderne",
+      "note": "",
+      "codex_slug": "zephyr",
+      "cluster": "warframes",
+      "parentId": "cluster:warframes"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:acrithis-dominus-thrax-lien-chronologique",
+      "source": "acrithis",
+      "target": "dominus_thrax",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:acrithis-kullervo-lien-chronologique",
+      "source": "acrithis",
+      "target": "kullervo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:alad-v-parvos-granum-lien-chronologique",
+      "source": "alad_v",
+      "target": "parvos_granum",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:alad-v-technocyte-lien-chronologique",
+      "source": "alad_v",
+      "target": "technocyte",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:alad-v-valkyr-lien-chronologique",
+      "source": "alad_v",
+      "target": "valkyr",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:albrecht-arthur-lien-chronologique",
+      "source": "albrecht",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:albrecht-ballas-lien-chronologique",
+      "source": "albrecht",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:albrecht-drifter-lien-paradoxal",
+      "source": "albrecht",
+      "target": "drifter",
+      "type": "lien_paradoxal",
+      "label": ""
+    },
+    {
+      "id": "edge:albrecht-indifference-lien-chronologique",
+      "source": "albrecht",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:albrecht-loid-lien-chronologique",
+      "source": "albrecht",
+      "target": "loid",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:amaryn-new-loka-lien-chronologique",
+      "source": "amaryn",
+      "target": "new_loka",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:amaryn-steel-meridian-lien-chronologique",
+      "source": "amaryn",
+      "target": "steel_meridian",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ambulas-frohd-bek-lien-chronologique",
+      "source": "ambulas",
+      "target": "frohd_bek",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ambulas-nef-anyo-lien-chronologique",
+      "source": "ambulas",
+      "target": "nef_anyo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:amir-albrecht-lien-chronologique",
+      "source": "amir",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:amir-arthur-lien-chronologique",
+      "source": "amir",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:amir-lettie-lien-chronologique",
+      "source": "amir",
+      "target": "lettie",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:amir-volt-lien-chronologique",
+      "source": "amir",
+      "target": "volt",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:aoi-albrecht-lien-chronologique",
+      "source": "aoi",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:aoi-arthur-lien-chronologique",
+      "source": "aoi",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:aoi-eleanor-lien-chronologique",
+      "source": "aoi",
+      "target": "eleanor",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:aoi-mag-lien-chronologique",
+      "source": "aoi",
+      "target": "mag",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:arbiters-of-hexis-excalibur-lien-chronologique",
+      "source": "arbiters_of_hexis",
+      "target": "excalibur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:arbiters-of-hexis-margulis-lien-chronologique",
+      "source": "arbiters_of_hexis",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:archimedienne-yonta-cavalero-lien-chronologique",
+      "source": "archimedienne_yonta",
+      "target": "cavalero",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:archimedienne-yonta-zariman-lien-chronologique",
+      "source": "archimedienne_yonta",
+      "target": "zariman",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:arthur-albrecht-lien-chronologique",
+      "source": "arthur",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:arthur-aoi-lien-chronologique",
+      "source": "arthur",
+      "target": "aoi",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:arthur-drifter-lien-chronologique",
+      "source": "arthur",
+      "target": "drifter",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:arthur-eleanor-lien-chronologique",
+      "source": "arthur",
+      "target": "eleanor",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:arthur-excalibur-lien-chronologique",
+      "source": "arthur",
+      "target": "excalibur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:arthur-indifference-lien-chronologique",
+      "source": "arthur",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:arthur-scaldra-lien-chronologique",
+      "source": "arthur",
+      "target": "scaldra",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:arthur-technocyte-lien-chronologique",
+      "source": "arthur",
+      "target": "technocyte",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ash-ballas-lien-chronologique",
+      "source": "ash",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ash-margulis-lien-chronologique",
+      "source": "ash",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ash-ryoku-lien-chronologique",
+      "source": "ash",
+      "target": "ryoku",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:atlas-technocyte-lien-chronologique",
+      "source": "atlas",
+      "target": "technocyte",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:avantus-ballas-lien-chronologique",
+      "source": "avantus",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:avantus-margulis-lien-chronologique",
+      "source": "avantus",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ballas-albrecht-lien-chronologique",
+      "source": "ballas",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ballas-indifference-lien-chronologique",
+      "source": "ballas",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ballas-margulis-lien-chronologique",
+      "source": "ballas",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:banshee-helminth-lien-chronologique",
+      "source": "banshee",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:baro-kiteer-darvo-lien-chronologique",
+      "source": "baro_kiteer",
+      "target": "darvo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:baro-kiteer-nef-anyo-lien-chronologique",
+      "source": "baro_kiteer",
+      "target": "nef_anyo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:baruuk-helminth-lien-chronologique",
+      "source": "baruuk",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:bird-3-tagfer-lien-chronologique",
+      "source": "bird_3",
+      "target": "tagfer",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:bird-3-the-cavia-lien-chronologique",
+      "source": "bird_3",
+      "target": "the_cavia",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:bombastine-dominus-thrax-lien-chronologique",
+      "source": "bombastine",
+      "target": "dominus_thrax",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:bombastine-luscinia-lien-chronologique",
+      "source": "bombastine",
+      "target": "luscinia",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:bombastine-mathila-lien-chronologique",
+      "source": "bombastine",
+      "target": "mathila",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:caliban-erra-lien-chronologique",
+      "source": "caliban",
+      "target": "erra",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:caliban-narmer-lien-chronologique",
+      "source": "caliban",
+      "target": "narmer",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:captain-vor-indifference-lien-chronologique",
+      "source": "captain_vor",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:captain-vor-kela-de-thaym-lien-chronologique",
+      "source": "captain_vor",
+      "target": "kela_de_thaym",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:captain-vor-reines-jumelles-lien-chronologique",
+      "source": "captain_vor",
+      "target": "reines_jumelles",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:cavalero-quinn-lien-chronologique",
+      "source": "cavalero",
+      "target": "quinn",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:cavalero-the-holdfasts-lien-chronologique",
+      "source": "cavalero",
+      "target": "the_holdfasts",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:cavalero-zariman-lien-chronologique",
+      "source": "cavalero",
+      "target": "zariman",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:cephalon-cy-cephalon-suda-lien-chronologique",
+      "source": "cephalon_cy",
+      "target": "cephalon_suda",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:cephalon-cy-ordis-lien-chronologique",
+      "source": "cephalon_cy",
+      "target": "ordis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:cephalon-simaris-cephalon-suda-lien-chronologique",
+      "source": "cephalon_simaris",
+      "target": "cephalon_suda",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:cephalon-simaris-ordis-lien-chronologique",
+      "source": "cephalon_simaris",
+      "target": "ordis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:cephalon-suda-cephalon-simaris-lien-chronologique",
+      "source": "cephalon_suda",
+      "target": "cephalon_simaris",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:cephalon-suda-ordis-lien-chronologique",
+      "source": "cephalon_suda",
+      "target": "ordis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:chroma-cephalon-simaris-lien-chronologique",
+      "source": "chroma",
+      "target": "cephalon_simaris",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:chroma-hunhow-lien-chronologique",
+      "source": "chroma",
+      "target": "hunhow",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:citrine-otak-lien-chronologique",
+      "source": "citrine",
+      "target": "otak",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:citrine-technocyte-lien-chronologique",
+      "source": "citrine",
+      "target": "technocyte",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:clem-darvo-lien-chronologique",
+      "source": "clem",
+      "target": "darvo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:clem-kahl-175-lien-chronologique",
+      "source": "clem",
+      "target": "kahl_175",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:cressa-tal-steel-meridian-lien-chronologique",
+      "source": "cressa_tal",
+      "target": "steel_meridian",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:cressa-tal-vay-hek-lien-chronologique",
+      "source": "cressa_tal",
+      "target": "vay_hek",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:cyte-09-ballas-lien-chronologique",
+      "source": "cyte-09",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:cyte-09-margulis-lien-chronologique",
+      "source": "cyte-09",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:cyte-09-quincy-lien-chronologique",
+      "source": "cyte-09",
+      "target": "quincy",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:dagath-grand-mere-lien-chronologique",
+      "source": "dagath",
+      "target": "grand_mere",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:dagath-teshin-lien-chronologique",
+      "source": "dagath",
+      "target": "teshin",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:dante-albrecht-lien-chronologique",
+      "source": "dante",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:dante-fibonacci-lien-chronologique",
+      "source": "dante",
+      "target": "fibonacci",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:dante-the-cavia-lien-chronologique",
+      "source": "dante",
+      "target": "the_cavia",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:darvo-alad-v-lien-chronologique",
+      "source": "darvo",
+      "target": "alad_v",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:darvo-clem-lien-chronologique",
+      "source": "darvo",
+      "target": "clem",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:darvo-ordis-lien-chronologique",
+      "source": "darvo",
+      "target": "ordis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:davis-margulis-lien-chronologique",
+      "source": "davis",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:davis-rhino-lien-chronologique",
+      "source": "davis",
+      "target": "rhino",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:dominus-thrax-drifter-lien-chronologique",
+      "source": "dominus_thrax",
+      "target": "drifter",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:dominus-thrax-indifference-lien-chronologique",
+      "source": "dominus_thrax",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:drifter-albrecht-lien-paradoxal",
+      "source": "drifter",
+      "target": "albrecht",
+      "type": "lien_paradoxal",
+      "label": ""
+    },
+    {
+      "id": "edge:drifter-arthur-lien-chronologique",
+      "source": "drifter",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:drifter-indifference-lien-chronologique",
+      "source": "drifter",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:drifter-rell-lien-paradoxal",
+      "source": "drifter",
+      "target": "rell",
+      "type": "lien_paradoxal",
+      "label": ""
+    },
+    {
+      "id": "edge:eleanor-albrecht-lien-chronologique",
+      "source": "eleanor",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:eleanor-aoi-lien-chronologique",
+      "source": "eleanor",
+      "target": "aoi",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:eleanor-arthur-lien-chronologique",
+      "source": "eleanor",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:eleanor-nyx-lien-chronologique",
+      "source": "eleanor",
+      "target": "nyx",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ember-margulis-lien-chronologique",
+      "source": "ember",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ember-zariman-lien-chronologique",
+      "source": "ember",
+      "target": "zariman",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:equinox-tyl-regor-lien-chronologique",
+      "source": "equinox",
+      "target": "tyl_regor",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ergo-glast-parvos-granum-lien-chronologique",
+      "source": "ergo_glast",
+      "target": "parvos_granum",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ergo-glast-perrin-sequence-lien-chronologique",
+      "source": "ergo_glast",
+      "target": "perrin_sequence",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:erra-ballas-lien-chronologique",
+      "source": "erra",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:erra-hunhow-lien-chronologique",
+      "source": "erra",
+      "target": "hunhow",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:erra-natah-lien-chronologique",
+      "source": "erra",
+      "target": "natah",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:eudico-little-duck-lien-chronologique",
+      "source": "eudico",
+      "target": "little_duck",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:eudico-nef-anyo-lien-chronologique",
+      "source": "eudico",
+      "target": "nef_anyo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:eudico-solaris-united-lien-chronologique",
+      "source": "eudico",
+      "target": "solaris_united",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:excalibur-arthur-lien-chronologique",
+      "source": "excalibur",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:excalibur-ballas-lien-chronologique",
+      "source": "excalibur",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:excalibur-margulis-lien-chronologique",
+      "source": "excalibur",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:famille-entrati-albrecht-lien-chronologique",
+      "source": "famille_entrati",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:famille-entrati-loid-lien-chronologique",
+      "source": "famille_entrati",
+      "target": "loid",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:famille-entrati-otak-lien-chronologique",
+      "source": "famille_entrati",
+      "target": "otak",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:fibonacci-albrecht-lien-chronologique",
+      "source": "fibonacci",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:fibonacci-loid-lien-chronologique",
+      "source": "fibonacci",
+      "target": "loid",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:fibonacci-the-cavia-lien-chronologique",
+      "source": "fibonacci",
+      "target": "the_cavia",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:fille-kermerros-albrecht-lien-chronologique",
+      "source": "fille_kermerros",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:fille-kermerros-famille-entrati-lien-chronologique",
+      "source": "fille_kermerros",
+      "target": "famille_entrati",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:fille-kermerros-otak-lien-chronologique",
+      "source": "fille_kermerros",
+      "target": "otak",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:fils-tyl-albrecht-lien-chronologique",
+      "source": "fils_tyl",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:fils-tyl-famille-entrati-lien-chronologique",
+      "source": "fils_tyl",
+      "target": "famille_entrati",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:fils-tyl-mere-gomati-lien-chronologique",
+      "source": "fils_tyl",
+      "target": "mere_gomati",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:flare-albrecht-lien-chronologique",
+      "source": "flare",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:flare-arthur-lien-chronologique",
+      "source": "flare",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:flare-kaya-lien-chronologique",
+      "source": "flare",
+      "target": "kaya",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:flare-temple-lien-chronologique",
+      "source": "flare",
+      "target": "temple",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:follie-arbiters-of-hexis-lien-chronologique",
+      "source": "follie",
+      "target": "arbiters_of_hexis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:follie-helminth-lien-chronologique",
+      "source": "follie",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:frohd-bek-ambulas-lien-chronologique",
+      "source": "frohd_bek",
+      "target": "ambulas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:frohd-bek-darvo-lien-chronologique",
+      "source": "frohd_bek",
+      "target": "darvo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:frohd-bek-nef-anyo-lien-chronologique",
+      "source": "frohd_bek",
+      "target": "nef_anyo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:frost-ballas-lien-chronologique",
+      "source": "frost",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:frost-margulis-lien-chronologique",
+      "source": "frost",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:frost-velemir-lien-chronologique",
+      "source": "frost",
+      "target": "velemir",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:gara-hunhow-lien-chronologique",
+      "source": "gara",
+      "target": "hunhow",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:gara-ostrons-lien-chronologique",
+      "source": "gara",
+      "target": "ostrons",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:garuda-ballas-lien-chronologique",
+      "source": "garuda",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:garuda-margulis-lien-chronologique",
+      "source": "garuda",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:garuda-vena-lien-chronologique",
+      "source": "garuda",
+      "target": "vena",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:gauss-helminth-lien-chronologique",
+      "source": "gauss",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:grand-mere-dagath-lien-chronologique",
+      "source": "grand_mere",
+      "target": "dagath",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:grand-mere-famille-entrati-lien-chronologique",
+      "source": "grand_mere",
+      "target": "famille_entrati",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:grand-mere-yareli-lien-chronologique",
+      "source": "grand_mere",
+      "target": "yareli",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:grendel-helminth-lien-chronologique",
+      "source": "grendel",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:gyre-zariman-lien-chronologique",
+      "source": "gyre",
+      "target": "zariman",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:hai-luk-konzu-lien-chronologique",
+      "source": "hai_luk",
+      "target": "konzu",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:hai-luk-ostrons-lien-chronologique",
+      "source": "hai_luk",
+      "target": "ostrons",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:harrow-ballas-lien-chronologique",
+      "source": "harrow",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:harrow-indifference-lien-chronologique",
+      "source": "harrow",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:harrow-rell-lien-chronologique",
+      "source": "harrow",
+      "target": "rell",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:helminth-albrecht-lien-chronologique",
+      "source": "helminth",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:helminth-technocyte-lien-chronologique",
+      "source": "helminth",
+      "target": "technocyte",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:hildryn-little-duck-lien-chronologique",
+      "source": "hildryn",
+      "target": "little_duck",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:hildryn-vox-solaris-lien-chronologique",
+      "source": "hildryn",
+      "target": "vox_solaris",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:hok-konzu-lien-chronologique",
+      "source": "hok",
+      "target": "konzu",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:hok-ostrons-lien-chronologique",
+      "source": "hok",
+      "target": "ostrons",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:hombask-cavalero-lien-chronologique",
+      "source": "hombask",
+      "target": "cavalero",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:hombask-the-holdfasts-lien-chronologique",
+      "source": "hombask",
+      "target": "the_holdfasts",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:hombask-zariman-lien-chronologique",
+      "source": "hombask",
+      "target": "zariman",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:hunhow-ballas-lien-chronologique",
+      "source": "hunhow",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:hunhow-erra-lien-chronologique",
+      "source": "hunhow",
+      "target": "erra",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:hunhow-natah-lien-chronologique",
+      "source": "hunhow",
+      "target": "natah",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:hydroid-vay-hek-lien-chronologique",
+      "source": "hydroid",
+      "target": "vay_hek",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:inaros-ballas-lien-chronologique",
+      "source": "inaros",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:inaros-baro-kiteer-lien-chronologique",
+      "source": "inaros",
+      "target": "baro_kiteer",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:indifference-albrecht-lien-chronologique",
+      "source": "indifference",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:indifference-arthur-lien-chronologique",
+      "source": "indifference",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:indifference-drifter-lien-chronologique",
+      "source": "indifference",
+      "target": "drifter",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:indifference-margulis-lien-chronologique",
+      "source": "indifference",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:indifference-rell-lien-paradoxal",
+      "source": "indifference",
+      "target": "rell",
+      "type": "lien_paradoxal",
+      "label": ""
+    },
+    {
+      "id": "edge:ivara-helminth-lien-chronologique",
+      "source": "ivara",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:jackal-nef-anyo-lien-chronologique",
+      "source": "jackal",
+      "target": "nef_anyo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:jade-drifter-lien-chronologique",
+      "source": "jade",
+      "target": "drifter",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:jade-stalker-lien-chronologique",
+      "source": "jade",
+      "target": "stalker",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kahl-175-eudico-lien-chronologique",
+      "source": "kahl_175",
+      "target": "eudico",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kahl-175-kahl-garrison-lien-chronologique",
+      "source": "kahl_175",
+      "target": "kahl_garrison",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kahl-garrison-kahl-175-lien-chronologique",
+      "source": "kahl_garrison",
+      "target": "kahl_175",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kahl-garrison-narmer-lien-chronologique",
+      "source": "kahl_garrison",
+      "target": "narmer",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kahl-garrison-reines-jumelles-lien-chronologique",
+      "source": "kahl_garrison",
+      "target": "reines_jumelles",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kalymos-albrecht-lien-chronologique",
+      "source": "kalymos",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kalymos-loid-lien-chronologique",
+      "source": "kalymos",
+      "target": "loid",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kaya-albrecht-lien-chronologique",
+      "source": "kaya",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kaya-arthur-lien-chronologique",
+      "source": "kaya",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kaya-flare-lien-chronologique",
+      "source": "kaya",
+      "target": "flare",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kaya-lettie-lien-chronologique",
+      "source": "kaya",
+      "target": "lettie",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kaya-nova-lien-chronologique",
+      "source": "kaya",
+      "target": "nova",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kela-de-thaym-captain-vor-lien-chronologique",
+      "source": "kela_de_thaym",
+      "target": "captain_vor",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kela-de-thaym-reines-jumelles-lien-chronologique",
+      "source": "kela_de_thaym",
+      "target": "reines_jumelles",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kela-de-thaym-vay-hek-lien-chronologique",
+      "source": "kela_de_thaym",
+      "target": "vay_hek",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:khora-cephalon-simaris-lien-chronologique",
+      "source": "khora",
+      "target": "cephalon_simaris",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:khora-helminth-lien-chronologique",
+      "source": "khora",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:konzu-kahl-garrison-lien-chronologique",
+      "source": "konzu",
+      "target": "kahl_garrison",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:konzu-ostrons-lien-chronologique",
+      "source": "konzu",
+      "target": "ostrons",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:koumei-helminth-lien-chronologique",
+      "source": "koumei",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kullervo-ballas-lien-chronologique",
+      "source": "kullervo",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kullervo-drifter-lien-chronologique",
+      "source": "kullervo",
+      "target": "drifter",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kuva-reines-jumelles-lien-chronologique",
+      "source": "kuva",
+      "target": "reines_jumelles",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kuva-teshin-lien-chronologique",
+      "source": "kuva",
+      "target": "teshin",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:kuva-yuvan-lien-chronologique",
+      "source": "kuva",
+      "target": "yuvan",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:lavos-kuva-lien-chronologique",
+      "source": "lavos",
+      "target": "kuva",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:lech-kril-reines-jumelles-lien-chronologique",
+      "source": "lech_kril",
+      "target": "reines_jumelles",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:lech-kril-sargas-ruk-lien-chronologique",
+      "source": "lech_kril",
+      "target": "sargas_ruk",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:legs-solaris-united-lien-chronologique",
+      "source": "legs",
+      "target": "solaris_united",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:legs-the-business-lien-chronologique",
+      "source": "legs",
+      "target": "the_business",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:lephantis-hunhow-lien-chronologique",
+      "source": "lephantis",
+      "target": "hunhow",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:lephantis-technocyte-lien-chronologique",
+      "source": "lephantis",
+      "target": "technocyte",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:lettie-albrecht-lien-chronologique",
+      "source": "lettie",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:lettie-amir-lien-chronologique",
+      "source": "lettie",
+      "target": "amir",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:lettie-arthur-lien-chronologique",
+      "source": "lettie",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:lettie-technocyte-lien-chronologique",
+      "source": "lettie",
+      "target": "technocyte",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:lettie-trinity-lien-chronologique",
+      "source": "lettie",
+      "target": "trinity",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:limbo-indifference-lien-paradoxal",
+      "source": "limbo",
+      "target": "indifference",
+      "type": "lien_paradoxal",
+      "label": ""
+    },
+    {
+      "id": "edge:limbo-ordis-lien-chronologique",
+      "source": "limbo",
+      "target": "ordis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:little-duck-eudico-lien-chronologique",
+      "source": "little_duck",
+      "target": "eudico",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:little-duck-vox-solaris-lien-chronologique",
+      "source": "little_duck",
+      "target": "vox_solaris",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:loid-albrecht-lien-chronologique",
+      "source": "loid",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:loid-indifference-lien-chronologique",
+      "source": "loid",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:loid-ordis-lien-chronologique",
+      "source": "loid",
+      "target": "ordis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:loki-ash-lien-chronologique",
+      "source": "loki",
+      "target": "ash",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:loki-helminth-lien-chronologique",
+      "source": "loki",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:luscinia-dominus-thrax-lien-chronologique",
+      "source": "luscinia",
+      "target": "dominus_thrax",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:luscinia-kullervo-lien-chronologique",
+      "source": "luscinia",
+      "target": "kullervo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:luscinia-sythel-lien-chronologique",
+      "source": "luscinia",
+      "target": "sythel",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:mag-aoi-lien-chronologique",
+      "source": "mag",
+      "target": "aoi",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:mag-ballas-lien-chronologique",
+      "source": "mag",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:mag-margulis-lien-chronologique",
+      "source": "mag",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:maitre-teasonai-hai-luk-lien-chronologique",
+      "source": "maitre_teasonai",
+      "target": "hai_luk",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:maitre-teasonai-ostrons-lien-chronologique",
+      "source": "maitre_teasonai",
+      "target": "ostrons",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:maitre-teasonai-the-business-lien-chronologique",
+      "source": "maitre_teasonai",
+      "target": "the_business",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:major-noz-arthur-lien-chronologique",
+      "source": "major-noz",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:major-noz-scaldra-lien-chronologique",
+      "source": "major-noz",
+      "target": "scaldra",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:major-noz-technocyte-lien-chronologique",
+      "source": "major-noz",
+      "target": "technocyte",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:major-noz-vena-lien-chronologique",
+      "source": "major-noz",
+      "target": "vena",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:margulis-albrecht-lien-chronologique",
+      "source": "margulis",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:margulis-ballas-lien-paradoxal",
+      "source": "margulis",
+      "target": "ballas",
+      "type": "lien_paradoxal",
+      "label": ""
+    },
+    {
+      "id": "edge:margulis-rell-lien-chronologique",
+      "source": "margulis",
+      "target": "rell",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:maroo-darvo-lien-chronologique",
+      "source": "maroo",
+      "target": "darvo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:mathila-bombastine-lien-chronologique",
+      "source": "mathila",
+      "target": "bombastine",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:mathila-dominus-thrax-lien-chronologique",
+      "source": "mathila",
+      "target": "dominus_thrax",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:mathila-drifter-lien-chronologique",
+      "source": "mathila",
+      "target": "drifter",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:mere-gomati-famille-entrati-lien-chronologique",
+      "source": "mere_gomati",
+      "target": "famille_entrati",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:mere-gomati-fils-tyl-lien-chronologique",
+      "source": "mere_gomati",
+      "target": "fils_tyl",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:mere-gomati-pere-vilcor-lien-chronologique",
+      "source": "mere_gomati",
+      "target": "pere_vilcor",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:mesa-alad-v-lien-chronologique",
+      "source": "mesa",
+      "target": "alad_v",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:mirage-cephalon-suda-lien-chronologique",
+      "source": "mirage",
+      "target": "cephalon_suda",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:mirage-hunhow-lien-chronologique",
+      "source": "mirage",
+      "target": "hunhow",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nakak-onkko-lien-chronologique",
+      "source": "nakak",
+      "target": "onkko",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nakak-revenant-lien-chronologique",
+      "source": "nakak",
+      "target": "revenant",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nakak-the-quills-lien-chronologique",
+      "source": "nakak",
+      "target": "the_quills",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:narmer-ballas-lien-chronologique",
+      "source": "narmer",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:narmer-erra-lien-chronologique",
+      "source": "narmer",
+      "target": "erra",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:narmer-kahl-175-lien-chronologique",
+      "source": "narmer",
+      "target": "kahl_175",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:natah-ballas-lien-paradoxal",
+      "source": "natah",
+      "target": "ballas",
+      "type": "lien_paradoxal",
+      "label": ""
+    },
+    {
+      "id": "edge:natah-erra-lien-chronologique",
+      "source": "natah",
+      "target": "erra",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:natah-hunhow-lien-chronologique",
+      "source": "natah",
+      "target": "hunhow",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:necramech-loid-lien-chronologique",
+      "source": "necramech",
+      "target": "loid",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:necramech-pere-vilcor-lien-chronologique",
+      "source": "necramech",
+      "target": "pere_vilcor",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nef-anyo-alad-v-lien-chronologique",
+      "source": "nef_anyo",
+      "target": "alad_v",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nef-anyo-eudico-lien-chronologique",
+      "source": "nef_anyo",
+      "target": "eudico",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nef-anyo-parvos-granum-lien-chronologique",
+      "source": "nef_anyo",
+      "target": "parvos_granum",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nef-anyo-solaris-united-lien-chronologique",
+      "source": "nef_anyo",
+      "target": "solaris_united",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nekros-lephantis-lien-chronologique",
+      "source": "nekros",
+      "target": "lephantis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:new-loka-amaryn-lien-chronologique",
+      "source": "new_loka",
+      "target": "amaryn",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:new-loka-reines-jumelles-lien-chronologique",
+      "source": "new_loka",
+      "target": "reines_jumelles",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nezha-helminth-lien-chronologique",
+      "source": "nezha",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nidus-ergo-glast-lien-chronologique",
+      "source": "nidus",
+      "target": "ergo_glast",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nidus-helminth-lien-chronologique",
+      "source": "nidus",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nidus-technocyte-lien-chronologique",
+      "source": "nidus",
+      "target": "technocyte",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nihil-nora-night-lien-chronologique",
+      "source": "nihil",
+      "target": "nora_night",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nokko-helminth-lien-chronologique",
+      "source": "nokko",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nokko-solaris-united-lien-chronologique",
+      "source": "nokko",
+      "target": "solaris_united",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nora-night-nihil-lien-chronologique",
+      "source": "nora_night",
+      "target": "nihil",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nova-ballas-lien-chronologique",
+      "source": "nova",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nova-kaya-lien-chronologique",
+      "source": "nova",
+      "target": "kaya",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nova-margulis-lien-chronologique",
+      "source": "nova",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nyx-ballas-lien-chronologique",
+      "source": "nyx",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nyx-eleanor-lien-chronologique",
+      "source": "nyx",
+      "target": "eleanor",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:nyx-margulis-lien-chronologique",
+      "source": "nyx",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:oberon-helminth-lien-chronologique",
+      "source": "oberon",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:octavia-cephalon-suda-lien-chronologique",
+      "source": "octavia",
+      "target": "cephalon_suda",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:octavia-hunhow-lien-chronologique",
+      "source": "octavia",
+      "target": "hunhow",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:onkko-indifference-lien-chronologique",
+      "source": "onkko",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:onkko-the-quills-lien-chronologique",
+      "source": "onkko",
+      "target": "the_quills",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:operateur-drifter-lien-paradoxal",
+      "source": "operateur",
+      "target": "drifter",
+      "type": "lien_paradoxal",
+      "label": ""
+    },
+    {
+      "id": "edge:operateur-indifference-lien-chronologique",
+      "source": "operateur",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:operateur-margulis-lien-chronologique",
+      "source": "operateur",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:operateur-zariman-lien-chronologique",
+      "source": "operateur",
+      "target": "zariman",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:oraxia-albrecht-lien-chronologique",
+      "source": "oraxia",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:oraxia-helminth-lien-chronologique",
+      "source": "oraxia",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ordis-ballas-lien-chronologique",
+      "source": "ordis",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ordis-indifference-lien-chronologique",
+      "source": "ordis",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ordis-margulis-lien-chronologique",
+      "source": "ordis",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:orowyrms-dominus-thrax-lien-chronologique",
+      "source": "orowyrms",
+      "target": "dominus_thrax",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:orowyrms-drifter-lien-chronologique",
+      "source": "orowyrms",
+      "target": "drifter",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ostrons-hunhow-lien-chronologique",
+      "source": "ostrons",
+      "target": "hunhow",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ostrons-konzu-lien-chronologique",
+      "source": "ostrons",
+      "target": "konzu",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:otak-albrecht-lien-chronologique",
+      "source": "otak",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:otak-loid-lien-chronologique",
+      "source": "otak",
+      "target": "loid",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:otak-technocyte-lien-chronologique",
+      "source": "otak",
+      "target": "technocyte",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:palladino-cressa-tal-lien-chronologique",
+      "source": "palladino",
+      "target": "cressa_tal",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:palladino-red-veil-lien-chronologique",
+      "source": "palladino",
+      "target": "red_veil",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:parvos-granum-alad-v-lien-chronologique",
+      "source": "parvos_granum",
+      "target": "alad_v",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:pere-vilcor-famille-entrati-lien-chronologique",
+      "source": "pere_vilcor",
+      "target": "famille_entrati",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:pere-vilcor-mere-gomati-lien-chronologique",
+      "source": "pere_vilcor",
+      "target": "mere_gomati",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:pere-vilcor-necramech-lien-chronologique",
+      "source": "pere_vilcor",
+      "target": "necramech",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:perintol-ballas-lien-chronologique",
+      "source": "perintol",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:perintol-hunhow-lien-chronologique",
+      "source": "perintol",
+      "target": "hunhow",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:perrin-sequence-ergo-glast-lien-chronologique",
+      "source": "perrin_sequence",
+      "target": "ergo_glast",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:perrin-sequence-parvos-granum-lien-chronologique",
+      "source": "perrin_sequence",
+      "target": "parvos_granum",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:phorid-lephantis-lien-chronologique",
+      "source": "phorid",
+      "target": "lephantis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:phorid-technocyte-lien-chronologique",
+      "source": "phorid",
+      "target": "technocyte",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:prelat-zelote-nora-night-lien-chronologique",
+      "source": "prelat_zelote",
+      "target": "nora_night",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:prelat-zelote-technocyte-lien-chronologique",
+      "source": "prelat_zelote",
+      "target": "technocyte",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:protea-nef-anyo-lien-chronologique",
+      "source": "protea",
+      "target": "nef_anyo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:protea-parvos-granum-lien-chronologique",
+      "source": "protea",
+      "target": "parvos_granum",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:protoframe-minerva-albrecht-lien-chronologique",
+      "source": "protoframe_minerva",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:protoframe-minerva-arthur-lien-chronologique",
+      "source": "protoframe_minerva",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:protoframe-minerva-kaya-lien-chronologique",
+      "source": "protoframe_minerva",
+      "target": "kaya",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:protoframe-minerva-saryn-lien-chronologique",
+      "source": "protoframe_minerva",
+      "target": "saryn",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:protoframe-minerva-velemir-lien-chronologique",
+      "source": "protoframe_minerva",
+      "target": "velemir",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:qorvex-albrecht-lien-chronologique",
+      "source": "qorvex",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:qorvex-loid-lien-chronologique",
+      "source": "qorvex",
+      "target": "loid",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:quincy-albrecht-lien-chronologique",
+      "source": "quincy",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:quincy-arthur-lien-chronologique",
+      "source": "quincy",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:quincy-cyte-09-lien-chronologique",
+      "source": "quincy",
+      "target": "cyte-09",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:quincy-scaldra-lien-chronologique",
+      "source": "quincy",
+      "target": "scaldra",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:quinn-the-holdfasts-lien-chronologique",
+      "source": "quinn",
+      "target": "the_holdfasts",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:quinn-zariman-lien-chronologique",
+      "source": "quinn",
+      "target": "zariman",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:red-veil-new-loka-lien-chronologique",
+      "source": "red_veil",
+      "target": "new_loka",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:red-veil-palladino-lien-chronologique",
+      "source": "red_veil",
+      "target": "palladino",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:reines-jumelles-hunhow-lien-chronologique",
+      "source": "reines_jumelles",
+      "target": "hunhow",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:reines-jumelles-tyl-regor-lien-chronologique",
+      "source": "reines_jumelles",
+      "target": "tyl_regor",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:rell-drifter-lien-paradoxal",
+      "source": "rell",
+      "target": "drifter",
+      "type": "lien_paradoxal",
+      "label": ""
+    },
+    {
+      "id": "edge:rell-indifference-lien-chronologique",
+      "source": "rell",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:rell-margulis-lien-chronologique",
+      "source": "rell",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:revenant-gara-lien-chronologique",
+      "source": "revenant",
+      "target": "gara",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:revenant-hunhow-lien-chronologique",
+      "source": "revenant",
+      "target": "hunhow",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:rhino-davis-lien-chronologique",
+      "source": "rhino",
+      "target": "davis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:rhino-margulis-lien-chronologique",
+      "source": "rhino",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:roky-eudico-lien-chronologique",
+      "source": "roky",
+      "target": "eudico",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:roky-the-ventkids-lien-chronologique",
+      "source": "roky",
+      "target": "the_ventkids",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ropalolyst-hunhow-lien-chronologique",
+      "source": "ropalolyst",
+      "target": "hunhow",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ropalolyst-natah-lien-chronologique",
+      "source": "ropalolyst",
+      "target": "natah",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:rude-zuud-solaris-united-lien-chronologique",
+      "source": "rude_zuud",
+      "target": "solaris_united",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:rude-zuud-ticker-lien-chronologique",
+      "source": "rude_zuud",
+      "target": "ticker",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ryoku-albrecht-lien-chronologique",
+      "source": "ryoku",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ryoku-arthur-lien-chronologique",
+      "source": "ryoku",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ryoku-ash-lien-chronologique",
+      "source": "ryoku",
+      "target": "ash",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ryoku-vena-lien-chronologique",
+      "source": "ryoku",
+      "target": "vena",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:sargas-ruk-reines-jumelles-lien-chronologique",
+      "source": "sargas_ruk",
+      "target": "reines_jumelles",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:sargas-ruk-vay-hek-lien-chronologique",
+      "source": "sargas_ruk",
+      "target": "vay_hek",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:saryn-ballas-lien-chronologique",
+      "source": "saryn",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:saryn-margulis-lien-chronologique",
+      "source": "saryn",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:saryn-protoframe-minerva-lien-chronologique",
+      "source": "saryn",
+      "target": "protoframe_minerva",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:scaldra-amir-lien-chronologique",
+      "source": "scaldra",
+      "target": "amir",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:scaldra-aoi-lien-chronologique",
+      "source": "scaldra",
+      "target": "aoi",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:scaldra-arthur-lien-chronologique",
+      "source": "scaldra",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:scaldra-major-noz-lien-chronologique",
+      "source": "scaldra",
+      "target": "major-noz",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:scaldra-quincy-lien-chronologique",
+      "source": "scaldra",
+      "target": "quincy",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:scaldra-technocyte-lien-chronologique",
+      "source": "scaldra",
+      "target": "technocyte",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:sevagoth-cephalon-cy-lien-chronologique",
+      "source": "sevagoth",
+      "target": "cephalon_cy",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:silvana-new-loka-lien-chronologique",
+      "source": "silvana",
+      "target": "new_loka",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:silvana-titania-lien-chronologique",
+      "source": "silvana",
+      "target": "titania",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:sirius-orion-hunhow-lien-chronologique",
+      "source": "sirius_orion",
+      "target": "hunhow",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:sirius-orion-jade-lien-chronologique",
+      "source": "sirius_orion",
+      "target": "jade",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:sirius-orion-stalker-lien-chronologique",
+      "source": "sirius_orion",
+      "target": "stalker",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:smokefinger-nef-anyo-lien-chronologique",
+      "source": "smokefinger",
+      "target": "nef_anyo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:smokefinger-solaris-united-lien-chronologique",
+      "source": "smokefinger",
+      "target": "solaris_united",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:solaris-united-eudico-lien-chronologique",
+      "source": "solaris_united",
+      "target": "eudico",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:solaris-united-nef-anyo-lien-chronologique",
+      "source": "solaris_united",
+      "target": "nef_anyo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:stalker-ballas-lien-chronologique",
+      "source": "stalker",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:stalker-drifter-lien-chronologique",
+      "source": "stalker",
+      "target": "drifter",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:stalker-jade-lien-chronologique",
+      "source": "stalker",
+      "target": "jade",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:stalker-natah-lien-chronologique",
+      "source": "stalker",
+      "target": "natah",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:steel-meridian-cressa-tal-lien-chronologique",
+      "source": "steel_meridian",
+      "target": "cressa_tal",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:steel-meridian-reines-jumelles-lien-chronologique",
+      "source": "steel_meridian",
+      "target": "reines_jumelles",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:styanax-kahl-175-lien-chronologique",
+      "source": "styanax",
+      "target": "kahl_175",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:sythel-dominus-thrax-lien-chronologique",
+      "source": "sythel",
+      "target": "dominus_thrax",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:sythel-drifter-lien-chronologique",
+      "source": "sythel",
+      "target": "drifter",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:sythel-luscinia-lien-chronologique",
+      "source": "sythel",
+      "target": "luscinia",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:tagfer-fibonacci-lien-chronologique",
+      "source": "tagfer",
+      "target": "fibonacci",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:tagfer-the-cavia-lien-chronologique",
+      "source": "tagfer",
+      "target": "the_cavia",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:technocyte-albrecht-lien-chronologique",
+      "source": "technocyte",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:technocyte-arthur-lien-chronologique",
+      "source": "technocyte",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:technocyte-indifference-lien-paradoxal",
+      "source": "technocyte",
+      "target": "indifference",
+      "type": "lien_paradoxal",
+      "label": ""
+    },
+    {
+      "id": "edge:technocyte-lettie-lien-chronologique",
+      "source": "technocyte",
+      "target": "lettie",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:technocyte-scaldra-lien-chronologique",
+      "source": "technocyte",
+      "target": "scaldra",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:temple-ballas-lien-chronologique",
+      "source": "temple",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:temple-flare-lien-chronologique",
+      "source": "temple",
+      "target": "flare",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:temple-margulis-lien-chronologique",
+      "source": "temple",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:teshin-ballas-lien-chronologique",
+      "source": "teshin",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:teshin-natah-lien-chronologique",
+      "source": "teshin",
+      "target": "natah",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:teshin-reines-jumelles-lien-chronologique",
+      "source": "teshin",
+      "target": "reines_jumelles",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:the-business-eudico-lien-chronologique",
+      "source": "the_business",
+      "target": "eudico",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:the-business-solaris-united-lien-chronologique",
+      "source": "the_business",
+      "target": "solaris_united",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:the-cavia-albrecht-lien-chronologique",
+      "source": "the_cavia",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:the-cavia-fibonacci-lien-chronologique",
+      "source": "the_cavia",
+      "target": "fibonacci",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:the-cavia-indifference-lien-chronologique",
+      "source": "the_cavia",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:the-holdfasts-quinn-lien-chronologique",
+      "source": "the_holdfasts",
+      "target": "quinn",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:the-holdfasts-rell-lien-chronologique",
+      "source": "the_holdfasts",
+      "target": "rell",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:the-holdfasts-zariman-lien-chronologique",
+      "source": "the_holdfasts",
+      "target": "zariman",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:the-quills-indifference-lien-chronologique",
+      "source": "the_quills",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:the-quills-onkko-lien-chronologique",
+      "source": "the_quills",
+      "target": "onkko",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:the-sergeant-nef-anyo-lien-chronologique",
+      "source": "the_sergeant",
+      "target": "nef_anyo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:the-ventkids-roky-lien-chronologique",
+      "source": "the_ventkids",
+      "target": "roky",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:the-ventkids-solaris-united-lien-chronologique",
+      "source": "the_ventkids",
+      "target": "solaris_united",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ticker-eudico-lien-chronologique",
+      "source": "ticker",
+      "target": "eudico",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:ticker-solaris-united-lien-chronologique",
+      "source": "ticker",
+      "target": "solaris_united",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:titania-margulis-lien-chronologique",
+      "source": "titania",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:trinity-ballas-lien-chronologique",
+      "source": "trinity",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:trinity-lettie-lien-chronologique",
+      "source": "trinity",
+      "target": "lettie",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:trinity-margulis-lien-chronologique",
+      "source": "trinity",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:tuvul-ballas-lien-chronologique",
+      "source": "tuvul",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:tuvul-margulis-lien-chronologique",
+      "source": "tuvul",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:tyl-regor-alad-v-lien-chronologique",
+      "source": "tyl_regor",
+      "target": "alad_v",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:tyl-regor-reines-jumelles-lien-chronologique",
+      "source": "tyl_regor",
+      "target": "reines_jumelles",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:tyl-regor-technocyte-lien-chronologique",
+      "source": "tyl_regor",
+      "target": "technocyte",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:uriel-helminth-lien-chronologique",
+      "source": "uriel",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:valkyr-alad-v-lien-chronologique",
+      "source": "valkyr",
+      "target": "alad_v",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:varzia-ballas-lien-chronologique",
+      "source": "varzia",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:varzia-teshin-lien-chronologique",
+      "source": "varzia",
+      "target": "teshin",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:vauban-helminth-lien-chronologique",
+      "source": "vauban",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:vay-hek-cressa-tal-lien-chronologique",
+      "source": "vay_hek",
+      "target": "cressa_tal",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:vay-hek-reines-jumelles-lien-chronologique",
+      "source": "vay_hek",
+      "target": "reines_jumelles",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:vay-hek-tyl-regor-lien-chronologique",
+      "source": "vay_hek",
+      "target": "tyl_regor",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:velemir-albrecht-lien-chronologique",
+      "source": "velemir",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:velemir-arthur-lien-chronologique",
+      "source": "velemir",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:velemir-frost-lien-chronologique",
+      "source": "velemir",
+      "target": "frost",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:velemir-lettie-lien-chronologique",
+      "source": "velemir",
+      "target": "lettie",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:vena-albrecht-lien-chronologique",
+      "source": "vena",
+      "target": "albrecht",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:vena-arthur-lien-chronologique",
+      "source": "vena",
+      "target": "arthur",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:vena-garuda-lien-chronologique",
+      "source": "vena",
+      "target": "garuda",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:vena-ryoku-lien-chronologique",
+      "source": "vena",
+      "target": "ryoku",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:veso-r-erra-lien-chronologique",
+      "source": "veso_r",
+      "target": "erra",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:veso-r-nef-anyo-lien-chronologique",
+      "source": "veso_r",
+      "target": "nef_anyo",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:volt-amir-lien-chronologique",
+      "source": "volt",
+      "target": "amir",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:volt-ballas-lien-chronologique",
+      "source": "volt",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:volt-margulis-lien-chronologique",
+      "source": "volt",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:voruna-tuvul-lien-chronologique",
+      "source": "voruna",
+      "target": "tuvul",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:voruna-yuvan-lien-chronologique",
+      "source": "voruna",
+      "target": "yuvan",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:vox-solaris-little-duck-lien-chronologique",
+      "source": "vox_solaris",
+      "target": "little_duck",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:vox-solaris-solaris-united-lien-chronologique",
+      "source": "vox_solaris",
+      "target": "solaris_united",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:wisp-helminth-lien-chronologique",
+      "source": "wisp",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:wolf-of-saturn-six-nora-night-lien-chronologique",
+      "source": "wolf_of_saturn_six",
+      "target": "nora_night",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:wolf-of-saturn-six-reines-jumelles-lien-chronologique",
+      "source": "wolf_of_saturn_six",
+      "target": "reines_jumelles",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:wukong-helminth-lien-chronologique",
+      "source": "wukong",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:xaku-indifference-lien-chronologique",
+      "source": "xaku",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:xaku-zariman-lien-chronologique",
+      "source": "xaku",
+      "target": "zariman",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:yareli-grand-mere-lien-chronologique",
+      "source": "yareli",
+      "target": "grand_mere",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:yareli-roky-lien-chronologique",
+      "source": "yareli",
+      "target": "roky",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:yareli-the-ventkids-lien-chronologique",
+      "source": "yareli",
+      "target": "the_ventkids",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:yuvan-ballas-lien-chronologique",
+      "source": "yuvan",
+      "target": "ballas",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:yuvan-kuva-lien-chronologique",
+      "source": "yuvan",
+      "target": "kuva",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:yuvan-tuvul-lien-chronologique",
+      "source": "yuvan",
+      "target": "tuvul",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:zariman-drifter-lien-paradoxal",
+      "source": "zariman",
+      "target": "drifter",
+      "type": "lien_paradoxal",
+      "label": ""
+    },
+    {
+      "id": "edge:zariman-indifference-lien-chronologique",
+      "source": "zariman",
+      "target": "indifference",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:zariman-margulis-lien-chronologique",
+      "source": "zariman",
+      "target": "margulis",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:zariman-rell-lien-chronologique",
+      "source": "zariman",
+      "target": "rell",
+      "type": "lien_chronologique",
+      "label": ""
+    },
+    {
+      "id": "edge:zephyr-helminth-lien-chronologique",
+      "source": "zephyr",
+      "target": "helminth",
+      "type": "lien_chronologique",
+      "label": ""
+    }
+  ]
+}

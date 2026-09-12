@@ -9,6 +9,10 @@ export default defineConfig({
   plugins: [vue()],
   root: 'src',
   base: '/timeline/',
+  // Le graphe généré par scripts/extractor.js vit dans data/timeline
+  // (racine du projet) : déclaré comme "public dir" → servi en dev et copié
+  // tel quel dans static/timeline/graph.json au build (pas de copie manuelle).
+  publicDir: fileURLToPath(new URL('../../../data/timeline', import.meta.url)),
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

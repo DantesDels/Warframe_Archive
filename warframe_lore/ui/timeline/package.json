@@ -1,21 +1,26 @@
 {
   "name": "cephalon-timeline",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
-  "description": "Timeline — Cephalon Archive (Vue 3 + dagre in a Web Worker, lazy-loading, pan/zoom)",
+  "description": "Timeline — Cephalon Oracle (Vue 3 + Vue Flow + ELK.js en Web Worker, clusters Obsidian, reconnexion causale)",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "extract": "node scripts/extractor.js",
+    "reload": "node scripts/extractor.js && vite build"
   },
   "dependencies": {
-    "@dagrejs/dagre": "^1.1.4",
+    "@vue-flow/background": "^1.3.0",
+    "@vue-flow/core": "^1.33.0",
+    "elkjs": "^0.9.3",
     "vue": "^3.5.13",
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
+    "gray-matter": "^4.0.3",
     "vite": "^6.0.7"
   }
 }

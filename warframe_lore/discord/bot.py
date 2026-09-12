@@ -16,6 +16,7 @@ from warframe_lore.engram.persona import (STATUT_ALLIE, STATUT_CONCEPTEUR,
                                           STATUT_HAUT_COMMANDEMENT,
                                           STATUT_MEMBRE_OFFICIEL,
                                           STATUT_ORGANIQUE)
+from warframe_lore.engram.guardrail import is_toxic_critical
 from warframe_lore.engram.rag.probes import detect_probe, is_self_reflection
 
 from .gateway import RoleplayGateway
@@ -27,6 +28,7 @@ from .members import (creator_mentioned, is_member_question, leetspeak,
                       match_member_token, normalize_mentions, roles_question,
                       self_info_request)
 from .activity import MemberActivityStore
+from .abuse_manager import AbuseManager
 from .roles import Accreditation, RoleHierarchy
 from .streamer import MessageStreamer
 
@@ -90,6 +92,12 @@ class LoreMasterBot(discord.Client):
         # Anti-spam guard rail: per-user cooldown, per-channel cap,
         # temporary block on insistence (quasi-DDoS at channel level).
         self.guard = BurstGuard()
+        # Limite dure anti-récidive (spam/insulte) : 5 infractions
+        # consécutives en moins de 3 minutes ⇒ ``Member.timeout()`` d'une
+        # heure, quel que soit l'état des autres compteurs (le Concepteur
+        # est protégé par son snowflake).
+        protected = {self.creator_discord_id} if self.creator_discord_id else set()
+        self.abuse = AbuseManager(protected_ids=protected)
         # Anti-attack reply escalation (level 0 → 2).
         self.hostility = HostilityTracker()
         # Insolence counter (répartie): separate from probe strikes so a
@@ -123,6 +131,23 @@ class LoreMasterBot(discord.Client):
         if message.author.bot or not message.content:
             return
         content = message.content.strip()
+        # TOLÉRANCE ZÉRO (verdict TOXIC_CRITICAL de la garde sémantique) :
+        # insulte raciale/homophobe grave, apologie du terrorisme ou du
+        # nazisme.  AUCUNE réponse textuelle — jamais — et escalade dure
+        # immédiate : timeout Discord 24 h + rapport automatique en MP au
+        # Créateur (déterministe, indépendant du LLM, même en OOC/parenthèses,
+        # même sans mention).
+        if is_toxic_critical(content):
+            # Compté pour le hard-limit (4 infractions consécutives en
+            # <3 min ⇒ timeout 1 h) en plus de la sanction 24 h + rapport.
+            await self.abuse.register(message.author, "toxic_critical")
+            await self.abuse.hard_sanction(
+                message.author,
+                kind="toxic_critical",
+                creator=self._creator_member(message.guild),
+                channel_name=getattr(message.channel, "name", ""),
+                excerpt=content[:200])
+            return
         # Per-member interaction memory (feeds the member-card comment and the
         # reliability/assiduité indices): recorded for EVERY human message the
         # bot sees, so activity is real and comparable across members.
@@ -153,6 +178,7 @@ class LoreMasterBot(discord.Client):
             if not self.guard.check(message.author.id, message.channel.id):
                 log.info("Hostile spam ignored user=%s channel=%s",
                          message.author.id, message.channel.id)
+                await self.abuse.register(message.author, "spam")
                 return
             await self._insist(message.author.id, message)
             return
@@ -167,6 +193,9 @@ class LoreMasterBot(discord.Client):
         is_creator = self._is_creator(message.author.id)
         if detect_insult(text) and not is_creator:
             level = self._insults.strike(message.author.id)
+            # Infraction « insulte » comptée pour la limite dure (5 en moins
+            # de 3 min ⇒ timeout Discord d'une heure).
+            await self.abuse.register(message.author, "insult")
             log.warning("INSULT user=%s lvl=%d channel=%s text=%r",
                         message.author.id, level, message.channel.id, text)
             await message.reply(comeback_for(level))
@@ -183,6 +212,9 @@ class LoreMasterBot(discord.Client):
             return
         # Anti-spam for normal users (cooldown / caps).
         if not self.guard.check(message.author.id, message.channel.id):
+            # Infraction « spam » comptée pour la limite dure (5 en moins de
+            # 3 min ⇒ timeout Discord d'une heure).
+            await self.abuse.register(message.author, "spam")
             if self.guard.is_blocked(message.author.id):
                 log.warning("Temporary block on abuse user=%s channel=%s",
                             message.author.id, message.channel.id)
@@ -290,6 +322,9 @@ class LoreMasterBot(discord.Client):
         turn — no more interleaved fragments."""
         channel_id = message.channel.id
         text = self._normalize_message(message)
+        # Un message accepté licite rompt la série « consécutive » de la
+        # limite dure anti-récidive (seuls les faits consécutifs comptent).
+        self.abuse.register_pass(message.author.id)
         lock = self._route_locks.setdefault(channel_id, asyncio.Lock())
         async with lock:
             placeholder = None
@@ -735,6 +770,27 @@ class LoreMasterBot(discord.Client):
                 display = (getattr(member, "display_name", None)
                            or getattr(member, "name", "") or "").strip()
                 return display or None
+        return None
+
+    def _creator_member(self, guild: discord.Guild | None) -> discord.Member | None:
+        """Le membre Discord (objet) du Concepteur configuré, ou None.
+
+        Sert aux MP de rapport de sanction (``AbuseManager.hard_sanction``) :
+        seul le snowflake authentique résout le destinataire — jamais un nom
+        de personne prétendu dans un message."""
+        if guild is None or not self.creator_discord_id:
+            return None
+        try:
+            member = guild.get_member(int(self.creator_discord_id))
+            if member is not None:
+                return member
+        except (ValueError, TypeError):
+            return None
+        # Les membres peuvent être non-chunkés : scan de secours (même
+        # matching natif que ``_creator_display``).
+        for member in getattr(guild, "members", ()):
+            if str(getattr(member, "id", "") or "") == self.creator_discord_id:
+                return member
         return None
 
     def _is_creator(self, user_id: int | None) -> bool:

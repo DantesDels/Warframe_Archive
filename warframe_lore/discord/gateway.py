@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from collections.abc import Callable
 from typing import Awaitable
 
@@ -19,6 +20,32 @@ log = logging.getLogger("warframe_lore.discord.gateway")
 
 TokenHandler = Callable[[str], Awaitable[bool]]
 EndHandler = Callable[[str], Awaitable[None]]
+
+# ---- Sanitisation des payloads (NE lève jamais d'exception) ----
+# 1) Texte vide ou blanc → drop silencieux.
+# 2) Message ne contenant QU'UNE URL (liens directs types gifs/images) →
+#    drop silencieux : aucune réponse d'Oracle pour un pur lien.
+_URL_ONLY_RE = re.compile(r"^https?://[^\s]+$", re.IGNORECASE)
+_MEDIA_EXT_RE = re.compile(
+    r"\.(?:gif|gifv|jpe?g|png|webp|mp4|webm|mov|apng)(?:\?.*)?$",
+    re.IGNORECASE)
+_MEDIA_HOST_RE = re.compile(
+    r"(?:tenor\.com|giphy\.com|c\.tenor\.com|media\.giphy\.com|"
+    r"cdn\.discordapp\.com|media\.discordapp\.net|imgur\.com|"
+    r"i\.imgur\.com|c\.discordapp\.com)",
+    re.IGNORECASE)
+
+
+def is_media_only(text: str | None) -> bool:
+    """True si le message se réduit à un lien direct (gif/image/vidéo).
+
+    Un unique lien littéral (URL sans aucun mot) n'a pas de matière
+    conversationnelle : il est ignoré côté discord et côté API, sans
+    round-trip vers ENGRAM."""
+    t = (text or "").strip()
+    if not t or not _URL_ONLY_RE.match(t):
+        return False
+    return bool(_MEDIA_EXT_RE.search(t) or _MEDIA_HOST_RE.search(t))
 
 
 class RoleplayGateway:
@@ -69,6 +96,21 @@ class RoleplayGateway:
         after the stop marker.
         """
         async with self._send_lock:
+            # SANITISATION DES PAQUETS (faille sécurité/robustesse) : un texte
+            # vide, rempli d'espaces ou réduit à une URL directe (gif/image…)
+            # ne déclenche ni envoi WS ni exception.  Ignoré silencieusement
+            # (drop) — aucun round-trip vers ENGRAM, aucun frame ``error``,
+            # aucun crash en aval, plus de « Roleplay error: empty or invalid
+            # message ».
+            silent = (text or "").strip()
+            if not silent:
+                log.debug("Paquet vide ignoré (drop silencieux) — aucun envoi")
+                return
+            if is_media_only(silent):
+                log.debug("Paquet réduit à une URL directe ignoré (drop "
+                          "silencieux) — aucun envoi")
+                return
+            text = silent
             if not self.active:
                 raise ConnectionError(
                     "WS connection closed — restart the gateway")
@@ -122,6 +164,16 @@ class RoleplayGateway:
                 elif kind == "error":
                     # Terminal error (e.g. "internal error"): turn closed.
                     log.error("Roleplay error: %s", frame.get("message"))
+                    return
+                elif kind == "sanction":
+                    # Tolérance zéro (TOXIC_CRITICAL) : le serveur coupe le
+                    # tour, AUCUNE réponse textuelle.  Le frame est absorbé
+                    # (pas de boucle infinie) et la couche hôte est alertée.
+                    log.critical(
+                        "Oracle sanction (aucun texte) — reason=%s",
+                        frame.get("reason"))
+                    if on_end:
+                        await on_end("")
                     return
 
     async def comment(self, member_name: str, roles: list[str],
@@ -200,4 +252,4 @@ class RoleplayGateway:
             await self._conn.close()
 
 
-__all__ = ["RoleplayGateway"]
+__all__ = ["RoleplayGateway", "is_media_only"]

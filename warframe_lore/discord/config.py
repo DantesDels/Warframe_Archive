@@ -48,9 +48,9 @@ class DiscordConfig:
     # protectiveness.  Empty = feature disabled (no banner anywhere).
     creator_discord_id: str = field(
         default_factory=lambda: _env("CREATOR_DISCORD_ID", ""))
-    # Role hierarchy → JSON file (``discord_roles.json`` at the project root
-    # by default): maps each role name to its real Discord snowflake, grouped
-    # under its category.  The bot evaluates ``message.author.roles`` through
+    # Role hierarchy → JSON file (``config/discord_roles.json`` by default):
+    # maps each role name to its real Discord snowflake, grouped under its
+    # category.  The bot evaluates ``message.author.roles`` through
     # :class:`RoleHierarchy` to feed the speaker status (BLOC 2) and the
     # persona banner tone (mission-8).  Empty file/dir → everyone guest.
     roles_file: str = field(
@@ -65,12 +65,12 @@ class DiscordConfig:
             str(PROJECT_ROOT / "data" / "member_activity" / "member_activity.db")))
 
     @classmethod
-    def load(cls) -> "DiscordConfig":
+    def load(cls) -> DiscordConfig:
         """Build the configuration from the environment."""
         return cls()
 
     def build_roles(self) -> RoleHierarchy:
         """Loads the role hierarchy (explicit path, else the default JSON
-        at the project root)."""
-        path = self.roles_file or str(PROJECT_ROOT / "discord_roles.json")
+        under ``config/``)."""
+        path = self.roles_file or str(PROJECT_ROOT / "config" / "discord_roles.json")
         return RoleHierarchy.from_file(path)

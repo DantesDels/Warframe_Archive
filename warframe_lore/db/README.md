@@ -14,7 +14,7 @@ Stack: SQLAlchemy 2.0 async + asyncpg + pgvector.
 | `chunks/` | `ChunkManager` / `RAGChunk` / `chunk_markdown`: Markdown splitting into RAG chunks (`patterns.py` KIM rules, `splitters.py`, `split.py`) |
 | `kim_parser.py` | `extract_kim_messages`: KIM message extraction from dialogue blocks |
 
-## Schema (`init_db.sql`)
+## Schema (`warframe_lore/db/init_db.sql`)
 
 ```
 wiki_pages     (page_id PK, namespace, page_title UNIQUE, touched → delta,

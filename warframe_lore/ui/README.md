@@ -37,6 +37,6 @@ cephalon ui --port 8123                                       # via CLI
 
 ## Standalone Executable
 
-`dist/cephalon-ui.exe` (PyInstaller, see root README) bundles `launch_ui.py`
-+ `warframe_lore/ui/static/`; it reads the `out/` folder from the current
-directory.
+`dist/cephalon-ui.exe` (PyInstaller, see root README) bundles
+`packaging/launch_ui.py` + `warframe_lore/ui/static/`; it reads the `out/`
+folder from the current directory.

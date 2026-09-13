@@ -25,7 +25,7 @@ runtime_*.log
 cache/
 
 # Config locale
-buckets.json.local
+config/buckets.json.local
 
 # Base d'activité membre du bot (runtime)
 *.db
@@ -34,7 +34,7 @@ buckets.json.local
 
 # Env
 .env
-discord_roles.json
+config/discord_roles.json
 
 # Node (RAG Inspector / Vite)
 node_modules/

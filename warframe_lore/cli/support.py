@@ -11,13 +11,16 @@ import os
 import socket
 import subprocess
 import sys
+from pathlib import Path
 
 from ..api import BucketConfig
 from ..config import PROJECT_ROOT, load_config
 
 log = logging.getLogger("cephalon")
 
-PROJECT_DEFAULT_DB_INIT_SQL = PROJECT_ROOT / "init_db.sql"
+PROJECT_DEFAULT_DB_INIT_SQL = (
+    Path(__file__).resolve().parents[1] / "db" / "init_db.sql")
+PROJECT_DEFAULT_BUCKET_CONFIG = PROJECT_ROOT / "config" / "buckets.json"
 DEFAULT_UI_PORT = 49772
 
 
@@ -37,7 +40,7 @@ def build_config(args) -> tuple:
     if getattr(args, "database_url", None):
         config.database_url = args.database_url
 
-    project_default = PROJECT_ROOT / "buckets.json"
+    project_default = PROJECT_DEFAULT_BUCKET_CONFIG
     bucket_path = getattr(args, "bucket_config", None) or (
         project_default if project_default.exists() else None)
     if bucket_path is not None:

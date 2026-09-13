@@ -20,8 +20,8 @@ Responsibility: the command-line entry point of the pipeline.
 | `run` | Full pipeline, incremental delta (`--force`, `--skip-sql`, `--bucket-config`) |
 | `diff` | Preview delta (dry-run) via `scraper.delta_plan` |
 | `status` / `recent` | Database state / latest modified pages (`db.db_stats`, `recent_pages`) |
-| `buckets [--init]` | List / materialize `buckets.json` |
-| `init-db` | Create the PostgreSQL schema (`init_db.sql`) |
+| `buckets [--init]` | List / materialize `config/buckets.json` |
+| `init-db` | Create the PostgreSQL schema (`warframe_lore/db/init_db.sql`) |
 | `export-entities` | Synchronize `game_entities_i18n` (Public Export, `--lang`) |
 | `kim-dm` | Update the KIM mirror (datamine, `--lang`) |
 | `ui` | Launch the local HTTP server (browser) — `--port`, `--no-browser`, `--out` |

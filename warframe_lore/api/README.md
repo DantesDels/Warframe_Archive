@@ -38,5 +38,5 @@ and plugs into the same cleaning pipeline.
 from warframe_lore.api import BucketConfig
 
 cfg = BucketConfig()                    # 8 default buckets
-cfg = BucketConfig.from_file("buckets.json")  # or custom
+cfg = BucketConfig.from_file("config/buckets.json")  # or custom
 ```

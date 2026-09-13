@@ -221,7 +221,7 @@ package with its own README (see [Documentation](#documentation)). See
 `{page_title, category, last_updated, canon_status, content_markdown,
 _source, _pageid}` (plus `extra`). Consumers never write to it;
 `output` is the sole writer, merge is done on `page_title`. Schema
-disagreement with the database is possible (audited in `Rapport.md` finding 1).
+disagreement with the database is possible (audited in `docs/Rapport.md` finding 1).
 
 **I2 — PostgreSQL / pgvector.** `engram` accesses the database in
 **read-only** mode (asyncpg dialect): it vectorizes the question (`I3`,
@@ -311,8 +311,8 @@ pipeline navigation and maintenance:
 | `cephalon diff` | previews the delta without writing anything (dry-run) |
 | `cephalon status` | current state: pages, chunks, canon, last synchronization |
 | `cephalon recent` | latest modified / inserted pages |
-| `cephalon buckets` | lists buckets (`--init` materializes `buckets.json`) |
-| `cephalon init-db` | creates the PostgreSQL schema |
+| `cephalon buckets` | lists buckets (`--init` materializes `config/buckets.json`) |
+| `cephalon init-db` | creates the PostgreSQL schema (`warframe_lore/db/init_db.sql`) |
 | `cephalon export-entities` | synchronizes game entities (Public Export) into the database |
 | `cephalon kim-dm` | downloads the KIM mirror (conversation datamine) |
 | `cephalon ui` | launches the local web interface (browser) |
@@ -344,7 +344,7 @@ docker run --name warframe-lore-db -p 5432:5432 \
   -e POSTGRES_DB=warframe_lore -d pgvector/pgvector:pg16
 ```
 
-Create the schema (`init_db.sql`):
+Create the schema (`warframe_lore/db/init_db.sql`):
 
 ```bash
 python -m warframe_lore --init-db   # or: cephalon init-db
@@ -374,8 +374,8 @@ cephalon run --skip-sql
 
 ```bash
 cephalon buckets                  # see the 8 default buckets
-cephalon buckets --init           # write buckets.json to customize
-cephalon run --bucket-config buckets.json
+cephalon buckets --init           # write config/buckets.json to customize
+cephalon run --bucket-config config/buckets.json
 ```
 
 ### 4. Game Data (Optional)
@@ -397,7 +397,7 @@ cephalon kim-dm                    # KIM datamine → out/kim_dm/*.json
 | `cephalon status` | database state (pages, chunks, canon, last sync) |
 | `cephalon recent` | latest modified pages |
 | `cephalon buckets [--init]` | list / materialize buckets |
-| `cephalon init-db` | creates the PostgreSQL schema (`init_db.sql`) |
+| `cephalon init-db` | creates the PostgreSQL schema (`warframe_lore/db/init_db.sql`) |
 | `cephalon export-entities` | upserts `game_entities_i18n` (default `en`, `fr`) |
 | `cephalon kim-dm` | updates the KIM mirror (datamined conversations) |
 | `cephalon ui` | local web interface (megafile reading + search + KIM dialogues) |
@@ -438,7 +438,7 @@ The interface can be compiled into a standalone binary with PyInstaller:
 pip install pyinstaller
 pyinstaller --onefile --name cephalon-ui \
   --add-data "warframe_lore/ui/static;warframe_lore/ui/static" \
-  --paths . launch_ui.py
+  --paths . packaging/launch_ui.py
 ```
 
 The result (`dist/cephalon-ui.exe`) reads the `out/` folder from the
@@ -469,8 +469,8 @@ into `lore_chunks` (reuses `SQLDatabaseManager`) then vectorized.
 # Launch PostgreSQL + pgvector database (docker-compose at root)
 docker compose up -d
 
-# Apply schema (init_db.sql) — once
-# (via: psql -U warframe -d warframe_lore -f init_db.sql)
+# Apply schema (warframe_lore/db/init_db.sql) — once
+# (via: psql -U warframe -d warframe_lore -f warframe_lore/db/init_db.sql)
 # then populate + vectorize chunks:
 python -m warframe_lore.engram.scripts.ingest --glob "out/Lore_*.json"
 
@@ -569,7 +569,7 @@ cautious status on conflict.
 The operational MVP = **local database + ingestion + ENGRAM backend +
 LM Studio + one Discord channel**. Every setting is overridable by
 environment variable (no sensitive values in the repository; the repo
-ships `buckets.json`, `persona/oracle`, `config/cleaner_config.json`).
+ships `config/buckets.json`, `persona/oracle`, `config/cleaner_config.json`).
 
 ### Environment Variables — Pipeline (`WF_*`)
 
@@ -609,7 +609,7 @@ ships `buckets.json`, `persona/oracle`, `config/cleaner_config.json`).
 | `DISCORD_CHANNELS` | *(all)* | Restricted channel IDs (comma-separated) |
 | `DISCORD_TYPING` | `5` | "typing…" indicator interval (s) |
 | `CREATOR_DISCORD_ID` | *(empty)* | Creator's native Discord snowflake (only identity the persona trusts; enables the Directive Zéro banner, jealousy and creator-gated member cards) |
-| `DISCORD_ROLES_FILE` | `discord_roles.json` | Role hierarchy (name → snowflake, by category) for status accreditation |
+| `DISCORD_ROLES_FILE` | `config/discord_roles.json` | Role hierarchy (name → snowflake, by category) for status accreditation |
 | `DISCORD_ACTIVITY_DB` | `data/member_activity/member_activity.db` | Persistent member-activity SQLite (assiduité / fiabilité / commentaire) |
 
 ### Minimal Launch (End-to-End Path)
@@ -802,8 +802,8 @@ trials below.
 
 | Phase | Reference Commit(s) | Subject | Verdict |
 |---|---|---|---|
-| 0 · MVP scrape + web interface | `a0f7040` · `28baaab` · `1939858` | official wiki corpus + reading interface ("Gateway Text"), fixes from `Rapport.md` audit | Success — local corpus of ~3,175 pages |
-| 0·b · Technical audit | `Rapport.md` (on `28baaab`) | external audit: data fidelity first | Documented failures → wave of fixes |
+| 0 · MVP scrape + web interface | `a0f7040` · `28baaab` · `1939858` | official wiki corpus + reading interface ("Gateway Text"), fixes from `docs/Rapport.md` audit | Success — local corpus of ~3,175 pages |
+| 0·b · Technical audit | `docs/Rapport.md` (on `28baaab`) | external audit: data fidelity first | Documented failures → wave of fixes |
 | 1 · KIM Mirror | `77fcb36` · `8e93f09` · `f8d1187` · `0b568d3` | conversation datamine, strict tree graph, root anchoring, simulator, citations | Success — graph validated (terminal edges fixed) |
 | 2 · Refactor + tests | `679be66` · `02490ae` · `2b1c2d1` | package modularization + `models` directories, KIM unit tests | Success — 16 tests green |
 | 3 · ENGRAM Backend | `e307923` | document RAG + Roleplay terminal (FastAPI, WS, LM Studio) | Trial → Success (see 3B optimizations) |
@@ -880,7 +880,7 @@ trials below.
     `engram/scripts/audit_rag.py` (counts by name) and `dump_scraper.py`
     (dump of probes to `data/raw/`) — essential for establishing a
     diagnosis before touching the prompt.
-13. **`Rapport.md` Audit (Data Fidelity).**
+13. **`docs/Rapport.md` Audit (Data Fidelity).**
     Documented and partially corrected failures: SQL/JSON divergence (ack
     conditioned on publication), canon priority (`merge_canon_status`
     `min` → `max`), KIM graph (terminal edges, `option.ends`),
@@ -1039,7 +1039,7 @@ trials below.
 - **VRAM constraint first**: cap `top_k` + `max_tokens` before buying
   GPU; target Q4 quant on 8 GB.
 - **Verify before believing**: ORM/DDL schemas, actually populated embeddings,
-  LZMA/hash integrity (`Rapport.md` audit), SQL/JSON consistency. A storage
+  LZMA/hash integrity (`docs/Rapport.md` audit), SQL/JSON consistency. A storage
   promise is not a fidelity guarantee.
 - **A "data hole" is often a naming problem** (canonical alias), not an actual
   gap — hence the utility of audit tools before any prompt tuning.
@@ -1047,7 +1047,7 @@ trials below.
 ### Open Tracks
 
 - Systematic RAG evaluation: FR/EN question set, Recall@k, citation fidelity,
-  p95 latency (see `Rapport.md`).
+  p95 latency (see `docs/Rapport.md`).
 - PostgreSQL as source of truth, megafiles as regenerable projection
   (audit finding #1).
 - Replayable ingestion with provenance (`derivation_key`: source, revision,

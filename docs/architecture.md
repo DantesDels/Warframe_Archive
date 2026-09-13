@@ -93,7 +93,8 @@ each module evolves independently without breaking the rest.
 - `models.py`: SQLAlchemy 2.0 model (async) — `WikiPage`, `LoreChunk`,
   `KimDialogue`, `SyncStateRecord`, `Base`.
 - `manager.py`: `SQLDatabaseManager` — transactional upsert, database-backed
-  delta, `run_ddl_script` (`init_db.sql` execution, statement splitting).
+  delta, `run_ddl_script` (`warframe_lore/db/init_db.sql` execution,
+  statement splitting).
 - `chunker.py`: `ChunkManager` — two-pass RAG chunking + dialogue mode.
 - `kim_parser.py`: KIM message extraction from dialogue blocks.
 
@@ -158,7 +159,7 @@ and `metadata` (JSONB, GIN index for `@>` filtering).
 
 Statuses: `canon`, `speculation`, `community_theory`.
 
-## SQL Schema (`init_db.sql`)
+## SQL Schema (`warframe_lore/db/init_db.sql`)
 
 - `wiki_pages`: page identity (unique id per page, url, delta-permitted).
 - `lore_chunks`: `wiki_page_id`, `chunk_index`, `content_markdown`,
@@ -205,8 +206,8 @@ unique constraint violation on the title.
 - `static/`: modern dark frontend (no CDN, no build) — Overview,
   bucket browser, KIM chat, recent, search.
 - Commands: `cephalon ui` (in the package) and `cephalon-ui` (standalone
-  entry point, PyInstaller exe via `launch_ui.py`). Read-only megafile
-  access, no network access at runtime.
+  entry point, PyInstaller exe via `packaging/launch_ui.py`). Read-only
+  megafile access, no network access at runtime.
 
 ## CLI
 
@@ -222,8 +223,8 @@ cephalon run        # full pipeline, incremental delta by default
 cephalon diff       # preview delta without writing (dry-run)
 cephalon status     # database state (pages, chunks, canon, last sync)
 cephalon recent     # latest modified / inserted pages
-cephalon buckets    # list buckets (--init materializes buckets.json)
-cephalon init-db    # create schema (init_db.sql)
+cephalon buckets    # list buckets (--init materializes config/buckets.json)
+cephalon init-db    # create schema (warframe_lore/db/init_db.sql)
 cephalon ui         # local web interface (server + browser)
                     #   --port            fixed port (0 = free)
                     #   --no-browser      no auto-open

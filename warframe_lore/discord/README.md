@@ -88,7 +88,7 @@ RAPPORT MATRICIEL
 IDENTIFIANT : Aze07
 Identifiant Réseau : #194814251502796800
 Rôles et Accréditations      ← real roles (bullets, @everyone excluded)
-Niveau de Sécurité           ← from the role hierarchy (discord_roles.json)
+Niveau de Sécurité           ← from the role hierarchy (config/discord_roles.json)
 Assiduité                    ← 5 levels, relative to the other members
 Indice de Fiabilité          ← activity − insolence/probes
 Analyse comportementale      ← LLM observation, grounded in recorded activity

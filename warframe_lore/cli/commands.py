@@ -14,9 +14,9 @@ from pathlib import Path
 
 from .. import __version__
 from ..api import BucketConfig
-from ..config import PROJECT_ROOT
 from ..db import SQLDatabaseManager
 from .support import (
+    PROJECT_DEFAULT_BUCKET_CONFIG,
     PROJECT_DEFAULT_DB_INIT_SQL,
     build_config,
     build_scraper,
@@ -171,7 +171,7 @@ def _cmd_export_entities(args) -> int:
 def _cmd_buckets(args) -> int:
     _, bucket_config = build_config(args)
     if args.init:
-        target = args.bucket_config or (PROJECT_ROOT / "buckets.json")
+        target = args.bucket_config or PROJECT_DEFAULT_BUCKET_CONFIG
         BucketConfig.write_defaults(target)
         print(f"Default bucket config written -> {target}")
         return 0

@@ -88,7 +88,7 @@ class _RoleDumpClient(discord.Client):
         connect_task = asyncio.create_task(self.connect())
         try:
             await asyncio.wait_for(self._done.wait(), timeout=90.0)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             print("Connexion Discord absente après 90 s — vérifiez le réseau, "
                   "le token (DISCORD_TOKEN) et l'intent `guild members`.",
                   file=sys.stderr)
@@ -111,10 +111,10 @@ def _load_mapping(path: Path) -> dict | None:
     """Current mapping (real file, else the committed example)."""
     candidates = [path]
     if not path.is_file():
-        candidates.append(PROJECT_ROOT / "discord_roles.example.json")
+        candidates.append(PROJECT_ROOT / "config" / "discord_roles.example.json")
     for cand in candidates:
         try:
-            with open(cand, "r", encoding="utf-8") as fh:
+            with open(cand, encoding="utf-8") as fh:
                 return json.load(fh)
         except (OSError, ValueError):
             continue
@@ -196,7 +196,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Remplir discord_roles.json avec les IDs trouvés.")
     parser.add_argument("--file", default=None,
                         help=f"Mapping cible (défaut: "
-                             f"{PROJECT_ROOT / 'discord_roles.json'})")
+                             f"{PROJECT_ROOT / 'config' / 'discord_roles.json'})")
     return parser
 
 
@@ -207,7 +207,7 @@ def main(argv: list[str] | None = None) -> int:
     if not token:
         print("Missing DISCORD_TOKEN in .env (ou --token).", file=sys.stderr)
         return 2
-    target = args.file or str(PROJECT_ROOT / "discord_roles.json")
+    target = args.file or str(PROJECT_ROOT / "config" / "discord_roles.json")
     intents = discord.Intents.default()
     intents.members = True
     client = _RoleDumpClient(target, write=args.write, intents=intents)

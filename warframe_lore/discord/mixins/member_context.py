@@ -14,7 +14,7 @@ import discord
 
 from warframe_lore.engram.auth import STATUT_CONCEPTEUR, STATUT_ORGANIQUE
 
-from ..guild.members import leetspeak, match_member_token
+from ..guild import leetspeak, match_member_token
 from ..guild.roles import Accreditation
 from ..services.gateway import RoleplayGateway
 

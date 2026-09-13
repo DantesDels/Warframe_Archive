@@ -16,7 +16,7 @@ import discord
 
 from warframe_lore.engram.rag.probes import is_self_reflection
 
-from ..guild.members import (
+from ..guild import (
     creator_mentioned,
     is_member_question,
     normalize_mentions,

@@ -1,19 +1,19 @@
-"""Persistent per-member activity store (SQLite) for the Discord bot.
+"""Persistent per-member activity ledger (SQLite).
 
-Tracks, per member, the TOTAL message count (for the relative assiduité and
-the reliability index) and the last ``keep_last`` message texts (for the
-card's generated behavioural analysis).  Backed by ``sqlite3`` (stdlib) so the
-indices survive bot restarts — no extra dependency, no external service.
+Tracks, per member, the TOTAL message count (relative assiduité + reliability
+index) and the last ``keep_last`` message texts (the card's generated
+behavioural analysis).  stdlib ``sqlite3`` only: the indices survive bot
+restarts without any extra dependency or external service.
 
-Pure synchronous I/O: the bot writes once per message and reads on member-card
-requests, far below any rate that would block the asyncio loop.
+Writes go through :class:`LedgerDB` (batched commits), so a busy guild never
+blocks the asyncio loop with one fsync per message.
 """
 
 from __future__ import annotations
 
-import os
-import sqlite3
 import time
+
+from .db import LedgerDB
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS member_activity (
@@ -35,66 +35,64 @@ CREATE INDEX IF NOT EXISTS idx_member_messages_user
 class MemberActivityStore:
     """Bounded, persistent activity ledger keyed by Discord user id."""
 
-    def __init__(self, path: str, keep_last: int = 8) -> None:
+    def __init__(self, path: str = ":memory:", keep_last: int = 8,
+                 db: LedgerDB | None = None) -> None:
         self._keep_last = max(keep_last, 1)
-        self._path = path
-        if path != ":memory:":
-            parent = os.path.dirname(os.path.abspath(path))
-            os.makedirs(parent, exist_ok=True)
-        self._conn = sqlite3.connect(path, check_same_thread=False)
-        self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.execute("PRAGMA busy_timeout=5000")
-        self._conn.executescript(_SCHEMA)
-        self._conn.commit()
+        self._db = db if db is not None else LedgerDB(path)
+        self._db.script(_SCHEMA)
 
     def record(self, user_id: int, text: str) -> None:
-        """Stores one message: bumps the counter and keeps the recent window."""
+        """Store one message: bump the counter, keep the recent window."""
         if not text:
             return
         now = time.time()
-        self._conn.execute(
+        self._db.write(
             "INSERT INTO member_activity (user_id, msg_count, first_seen, "
             "last_seen) VALUES (?, 1, ?, ?) "
             "ON CONFLICT(user_id) DO UPDATE SET "
             "msg_count = msg_count + 1, last_seen = excluded.last_seen",
             (user_id, now, now))
-        self._conn.execute(
+        self._db.write(
             "INSERT INTO member_messages (user_id, content, created_at) "
             "VALUES (?, ?, ?)", (user_id, text, now))
-        # Keep only the last ``keep_last`` messages per user.
-        self._conn.execute(
+        self._db.write(
             "DELETE FROM member_messages WHERE rowid IN ("
             "SELECT rowid FROM member_messages WHERE user_id = ? "
             "ORDER BY created_at DESC LIMIT -1 OFFSET ?)",
             (user_id, self._keep_last))
-        self._conn.commit()
 
     def count(self, user_id: int) -> int:
         """Total recorded messages of the user."""
-        row = self._conn.execute(
+        rows = self._db.read(
             "SELECT msg_count FROM member_activity WHERE user_id = ?",
-            (user_id,)).fetchone()
-        return int(row[0]) if row else 0
+            (user_id,))
+        return int(rows[0][0]) if rows else 0
 
     def recent(self, user_id: int) -> list[str]:
         """Last messages of the user, oldest first (for the card comment)."""
-        rows = self._conn.execute(
+        rows = self._db.read(
             "SELECT content FROM member_messages WHERE user_id = ? "
-            "ORDER BY created_at ASC", (user_id,)).fetchall()
-        return [str(r[0]) for r in rows]
+            "ORDER BY created_at ASC", (user_id,))
+        return [str(row[0]) for row in rows]
 
     def all_counts(self) -> dict[int, int]:
-        """Message count of every tracked member (for the relative assiduité)."""
-        rows = self._conn.execute(
-            "SELECT user_id, msg_count FROM member_activity").fetchall()
+        """Message count of every tracked member (relative assiduité)."""
+        rows = self._db.read("SELECT user_id, msg_count FROM member_activity")
         return {int(uid): int(count) for uid, count in rows}
 
+    def purge(self, user_id: int) -> None:
+        """Forget a member who left the guild (no ghost in the rankings)."""
+        self._db.write("DELETE FROM member_messages WHERE user_id = ?",
+                       (user_id,))
+        self._db.write("DELETE FROM member_activity WHERE user_id = ?",
+                       (user_id,))
+        # Durability matters here: a purge lost on crash would resurrect the
+        # ghost in the assiduité ranking.
+        self._db.commit()
+
     def close(self) -> None:
-        """Closes the underlying connection."""
-        try:
-            self._conn.close()
-        except sqlite3.Error:
-            pass
+        """Flush and close the underlying connection."""
+        self._db.close()
 
 
 __all__ = ["MemberActivityStore"]

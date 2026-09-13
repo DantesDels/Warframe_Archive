@@ -2,21 +2,13 @@
 
 The server ranks its roles by importance; at each message the bot reads
 ``message.author.roles`` and keeps only the HIGHEST configured role owned by
-the speaker.  That rank is translated into a status label injected in BLOC 2
-of the Roleplay prompt plus the persona banner tone.
+the speaker.  That rank becomes a status label injected in BLOC 2 of the
+Roleplay prompt, plus the persona banner tone.
 
-Role IDs are mapped through a JSON file (``discord_roles.json`` by default)
-so the business logic never hardcodes role names nor snowflake strings::
-
-    {
-        "commandement":   {"FONDATEUR": "…", "MODÉRATEURS": "…", "CHEFS DE CLAN": "…"},
-        "structure_clan": {"『 PRIME 』": "…", …, "NOVICE": "…"},
-        "affiliations":   {"ALLIANCE": "…"},
-        "generaux":       {"WARFRAME": "…", "SOULFRAME": "…", "MEMBRES": "…"}
-    }
-
-Categories are evaluated top-to-bottom (priority order); bots and event roles
-(e.g. "Joyeux Anniversaire") are simply absent from the map and never rank.
+Role snowflakes are mapped through a JSON file (``config/discord_roles.json``,
+see :mod:`dump` to generate it) so the business logic never hardcodes role
+names nor IDs.  Categories are evaluated top-to-bottom; bots and event roles
+are absent from the map and never rank.
 """
 
 from __future__ import annotations
@@ -25,7 +17,7 @@ import json
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from ...engram.auth import (
+from warframe_lore.engram.auth import (
     STATUT_ALLIE,
     STATUT_CONCEPTEUR,
     STATUT_HAUT_COMMANDEMENT,
@@ -33,13 +25,16 @@ from ...engram.auth import (
     STATUT_ORGANIQUE,
 )
 
-# Category → status.  The dict insertion order reads the JSON file order.
+# Category -> status. Insertion order IS the evaluation priority.
 _CATEGORY_STATUS = {
     "commandement": STATUT_HAUT_COMMANDEMENT,
     "structure_clan": STATUT_MEMBRE_OFFICIEL,
     "affiliations": STATUT_ALLIE,
     "generaux": STATUT_ORGANIQUE,
 }
+
+# Role name marking the Concepteur inside the "commandement" category.
+_FONDATEUR = "FONDATEUR"
 
 
 @dataclass(frozen=True)
@@ -57,7 +52,7 @@ class Accreditation:
 class RoleHierarchy:
     """Ordered mapping of the server roles, ranked by importance.
 
-    The first category match (walking ``commandement`` → ``generaux``) wins:
+    The first category match (walking ``commandement`` -> ``generaux``) wins:
     a member holding several roles gets the HIGHEST one.  ``FONDATEUR`` maps
     to the "Concepteur" status and marks the creator flag.
     """
@@ -69,18 +64,21 @@ class RoleHierarchy:
         for category, roles in (data or {}).items():
             status = _CATEGORY_STATUS.get(str(category), STATUT_ORGANIQUE)
             for name, role_id in (roles or {}).items():
-                rid = str(role_id or "").strip()
-                if not rid:
-                    continue
-                self._order.append(rid)
-                is_founder = str(name).strip() == "FONDATEUR"
-                self._status[rid] = STATUT_CONCEPTEUR if is_founder else status
-                self._creator[rid] = is_founder
+                self._add(str(role_id or "").strip(), str(name).strip(),
+                          status)
+
+    def _add(self, role_id: str, name: str, status: str) -> None:
+        if not role_id:
+            return
+        self._order.append(role_id)
+        is_founder = name == _FONDATEUR
+        self._status[role_id] = STATUT_CONCEPTEUR if is_founder else status
+        self._creator[role_id] = is_founder
 
     @classmethod
     def from_file(cls, path: str) -> RoleHierarchy:
-        """Loads the map from a JSON file; a missing/malformed file yields an
-        empty hierarchy (safe default: everyone counts as a guest)."""
+        """Load the map from JSON; a missing/malformed file yields an empty
+        hierarchy (safe default: everyone counts as a guest)."""
         try:
             with open(path, encoding="utf-8") as fh:
                 return cls(json.load(fh))
@@ -90,9 +88,8 @@ class RoleHierarchy:
     def accredit(self, role_ids: Iterable[int | str]) -> Accreditation:
         """Highest configured role of the speaker, else the guest default.
 
-        The hierarchy is walked top-to-bottom (Commandement → Généraux):
-        the FIRST configured role the speaker owns wins — only then the
-        "Généraux"/default status.  The input order never matters.
+        The hierarchy is walked top-to-bottom: the FIRST configured role the
+        speaker owns wins.  The input order never matters.
         """
         owned = {str(rid) for rid in role_ids}
         for rid in self._order:

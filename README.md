@@ -933,7 +933,7 @@ trials below.
     Roleplay (in addition to the RAG prompt and guard); rate limiter per
     IP (`api/ratelimit.py`, sliding window): `POST /v1/rag`
     → HTTP 429, WS → 1008 close (`ENGRAM_RATE_LIMIT_RAG/WS`,
-    `ENGRAM_RATE_*_WINDOW`); bot anti-spam guard (`discord/guards.py`):
+    `ENGRAM_RATE_*_WINDOW`); bot anti-spam guard (`discord/moderation/guards.py`):
     per-user cooldown, per-channel cap, temporary ban on
     insistence.
     *Live validated:* both real payloads → "[Software anomaly
@@ -952,9 +952,10 @@ trials below.
     escalation response (`reply_for`, level 0→2) prefixed to the
     `JAILBREAK_REJECT` string AND switch of the ATTACKER's session to a
     dedicated hostile persona (`persona/oracle_hostile`, editable, fallback
-    `HOSTILE_PERSONA`), via a per-attacker WS connection (`hostile_link.py`)
-    and a control frame
-    `{"type":"persona","mode":"hostile"}` (`gateway.set_persona`); the bot
+    `HOSTILE_PERSONA`), via a per-attacker WS connection
+    (`discord/moderation/hostile_link.py`) and a control frame
+    `{"type":"persona","mode":"hostile"}` (`discord/services/gateway.py`
+    `set_persona`); the bot
     insists on an apology and deterministic detection (`is_apology`:
     pardon, sorry, mea culpa…) restores the oracle persona and closes the
     session. Other users and the normal channel session are never

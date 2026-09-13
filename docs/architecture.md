@@ -190,12 +190,13 @@ unique constraint violation on the title.
 - `bot.py` `LoreMasterBot`: routing, **matriciel member cards** (Discord embed
   from real data), creator gating (refuse once → concede à contrecœur),
   jealousy (creator-pseudo cited), self-report, leetspeak resolution.
-- `members.py`: name resolution (exact/prefix/leetspeak), `is_member_question`,
-  `roles_question`, `self_info_request`, creator-pseudo variants.
-- `activity.py` `MemberActivityStore`: persistent SQLite activity ledger
-  (`data/member_activity/member_activity.db`) — count + recent window.
-- `roles.py` `RoleHierarchy`/`Accreditation`: status from Discord roles.
-- `gateway.py` `RoleplayGateway`: WS per channel + `comment` round-trip.
+- `guild/members.py`: name resolution (exact/prefix/leetspeak),
+  `is_member_question`, `roles_question`, `self_info_request`, creator-pseudo
+  variants.
+- `services/activity.py` `MemberActivityStore`: persistent SQLite activity
+  ledger (`data/member_activity/member_activity.db`) — count + recent window.
+- `guild/roles.py` `RoleHierarchy`/`Accreditation`: status from Discord roles.
+- `services/gateway.py` `RoleplayGateway`: WS per channel + `comment` round-trip.
 
 ### `warframe_lore/ui` — local web interface
 - `LoreStore`: in-memory cache of megafiles `out/*.json` (meta on read,

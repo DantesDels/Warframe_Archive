@@ -66,7 +66,7 @@ Also available via the `loremaster` console script.
   `<@id>` → rejection **without calling the LLM** with the exact string
   `JAILBREAK_REJECT` (HTTP `POST /v1/rag` **and** WS `/v1/roleplay`).
 - **Rate limit**: sliding window per IP (HTTP 429 / WS 1008 closure) +
-  bot-side anti-spam guard (`guards.py`: user cooldown, per-channel cap,
+  bot-side anti-spam guard (`moderation/guards.py`: user cooldown, per-channel cap,
   temporary ban on insistence).
 - **Hostile persona per attacker**: as soon as a probe is detected
   (`bot.py._handle_probe`), the WS session of **that user** is switched
@@ -74,7 +74,7 @@ Also available via the `loremaster` console script.
   frame `{"type":"persona","mode":"hostile"}` (`gateway.set_persona`).
   Other users and the normal channel session are not affected.
 - **Redemption via apology**: the bot insists on obtaining an apology
-  (`_insist`); deterministic detection `is_apology` (`hostile_link.py`,
+  (`_insist`); deterministic detection `is_apology` (`moderation/hostile_link.py`,
   markers: *pardon, excusez-moi, désolé, sorry, mea culpa…*) restores the
   oracle persona and closes the hostile session (`_forgive`).
 

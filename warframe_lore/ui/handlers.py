@@ -1,33 +1,29 @@
 """ApiHandler — HTTP ``/api/*`` routes and static files (Gzip).
 
 Single responsibility: route frontend requests to the data layer
-(``LoreStore``), the media layer (``MediaIndex``) and static files, with
-explicit Gzip compression (large KIM documents are never sent in clear).
+(``LoreStore``), the media layer (``MediaIndex``) and static files.  The
+Gzip/ETag transport lives in :mod:`warframe_lore.ui.httpio`.
 """
 
 from __future__ import annotations
 
-import gzip
-import hashlib
-import json
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
-from typing import Any
 from urllib.parse import parse_qs, unquote
 
 from ..cleaner.formatting import cut_footer_noise, normalise_deep_headings
 from ..media import MediaIndex
 from ..timeline import children_payload, roots_payload
+from .httpio import HttpIOMixin
 from .patch_notes import _PATCH_HISTORY_HEADING, extract_patch_notes
 from .store import LoreStore
 
 
-class ApiHandler(BaseHTTPRequestHandler):
+class ApiHandler(HttpIOMixin, BaseHTTPRequestHandler):
     server_version = "CephalonUI/1.0"
     store: LoreStore = None  # injecté par la fabrique
     media: MediaIndex = None  # injecté par la fabrique
     root: Path = None        # répertoire des fichiers statiques
-    _static_cache: dict[tuple, tuple] = {}  # (root, filename) → (fp, gzip, etag)
 
     # ------------------------------------------------------------ verbosity
     def log_message(self, format, *args):  # noqa: A002  (stdlib signature)
@@ -222,65 +218,6 @@ class ApiHandler(BaseHTTPRequestHandler):
                 result["source"] = dm_detail["source"] if dm_detail else "wiki"
             return result
         return {"id": None, "title": None, "rank": None, "messages": []}
-
-    def _send_static(self, filename: str, content_type: str = "text/html") -> None:
-        static_file = (self.root / filename) if self.root else Path(filename)
-        if not static_file.is_file():
-            self._send_json({"error": f"Static file '{filename}' not found"},
-                            status=404)
-            return
-        try:
-            st = static_file.stat()
-        except OSError:
-            self._send_json({"error": f"Static file '{filename}' unreadable"},
-                            status=500)
-            return
-        fingerprint = (st.st_mtime_ns, st.st_size)
-        key = (str(self.root), filename)
-        cached = self._static_cache.get(key)
-        if cached is None or cached[0] != fingerprint:
-            compressed = gzip.compress(static_file.read_bytes())
-            etag = '"' + hashlib.md5(
-                f"{fingerprint[0]}:{fingerprint[1]}:{len(compressed)}"
-                .encode("ascii")).hexdigest() + '"'
-            cached = (fingerprint, compressed, etag)
-            self._static_cache[key] = cached
-        _, compressed, etag = cached
-        if self.headers.get("If-None-Match") == etag:
-            self._send_not_modified(etag)
-            return
-        self.send_response(200)
-        self.send_header("Content-Type", f"{content_type}; charset=utf-8")
-        self.send_header("Content-Encoding", "gzip")
-        self.send_header("Content-Length", str(len(compressed)))
-        self.send_header("ETag", etag)
-        self.send_header("Cache-Control", "no-cache")
-        self.end_headers()
-        self.wfile.write(compressed)
-
-    def _send_json(self, payload: Any, status: int = 200) -> None:
-        raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        compressed = gzip.compress(raw)
-        etag = '"' + hashlib.md5(compressed).hexdigest() + '"'
-        if self.headers.get("If-None-Match") == etag:
-            self._send_not_modified(etag)
-            return
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Encoding", "gzip")
-        self.send_header("Content-Length", str(len(compressed)))
-        self.send_header("ETag", etag)
-        self.send_header("Cache-Control", "no-cache")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-        self.wfile.write(compressed)
-
-    def _send_not_modified(self, etag: str) -> None:
-        """Réponse 304 pour un client dont le cache est à jour (ETag)."""
-        self.send_response(304)
-        self.send_header("ETag", etag)
-        self.send_header("Cache-Control", "no-cache")
-        self.end_headers()
 
     # ---------------------------------------------------------------- média
     def _media_payload(self) -> dict:

@@ -29,7 +29,6 @@ from ...config import PROJECT_ROOT
 from ...db import (
     LoreChunk,
     SQLDatabaseManager,
-    WikiPage,
     sections_from_markdown,
 )
 from ..config import EngramConfig
@@ -37,9 +36,14 @@ from ..llm import LMStudioProvider
 
 log = logging.getLogger("warframe_lore.engram.ingest")
 
-BATCH = 64  # Embedding batch size (bge-m3 ~576, staying conservative).
+BATCH = 64  # Taille de batch d'embedding (bge-m3 1024 dims; batch modéré).
 
 _KIM_BUCKET_ID = "Lore_Dialogues_KIM"
+
+# Clé de verrou advisory PostgreSQL (session-level) : un seul processus
+# d'ingestion à la fois par base (anti-course double upsert / double
+# embedding).
+INGEST_LOCK_KEY = 0x4B494D5A  # "KIMZ"
 
 
 def _is_kim_page(page: dict) -> bool:
@@ -66,7 +70,13 @@ def load_pages(glob_pattern: str) -> list[dict]:
 
 
 async def embed_pending(sessions, embeddings) -> int:
-    """Computes embeddings for chunks without vectors (batches of ``BATCH``)."""
+    """Computes embeddings for chunks without vectors (batches of ``BATCH``).
+
+    The embedding dimension of the FIRST returned vector is validated against
+    the ``lore_chunks.embedding`` column (vector(1024)): a model port change
+    (wrong dimension) is detected before the first corrupted row is written.
+    """
+    embedding_dim = LoreChunk.__table__.c.embedding.type.dim
     embedded = 0
     while True:
         async with sessions() as session:
@@ -77,8 +87,14 @@ async def embed_pending(sessions, embeddings) -> int:
         if not missing:
             break
         vectors = await embeddings.embed([content for _, content in missing])
+        for vector in vectors:
+            if len(vector) != embedding_dim:
+                raise ValueError(
+                    f"Embedding dimension mismatch: model returned "
+                    f"{len(vector)}, column is vector({embedding_dim}). "
+                    f"Align ENGRAM_EMBED_MODEL / ENGRAM_EMBED_DIM.")
         async with sessions() as session:
-            for (chunk_id, _), vector in zip(missing, vectors):
+            for (chunk_id, _), vector in zip(missing, vectors, strict=True):
                 chunk = await session.get(LoreChunk, chunk_id)
                 chunk.embedding = vector
             await session.commit()
@@ -100,32 +116,36 @@ async def run(cfg: EngramConfig, glob_pattern: str) -> int:
         api_key=cfg.lmstudio_api_key,
     )
     try:
-        processed = 0
-        for page in pages:
-            page_id = int(page.get("_pageid") or 0)
-            page_title = page["page_title"]
-            is_kim = _is_kim_page(page)
-            sections = None if is_kim else page.get("sections")
-            if sections is None and not is_kim:
-                # Old megafiles with no "sections" yet: build the semantic
-                # sections on the fly (identical to the parser's output).
-                sections = sections_from_markdown(
-                    page.get("content_markdown", ""), page_title)
-            await manager.upsert_cleaned_page(
-                page_title=page_title,
-                category=page.get("category", ""),
-                page_id=page_id,
-                touched=page.get("touched"),
-                last_updated=page.get("last_updated"),
-                canon_status=page.get("canon_status", "canon"),
-                content_markdown=page.get("content_markdown", ""),
-                detect_kim_dialogues=is_kim,
-                sections=sections,
-            )
-            processed += 1
-        log.info("Pages upserted: %d", processed)
-        embedded = await embed_pending(manager._require_session_factory(), provider)
-        return embedded
+        # Verrou advisory : deux ingestions concurrentes attendent au lieu de
+        # courir (upsert + embeddings seraient dupliqués / interrompus).
+        async with manager.advisory_lock(INGEST_LOCK_KEY):
+            processed = 0
+            for page in pages:
+                page_id = int(page.get("_pageid") or 0)
+                page_title = page["page_title"]
+                is_kim = _is_kim_page(page)
+                sections = None if is_kim else page.get("sections")
+                if sections is None and not is_kim:
+                    # Old megafiles with no "sections" yet: build the semantic
+                    # sections on the fly (identical to the parser's output).
+                    sections = sections_from_markdown(
+                        page.get("content_markdown", ""), page_title)
+                await manager.upsert_cleaned_page(
+                    page_title=page_title,
+                    category=page.get("category", ""),
+                    page_id=page_id,
+                    touched=page.get("touched"),
+                    last_updated=page.get("last_updated"),
+                    canon_status=page.get("canon_status", "canon"),
+                    content_markdown=page.get("content_markdown", ""),
+                    detect_kim_dialogues=is_kim,
+                    sections=sections,
+                )
+                processed += 1
+            log.info("Pages upserted: %d", processed)
+            embedded = await embed_pending(
+                manager._require_session_factory(), provider)
+            return embedded
     finally:
         await provider.close()
         await manager.close()

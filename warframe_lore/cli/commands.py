@@ -7,18 +7,19 @@ the async coroutines called through ``asyncio.run``.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import sys
 from pathlib import Path
 
+from .. import __version__
 from ..api import BucketConfig
 from ..config import PROJECT_ROOT
 from ..db import SQLDatabaseManager
-from ..scraper import Scraper
 from .support import (
     PROJECT_DEFAULT_DB_INIT_SQL,
-    VERSION,
     build_config,
+    build_scraper,
     launch_ui,
     print_buckets,
 )
@@ -26,14 +27,21 @@ from .support import (
 log = logging.getLogger("cephalon")
 
 
-# ------------------------------------------------------------- command: run
-async def _cmd_init_database_impl(database_url: str) -> None:
+@contextlib.asynccontextmanager
+async def _manager_scope(database_url: str):
+    """Connect/try/finally/close boilerplate shared by the SQL commands."""
     manager = SQLDatabaseManager(database_url)
     await manager.connect()
     try:
-        await manager.run_ddl_script(PROJECT_DEFAULT_DB_INIT_SQL)
+        yield manager
     finally:
         await manager.close()
+
+
+# ------------------------------------------------------------- command: run
+async def _cmd_init_database_impl(database_url: str) -> None:
+    async with _manager_scope(database_url) as manager:
+        await manager.run_ddl_script(PROJECT_DEFAULT_DB_INIT_SQL)
     print(f"Database initialised from {PROJECT_DEFAULT_DB_INIT_SQL.name}.")
 
 
@@ -44,12 +52,8 @@ def _cmd_init_database(args) -> int:
 
 
 def _cmd_run(args) -> int:
-    config, bucket_config = build_config(args)
-    scraper = Scraper(
-        config=config,
-        bucket_config=bucket_config,
-        database_url=None if args.skip_sql else config.database_url,
-    )
+    config, _ = build_config(args)
+    scraper = build_scraper(args)
     try:
         scraper.run(force=args.force)
     except KeyboardInterrupt:
@@ -62,12 +66,7 @@ def _cmd_run(args) -> int:
 
 
 async def _cmd_diff_impl(args) -> dict:
-    config, bucket_config = build_config(args)
-    scraper = Scraper(
-        config=config,
-        bucket_config=bucket_config,
-        database_url=None if args.skip_sql else config.database_url,
-    )
+    scraper = build_scraper(args)
     if scraper.db is not None:
         await scraper.db.connect()
     try:
@@ -93,12 +92,8 @@ def _cmd_diff(args) -> int:
 
 async def _cmd_status_impl(args) -> None:
     config, _ = build_config(args)
-    manager = SQLDatabaseManager(config.database_url)
-    await manager.connect()
-    try:
+    async with _manager_scope(config.database_url) as manager:
         stats = await manager.db_stats()
-    finally:
-        await manager.close()
 
     def _fmt(dt) -> str:
         return dt.strftime("%Y-%m-%d %H:%M:%S") if dt else "\u2014"
@@ -129,12 +124,8 @@ def _cmd_status(args) -> int:
 
 async def _cmd_recent_impl(args) -> None:
     config, _ = build_config(args)
-    manager = SQLDatabaseManager(config.database_url)
-    await manager.connect()
-    try:
+    async with _manager_scope(config.database_url) as manager:
         rows = await manager.recent_pages(limit=args.limit)
-    finally:
-        await manager.close()
 
     def _fmt(dt) -> str:
         return dt.strftime("%Y-%m-%d %H:%M:%S") if dt else "\u2014"
@@ -158,20 +149,16 @@ async def _cmd_export_entities_impl(args) -> None:
     from ..export import EXPORT_CATEGORIES, PublicExportClient
 
     config, _ = build_config(args)
-    manager = SQLDatabaseManager(config.database_url)
-    await manager.connect()
     langs = tuple(args.lang) if args.lang else ("en", "fr")
     client = PublicExportClient(
         cache_dir=args.cache_dir or Path("cache") / "public_export",
         langs=langs)
-    try:
+    async with _manager_scope(config.database_url) as manager:
         if args.categories:
             wanted = {k: v for k, v in EXPORT_CATEGORIES.items()
                       if k in args.categories}
             client.categories = wanted
         stats = await client.sync(manager, langs=langs, force=args.force)
-    finally:
-        await manager.close()
     print(f"Public Export: {stats['entities']} entities written, "
           f"{stats['assets']} assets processed, {stats['skipped']} failures.")
 
@@ -193,19 +180,19 @@ def _cmd_buckets(args) -> int:
 
 
 def _cmd_version(args) -> int:
-    print(f"cephalon (warframe-archives) \u2014 {VERSION}")
+    print(f"cephalon (warframe-archives) \u2014 {__version__}")
     print(f"package: {Path(__file__).resolve().parent.parent}")
     return 0
 
 
 def _cmd_ui(args) -> int:
     """Launch the local web interface (see ``warframe_lore.ui.server``)."""
-    from ..ui.server import serve_forever
+    from ..ui.server import launch
 
     config, _ = build_config(args)
-    serve_forever(output_dir=args.out or config.output_dir,
-                  port=args.port,
-                  open_browser=not args.no_browser)
+    launch(output_dir=args.out or config.output_dir,
+           port=args.port,
+           open_browser=not args.no_browser)
     return 0
 
 

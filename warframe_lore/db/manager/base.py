@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -94,3 +95,26 @@ class SQLSessionBase:
             raise RuntimeError(
                 "SQLDatabaseManager is not connected: call connect() first.")
         return self._session_factory
+
+    @asynccontextmanager
+    async def advisory_lock(self, key: int):
+        """Session-level PostgreSQL advisory lock, released on exit.
+
+        Coordinates long multi-transaction jobs (e.g. the RAG ingestion ETL)
+        across concurrent processes: the lock is held on a dedicated
+        connection for the whole block, so a second worker waits instead of
+        racing the first one (double upsert / double embedding).
+        """
+        self._require_session_factory()
+        assert self._engine is not None
+        connection = await self._engine.connect()
+        try:
+            await connection.execute(
+                text("SELECT pg_advisory_lock(:key)"), {"key": int(key)})
+            log.info("Advisory lock acquired: %s", key)
+            yield connection
+        finally:
+            await connection.execute(
+                text("SELECT pg_advisory_unlock(:key)"), {"key": int(key)})
+            await connection.close()
+            log.info("Advisory lock released: %s", key)

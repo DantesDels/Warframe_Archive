@@ -6,6 +6,8 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .envfile import load_dotenv
+
 # Project root is the parent of the package directory.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -30,7 +32,6 @@ class Config:
     per_request_limit: int = 50          # pages/categories fetched per API call
 
     # --- Incremental sync ---
-    state_file: Path = field(default_factory=lambda: PROJECT_ROOT / "sync_state.json")
     output_dir: Path = field(default_factory=lambda: PROJECT_ROOT / "out")
     output_format: str = "json"          # 'json' (megafiles) + sql (PostgreSQL)
 
@@ -38,12 +39,9 @@ class Config:
     database_url: str = "postgresql+asyncpg://warframe:warframe@localhost:5432/warframe_lore"
 
     # --- Scope ---
-    # Logical buckets -> list of real wiki category names (subcategories are
-    # resolved automatically). Tune freely without changing code.
-    buckets: dict = field(default_factory=dict)
-
-    # Namespaces to keep (0 = main/article). Everything else is skipped
-    # (Talk:, User:, File:, Conclave:, etc.).
+    # Buckets are configured externally (buckets.json), via BucketConfig — not
+    # duplicated here. Namespaces to keep (0 = main/article). Everything else
+    # is skipped (Talk:, User:, File:, Conclave:, etc.).
     include_namespaces: frozenset = frozenset({0})
 
     # Page titles / prefixes to always exclude (case-insensitive substring).
@@ -65,12 +63,17 @@ class Config:
 
 
 def load_config() -> Config:
-    """Build a Config, applying environment-variable overrides."""
+    """Build a Config, applying environment-variable overrides.
+
+    ``config.py`` is now the single entry point for ``WF_*`` variables: the
+    ``.env`` file is loaded here (not via an import side-effect of ``engram``/
+    ``discord``), so ``cephalon run`` sees the exact same overrides.
+    """
+    load_dotenv()
     cfg = Config()
 
     cfg.api_url = os.getenv("WF_API_URL", cfg.api_url)
     cfg.output_dir = Path(os.getenv("WF_OUTPUT_DIR", str(cfg.output_dir)))
-    cfg.state_file = Path(os.getenv("WF_STATE_FILE", str(cfg.state_file)))
     cfg.database_url = os.getenv("WF_DATABASE_URL", cfg.database_url)
 
     cfg.max_retries = int(os.getenv("WF_MAX_RETRIES", str(cfg.max_retries)))

@@ -13,17 +13,24 @@ from collections import deque
 
 
 class BurstGuard:
-    """Decides whether a message may be processed… or silently ignored."""
+    """Decides whether a message may be processed… or silently ignored.
+
+    Bounded state: the per-user/per-channel dictionaries are purged when they
+    exceed ``max_tracked`` — the guard must never grow with the guild size
+    (a hostile mega-guild must not eat the bot's memory).
+    """
 
     def __init__(self, user_cooldown: float = 2.5,
                  channel_limit: int = 8, channel_window: float = 30.0,
                  block_after: int = 4, block_seconds: float = 90.0,
+                 max_tracked: int = 4096,
                  _clock=time.monotonic) -> None:
         self.user_cooldown = user_cooldown
         self.channel_limit = channel_limit
         self.channel_window = channel_window
         self.block_after = block_after
         self.block_seconds = block_seconds
+        self.max_tracked = max(64, max_tracked)
         self._clock = _clock
         self._last_user: dict[int, float] = {}
         self._channel: dict[int, deque[float]] = {}
@@ -33,6 +40,7 @@ class BurstGuard:
     def check(self, user_id: int, channel_id: int) -> bool:
         """``True`` if the message may be processed; otherwise the bot stays silent."""
         now = self._clock()
+        self._purge(now)
         if self._blocked_until.get(user_id, 0.0) > now:
             return False
         last = self._last_user.get(user_id, 0.0)
@@ -52,6 +60,30 @@ class BurstGuard:
     def is_blocked(self, user_id: int) -> bool:
         """True if the user is currently temporarily blocked."""
         return self._clock() < self._blocked_until.get(user_id, 0.0)
+
+    def _purge(self, now: float) -> None:
+        """Bounds the tracking dictionaries once they reach ``max_tracked``:
+        expired blocks, empty bursts and fresh-free users are dropped first."""
+        if (len(self._last_user) + len(self._channel)
+                + len(self._blocked_until)) <= self.max_tracked:
+            return
+        # Expired blocks vanish; stale empty bursts vanish.
+        expired = [uid for uid, until in self._blocked_until.items()
+                   if until <= now]
+        for uid in expired:
+            self._blocked_until.pop(uid, None)
+        for uid, stamps in list(self._user_burst.items()):
+            if uid not in self._blocked_until and not stamps:
+                self._user_burst.pop(uid, None)
+        # Still over the cap: drop the least recently seen users/channels that
+        # are neither blocked nor freshly active.
+        for uid in list(self._last_user)[: max(0, len(self._last_user)
+                                               - self.max_tracked // 2)]:
+            if uid not in self._blocked_until:
+                self._last_user.pop(uid, None)
+        for cid in list(self._channel)[: max(0, len(self._channel)
+                                             - self.max_tracked // 2)]:
+            self._channel.pop(cid, None)
 
     def _penalize(self, user_id: int, now: float) -> None:
         """Counts a refusal; beyond the threshold → temporary user block."""

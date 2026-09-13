@@ -9,6 +9,6 @@ Related commands:
     * ``cephalon-ui``        -> standalone entry point (PyInstaller exe).
 """
 
-from .server import LoreStore, main, serve_forever
+from .server import LoreStore, launch, main, serve_forever
 
-__all__ = ["LoreStore", "serve_forever", "main"]
+__all__ = ["LoreStore", "launch", "serve_forever", "main"]

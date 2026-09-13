@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -31,6 +31,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from ...db import LoreChunk, WikiPage
 from ..llm import EmbeddingProvider
 from .aliases import AliasResolver
+from .search import set_hnsw_ef_search
 
 # ts_headline output cap (PostgreSQL options string — no inner quotes).
 _FTS_HEADLINE_OPTIONS = "MaxWords=40, MinWords=15, MaxFragments=2"
@@ -185,6 +186,9 @@ class HybridSearch:
         query_vector = (await self.embeddings.embed([expanded]))[0]
         async with self.sessions() as session:
             hits: dict[int, HybridHit] = {}
+            # Même élargissement HNSW que RAGService : l'inspecteur reflète
+            # exactement le pool que la recherche production verrait.
+            await set_hnsw_ef_search(session)
 
             cosine_rows = (await session.execute(
                 self._cosine_statement(query_vector))).all()

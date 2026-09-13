@@ -12,11 +12,13 @@
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- 0. Extension vectorielle (requise pour le RAG / embeddings).
---    pgvector fournit le type `vector(n)` et des opérateurs de similarité
---    (<-> distance, <=> cosinus).  À installer une seule fois sur la base.
+-- 0. Extensions (requises pour le RAG / embeddings / recherche lexicale).
+--    - vector          : type vector(n) et opérateurs cosine (<=>).
+--    - pg_trgm         : index trigrammes -> accélère ``ILIKE '%token%'`` des
+--                        titres (suggest_title) et le matching flou.
 -- ----------------------------------------------------------------------------
 CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- ----------------------------------------------------------------------------
 -- 1. Table wiki_pages : racine d'une page de wiki.
@@ -45,6 +47,10 @@ ALTER TABLE wiki_pages ADD COLUMN IF NOT EXISTS content_markdown TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_wiki_pages_title   ON wiki_pages (page_title);
 CREATE INDEX        IF NOT EXISTS idx_wiki_pages_bucket  ON wiki_pages (category);
 CREATE INDEX        IF NOT EXISTS idx_wiki_pages_canon   ON wiki_pages (canon_status);
+-- Trigrammes : rend le ``ILIKE '%token%'`` du suggest_title indexé en GIN
+-- (sinon balayage séquentiel de toutes les pages à chaque requête).
+CREATE INDEX IF NOT EXISTS idx_wiki_pages_title_trgm    ON wiki_pages
+    USING GIN (page_title gin_trgm_ops);
 
 -- ----------------------------------------------------------------------------
 -- 2. Table lore_chunks : paragraphes/sections découpés du contenu nettoyé.
@@ -75,6 +81,11 @@ CREATE INDEX IF NOT EXISTS idx_chunks_page ON lore_chunks (wiki_page_id);
 CREATE INDEX IF NOT EXISTS idx_chunks_metadata ON lore_chunks USING GIN (metadata);
 CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON lore_chunks
     USING hnsw (embedding vector_cosine_ops);
+-- Index GIN sur l'expression tsvector des chunks : c'est EXACTEMENT
+-- l'expression interrogée par le canal full-text (websearch_to_tsquery),
+-- donc l'index est utilisé au lieu d'un seq scan sur tout le corpus.
+CREATE INDEX IF NOT EXISTS idx_chunks_fts ON lore_chunks
+    USING GIN (to_tsvector('french', content_markdown));
 
 -- ----------------------------------------------------------------------------
 -- 3. Table kim_dialogues : discussions KIM ("Kinemantik Instant Messenger"),

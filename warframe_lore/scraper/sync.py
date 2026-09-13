@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 import logging
-from collections import defaultdict
-
-from ..api import assign_pages
 
 log = logging.getLogger("warframe_lore.scraper")
 
@@ -17,14 +14,7 @@ class ScraperSyncMixin:
         # 1. Resolution + delta (no writes) -- shared logic (DRY)
         #    with ``delta_plan`` used by ``cephalon diff``.
         log.info("Resolving %d bucket(s)...", len(self.buckets.specs))
-        resolved_buckets = [
-            self.catalog.resolve(spec) for spec in self.buckets.specs
-        ]
-        assigned_pages = assign_pages(resolved_buckets)
-
-        pages_by_bucket: dict[str, list[str]] = defaultdict(list)
-        for page_title, bucket_spec in assigned_pages.items():
-            pages_by_bucket[bucket_spec.id].append(page_title)
+        assigned_pages, pages_by_bucket = await self.resolve_buckets()
 
         # Purge pages that disappeared from all resolved categories.
         for spec in self.buckets.specs:
@@ -40,7 +30,8 @@ class ScraperSyncMixin:
             return
 
         # 2. Delta (pages that actually need fetching/updating).
-        needs_fetch_per_bucket = await self.delta_plan(force=force)
+        needs_fetch_per_bucket = await self.delta_plan(
+            force=force, resolution=(assigned_pages, pages_by_bucket))
         total_todo = sum(len(titles) for titles in needs_fetch_per_bucket.values())
         log.info("Delta: %d page(s) to fetch/update (force=%s).",
                  total_todo, force)

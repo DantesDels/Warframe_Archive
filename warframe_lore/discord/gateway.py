@@ -10,22 +10,44 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from collections.abc import Callable
-from typing import Awaitable
+from collections.abc import Awaitable, Callable
 
 from websockets.legacy.client import connect
+
+from ..protocols.roleplay import (
+    FRAME_COMMENT,
+    FRAME_END,
+    FRAME_ERROR,
+    FRAME_TOKEN,
+    CommentRequestFrame,
+    MessageFrame,
+    PersonaFrame,
+    ResetFrame,
+)
 
 log = logging.getLogger("warframe_lore.discord.gateway")
 
 TokenHandler = Callable[[str], Awaitable[bool]]
 EndHandler = Callable[[str], Awaitable[None]]
 
+# Maximum silent gap between two frames of a stream: if the server stalls
+# longer, the gateway aborts the turn instead of blocking the channel forever.
+DEFAULT_REPLY_TIMEOUT = 120.0
+
+# Timeout for the initial WebSocket handshake (TCP + WS upgrade).  Without it
+# a dead ENGRAM host hangs the very first ``open()`` forever (the Discord
+# message would never be answered).
+DEFAULT_CONNECT_TIMEOUT = 15.0
+
 
 class RoleplayGateway:
     """Access point to the Oracle Roleplay, per WebSocket connection."""
 
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str, reply_timeout: float = DEFAULT_REPLY_TIMEOUT,
+                 connect_timeout: float = DEFAULT_CONNECT_TIMEOUT) -> None:
         self.url = url
+        self.reply_timeout = reply_timeout
+        self.connect_timeout = connect_timeout
         self._conn = None
         self._closed = False
         self._queue: asyncio.Queue = asyncio.Queue(maxsize=64)
@@ -37,10 +59,36 @@ class RoleplayGateway:
         """True if the connection is open and the stream reader is alive."""
         return self._conn is not None and not self._closed
 
+    async def _next_frame(self) -> dict:
+        """Next frame, or a timeout error frame if the stream stalls.
+
+        The timeout applies PER FRAME (a long stream keeps producing tokens),
+        not to the whole turn: only an idle server is aborted."""
+        try:
+            return await asyncio.wait_for(self._queue.get(), self.reply_timeout)
+        except TimeoutError:
+            log.error("WS reply timed out after %.0fs — aborting turn",
+                      self.reply_timeout)
+            return {"type": FRAME_ERROR,
+                    "message": "reply timed out"}
+
     async def open(self) -> None:
-        """Establishes the connection and starts the stream reader."""
+        """Establishes the connection and starts the stream reader.
+
+        The handshake is bounded by ``connect_timeout``: a dead ENGRAM host
+        raises instead of hanging the first turn forever.  On ANY failure the
+        gateway stays inactive (``active`` False), so the caller can retry.
+        """
         self._closed = False
-        self._conn = await connect(self.url)
+        try:
+            self._conn = await asyncio.wait_for(
+                connect(self.url), timeout=self.connect_timeout)
+        except (TimeoutError, OSError) as exc:
+            self._closed = True
+            self._conn = None
+            raise ConnectionError(
+                f"cannot connect to {self.url} within "
+                f"{self.connect_timeout}s: {exc}") from exc
         log.info("WS connection established: %s", self.url)
         self._worker = asyncio.create_task(self._read_loop())
 
@@ -72,39 +120,26 @@ class RoleplayGateway:
             if not self.active:
                 raise ConnectionError(
                     "WS connection closed — restart the gateway")
-            payload = {"type": "message", "text": text, "rag": rag}
-            if user_name is not None:
-                payload["user_name"] = user_name
-            if user_role is not None:
-                payload["user_role"] = user_role
-            if user_id is not None:
-                payload["user_id"] = user_id
-            if role_status is not None:
-                payload["role_status"] = role_status
-            if creator is not None:
-                payload["creator"] = creator
-            if user_roles is not None:
-                payload["user_roles"] = list(user_roles)
-            if member_name is not None:
-                payload["member_name"] = member_name
-            if member_roles is not None:
-                payload["member_roles"] = list(member_roles)
-            if member_affiliated is not None:
-                payload["member_affiliated"] = member_affiliated
-            if reluctant is not None:
-                payload["reluctant"] = reluctant
-            if creator_mention is not None:
-                payload["creator_mention"] = creator_mention
+            payload = MessageFrame(
+                text=text, rag=rag,
+                user_name=user_name, user_role=user_role, user_id=user_id,
+                role_status=role_status, creator=creator,
+                user_roles=list(user_roles) if user_roles else None,
+                member_name=member_name,
+                member_roles=list(member_roles) if member_roles else None,
+                member_affiliated=member_affiliated, reluctant=reluctant,
+                creator_mention=creator_mention,
+            ).payload()
             await self._conn.send(json.dumps(payload))
             while True:
-                frame = await self._queue.get()
+                frame = await self._next_frame()
                 kind = frame.get("type")
                 # Dead stream mid-reply: NEVER wait for an ``end`` frame that
                 # will never come (otherwise infinite block/typing).
                 if not self.active:
                     raise ConnectionError(
                         "WS stream closed before the end of the reply")
-                if kind == "token":
+                if kind == FRAME_TOKEN:
                     stop = await on_token(frame.get("token", ""))
                     if stop:
                         # Hard split: cut the stream right now, whatever
@@ -115,11 +150,11 @@ class RoleplayGateway:
                             "Hard split on stop marker — closing WS stream")
                         await self.close()
                         return
-                elif kind == "end":
+                elif kind == FRAME_END:
                     if on_end:
                         await on_end(frame.get("text", ""))
                     return
-                elif kind == "error":
+                elif kind == FRAME_ERROR:
                     # Terminal error (e.g. "internal error"): turn closed.
                     log.error("Roleplay error: %s", frame.get("message"))
                     return
@@ -133,20 +168,20 @@ class RoleplayGateway:
             if not self.active:
                 raise ConnectionError(
                     "WS connection closed — restart the gateway")
-            payload = {"type": "comment", "member_name": member_name,
-                       "member_roles": list(roles),
-                       "interactions": list(interactions),
-                       "creator": creator, "reluctant": reluctant}
+            payload = CommentRequestFrame(
+                member_name=member_name, member_roles=list(roles),
+                interactions=list(interactions),
+                creator=creator, reluctant=reluctant).payload()
             await self._conn.send(json.dumps(payload))
             while True:
-                frame = await self._queue.get()
+                frame = await self._next_frame()
                 kind = frame.get("type")
                 if not self.active:
                     raise ConnectionError(
                         "WS stream closed before the comment reply")
-                if kind == "comment":
+                if kind == FRAME_COMMENT:
                     return str(frame.get("text", ""))
-                if kind == "error":
+                if kind == FRAME_ERROR:
                     log.error("Roleplay comment error: %s",
                               frame.get("message"))
                     return ""
@@ -162,7 +197,7 @@ class RoleplayGateway:
                 raise ConnectionError(
                     "WS connection closed — restart the gateway")
             await self._conn.send(json.dumps(
-                {"type": "persona", "mode": mode}))
+                PersonaFrame(mode=mode).payload()))
 
     async def reset(self, user_id: int | str) -> None:
         """Wipes the user's short-term memory server-side (``!reset``)."""
@@ -171,7 +206,7 @@ class RoleplayGateway:
                 raise ConnectionError(
                     "WS connection closed — restart the gateway")
             await self._conn.send(json.dumps(
-                {"type": "reset", "user_id": user_id}))
+                ResetFrame(user_id=user_id).payload()))
 
     async def _read_loop(self) -> None:
         """Reads the incoming frames and queues them."""
@@ -192,12 +227,23 @@ class RoleplayGateway:
                 pass
 
     async def close(self) -> None:
-        """Closes the connection and the reader."""
+        """Closes the connection, joining the reader.
+
+        The worker is cancelled and awaited (not fire-and-forget): the caller
+        knows the stream is fully down before reopening a gateway, so no
+        residual frame can be read into a future connection's queue."""
         self._closed = True
-        if self._worker:
-            self._worker.cancel()
-        if self._conn:
+        worker = self._worker
+        self._worker = None
+        if worker is not None and not worker.done():
+            worker.cancel()
+            try:
+                await worker
+            except (asyncio.CancelledError, Exception):  # noqa: BLE001
+                pass
+        if self._conn is not None:
             await self._conn.close()
+            self._conn = None
 
 
 __all__ = ["RoleplayGateway"]

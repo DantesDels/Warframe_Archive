@@ -12,35 +12,36 @@ import logging
 
 import discord
 
-from warframe_lore.engram.persona import (STATUT_ALLIE, STATUT_CONCEPTEUR,
-                                          STATUT_HAUT_COMMANDEMENT,
-                                          STATUT_MEMBRE_OFFICIEL,
-                                          STATUT_ORGANIQUE)
+from warframe_lore.engram.persona import STATUT_CONCEPTEUR, STATUT_ORGANIQUE
 from warframe_lore.engram.rag.probes import detect_probe, is_self_reflection
 
+from .activity import MemberActivityStore
 from .gateway import RoleplayGateway
 from .guards import BurstGuard
 from .hostile_link import HostileLink, is_sincere_apology
 from .hostility import HostilityTracker, reply_for
 from .insults import comeback_for, detect_insult
-from .members import (creator_mentioned, is_member_question, leetspeak,
-                      match_member_token, normalize_mentions, roles_question,
-                      self_info_request)
-from .activity import MemberActivityStore
+from .member_card import MemberCardService
+from .members import (
+    creator_mentioned,
+    is_member_question,
+    leetspeak,
+    match_member_token,
+    normalize_mentions,
+    roles_question,
+    self_info_request,
+)
 from .roles import Accreditation, RoleHierarchy
 from .streamer import MessageStreamer
 
 log = logging.getLogger("warframe_lore.discord.bot")
 
-# "Niveau de Sécurité" flavour label of the member card, derived from the
-# accredited Discord status (never a LLM guess).
-_SECURITY_LEVELS = {
-    STATUT_CONCEPTEUR: "Commandement Suprême",
-    STATUT_HAUT_COMMANDEMENT: "Commandement Tactique",
-    STATUT_MEMBRE_OFFICIEL: "Accès Membre Officiel",
-    STATUT_ALLIE: "Accès Invité",
-    STATUT_ORGANIQUE: "Accès Invité Restreint",
-}
+# Bornes LRU des tables voltaïles du bot : un guild hostile ne doit jamais
+# faire croître la mémoire indéfiniment (sessions hostiles, anaphores membre,
+# refus d'accès).
+_MAX_HOSTILE_SESSIONS = 32
+_MAX_LAST_MEMBERS = 256
+_MAX_MEMBER_REFUSALS = 2048
 
 # Trigger words for a document-based question (triggers a RAG retrieval).
 # Bilingual FR/EN: the Oracle understands English input too.
@@ -110,6 +111,13 @@ class LoreMasterBot(discord.Client):
         # reliability index and the relative assiduité are REAL functions of
         # this ledger — they survive bot restarts.
         self.member_activity = MemberActivityStore(activity_db_path)
+        # Cards + indices (embed, Niveau de Sécurité, fiabilité, assiduité):
+        # extracted service, unit-testable, kept up-to-date with the stores.
+        self.card = MemberCardService(
+            activity=self.member_activity,
+            insolence=self._insults,
+            probes=self.hostility,
+        )
 
     async def on_ready(self) -> None:
         log.info("Loremaster Oracle online: %s (%s)",
@@ -123,6 +131,10 @@ class LoreMasterBot(discord.Client):
         if message.author.bot or not message.content:
             return
         content = message.content.strip()
+        # Volatile-state pruning: sessions hostiles, anaphores membre,
+        # compteurs de refus — toutes ces tables sont BORNÉES (un guild
+        # hostile ne peut pas faire croître la mémoire du bot indéfiniment).
+        await self._purge_hostile_sessions()
         # Per-member interaction memory (feeds the member-card comment and the
         # reliability/assiduité indices): recorded for EVERY human message the
         # bot sees, so activity is real and comparable across members.
@@ -180,6 +192,7 @@ class LoreMasterBot(discord.Client):
                         "Hostile persona unreachable for an insulter")
                 else:
                     self._hostile[message.author.id] = link
+                    await self._purge_hostile_sessions()
             return
         # Anti-spam for normal users (cooldown / caps).
         if not self.guard.check(message.author.id, message.channel.id):
@@ -208,8 +221,20 @@ class LoreMasterBot(discord.Client):
                     "Hostile persona unreachable — ENGRAM down?")
             else:
                 self._hostile[message.author.id] = link
+                await self._purge_hostile_sessions()
         log.warning("HOSTILE_PROBE user=%s lvl=%d (hostile session opened)",
                     message.author.id, level)
+
+    async def _purge_hostile_sessions(self) -> None:
+        """Bounded hostile sessions: evicts (and closes) the oldest sessions
+        past ``_MAX_HOSTILE_SESSIONS`` — cheap no-op while under the cap."""
+        while len(self._hostile) > _MAX_HOSTILE_SESSIONS:
+            user_id, link = next(iter(self._hostile.items()))
+            self._hostile.pop(user_id, None)
+            try:
+                await link.close()
+            except Exception:  # noqa: BLE001 — best-effort close
+                log.debug("Hostile session close failed for %s", user_id)
 
     async def _insist(self, user_id: int, message: discord.Message) -> None:
         """Relay to the attacker's hostile session (he must apologise)."""
@@ -381,6 +406,9 @@ class LoreMasterBot(discord.Client):
                         key = (info["display"] or "").lower()
                         pocket = self._member_refusals.setdefault(user_id or 0,
                                                                   {})
+                        if len(self._member_refusals) > _MAX_MEMBER_REFUSALS:
+                            self._member_refusals.pop(
+                                next(iter(self._member_refusals)))
                         strikes = pocket.get(key, 0) + 1
                         pocket[key] = strikes
                         if strikes == 1:
@@ -603,101 +631,21 @@ class LoreMasterBot(discord.Client):
                          member) -> None:
         """Anaphora context: the last guild member discussed in a channel
         ("Quels sont ses rôles ?" → this record).  Never stored for the
-        Concepteur (his roster is Creator material, not "organique")."""
+        Concepteur (his roster is Creator material, not "organique").
+        Bounded (LRU): the table cannot grow with every channel of the guild."""
         if not member_name or member is None:
             return
         roster = self._member_roster(member_name, member)
         if roster is not None:
             self._last_member[channel_id] = roster
+            if len(self._last_member) > _MAX_LAST_MEMBERS:
+                self._last_member.pop(next(iter(self._last_member)))
 
     def _remember_interaction(self, user_id: int, text: str) -> None:
         """Records a member message in the persistent activity ledger (total
         count + recent window) — the card comment, reliability and assiduité
         are REAL, restart-proof functions of this data."""
         self.member_activity.record(user_id, text)
-
-    def _reliability(self, member_id: int) -> tuple[str, str]:
-        """Real reliability index from the bot's own counters: activity
-        (persistent total), insolence strikes and hostile-probe strikes.
-        Returns ``(label, reason)`` — a pure function, never the LLM's guess."""
-        activity = self.member_activity.count(member_id)
-        insolence = self._insults.count(member_id)
-        probes = self.hostility.count(member_id)
-        if probes >= 2:
-            return "Compromis", "tentatives hostiles répétées"
-        if insolence >= 3:
-            return "Défaillant", "insolence récurrente"
-        if activity == 0:
-            return "Inconnu", "aucune interaction enregistrée"
-        if activity < 3:
-            return "Faible", "interactions trop rares"
-        if activity >= 10 and insolence == 0 and probes == 0:
-            return "Élevée", "présence régulière, aucune incartade"
-        if activity >= 5:
-            return "Moyenne", "présence correcte"
-        return "Inconstant", "activité irrégulière"
-
-    def _assiduity(self, member_id: int) -> tuple[str, str]:
-        """Relative assiduité on a 5-level scale: the member's persistent
-        activity compared to the OTHER tracked members (percentile).  A real,
-        comparable function of the per-member ledger — never a LLM guess."""
-        activity = self.member_activity.count(member_id)
-        counts = self.member_activity.all_counts()
-        others = [c for uid, c in counts.items() if uid != member_id]
-        if activity == 0:
-            return "Inactif", "aucune activité enregistrée"
-        if not others:
-            return "Modéré", "aucune base de comparaison"
-        behind = sum(1 for c in others if c < activity)
-        pct = round(100 * behind / len(others))
-        if pct >= 80:
-            label = "Très assidu"
-        elif pct >= 60:
-            label = "Assidu"
-        elif pct >= 40:
-            label = "Modéré"
-        elif pct >= 20:
-            label = "Peu assidu"
-        else:
-            label = "Inactif"
-        return label, f"plus actif que {pct}% des membres ({activity} messages)"
-
-    def _security_level(self, status: str | None) -> str:
-        """"Niveau de Sécurité" flavour label from the accredited status."""
-        return _SECURITY_LEVELS.get(status, _SECURITY_LEVELS[STATUT_ORGANIQUE])
-
-    def _member_embed(self, info: dict, reliability: tuple[str, str],
-                      assiduity: tuple[str, str], comment: str) -> discord.Embed:
-        """Well-formed member card (Discord embed): profile picture beside
-        the pseudo, roles as bullets, network ID, security level, reliability
-        index and the LLM behavioural analysis."""
-        name = info.get("display") or "Inconnu"
-        embed = discord.Embed(title="RAPPORT MATRICIEL", color=0x7c3aed)
-        avatar = info.get("avatar")
-        if avatar:
-            embed.set_thumbnail(url=avatar)
-        # Pseudo puis identifiant réseau : en sous-titres (h4) juste sous le
-        # titre « RAPPORT MATRICIEL ».
-        embed.description = (
-            f"**IDENTIFIANT :** {name}\n"
-            f"**Identifiant Réseau :** #{info.get('member_id') or 'inconnu'}")
-        roles = info.get("roles") or []
-        roles_txt = "\n".join(f"- {r}" for r in roles) if roles else "- aucun"
-        embed.add_field(name="Rôles et Accréditations", value=roles_txt,
-                        inline=False)
-        embed.add_field(name="Niveau de Sécurité",
-                        value=self._security_level(info.get("status")),
-                        inline=True)
-        a_label, a_reason = assiduity
-        embed.add_field(name="Assiduité",
-                        value=f"{a_label} — {a_reason}", inline=True)
-        label, reason = reliability
-        embed.add_field(name="Indice de Fiabilité",
-                        value=f"{label} — {reason}", inline=True)
-        if comment:
-            embed.add_field(name="Analyse comportementale de la Matrice",
-                            value=f"« {comment} »", inline=False)
-        return embed
 
     async def _send_member_card(self, gateway: RoleplayGateway,
                                 message: discord.Message, info: dict,
@@ -708,8 +656,6 @@ class LoreMasterBot(discord.Client):
         member_id = info.get("member_id") or ""
         numeric_id = int(member_id) if member_id.isdigit() else 0
         interactions = self.member_activity.recent(numeric_id)
-        reliability = self._reliability(numeric_id)
-        assiduity = self._assiduity(numeric_id)
         comment = ""
         try:
             comment = await gateway.comment(
@@ -721,7 +667,7 @@ class LoreMasterBot(discord.Client):
             )
         except ConnectionError:
             log.warning("Member card comment unavailable — card sans analyse")
-        embed = self._member_embed(info, reliability, assiduity, comment)
+        embed = self.card.build(info, comment)
         await message.channel.send(embed=embed)
 
     def _creator_display(self, message: discord.Message) -> str | None:
@@ -771,7 +717,8 @@ class LoreMasterBot(discord.Client):
         directive in the system prompt (lore-friendly impersonation defence).
         """
         author = message.author
-        user_name = getattr(author, "display_name", None) or getattr(author, "name", None)
+        user_name = (getattr(author, "display_name", None)
+                     or getattr(author, "name", None))
         top_role = getattr(author, "top_role", None)
         user_role = top_role.name if top_role is not None else None
         return user_name, user_role, getattr(author, "id", None)

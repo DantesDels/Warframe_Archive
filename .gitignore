@@ -7,6 +7,9 @@ dist/
 .venv/
 venv/
 
+# Refactoring prompts 
+REFACTO/
+
 # Sorties du scraper
 out/
 sync_state.json
@@ -35,6 +38,10 @@ discord_roles.json
 
 # Node (RAG Inspector / Vite)
 node_modules/
+
+# Artefacts de débogage du timeline (dumps ELK / logs locaux)
+warframe_lore/ui/timeline/debug-elk.mjs
+warframe_lore/ui/timeline/preview.log
 
 # IDE / OS
 .vscode/

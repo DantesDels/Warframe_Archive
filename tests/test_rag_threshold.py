@@ -11,9 +11,13 @@ from __future__ import annotations
 import asyncio
 import unittest
 
-from warframe_lore.engram.rag import (NO_DATA_MARKER,
-                                      PromptBuilder, RAGContext, RAG_ERROR,
-                                      RAGService)
+from warframe_lore.engram.rag import (
+    NO_DATA_MARKER,
+    RAG_ERROR,
+    PromptBuilder,
+    RAGContext,
+    RAGService,
+)
 from warframe_lore.engram.rag.retriever import RAGHit
 from warframe_lore.engram.rag.search import CosinusSearch, _token_matches_title
 from warframe_lore.engram.rag.service import RAG_TEMPERATURE, _lookup_entity
@@ -71,10 +75,10 @@ def make_service(hits, suggestion_min_score=0.5, llm=None):
 class ThresholdTests(unittest.TestCase):
     """Le court-circuit doit vider le contexte et ne jamais appeler le LLM."""
 
-    def test_seuil_applique_dans_le_sql_pgvector(self):
-        """Le seuil de pertinence est imposé dans la requête SQL (WHERE
-        ``embedding <=> query <= 1 - min_score``), pas seulement en Python
-        après récupération — un sujet absent (hors-corpus) ne remonte jamais.
+    def test_seuil_unique_live_dans_ragservice(self):
+        """Le seuil de pertinence N'EST PLUS dupliqué en SQL (double-seuil
+        corrigé) : pgvector renvoie le pool candidat LIMIT top_k et le seul
+        filtre de confiance vit dans RAGService.retrieve (``floor``).
         """
         from sqlalchemy.dialects import postgresql
         search = CosinusSearch.__new__(CosinusSearch)
@@ -84,19 +88,13 @@ class ThresholdTests(unittest.TestCase):
                   .compile(dialect=postgresql.dialect()))
         self.assertIn("<=>", sql)                 # opérateur cosine pgvector
         self.assertIn("WHERE", sql)
-        self.assertIn("<=", sql)                  # contrainte de distance
-        self.assertIn("LIMIT", sql)               # top_k appliqué en SQL
-
-    def test_min_score_calcule_la_distance_maximale(self):
-        """score >= min_score ⇔ distance <= 1 - min_score (lien SQL/Python)."""
-        from sqlalchemy.dialects import postgresql
-        search = CosinusSearch.__new__(CosinusSearch)
-        search.min_score = 0.5
-        search.top_k = 1
-        statement = search._build_statement([0.0] * 1024)
-        # (1 - min_score) = 0.5 : le WHERE contient une borne numérique 0.5.
-        sql = str(statement.compile(dialect=postgresql.dialect()))
-        self.assertIn("%(param_1)s", sql)         # borne paramétrée (anti-SQLi)
+        self.assertIn("LIMIT", sql)               # top_k borné en SQL
+        # Plus AUCUNE borne de distance dans le WHERE (pattern `` <= `` absent ;
+        # l'opérateur ‹<=› présente ne doit pas tromper la vérif) : la décision
+        # de pertinence est unique et Python-side (suggestion/critical).  Le
+        # seul paramètre restant est celui du LIMIT (pool candidat).
+        self.assertNotIn(" <= ", sql)
+        self.assertEqual(sql.count("%(param_1)s"), 1)
 
     def test_sous_seuil_ctx_vide_et_bypass(self):
         service = make_service([hit(1, 0.42)])

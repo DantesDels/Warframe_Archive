@@ -11,7 +11,6 @@ import os
 import socket
 import subprocess
 import sys
-from pathlib import Path
 
 from ..api import BucketConfig
 from ..config import PROJECT_ROOT, load_config
@@ -19,7 +18,6 @@ from ..config import PROJECT_ROOT, load_config
 log = logging.getLogger("cephalon")
 
 PROJECT_DEFAULT_DB_INIT_SQL = PROJECT_ROOT / "init_db.sql"
-VERSION = "1.0.0"
 DEFAULT_UI_PORT = 49772
 
 
@@ -47,6 +45,21 @@ def build_config(args) -> tuple:
     else:
         bucket_config = BucketConfig()
     return config, bucket_config
+
+
+def build_scraper(args):
+    """Single source of truth for constructing the Scraper.
+
+    Used by ``run`` and ``diff`` so the config+bucket+database_url triple is
+    resolved exactly once (before: cloned in two places)."""
+    from ..scraper import Scraper
+
+    config, bucket_config = build_config(args)
+    return Scraper(
+        config=config,
+        bucket_config=bucket_config,
+        database_url=None if getattr(args, "skip_sql", False) else config.database_url,
+    )
 
 
 def print_buckets(bucket_config: BucketConfig) -> None:

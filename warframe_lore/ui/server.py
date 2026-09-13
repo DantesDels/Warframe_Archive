@@ -20,7 +20,7 @@ from ..media import MediaIndex
 from .handlers import ApiHandler
 from .store import LoreStore
 
-__all__ = ["LoreStore", "serve_forever", "main"]
+__all__ = ["LoreStore", "launch", "serve_forever", "main"]
 
 
 def _bundle_root() -> Path:
@@ -58,7 +58,9 @@ def _default_output_dir() -> Path:
     return candidates[0]
 
 
-def _build_handler(store: LoreStore, media: MediaIndex | None = None) -> type[ApiHandler]:
+def _build_handler(
+    store: LoreStore, media: MediaIndex | None = None
+) -> type[ApiHandler]:
     ApiHandler.store = store
     ApiHandler.media = media
     ApiHandler.root = _static_dir()
@@ -101,6 +103,20 @@ def serve_forever(output_dir: Path, port: int = 0,
         print("Server stopped.")
 
 
+def launch(output_dir: Path | None = None, port: int = 0,
+           open_browser: bool = True) -> None:
+    """Unique point d'entrée du serveur UI (CLI ``cephalon ui`` et exe).
+
+    Résout le dossier de megafiles (``output_dir`` donné ou défaut détecté),
+    affiche un avertissement si vide, puis lance ``serve_forever``.
+    """
+    out = Path(output_dir) if output_dir is not None else _default_output_dir()
+    if not out.is_dir():
+        print(f"Warning: no data folder found ({out}).")
+        print("Run `cephalon run` first to generate the megafiles.")
+    serve_forever(out, port=port, open_browser=open_browser)
+
+
 def main(argv: list[str] | None = None) -> int:
     """Console entry point ``cephalon-ui`` (standalone, for the PyInstaller exe)."""
     import argparse
@@ -116,12 +132,7 @@ def main(argv: list[str] | None = None) -> int:
                         help="Does not open the browser automatically.")
     args = parser.parse_args(argv)
 
-    output_dir = args.out or _default_output_dir()
-    if not output_dir.is_dir():
-        print(f"Warning: no data folder found ({output_dir}).")
-        print("Run `cephalon run` first to generate the megafiles.")
-    serve_forever(output_dir, port=args.port,
-                  open_browser=not args.no_browser)
+    launch(args.out, port=args.port, open_browser=not args.no_browser)
     return 0
 
 

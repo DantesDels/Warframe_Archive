@@ -8,8 +8,7 @@ from typing import TYPE_CHECKING
 from ..api import assign_pages
 
 if TYPE_CHECKING:
-    from ..api import BucketConfig
-    from ..api import PageData
+    pass
 
 __all__ = ["ScraperDeltaMixin"]
 
@@ -17,13 +16,12 @@ __all__ = ["ScraperDeltaMixin"]
 class ScraperDeltaMixin:
     """Computes the delta (``diff`` preview mode included)."""
 
-    async def delta_plan(self, force: bool = False,
-                         bucket_config=None) -> dict[str, list[str]]:
-        """Computes the delta without writing anything (``diff`` preview mode).
+    async def resolve_buckets(self, bucket_config=None):
+        """Resolve buckets -> assigned pages, exactly once.
 
-        Reproduces bucket resolution + ``touched`` comparison without
-        downloading content or writing to the database.  Returns a mapping
-        ``bucket_id -> [titles to update]``.
+        Returns ``(assigned_pages, pages_by_bucket)`` so that ``_sync_buckets``
+        (update) and ``delta_plan`` (diff) share the same resolution instead of
+        each recomputing ``assign_pages``.
         """
         buckets = bucket_config or self.buckets
         resolved_buckets = [
@@ -34,30 +32,49 @@ class ScraperDeltaMixin:
         pages_by_bucket: dict[str, list[str]] = defaultdict(list)
         for page_title, bucket_spec in assigned_pages.items():
             pages_by_bucket[bucket_spec.id].append(page_title)
+        return assigned_pages, pages_by_bucket
+
+    async def delta_plan(self, force: bool = False,
+                         bucket_config=None,
+                         resolution=None) -> dict[str, list[str]]:
+        """Computes the delta without writing anything (``diff`` preview mode).
+
+        Reproduces bucket resolution + ``touched`` comparison without
+        downloading content or writing to the database.  Returns a mapping
+        ``bucket_id -> [titles to update]``.
+
+        ``resolution`` reuses the result of :meth:`resolve_buckets` when the
+        caller already resolved (``_sync_buckets``), otherwise the resolution
+        is computed here (standalone ``cephalon diff``).
+        """
+        if resolution is None:
+            assigned_pages, _ = await self.resolve_buckets(bucket_config)
+        else:
+            assigned_pages, _ = resolution
         if not assigned_pages:
             return {}
 
         touched_info = self.source.check_updates(list(assigned_pages.keys()))
+
+        # Freshness: the sync state is loaded ONCE per bucket (before: one
+        # SELECT per page -> O(pages) round-trips).
+        fresh_by_bucket: dict[str, dict] = {}
+        if not force and self.db is not None:
+            specs = (bucket_config or self.buckets).specs
+            for spec in specs:
+                fresh_by_bucket[spec.id] = await self.db.fetch_sync_state(spec.id)
+
         plan: dict[str, list[str]] = defaultdict(list)
         for page_title, bucket_spec in assigned_pages.items():
             bucket_id = bucket_spec.id
             info = touched_info.get(page_title)
             if info is None or info.missing:
                 continue
-            modified_timestamp = info.touched
             needs_fetch = True
             if not force and self.db is not None:
-                needs_fetch = not await self._page_is_fresh(
-                    bucket_id, page_title, modified_timestamp)
+                stored = fresh_by_bucket.get(bucket_id, {}).get(page_title)
+                needs_fetch = not (
+                    stored is not None and stored.get("touched") == info.touched)
             if needs_fetch:
                 plan[bucket_id].append(page_title)
         return dict(plan)
-
-    async def _page_is_fresh(self, bucket_id: str, page_title: str,
-                             touched: str | None) -> bool:
-        """True if the page in the database is already up-to-date (same ``touched``)."""
-        if touched is None:
-            return False  # no reference: we (re)download
-        state = await self.db.fetch_sync_state(bucket_id)
-        stored = state.get(page_title)
-        return stored is not None and stored.get("touched") == touched

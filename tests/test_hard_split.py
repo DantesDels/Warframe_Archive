@@ -9,11 +9,10 @@ fermé (le flux résiduel est abandonné) et l'édition finale est envoyée.
 from __future__ import annotations
 
 import asyncio
-import json
 import unittest
 
-from warframe_lore.discord.gateway import RoleplayGateway
-from warframe_lore.discord.streamer import MessageStreamer, STOP_MARKER
+from warframe_lore.discord.services.gateway import RoleplayGateway
+from warframe_lore.discord.services.streamer import STOP_MARKER, MessageStreamer
 
 
 def _run(coro):

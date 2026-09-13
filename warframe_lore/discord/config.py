@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 from ..config import PROJECT_ROOT
 from ..envfile import load_dotenv
-from .roles import RoleHierarchy
+from .guild.roles import RoleHierarchy
 
 load_dotenv()
 

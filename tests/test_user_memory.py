@@ -15,7 +15,7 @@ import asyncio
 import unittest
 
 from warframe_lore.discord.bot import LoreMasterBot
-from warframe_lore.discord.roles import RoleHierarchy
+from warframe_lore.discord.guild.roles import RoleHierarchy
 from warframe_lore.engram.roleplay import (
     RoleplayService,
     Session,

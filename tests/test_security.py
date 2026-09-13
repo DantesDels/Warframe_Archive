@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import unittest
 
-from warframe_lore.discord.guards import BurstGuard
+from warframe_lore.discord.moderation.guards import BurstGuard
 from warframe_lore.engram.api.ratelimit import SlidingWindowLimiter
 from warframe_lore.engram.rag import (
     JAILBREAK_REJECT,

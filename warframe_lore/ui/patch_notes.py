@@ -68,4 +68,5 @@ def extract_patch_notes(markdown: str) -> tuple[list[dict[str, list[str]]], str]
         note = note.strip()
         if note:
             current["notes"].append(note)
-    return [p for p in patches if p["notes"]], markdown[:heading.start()].rstrip() + "\n"
+    head = markdown[:heading.start()].rstrip()
+    return [p for p in patches if p["notes"]], head + "\n"

@@ -23,18 +23,18 @@ import discord
 
 from warframe_lore.engram.rag.probes import detect_probe
 
-from .activity import MemberActivityStore
-from .commands_core import CommandMixin
-from .gateway import RoleplayGateway
-from .guards import BurstGuard
-from .hostile import HostileMixin
-from .hostile_link import HostileLink, is_sincere_apology
-from .hostility import HostilityTracker
-from .insults import comeback_for, detect_insult
-from .member_card import MemberCardService
-from .member_context import MemberContextMixin
-from .roles import RoleHierarchy
-from .routing import RoutingMixin
+from .guild.roles import RoleHierarchy
+from .mixins.commands_core import CommandMixin
+from .mixins.hostile import HostileMixin
+from .mixins.member_context import MemberContextMixin
+from .mixins.routing import RoutingMixin
+from .moderation.guards import BurstGuard
+from .moderation.hostile_link import HostileLink, is_sincere_apology
+from .moderation.hostility import HostilityTracker
+from .moderation.insults import comeback_for, detect_insult
+from .services.activity import MemberActivityStore
+from .services.gateway import RoleplayGateway
+from .services.member_card import MemberCardService
 
 log = logging.getLogger("warframe_lore.discord.bot")
 

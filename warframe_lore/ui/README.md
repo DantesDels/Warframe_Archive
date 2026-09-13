@@ -9,12 +9,10 @@ lore navigation interface — launched via `cephalon ui`.
 | File | Role |
 |---|---|
 | `server.py` | `LoreStore`, `main`, `serve_forever`: stdlib server, `gzip`-enabled, `python -m warframe_lore.ui.server --port …` |
-| `handlers.py` | `ApiHandler` (BaseHTTPRequestHandler): routes `/`, `/api/stats`, `/api/kim`, `/api/search`, `/api/media`… |
-| `store.py` | `LoreStore`: loads/reads megafiles, full-text index, stats |
-| `dialogue.py` | Parsing/normalization of KIM conversations for display |
-| `dialogue_graph.py` | Tree graph of conversations (flowchart) |
-| `dialogue_script.py` | Script rendering (sequence, speakers, choices) |
 | `patch_notes.py` | Patch notes traversal |
+| **`http/`** | `handlers.py` (`ApiHandler`: routes `/`, `/api/stats`, `/api/kim`, `/api/search`, `/api/media`…), `httpio.py` (Gzip/ETag transport) |
+| **`data/`** | `store.py` (`LoreStore` facade), `megafiles.py` (incremental `out/*.json` loading), `search.py` (full-text index) |
+| **`dialogue/`** | `dialogue.py` (facade), `dialogue_graph.py` (tree graph), `dialogue_script.py` (script rendering), `refs.py`, `sections.py`, `kim_view.py` |
 | `static/` | `app.js` + `styles.css` (dark interface) |
 
 ## Endpoints

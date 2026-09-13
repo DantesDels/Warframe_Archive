@@ -12,8 +12,8 @@ import logging
 
 import discord
 
-from .hostile_link import HostileLink
-from .hostility import reply_for
+from ..moderation.hostile_link import HostileLink
+from ..moderation.hostility import reply_for
 
 log = logging.getLogger("warframe_lore.discord.bot.hostile")
 

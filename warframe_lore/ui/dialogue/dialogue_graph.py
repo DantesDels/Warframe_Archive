@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 
-from ..kim_dm import _anchor_graph
+from ...kim_dm import _anchor_graph
 from .dialogue import (
     _BLOCKQUOTE_SPEAKER,
     _CONVO_ENDS,

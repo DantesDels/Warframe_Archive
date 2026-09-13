@@ -16,8 +16,8 @@ import logging
 
 import discord
 
-from .gateway import RoleplayGateway
-from .streamer import MessageStreamer
+from ..services.gateway import RoleplayGateway
+from ..services.streamer import MessageStreamer
 
 log = logging.getLogger("warframe_lore.discord.hostile")
 

@@ -3,14 +3,14 @@
 Single responsibility: recognise dialogue lines from WARFRAME wiki pages
 (KIM and quests) — extraction, cleanup of navigation instructions, spoiler
 warnings and section splitting by conversations.  Reference normalisation
-machinery lives in :mod:`warframe_lore.ui.refs`.
+machinery lives in :mod:`warframe_lore.ui.dialogue.refs`.
 """
 
 from __future__ import annotations
 
 import re
 
-from .patch_notes import split_lines
+from ..patch_notes import split_lines
 from .refs import (
     _DIALOGUE_STRIP_CHARS,
     clean_kim_text,

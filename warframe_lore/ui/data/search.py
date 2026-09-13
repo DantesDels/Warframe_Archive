@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from . import dialogue as dlg
+from ..dialogue import dialogue as dlg
 
 
 class _SearchDoc(NamedTuple):

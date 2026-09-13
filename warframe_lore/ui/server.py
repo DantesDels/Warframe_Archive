@@ -17,8 +17,8 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from ..media import MediaIndex
-from .handlers import ApiHandler
-from .store import LoreStore
+from .data.store import LoreStore
+from .http.handlers import ApiHandler
 
 __all__ = ["LoreStore", "launch", "serve_forever", "main"]
 

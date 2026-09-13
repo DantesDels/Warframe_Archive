@@ -14,7 +14,7 @@ from collections.abc import Awaitable, Callable
 
 from websockets.legacy.client import connect
 
-from ..protocols.roleplay import (
+from ...protocols.roleplay import (
     FRAME_COMMENT,
     FRAME_END,
     FRAME_ERROR,

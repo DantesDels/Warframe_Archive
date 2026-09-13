@@ -2,8 +2,8 @@
 
 The logic has been split by responsibility:
 
-* :mod:`warframe_lore.ui.refs`     -> text cleanup / jump-reference machinery;
-* :mod:`warframe_lore.ui.sections` -> recognition, extraction, conversations.
+* :mod:`warframe_lore.ui.dialogue.refs`     -> text cleanup / jump-reference machinery;
+* :mod:`warframe_lore.ui.dialogue.sections` -> recognition, extraction, conversations.
 
 WARFRAME wiki pages (KIM and quests): this module keeps the historical
 import surface for the store, the graph and the script builders.

@@ -2,7 +2,7 @@
 
 Single responsibility: route frontend requests to the data layer
 (``LoreStore``), the media layer (``MediaIndex``) and static files.  The
-Gzip/ETag transport lives in :mod:`warframe_lore.ui.httpio`.
+Gzip/ETag transport lives in :mod:`warframe_lore.ui.http.httpio`.
 """
 
 from __future__ import annotations
@@ -11,12 +11,12 @@ from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, unquote
 
-from ..cleaner.formatting import cut_footer_noise, normalise_deep_headings
-from ..media import MediaIndex
-from ..timeline import children_payload, roots_payload
+from ...cleaner.formatting import cut_footer_noise, normalise_deep_headings
+from ...media import MediaIndex
+from ...timeline import children_payload, roots_payload
+from ..data.store import LoreStore
+from ..patch_notes import _PATCH_HISTORY_HEADING, extract_patch_notes
 from .httpio import HttpIOMixin
-from .patch_notes import _PATCH_HISTORY_HEADING, extract_patch_notes
-from .store import LoreStore
 
 
 class ApiHandler(HttpIOMixin, BaseHTTPRequestHandler):

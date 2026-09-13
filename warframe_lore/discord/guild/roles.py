@@ -25,7 +25,7 @@ import json
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from ..engram.auth import (
+from ...engram.auth import (
     STATUT_ALLIE,
     STATUT_CONCEPTEUR,
     STATUT_HAUT_COMMANDEMENT,

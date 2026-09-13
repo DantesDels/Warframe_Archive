@@ -14,9 +14,9 @@ import discord
 
 from warframe_lore.engram.auth import STATUT_CONCEPTEUR, STATUT_ORGANIQUE
 
-from .gateway import RoleplayGateway
-from .members import leetspeak, match_member_token
-from .roles import Accreditation
+from ..guild.members import leetspeak, match_member_token
+from ..guild.roles import Accreditation
+from ..services.gateway import RoleplayGateway
 
 log = logging.getLogger("warframe_lore.discord.bot.member")
 

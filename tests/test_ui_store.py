@@ -7,7 +7,7 @@ titre > contenu — y compris après rechargement.
 
 from __future__ import annotations
 
-from warframe_lore.ui.store import LoreStore
+from warframe_lore.ui.data.store import LoreStore
 
 
 def _reset_interval(store: LoreStore, elapsed: float = 60.0) -> None:

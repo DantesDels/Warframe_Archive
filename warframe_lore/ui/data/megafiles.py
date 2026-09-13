@@ -11,7 +11,7 @@ import json
 import time
 from pathlib import Path
 
-from . import dialogue as dlg
+from ..dialogue import dialogue as dlg
 from .search import _SearchDoc
 
 

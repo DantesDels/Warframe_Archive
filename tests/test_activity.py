@@ -7,7 +7,7 @@ import os
 import tempfile
 import unittest
 
-from warframe_lore.discord.activity import MemberActivityStore
+from warframe_lore.discord.services.activity import MemberActivityStore
 
 
 class MemberActivityStoreTests(unittest.TestCase):

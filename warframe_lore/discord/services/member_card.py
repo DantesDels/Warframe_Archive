@@ -22,8 +22,8 @@ from warframe_lore.engram.auth import (
     STATUT_ORGANIQUE,
 )
 
+from ..moderation.hostility import HostilityTracker
 from .activity import MemberActivityStore
-from .hostility import HostilityTracker
 
 # "Niveau de Sécurité" flavour label of the member card, derived from the
 # accredited Discord status (never a LLM guess).

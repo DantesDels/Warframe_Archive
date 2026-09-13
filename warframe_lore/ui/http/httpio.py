@@ -2,7 +2,7 @@
 
 Single responsibility: write compressed responses (Gzip) with an ETag and
 answer ``304 Not Modified`` when the client cache is up to date.  Routes
-and payload assembly stay in :class:`warframe_lore.ui.handlers.ApiHandler`.
+and payload assembly stay in :class:`warframe_lore.ui.http.handlers.ApiHandler`.
 """
 
 from __future__ import annotations

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import unittest
 
-from warframe_lore.discord.insults import (
+from warframe_lore.discord.moderation.insults import (
     COMEBACKS,
     comeback_for,
     detect_insult,

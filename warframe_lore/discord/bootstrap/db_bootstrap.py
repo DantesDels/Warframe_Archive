@@ -22,7 +22,7 @@ from urllib.parse import urlparse
 
 log = logging.getLogger("warframe_lore.discord.db_bootstrap")
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 _DOCKER_DESKTOP_EXE = (
     Path(os.environ.get("PROGRAMFILES", r"C:\Program Files"))

@@ -16,16 +16,16 @@ import discord
 
 from warframe_lore.engram.rag.probes import is_self_reflection
 
-from .gateway import RoleplayGateway
-from .insults import detect_insult
-from .members import (
+from ..guild.members import (
     creator_mentioned,
     is_member_question,
     normalize_mentions,
     roles_question,
     self_info_request,
 )
-from .streamer import MessageStreamer
+from ..moderation.insults import detect_insult
+from ..services.gateway import RoleplayGateway
+from ..services.streamer import MessageStreamer
 
 log = logging.getLogger("warframe_lore.discord.bot.routing")
 

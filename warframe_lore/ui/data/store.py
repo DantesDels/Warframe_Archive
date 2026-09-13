@@ -1,9 +1,9 @@
 """LoreStore — cache en mémoire des megafiles ``out/*.json``.
 
 Façade : compose le chargement incrémental des megafiles
-(:mod:`warframe_lore.ui.megafiles`), la recherche plein texte
-(:mod:`warframe_lore.ui.search`) et les projections de dialogue KIM
-(:mod:`warframe_lore.ui.kim_view`).  Le parsing fin des
+(:mod:`warframe_lore.ui.data.megafiles`), la recherche plein texte
+(:mod:`warframe_lore.ui.data.search`) et les projections de dialogue KIM
+(:mod:`warframe_lore.ui.dialogue.kim_view`).  Le parsing fin des
 répliques/scripts/graphes vit dans ``dialogue*`` ; ici seuls les accès
 cohérents au corpus.
 """
@@ -14,8 +14,8 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from ..kim_dm import KimDM
-from .kim_view import KimViewMixin
+from ...kim_dm import KimDM
+from ..dialogue.kim_view import KimViewMixin
 from .megafiles import MegafilesMixin
 from .search import SearchMixin
 

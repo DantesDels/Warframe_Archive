@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import unittest
 
-from warframe_lore.discord.members import (
+from warframe_lore.discord.guild.members import (
     creator_mentioned,
     creator_pseudo_variants,
     is_member_question,

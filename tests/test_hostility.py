@@ -11,11 +11,11 @@ from __future__ import annotations
 import asyncio
 import unittest
 
-from warframe_lore.discord.hostile_link import (
+from warframe_lore.discord.moderation.hostile_link import (
     is_apology,
     is_sincere_apology,
 )
-from warframe_lore.discord.hostility import HostilityTracker, reply_for
+from warframe_lore.discord.moderation.hostility import HostilityTracker, reply_for
 from warframe_lore.engram.persona import HOSTILE_PERSONA
 from warframe_lore.engram.rag import JAILBREAK_REJECT
 from warframe_lore.engram.rag.guards import HIERARCHY_BLOCK

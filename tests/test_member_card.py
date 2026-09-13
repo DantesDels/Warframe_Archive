@@ -6,9 +6,9 @@ from __future__ import annotations
 
 import unittest
 
-from warframe_lore.discord.activity import MemberActivityStore
-from warframe_lore.discord.hostility import HostilityTracker
-from warframe_lore.discord.member_card import MemberCardService
+from warframe_lore.discord.moderation.hostility import HostilityTracker
+from warframe_lore.discord.services.activity import MemberActivityStore
+from warframe_lore.discord.services.member_card import MemberCardService
 from warframe_lore.engram.auth import (
     STATUT_HAUT_COMMANDEMENT,
     STATUT_ORGANIQUE,

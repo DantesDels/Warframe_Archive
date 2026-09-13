@@ -8,9 +8,9 @@ completes ``discord_roles.json`` by matching the role NAMES against the keys
 of the current mapping (accents and case-normalised).
 
 Usage:
-    python -m warframe_lore.discord.dump_roles            # dump only
-    python -m warframe_lore.discord.dump_roles --write    # fill the map
-    python -m warframe_lore.discord.dump_roles --write --file my_roles.json
+    python -m warframe_lore.discord.guild.dump_roles            # dump only
+    python -m warframe_lore.discord.guild.dump_roles --write    # fill the map
+    python -m warframe_lore.discord.guild.dump_roles --write --file my_roles.json
 """
 
 from __future__ import annotations
@@ -24,8 +24,8 @@ from pathlib import Path
 
 import discord
 
-from ..config import PROJECT_ROOT
-from .config import DiscordConfig
+from ...config import PROJECT_ROOT
+from ..config import DiscordConfig
 
 # Line-buffered console: the dump must stream live (no reordering against
 # stderr and no loss when the process exits).

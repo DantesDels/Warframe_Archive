@@ -123,17 +123,17 @@ Analyse comportementale      ← LLM observation, grounded in recorded activity
 
 ## Architecture (SOLID)
 
+Grouped by domain:
+
 | File | Role |
 |---|---|
 | `config.py` | `DiscordConfig` (token, WS, prefix, authorized channels, creator ID, roles file, activity DB path) |
-| `gateway.py` | `RoleplayGateway` — WS connection per channel, token broadcast, `set_persona` (switch to hostile persona), `comment` (one-shot member-card comment) |
-| `streamer.py` | `MessageStreamer` — message editing with buffering (anti-429) |
-| `guards.py` | `BurstGuard` — anti-spam (user cooldown, per-channel cap, ban) |
-| `hostility.py` | Targeted escalation (`reply_for`, level 0→2) + `HostilityTracker` (strike/count) |
-| `hostile_link.py` | Hostile session per attacker (`is_apology`, persona switch/return) |
-| `insults.py` | Répartie (classy insult comebacks) + `detect_insult` |
-| `members.py` | Member-name resolution (exact/prefix/leetspeak), `is_member_question`, `roles_question`, `self_info_request`, creator-pseudo detection |
-| `roles.py` | `RoleHierarchy` + `Accreditation` (status from Discord roles, mission-8) |
-| `activity.py` | `MemberActivityStore` — persistent SQLite activity ledger (count + recent window) |
-| `bot.py` | `LoreMasterBot` — `discord.Client`, routing, member card (embed), gating, probe detection, jealousy, self-report |
+| `bot.py` | `LoreMasterBot` — `discord.Client` composing the mixins below |
 | `main.py` | Console entry point (`launch_bot` shared with CLI `cephalon bot run`) |
+| `bootstrap/__init__.py` | Facade: `ensure_database` + `ensure_engram` (auto-start PostgreSQL/ENGRAM) |
+| `bootstrap/db_bootstrap.py` | PostgreSQL/pgvector auto-start (docker compose, local hosts only) |
+| `bootstrap/engram_bootstrap.py` | ENGRAM (uvicorn) auto-start + child-process teardown |
+| **`mixins/`** | Behaviour decomposed into single-responsibility mixins, composed into `LoreMasterBot`: `hostile.py` (probe escalation + death sessions), `member_context.py` (member resolution, accreditation, cards), `routing.py` (lore/member routing + token streaming), `commands_core.py` (`!prefix` commands) |
+| **`moderation/`** | `guards.py` (`BurstGuard` — anti-spam), `hostility.py` (targeted escalation + `HostilityTracker`), `hostile_link.py` (per-attacker hostile session + `is_apology`), `insults.py` (répartie + `detect_insult`) |
+| **`guild/`** | `members.py` (member-name resolution, `is_member_question`…), `roles.py` (`RoleHierarchy` + `Accreditation`), `dump_roles.py` (role-map discovery tool) |
+| **`services/`** | `gateway.py` (`RoleplayGateway` — per-channel WS, token broadcast, `set_persona`), `streamer.py` (`MessageStreamer` — anti-429 edits), `activity.py` (`MemberActivityStore` — persistent SQLite ledger), `member_card.py` (`MemberCardService` — deterministic RAPPORT MATRICIEL embed) |

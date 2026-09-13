@@ -222,7 +222,8 @@ async def roleplay(websocket: WebSocket) -> None:
                     user_role=payload.get("user_role"),
                     role_status=payload.get("role_status"),
                     creator=payload.get("creator"),
-                    creator_mention=creator_mention):
+                    creator_mention=creator_mention,
+                    lang=payload.get("lang")):
                 response_parts.append(token)
                 await websocket.send_json(
                     TokenFrame(token=token).model_dump())

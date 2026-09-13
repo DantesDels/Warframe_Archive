@@ -16,13 +16,13 @@ import asyncio
 import unittest
 
 from warframe_lore.discord.bot import LoreMasterBot
-from warframe_lore.engram.persona import (
+from warframe_lore.engram.auth import (
     AUTH_CREATOR_BANNER,
     AUTH_UNKNOWN_BANNER,
-    PERSONA_FILE,
     auth_banner,
 )
-from warframe_lore.engram.rag.prompt import HIERARCHY_BLOCK
+from warframe_lore.engram.persona import PERSONA_FILE
+from warframe_lore.engram.rag.guards import HIERARCHY_BLOCK
 from warframe_lore.engram.roleplay import RoleplayService, Session, SlidingWindow
 
 _NORMAL = "PERSONA NORMAL ORACLE"

@@ -18,7 +18,7 @@ import unittest
 from pathlib import Path
 
 from warframe_lore.discord.roles import Accreditation, RoleHierarchy
-from warframe_lore.engram.persona import (
+from warframe_lore.engram.auth import (
     AUTH_ALLIE_BANNER,
     AUTH_COMMANDEMENT_BANNER,
     AUTH_CREATOR_BANNER,

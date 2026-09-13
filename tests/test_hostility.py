@@ -18,7 +18,7 @@ from warframe_lore.discord.hostile_link import (
 from warframe_lore.discord.hostility import HostilityTracker, reply_for
 from warframe_lore.engram.persona import HOSTILE_PERSONA
 from warframe_lore.engram.rag import JAILBREAK_REJECT
-from warframe_lore.engram.rag.prompt import HIERARCHY_BLOCK
+from warframe_lore.engram.rag.guards import HIERARCHY_BLOCK
 from warframe_lore.engram.roleplay import RoleplayService, Session, SlidingWindow
 
 _NORMAL = "PERSONA NORMAL ORACLE"

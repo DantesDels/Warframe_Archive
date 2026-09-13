@@ -22,10 +22,10 @@ Categories are evaluated top-to-bottom (priority order); bots and event roles
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
-from ..engram.persona import (
+from ..engram.auth import (
     STATUT_ALLIE,
     STATUT_CONCEPTEUR,
     STATUT_HAUT_COMMANDEMENT,
@@ -78,11 +78,11 @@ class RoleHierarchy:
                 self._creator[rid] = is_founder
 
     @classmethod
-    def from_file(cls, path: str) -> "RoleHierarchy":
+    def from_file(cls, path: str) -> RoleHierarchy:
         """Loads the map from a JSON file; a missing/malformed file yields an
         empty hierarchy (safe default: everyone counts as a guest)."""
         try:
-            with open(path, "r", encoding="utf-8") as fh:
+            with open(path, encoding="utf-8") as fh:
                 return cls(json.load(fh))
         except (OSError, ValueError):
             return cls()

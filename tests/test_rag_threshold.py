@@ -18,9 +18,10 @@ from warframe_lore.engram.rag import (
     RAGContext,
     RAGService,
 )
+from warframe_lore.engram.rag.query_guard import _lookup_entity
 from warframe_lore.engram.rag.retriever import RAGHit
 from warframe_lore.engram.rag.search import CosinusSearch, _token_matches_title
-from warframe_lore.engram.rag.service import RAG_TEMPERATURE, _lookup_entity
+from warframe_lore.engram.rag.service import RAG_TEMPERATURE
 
 
 def hit(n, score, page="Page"):

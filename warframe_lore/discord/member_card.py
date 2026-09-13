@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import discord
 
-from warframe_lore.engram.persona import (
+from warframe_lore.engram.auth import (
     STATUT_ALLIE,
     STATUT_CONCEPTEUR,
     STATUT_HAUT_COMMANDEMENT,

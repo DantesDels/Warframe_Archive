@@ -305,7 +305,7 @@ class Bloc2UserContextTests(unittest.TestCase):
             self.assertNotIn(f"  - Lui : question {i}", system)
 
     def test_banniere_apres_le_bloc_2(self):
-        from warframe_lore.engram.persona import AUTH_CREATOR_BANNER
+        from warframe_lore.engram.auth import AUTH_CREATOR_BANNER
         llm = _FakeLLM()
         session = Session(session_id="s")
         session.add("user", "ancien")

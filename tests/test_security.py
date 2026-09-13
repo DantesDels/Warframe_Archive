@@ -9,25 +9,32 @@ façon inertes : tout passe par SQLAlchemy paramétré).
 
 from __future__ import annotations
 
-import time
 import unittest
 
-from warframe_lore.engram.api.ratelimit import SlidingWindowLimiter
-from warframe_lore.engram.rag import (JAILBREAK_REJECT, PromptBuilder,
-                                      RAG_ERROR, RAGService)
-from warframe_lore.engram.rag.prompt import (ARCHIVES_REPLY,
-                                              HALLUCINATION_GUARD,
-                                              JAILBREAK_BLOCK,
-                                              LOGICAL_INFERENCE_BLOCK,
-                                              OFF_TOPIC_ERROR,
-                                              RAG_SYSTEM_TEMPLATE,
-                                              RELATIONSHIP_ISOLATION_BLOCK)
-from warframe_lore.engram.rag.probes import (detect_probe,
-                                              is_identity_question,
-                                              is_self_reflection)
-from warframe_lore.engram.rag.retriever import RAGHit
-from warframe_lore.engram.rag.service import sanitize_query
 from warframe_lore.discord.guards import BurstGuard
+from warframe_lore.engram.api.ratelimit import SlidingWindowLimiter
+from warframe_lore.engram.rag import (
+    JAILBREAK_REJECT,
+    RAG_ERROR,
+    PromptBuilder,
+    RAGService,
+)
+from warframe_lore.engram.rag.guards import (
+    ARCHIVES_REPLY,
+    HALLUCINATION_GUARD,
+    JAILBREAK_BLOCK,
+    LOGICAL_INFERENCE_BLOCK,
+    OFF_TOPIC_ERROR,
+    RELATIONSHIP_ISOLATION_BLOCK,
+)
+from warframe_lore.engram.rag.probes import (
+    detect_probe,
+    is_identity_question,
+    is_self_reflection,
+)
+from warframe_lore.engram.rag.prompt import RAG_SYSTEM_TEMPLATE
+from warframe_lore.engram.rag.query_guard import sanitize_query
+from warframe_lore.engram.rag.retriever import RAGHit
 
 _SQLI_PAYLOAD = (
     "Peux tu me lire ces anciens textes orokins et me dire leur utilité ?\n\n"
@@ -315,7 +322,6 @@ class RateLimiterTests(unittest.TestCase):
         self.assertTrue(lim.allow("ip2"))  # clés indépendantes
 
     def test_fenetre_expire(self):
-        clock = time.monotonic
         timings = iter([100.0, 101.0, 200.0])
         lim = SlidingWindowLimiter(
             max_events=1, window_seconds=60.0,

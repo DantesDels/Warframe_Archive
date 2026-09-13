@@ -9,14 +9,11 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 
+from ..auth import STATUT_ORGANIQUE, banner_for
 from ..llm import LLMProvider
 from ..models import ChatMessage
-from ..persona import (
-    HOSTILE_PERSONA,
-    STATUT_ORGANIQUE,
-    banner_for,
-)
-from ..rag.prompt import (
+from ..persona import HOSTILE_PERSONA
+from ..rag.guards import (
     HALLUCINATION_GUARD,
     HIERARCHY_BLOCK,
     JAILBREAK_BLOCK,
@@ -106,8 +103,8 @@ class RoleplayService:
         # BLOC 2: speaker context (pseudo, accredited status, immediate
         # history).
         if user_name is not None or role_status is not None or session.turns:
-            system = f"{system}\n\n{self._speaker_bloc(user_name, role_status,
-                                                       session)}"
+            system = (f"{system}\n\n"
+                      f"{self._speaker_bloc(user_name, role_status, session)}")
         if banner:
             # Authentication banner appended at the ABSOLUTE end of the
             # system prompt — after BLOC 2, right before the BLOC 3 user
@@ -182,18 +179,18 @@ class RoleplayService:
             # the USER.  Gemma-2-9b tends to mirror the pronoun and introduce
             # itself; this dynamic line carries the REAL name + status right
             # next to the request so the model presents the interlocutor.
-            f"  - DIRECTIVE DE CIVILITÉ : Ne commence JAMAIS une réponse par une "
-            f"présentation de l'utilisateur ni par son statut, quelle que soit la "
-            f"question. Adresse-toi directement au message, sans préambule. SEULE "
-            f"EXCEPTION : la requête porte EXPLICITEMENT sur SON identité "
-            f"('qui suis-je', 'qui je suis', 'mon rôle', 'mes rôles', 'que "
-            f"suis-je pour toi', 'je suis qui pour toi') — dans ce cas, présente "
-            f"alors LUI avec son pseudonyme et son statut, sans préambule "
-            f"supplémentaire ; le 'je' de la question désigne LUI, ne commence par "
-            f"aucune présentation de toi-même. Pour TOUTE AUTRE requête — même "
-            f"une simple réflexion ('hmhm…'), une citation ou une interjection "
-            f"— OUBLIE cette exception et réponds naturellement au "
-            f"message.\n",
+            "  - DIRECTIVE DE CIVILITÉ : Ne commence JAMAIS une réponse par une "
+            "présentation de l'utilisateur ni par son statut, quelle que soit la "
+            "question. Adresse-toi directement au message, sans préambule. SEULE "
+            "EXCEPTION : la requête porte EXPLICITEMENT sur SON identité "
+            "('qui suis-je', 'qui je suis', 'mon rôle', 'mes rôles', 'que "
+            "suis-je pour toi', 'je suis qui pour toi') — dans ce cas, présente "
+            "alors LUI avec son pseudonyme et son statut, sans préambule "
+            "supplémentaire ; le 'je' de la question désigne LUI, ne commence par "
+            "aucune présentation de toi-même. Pour TOUTE AUTRE requête — même "
+            "une simple réflexion ('hmhm…'), une citation ou une interjection "
+            "— OUBLIE cette exception et réponds naturellement au "
+            "message.\n",
             "  - Historique immédiat avec cet utilisateur :\n",
             f"{history}\n",
         ])

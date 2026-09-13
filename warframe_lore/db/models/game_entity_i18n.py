@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import (
     BigInteger,
@@ -30,11 +29,11 @@ class GameEntityI18n(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True,
                                     autoincrement=True)
     entity_id: Mapped[str] = mapped_column(Text, nullable=False)
-    entity_type: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    entity_type: Mapped[str | None] = mapped_column(Text, nullable=True)
     lang: Mapped[str] = mapped_column(Text, nullable=False, default="en",
                                       server_default="en")
     name: Mapped[str] = mapped_column(Text, nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

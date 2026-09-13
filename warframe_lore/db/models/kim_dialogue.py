@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import (
     BigInteger,
@@ -37,7 +36,7 @@ class KimDialogue(Base):
     message_text: Mapped[str] = mapped_column(Text, nullable=False)
     player_choice: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false")
-    timestamp: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    timestamp: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now())
 

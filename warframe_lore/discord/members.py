@@ -178,7 +178,7 @@ _SELF_INFO_RE = re.compile(
 def self_info_request(text: str) -> bool:
     """True when the SPEAKER asks for their OWN matriciel report / fiche
     ("mon rapport", "mon propre rapport", "ma fiche", "rapport de moi")."""
-    return bool(_SELF_INFO_RE.search((text or "")))
+    return bool(_SELF_INFO_RE.search(text or ""))
 
 
 __all__ = ["creator_mentioned", "creator_pseudo_variants",

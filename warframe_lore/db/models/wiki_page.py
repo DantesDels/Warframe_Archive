@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import (
     BigInteger,
@@ -30,13 +29,13 @@ class WikiPage(Base):
     category: Mapped[str] = mapped_column(Text, nullable=False)
     namespace: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0")
-    last_updated: Mapped[Optional[datetime]] = mapped_column(
+    last_updated: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True)
-    touched: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    touched: Mapped[str | None] = mapped_column(Text, nullable=True)
     canon_status: Mapped[str] = mapped_column(
         Text, nullable=False, default="canon", server_default="canon")
-    source_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    content_markdown: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_markdown: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

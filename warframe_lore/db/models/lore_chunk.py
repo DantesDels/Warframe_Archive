@@ -3,22 +3,21 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    JSON,
     BigInteger,
     DateTime,
     ForeignKey,
     Index,
     Integer,
-    JSON,
     Text,
     UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from pgvector.sqlalchemy import Vector
 
 from .base import Base
 from .wiki_page import WikiPage
@@ -52,7 +51,7 @@ class LoreChunk(Base):
     # LM Studio ("baai-bge-m3-568m"), aligned with init_db.sql.  The
     # pgvector type (via the 'pgvector' package) enables similarity search
     # (cosine ops) directly in SQL.
-    embedding: Mapped[Optional[object]] = mapped_column(
+    embedding: Mapped[object | None] = mapped_column(
         Vector(1024), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now())

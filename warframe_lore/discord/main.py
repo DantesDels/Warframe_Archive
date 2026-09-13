@@ -11,8 +11,8 @@ import argparse
 import logging
 import sys
 
-from .bot import LoreMasterBot
 from .bootstrap import ensure_database, ensure_engram
+from .bot import LoreMasterBot
 from .config import DiscordConfig
 
 

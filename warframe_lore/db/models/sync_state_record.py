@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import BigInteger, DateTime, Index, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
@@ -23,7 +22,7 @@ class SyncStateRecord(Base):
     bucket_id: Mapped[str] = mapped_column(Text, primary_key=True)
     page_title: Mapped[str] = mapped_column(Text, primary_key=True)
     page_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    touched: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    touched: Mapped[str | None] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now())
 

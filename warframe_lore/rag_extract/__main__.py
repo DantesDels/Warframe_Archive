@@ -10,7 +10,8 @@ import asyncio
 import json
 import logging
 import sys
-from typing import Any, Dict, Iterable, Sequence
+from collections.abc import Iterable, Sequence
+from typing import Any
 
 from warframe_lore.rag_extract import (
     BaseExtractor,
@@ -65,7 +66,7 @@ def _strategy(args: argparse.Namespace) -> tuple[BaseExtractor, BaseExtractor | 
     return wiki, dom
 
 
-def _chunks_payload(chunks: Iterable[Any]) -> list[Dict[str, Any]]:
+def _chunks_payload(chunks: Iterable[Any]) -> list[dict[str, Any]]:
     return [chunk.to_payload() for chunk in chunks]
 
 

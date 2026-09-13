@@ -9,9 +9,11 @@ The pipeline applies:
 """
 
 from __future__ import annotations
+
 import asyncio
 import logging
-from typing import Any, Callable, List, Type
+from collections.abc import Callable
+from typing import Any
 
 import aiohttp
 from tenacity import (
@@ -29,7 +31,7 @@ logger = logging.getLogger(__name__)
 MAX_ATTEMPTS = 3
 DEFAULT_CONCURRENCY = 3
 
-_retryable_exceptions: List[Type[BaseException]] = [
+_retryable_exceptions: list[type[BaseException]] = [
     aiohttp.ClientConnectionError,
     aiohttp.ServerConnectionError,
     aiohttp.ClientError,

@@ -8,12 +8,11 @@ multi-command SQL script).
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from ...output.models import CanonStatus
 
 
-def parse_timestamp(value: str | None) -> Optional[datetime]:
+def parse_timestamp(value: str | None) -> datetime | None:
     """Converts an ISO timestamp into a datetime (None if invalid).
 
     The ``touched`` field of the wiki API has the form

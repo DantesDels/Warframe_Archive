@@ -8,7 +8,7 @@ free-form ``metadata`` dictionary for associated properties (infoboxes,
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
@@ -32,7 +32,7 @@ class LoreChunk(BaseModel):
     content: str = Field(
         ..., min_length=MIN_CONTENT_LENGTH, description="Text brut de la section."
     )
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Propriétés associées (infoboxes, ...)."
     )
 
@@ -44,7 +44,7 @@ class LoreChunk(BaseModel):
             return value.strip()
         return value
 
-    def to_payload(self) -> Dict[str, Any]:
+    def to_payload(self) -> dict[str, Any]:
         """Serialisable representation (``source_url`` as plain string)."""
         return {
             "source_url": str(self.source_url),

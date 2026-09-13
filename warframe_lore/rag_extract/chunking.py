@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from .models import LoreChunk, MIN_CONTENT_LENGTH
+from .models import MIN_CONTENT_LENGTH, LoreChunk
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +27,9 @@ def chunk_into_lorechunks(
     text: str,
     source_url: str,
     page_title: str,
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: dict[str, Any] | None = None,
     min_length: int = MIN_CONTENT_LENGTH,
-) -> List[LoreChunk]:
+) -> list[LoreChunk]:
     """Split ``text`` into one ``LoreChunk`` per logical H2/H3 section.
 
     Args:
@@ -44,7 +44,7 @@ def chunk_into_lorechunks(
         A list of validated ``LoreChunk`` objects.
     """
     sections = _split_sections(text)
-    chunks: List[LoreChunk] = []
+    chunks: list[LoreChunk] = []
     for section_title, body in sections:
         body = " ".join(body.split())
         if not body:
@@ -79,7 +79,7 @@ def _build_chunk(
     page_title: str,
     section_title: str,
     content: str,
-    metadata: Optional[Dict[str, Any]],
+    metadata: dict[str, Any] | None,
 ) -> LoreChunk:
     """Construct and validate a single ``LoreChunk``."""
     return LoreChunk(
@@ -91,15 +91,15 @@ def _build_chunk(
     )
 
 
-def _split_sections(text: str) -> List[Tuple[str, str]]:
+def _split_sections(text: str) -> list[tuple[str, str]]:
     """Slice ``text`` at each Markdown heading, grouping the following body.
 
     Returns ``[(section_title, body)]`` where the unnamed lead block is
     titled ``INTRODUCTION_TITLE``.
     """
-    sections: List[Tuple[str, str]] = []
-    current_title: Optional[str] = None
-    buffer: List[str] = []
+    sections: list[tuple[str, str]] = []
+    current_title: str | None = None
+    buffer: list[str] = []
     for raw_line in text.splitlines():
         heading = HEADING_RE.match(raw_line.strip())
         if heading:
@@ -113,9 +113,9 @@ def _split_sections(text: str) -> List[Tuple[str, str]]:
 
 
 def _flush_section(
-    sections: List[Tuple[str, str]],
-    title: Optional[str],
-    buffer: List[str],
+    sections: list[tuple[str, str]],
+    title: str | None,
+    buffer: list[str],
 ) -> None:
     """Append the pending section when a heading boundary is reached."""
     if buffer:

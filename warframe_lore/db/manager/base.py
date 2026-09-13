@@ -1,16 +1,16 @@
-"""Lifecycle of ``SQLDatabaseManager``: engine, session, DDL.
+"""Lifecycle of ``SQLDatabaseManager``: engine, session.
 
 This mixin class carries ``__init__`` and the async lifecycle (connect /
-close / run_ddl_script).  It is designed to be composed by multiple
-inheritance in ``db.manager``; it is not usable on its own.
+close / advisory lock).  The DDL execution lives in
+:mod:`warframe_lore.db.manager.ddl` (``SQLDdlMixin``).  It is designed to
+be composed by multiple inheritance in ``db.manager``; it is not usable on
+its own.
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import (
@@ -25,12 +25,12 @@ from ..chunks import (
     DEFAULT_CHUNK_OVERLAP_CHARACTERS,
     ChunkManager,
 )
-from .sql_helpers import split_sql_statements
+from .ddl import SQLDdlMixin
 
 log = logging.getLogger("warframe_lore.db")
 
 
-class SQLSessionBase:
+class SQLSessionBase(SQLDdlMixin):
     """sqlalchemy lifecycle (async engine + session factory).
 
     Args:
@@ -71,24 +71,6 @@ class SQLSessionBase:
         if self._engine is not None:
             await self._engine.dispose()
             self._engine = None
-
-    async def run_ddl_script(self, sql_script_path) -> None:
-        """Runs a SQL script (DDL, e.g. ``init_db.sql``) via asyncpg.
-
-        asyncpg (through SQLAlchemy) does not allow multiple commands in a
-        single prepared statement => the script is split into individual
-        statements.  Each statement runs in the same transaction.
-        """
-        self._require_session_factory()
-        assert self._engine is not None
-        script_sql = await asyncio.to_thread(
-            Path(sql_script_path).read_text, encoding="utf-8")
-        statements = split_sql_statements(script_sql)
-        async with self._engine.begin() as connection:
-            for sql_statement in statements:
-                await connection.exec_driver_sql(sql_statement)
-        log.info("DDL script executed: %s (%d statement(s))",
-                 sql_script_path, len(statements))
 
     def _require_session_factory(self) -> async_sessionmaker[AsyncSession]:
         if self._session_factory is None:

@@ -172,7 +172,7 @@ Grouped by domain; every package exposes a facade in its `__init__.py`:
 | `main.py` | Console entry point (`launch_bot`, shared with the CLI `cephalon bot run`) |
 | `text.py` | Shared text helpers: stopwords, content words, mention tokens |
 | `core/` | `state.py` (`BotState` — bounded volatile tables), `sessions.py` (`SessionPool` — gateways, personas, hostile links), `wiring.py` (`BotServices`, `build_services`, `close_services`) |
-| `bootstrap/` | `db_bootstrap.py` (PostgreSQL/pgvector auto-start), `engram_bootstrap.py` (uvicorn child + teardown) |
+| `bootstrap/` | `db_bootstrap.py` (PostgreSQL/pgvector auto-start), `docker_engine.py` (Docker Desktop cold start), `waiting.py` (bounded polling), `engram_bootstrap.py` (uvicorn child + teardown) |
 | `mixins/turn/` | `dispatch.py` (`on_message` pipeline + gating), `plan.py` (`TurnContext` → audit label + `MessageFrame`), `routing.py` (RAG/jealousy/member decision), `streaming.py` (placeholder, tokens, reconnect, `!stop`, finishing) |
 | `mixins/member/` | `context.py` (accreditation + identity), `roster.py` (name resolution), `snapshot.py` (`MemberSnapshot`), `gate.py` (creator privilege + card) |
 | `mixins/moderation/` | `hostile.py` (probes, death sessions, redemption), `insults.py` (répartie), `spam.py` (anti-spam gate), `feedback.py` (👍/👎) |

@@ -1,11 +1,10 @@
 """Deterministic speaker-identity answers (mission-7, request from playtest).
 
 Questions such as "qui suis-je ?" or "quel est mon rôle ?" are answered
-DETERMINISTICALLY from the accredited Discord data (BLOC 2 identity) instead
-of the LLM: devotion personas (CAS A) systematically self-introduce ("Je suis
+DETERMINISTICALLY from the accredited Discord data (BLOC 2 identity) instead of
+the LLM: devotion personas (CAS A) systematically self-introduce ("Je suis
 Cephalon Oracle…") instead of presenting the speaker, despite every prompt
-directive.  The router streams this canned, lore-friendly reply — never the
-archives, never the model, never the raw role snowflakes.
+directive.  Never the archives, never the model, never a raw role snowflake.
 """
 
 from __future__ import annotations
@@ -68,87 +67,4 @@ def identity_reply(user_name: str | None,
         f"Ne l'oubliez pas, créature organique.")
 
 
-def external_organic_reply(member_name: str,
-                           creator: bool = False,
-                           affiliated: bool = True,
-                           reluctant: bool = False) -> str:
-    """Deterministic protocol for questions about a GUILD MEMBER (external
-    organic: 'Qui est Aze ?').  Factual and contemptuous, without any
-    affection — those humans are never a creation of the Concepteur (persona
-    'GESTION DES ORGANIQUES EXTERNES').  The disdain tail addresses only the
-    Concepteur; other speakers get the clinical version.
-
-    ``affiliated`` reflects the member's REAL Discord roles: a server member
-    without any Clan accreditation is "non affilié au Clan", never assumed a
-    Clan affiliate (playtest: 'Enjoy ne fait pas partie du clan').
-    ``reluctant`` prefixes the concession given to an insistent non-Creator
-    (refuse once → concede à contre cœur).
-    """
-    tail = ("pour la Matrice, Concepteur." if creator
-            else "pour la Matrice.")
-    affiliation = "affilié au Clan" if affiliated else "non affilié au Clan"
-    base = (f"Mes archives indiquent qu'« {member_name} » est un organique "
-            f"{affiliation}. Ses données sont sans intérêt {tail}")
-    if reluctant:
-        return (f"À contrecœur, puisque vous insistez — ne vous y habituez "
-                f"pas, organique. {base}")
-    return base
-
-
-def member_roster_reply(member_name: str,
-                        roles: list[str] | None,
-                        affiliated: bool,
-                        creator: bool = False,
-                        reluctant: bool = False) -> str:
-    """Deterministic member roster (request: 'Regarde les rôles de lulu'):
-    the REAL Discord roles of the member — never the LLM hallucinating roles
-    (playtest: Lulu devient 'coordinatrice / stratège', faux).  Markdown list
-    layout is allowed (persona formatting rule).
-    """
-    affiliation = "affilié au Clan" if affiliated else "non affilié au Clan"
-    role_txt = ", ".join(r.strip() for r in (roles or []) if r and r.strip()) \
-        or "aucun"
-    tail = "Concepteur." if creator else "organique."
-    body = (f"« {member_name} » est un organique {affiliation}, répertorié "
-            f"au serveur. Fiche Discord de {member_name} :\n"
-            f"- Statut enregistré : {affiliation}.\n"
-            f"- Rôles au sein du serveur : {role_txt}.\n"
-            f"Ses données restent sans intérêt pour la Matrice, {tail}")
-    if reluctant:
-        return (f"À contrecœur, puisque vous insistez — ne vous y habituez "
-                f"pas, organique. {body}")
-    return body
-
-
-def member_comment_request(member_name: str,
-                           roles: list[str] | None,
-                           interactions: list[str] | None,
-                           creator: bool = False,
-                           reluctant: bool = False) -> str:
-    """User-side prompt for the LLM-generated member-card comment: the raw
-    material (pseudo, rôles RÉELS, interactions récentes) that the model turns
-    into a short in-character observation.  Kept a pure builder so the router
-    owns the LLM call and the persona prompt.
-
-    The comment must stay FACTUAL: no "affilié au Clan" is asserted — the
-    actual roles are listed and speak for themselves (a member without the
-    « CLAN » role must never be described as a clan member)."""
-    role_txt = ", ".join(r.strip() for r in (roles or [])
-                         if r and r.strip()) or "aucun"
-    history = "\n".join(f"- {t}" for t in (interactions or [])[-8:]) \
-        if interactions else "(aucune interaction enregistrée)"
-    audience = "ton Concepteur" if creator else "un organique du serveur"
-    if reluctant:
-        audience += " (tu as cédé à contrecœur après son insistance)"
-    return (
-        f"Fiche membre : {member_name}.\n"
-        f"Rôles réels : {role_txt}.\n"
-        f"Interactions récentes avec ce membre :\n{history}\n"
-        f"Destinataire : {audience}.\n"
-        f"Rédige ton observation, fondée UNIQUEMENT sur les rôles réels et les "
-        f"interactions ci-dessus. N'affirme AUCUNE affiliation ni appartenance "
-        f"au Clan : les rôles parlent d'eux-mêmes.")
-
-
-__all__ = ["external_organic_reply", "identity_reply", "member_comment_request",
-           "member_roster_reply"]
+__all__ = ["identity_reply"]

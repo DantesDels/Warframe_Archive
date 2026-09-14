@@ -1,14 +1,11 @@
 """Discord role hierarchy & speaker accreditation (mission-8).
 
-The server ranks its roles by importance; at each message the bot reads
-``message.author.roles`` and keeps only the HIGHEST configured role owned by
-the speaker.  That rank becomes a status label injected in BLOC 2 of the
-Roleplay prompt, plus the persona banner tone.
-
-Role snowflakes are mapped through a JSON file (``config/discord_roles.json``,
-see :mod:`dump` to generate it) so the business logic never hardcodes role
-names nor IDs.  Categories are evaluated top-to-bottom; bots and event roles
-are absent from the map and never rank.
+At each message the bot reads ``author.roles`` and keeps only the HIGHEST
+configured role owned by the speaker: that rank becomes the status label injected
+in BLOC 2 of the Roleplay prompt, plus the persona banner tone.  Role snowflakes
+are mapped through a JSON file (``config/discord_roles.json``, see :mod:`dump`),
+so the business logic never hardcodes role names nor IDs.  Categories are
+evaluated top-to-bottom; bots and event roles are absent from the map.
 """
 
 from __future__ import annotations
@@ -39,10 +36,9 @@ _FONDATEUR = "FONDATEUR"
 
 @dataclass(frozen=True)
 class Accreditation:
-    """Evaluated speaker rank: the status label + the creator flag.
-
-    Both values are DERIVED by the bot: the raw role IDs and the creator
-    snowflake never cross the wire — ENGRAM only receives this reduction.
+    """Evaluated speaker rank: the status label + the creator flag — both
+    DERIVED by the bot (raw role IDs and the creator snowflake never cross the
+    wire; ENGRAM only receives this reduction).
     """
 
     status: str = STATUT_ORGANIQUE
@@ -50,12 +46,8 @@ class Accreditation:
 
 
 class RoleHierarchy:
-    """Ordered mapping of the server roles, ranked by importance.
-
-    The first category match (walking ``commandement`` -> ``generaux``) wins:
-    a member holding several roles gets the HIGHEST one.  ``FONDATEUR`` maps
-    to the "Concepteur" status and marks the creator flag.
-    """
+    """Ordered mapping of the server roles: the FIRST category match wins
+    (``commandement`` -> ``generaux``), and ``FONDATEUR`` marks the creator."""
 
     def __init__(self, data: dict | None = None) -> None:
         self._order: list[str] = []
@@ -86,11 +78,8 @@ class RoleHierarchy:
             return cls()
 
     def accredit(self, role_ids: Iterable[int | str]) -> Accreditation:
-        """Highest configured role of the speaker, else the guest default.
-
-        The hierarchy is walked top-to-bottom: the FIRST configured role the
-        speaker owns wins.  The input order never matters.
-        """
+        """Highest configured role of the speaker, else the guest default: the
+        hierarchy is walked top-to-bottom, the input order never matters."""
         owned = {str(rid) for rid in role_ids}
         for rid in self._order:
             if rid in owned:

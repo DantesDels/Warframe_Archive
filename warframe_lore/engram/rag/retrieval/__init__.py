@@ -14,15 +14,15 @@ from warframe_lore.lazy_facade import install
 
 _EXPORTS = {
     "CosinusSearch": ".search",
-    "HybridHit": ".hybrid",
-    "HybridQuery": ".hybrid",
+    "HybridHit": ".model",
+    "HybridQuery": ".model",
     "HybridSearch": ".hybrid",
     "RAGHit": ".retriever",
     "Retriever": ".retriever",
-    "query_terms": ".hybrid",
+    "query_terms": ".scoring",
     "set_hnsw_ef_search": ".search",
-    "strip_context_prefix": ".hybrid",
-    "ts_rank_normalized": ".hybrid",
+    "strip_context_prefix": ".scoring",
+    "ts_rank_normalized": ".scoring",
 }
 
 install(sys.modules[__name__], _EXPORTS)

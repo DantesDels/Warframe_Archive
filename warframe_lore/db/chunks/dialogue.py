@@ -8,7 +8,8 @@ speakers of the scene in ``metadata["speakers"]``.
 from __future__ import annotations
 
 from .model import RAGChunk
-from .splitters import hard_split, line_speaker, speakers_metadata
+from .speakers import line_speaker, speakers_metadata
+from .splitters import hard_split
 
 
 def _split_dialogue_lines(

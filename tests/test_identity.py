@@ -13,7 +13,7 @@ from warframe_lore.engram.auth import (
     STATUT_HAUT_COMMANDEMENT,
     STATUT_MEMBRE_OFFICIEL,
 )
-from warframe_lore.engram.roleplay.identity import (
+from warframe_lore.engram.roleplay.replies.identity import (
     external_organic_reply,
     identity_reply,
     member_comment_request,

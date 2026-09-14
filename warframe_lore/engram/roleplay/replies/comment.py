@@ -10,15 +10,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..models import ChatMessage
-from ..rag.sanitize import strip_trailing_padding
+from ...models import ChatMessage
+from ...rag.sanitize import strip_trailing_padding
 from .identity import member_comment_request
 
 if TYPE_CHECKING:
-    from ..api.container import Container
+    from ...api.container import Container
 
 
-async def _member_comment(container: Container, payload: dict) -> str:
+async def member_comment(container: Container, payload: dict) -> str:
     """One-shot LLM observation for a member card (short, in-character)."""
     user_msg = member_comment_request(
         member_name=str(payload.get("member_name", "")),

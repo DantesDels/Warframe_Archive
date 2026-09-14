@@ -10,7 +10,7 @@ archives, never the model, never the raw role snowflakes.
 
 from __future__ import annotations
 
-from ..auth import (
+from ...auth import (
     STATUT_ALLIE,
     STATUT_CONCEPTEUR,
     STATUT_HAUT_COMMANDEMENT,

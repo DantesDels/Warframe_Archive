@@ -7,7 +7,9 @@ real key (dummy key ``lm-studio``).
 
 For reasoning models (e.g. Qwen3), only *visible content* tokens
 (``delta.content``) are relayed — internal reasoning
-(``delta.reasoning_content``) is ignored.
+(``delta.reasoning_content``) is ignored.  A response whose body is not SSE
+(or carries a JSON error) raises a visible error instead of yielding an
+empty, silent stream.
 """
 
 from __future__ import annotations
@@ -29,7 +31,7 @@ STOP_MARKER = "[Indexation terminée]"
 
 
 def _payload(messages: list[ChatMessage], model: str,
-             stream: bool, temperature: float, max_tokens: int) -> dict:
+              stream: bool, temperature: float, max_tokens: int) -> dict:
     return {
         "model": model,
         "messages": [{"role": m.role, "content": m.content}
@@ -39,6 +41,32 @@ def _payload(messages: list[ChatMessage], model: str,
         "max_tokens": max_tokens,
         "stop": [STOP_MARKER],
     }
+
+
+def _ensure_sse(line: str) -> None:
+    """Raise if the first non-empty line of a streamed body is not ``data:``.
+
+    Some OpenAI-compatible servers answer HTTP 200 with plain text instead of
+    SSE (LM Studio: *Unexpected endpoint or method...*).  Without this guard
+    the stream would silently yield no tokens and the caller would appear to
+    vanish.
+    """
+    if not line.startswith("data:"):
+        snippet = line[:120].strip()
+        raise RuntimeError(
+            f"Non-SSE first line from LLM endpoint ({snippet!r}): "
+            "the /v1/chat/completions endpoint may be unavailable")
+
+
+def _parse_data(data: str) -> dict | None:
+    """Parse a ``data:`` JSON chunk; *None* on benign malformation."""
+    try:
+        return json.loads(data)
+    except json.JSONDecodeError:
+        if '"error"' in data:
+            raise RuntimeError(
+                f"LLM server error (malformed JSON): {data[:200]}") from None
+        return None
 
 
 class LMStudioProvider(LLMProvider, EmbeddingProvider):
@@ -71,15 +99,25 @@ class LMStudioProvider(LLMProvider, EmbeddingProvider):
             "POST", "/chat/completions", json=payload,
         ) as response:
             response.raise_for_status()
+            first = True
             async for line in response.aiter_lines():
-                if not line or not line.startswith("data:"):
+                if first and line:
+                    first = False
+                    _ensure_sse(line)
+                if not line.startswith("data:"):
                     continue
                 data = line[5:].strip()
                 if data == "[DONE]":
                     break
+                event = _parse_data(data)
+                if event is None:
+                    continue
+                error = event.get("error")
+                if error:
+                    raise RuntimeError(f"LLM server error: {error}")
                 try:
-                    delta = json.loads(data)["choices"][0]["delta"]
-                except (json.JSONDecodeError, KeyError, IndexError):
+                    delta = event["choices"][0]["delta"]
+                except (KeyError, IndexError):
                     continue
                 token = delta.get("content")
                 if token:

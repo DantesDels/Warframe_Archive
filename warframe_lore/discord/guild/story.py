@@ -57,6 +57,14 @@ LENS_QUESTION = (
     "Ou pardonne ma prudence : je t'écoute."
 )
 
+# Corrective reply when the author answers an INDEX OUT OF the open menu
+# (e.g. "4" to a 1..3 question): the bot points out the mistake and keeps the
+# question open, instead of silently re-printing the same menu.
+MENU_INDEX_ERROR = (
+    "Hors de mon répertoire, organique : ce numéro n'existe pas. "
+    "Réponds-moi par un chiffre entre 1 et {}."
+)
+
 # Named subjects whose history is ambiguous: one word, TWO distinct tales in
 # the archives.  A story request naming one must ask WHICH tale the user wants
 # (never guess).  Keys are the mention keywords (lowercase, substring match),
@@ -110,6 +118,18 @@ def parse_lens_answer(text: str) -> str | None:
     return detect_story_lens(low)
 
 
+def is_out_of_range_index(text: str, count: int) -> bool:
+    """True when the answer is a plain integer OUTSIDE the menu (1..count).
+
+    Distinguishes a menu mistake ("4" to a 1..3 question) from any other
+    invalid answer: the bot then points out the index error to the author.
+    """
+    low = (text or "").strip()
+    if not low.isdigit():
+        return False
+    return not 1 <= int(low) <= count
+
+
 def story_subject(text: str) -> str | None:
     """Ambiguous-subject mention of a story request (``None`` if none)."""
     low = (text or "").lower()
@@ -156,7 +176,8 @@ def substitute_story_subject(request: str, subject: str) -> str:
 
 __all__ = ["LENS_1999", "LENS_COSMOGONIC", "LENS_INITIATE",
            "LENS_KEYWORDS", "LENS_LABELS", "LENS_QUESTION",
-           "STORY_SUBJECT_CHOICES", "STORY_TRIGGERS", "StoryAsk",
-           "detect_story_lens", "is_story_request", "parse_lens_answer",
-           "parse_subject_answer", "story_subject", "story_subject_choices",
-           "story_subject_question", "substitute_story_subject"]
+           "MENU_INDEX_ERROR", "STORY_SUBJECT_CHOICES", "STORY_TRIGGERS",
+           "StoryAsk", "detect_story_lens", "is_out_of_range_index",
+           "is_story_request", "parse_lens_answer", "parse_subject_answer",
+           "story_subject", "story_subject_choices", "story_subject_question",
+           "substitute_story_subject"]

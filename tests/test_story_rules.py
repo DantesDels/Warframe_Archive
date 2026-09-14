@@ -13,7 +13,9 @@ from warframe_lore.discord.guild.story import (
     LENS_INITIATE,
     LENS_LABELS,
     LENS_QUESTION,
+    MENU_INDEX_ERROR,
     detect_story_lens,
+    is_out_of_range_index,
     is_story_request,
     parse_lens_answer,
     parse_subject_answer,
@@ -79,12 +81,34 @@ class LensAnswerTests(unittest.TestCase):
     def test_une_reponse_inconnue_est_rejetee(self):
         self.assertIsNone(parse_lens_answer("n'importe quoi"))
 
+    def test_un_index_hors_du_menu_est_une_erreur_detectee(self):
+        for answer in ("0", "4", "5", "10"):
+            with self.subTest(answer=answer):
+                self.assertTrue(
+                    is_out_of_range_index(answer, len(LENS_LABELS)))
+
+    def test_un_index_valide_n_est_pas_une_erreur(self):
+        for answer in ("1", "2", "3"):
+            with self.subTest(answer=answer):
+                self.assertFalse(
+                    is_out_of_range_index(answer, len(LENS_LABELS)))
+
+    def test_une_reponse_non_numerique_n_est_pas_une_erreur_d_index(self):
+        for answer in ("", "n'importe quoi", "1., 2", "-1", "pardonne moi"):
+            with self.subTest(answer=answer):
+                self.assertFalse(
+                    is_out_of_range_index(answer, len(LENS_LABELS)))
+
 
 class LensQuestionTests(unittest.TestCase):
     def test_la_question_propose_les_trois_ouvertures(self):
         self.assertIn(LENS_LABELS[LENS_INITIATE], LENS_QUESTION)
         self.assertIn(LENS_LABELS[LENS_COSMOGONIC], LENS_QUESTION)
         self.assertIn(LENS_LABELS["1999"], LENS_QUESTION)
+
+    def test_l_erreur_d_index_signale_le_bon_intervalle(self):
+        self.assertIn("entre 1 et 3",
+                      MENU_INDEX_ERROR.format(len(LENS_LABELS)))
 
 
 class SubjectDisambiguationTests(unittest.TestCase):

@@ -14,9 +14,12 @@ from dataclasses import replace
 import discord
 
 from ...guild import (
+    LENS_LABELS,
     LENS_QUESTION,
+    MENU_INDEX_ERROR,
     creator_mentioned,
     detect_story_lens,
+    is_out_of_range_index,
     is_story_request,
     normalize_message,
     parse_lens_answer,
@@ -102,14 +105,25 @@ class RoutingMixin:
         if choices:
             subject = parse_subject_answer(text, choices)
             if subject is None:
-                await message.channel.send(question)    # stay open, re-ask
+                # An index OUT of the menu ("3" to a 1..2 question) is pointed
+                # out; anything else keeps the same re-ask.  Either way the
+                # question stays open for the author.
+                if is_out_of_range_index(text, len(choices)):
+                    await message.channel.send(
+                        MENU_INDEX_ERROR.format(len(choices)))
+                else:
+                    await message.channel.send(question)
                 return
             request = substitute_story_subject(request, subject)
             lens = detect_story_lens(request)
         else:
             lens = parse_lens_answer(text)
             if lens is None:
-                await message.channel.send(question)    # stay open, re-ask
+                if is_out_of_range_index(text, len(LENS_LABELS)):
+                    await message.channel.send(
+                        MENU_INDEX_ERROR.format(len(LENS_LABELS)))
+                else:
+                    await message.channel.send(question)
                 return
         self.state.close_story_ask(channel_id)
         mention = self._resolve_member(message, request)

@@ -11,7 +11,7 @@ import time
 
 import discord
 
-from warframe_lore.engram.rag.sanitize import strip_trailing_padding
+from warframe_lore.engram.rag import strip_trailing_padding
 
 from .hard_split import apply_stop_marker
 

@@ -28,9 +28,9 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from ...db import LoreChunk, WikiPage
-from ..llm import EmbeddingProvider
-from .aliases import AliasResolver
+from ....db import LoreChunk, WikiPage
+from ...llm import EmbeddingProvider
+from ..query.aliases import AliasResolver
 from .search import set_hnsw_ef_search
 
 # ts_headline output cap (PostgreSQL options string — no inner quotes).

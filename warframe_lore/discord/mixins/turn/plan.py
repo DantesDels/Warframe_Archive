@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from warframe_lore.engram.rag.probes import is_self_reflection
+from warframe_lore.engram.rag import is_self_reflection
 from warframe_lore.protocols.roleplay import MessageFrame
 
 from ...guild.roles import Accreditation

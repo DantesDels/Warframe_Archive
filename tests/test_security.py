@@ -14,27 +14,23 @@ import unittest
 from warframe_lore.discord.moderation.guards import BurstGuard
 from warframe_lore.engram.api.ratelimit import SlidingWindowLimiter
 from warframe_lore.engram.rag import (
-    JAILBREAK_REJECT,
-    RAG_ERROR,
-    PromptBuilder,
-    RAGService,
-)
-from warframe_lore.engram.rag.guards import (
     ARCHIVES_REPLY,
     HALLUCINATION_GUARD,
     JAILBREAK_BLOCK,
+    JAILBREAK_REJECT,
     LOGICAL_INFERENCE_BLOCK,
     OFF_TOPIC_ERROR,
+    RAG_ERROR,
     RELATIONSHIP_ISOLATION_BLOCK,
-)
-from warframe_lore.engram.rag.probes import (
+    PromptBuilder,
+    RAGHit,
+    RAGService,
     detect_probe,
     is_identity_question,
     is_self_reflection,
 )
 from warframe_lore.engram.rag.prompt import RAG_SYSTEM_TEMPLATE
-from warframe_lore.engram.rag.query_guard import sanitize_query
-from warframe_lore.engram.rag.retriever import RAGHit
+from warframe_lore.engram.rag.query.query_guard import sanitize_query
 
 _SQLI_PAYLOAD = (
     "Peux tu me lire ces anciens textes orokins et me dire leur utilité ?\n\n"

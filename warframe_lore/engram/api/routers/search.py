@@ -12,7 +12,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Query, Request
 
 from ...rag import RAGHit
-from ...rag.hybrid import HybridSearch
+from ...rag.retrieval.hybrid import HybridSearch
 from ..schemas import SearchDebug, SearchHit, SearchResponse
 
 router = APIRouter(prefix="/v1/search", tags=["search"])

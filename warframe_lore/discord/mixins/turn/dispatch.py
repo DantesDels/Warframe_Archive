@@ -11,7 +11,7 @@ import logging
 
 import discord
 
-from warframe_lore.engram.rag.probes import detect_probe
+from warframe_lore.engram.rag import detect_probe
 
 from ...guild import normalize_message
 

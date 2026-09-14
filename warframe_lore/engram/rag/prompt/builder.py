@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..retrieval.retriever import RAGHit
 from .guards import (
     ARCHIVES_REPLY,
     JAILBREAK_BLOCK,
@@ -27,7 +28,6 @@ from .guards import (
     OFF_TOPIC_ERROR,
     RELATIONSHIP_ISOLATION_BLOCK,
 )
-from .retriever import RAGHit
 
 # Context injected when no relevant passage was retrieved. The model is
 # expected to answer exactly the error sentence from the directives.

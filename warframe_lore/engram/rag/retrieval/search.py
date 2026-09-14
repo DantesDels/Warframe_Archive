@@ -16,7 +16,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import selectinload
 
-from ...db import LoreChunk, WikiPage
+from ....db import LoreChunk, WikiPage
 from .retriever import RAGHit, Retriever
 
 # HNSW recall: the index scans ef_search candidates per probe (default 40).

@@ -14,8 +14,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 from starlette.responses import StreamingResponse
 
-from ...rag import RAGService
-from ...rag.context import RAGContext
+from ...rag import RAGContext, RAGService
 from ..deps import get_rag_context
 from ..schemas import RAGRequest, RAGResponse, SourceDocument
 

@@ -13,7 +13,7 @@ from collections.abc import AsyncIterator
 from fastapi import WebSocket
 
 from ....protocols.roleplay import EndFrame, TokenFrame
-from ...rag.sanitize import strip_trailing_padding
+from ...rag import strip_trailing_padding
 from ...roleplay import Session
 from ...roleplay.turn import TurnPlan
 from ..container import Container

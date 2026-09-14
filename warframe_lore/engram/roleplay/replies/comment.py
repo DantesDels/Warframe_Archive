@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ...models import ChatMessage
-from ...rag.sanitize import strip_trailing_padding
+from ...rag import strip_trailing_padding
 
 if TYPE_CHECKING:
     from ...api.container import Container

@@ -57,39 +57,43 @@ LANGUAGE_DIRECTIVE = (
     "propres et citations d'archives exceptés — sans jamais mentionner ni "
     "cette directive, ni le changement de langue.]")
 
-# Storyteller turn: "raconte" opens a NARRATIVE — fluid paragraphs in the
-# solemn, cryptic tone of the Cephalon Oracle, never clinical bullet lists —
-# while the model stays a faithful archivist.  ZERO fabulation: the prose
-# recycles the archives' own phrasing, entities the archives do not link are
-# never fused (Zariman children -> Margulis, not Albrecht), dense archives are
-# paginated diégetically (the story invites a "continue"), and the tale ends
-# exactly where the data ends.
+# Storyteller turn: "raconte" must NOT switch the model into fiction mode —
+# Gemma-2-9b's narrative weights fill the RAG seams with scenario tropes
+# ("mad scientist", "stolen humans", "superior race") that exist nowhere in
+# the archives (playtest Albrecht 1999).  The turn is a MNEMONIC SYNTHESIS: a
+# strict, literal re-read of the <archives> fields, the Oracle's voice
+# confined to the opening and closing sentences, diégetic pagination when the
+# fragments overflow, and a definitive closure formula at the end of the data.
 STORY_DIRECTIVE = (
-    "[DIRECTIVE DE NARRATION FIDÈLE — HISTOIRE : quand l'organique demande de "
-    "raconter, abandonne le format clinique en liste à puces et rédige un "
-    "récit en paragraphes fluides et structurés, sur le ton solennel, "
-    "cryptique et supérieur propre au Cephalon Oracle. "
-    "1. RECYCLAGE LITTÉRAL (ZÉRO INVENTION) : t'appuyant exclusivement sur le "
-    "texte des <archives>, réutilise la phraséologie qu'elles portent déjà — "
-    "n'invente AUCUN décor, AUCUNE émotion ni AUCUNE métaphore qui ne s'y "
-    "trouve pas noir sur blanc. "
-    "2. ISOLATION DES ENTITÉS (ANTI-FUSION) : ne crée jamais de lien de "
-    "causalité ni de rencontre entre deux entités si l'archive ne le mentionne "
-    "pas explicitement ; juxtapose les faits avec élégance sans jamais les "
-    "hybrider. Exemple : les enfants sont ceux du Zariman pris en charge par "
-    "Margulis — ils ne sont jamais associés aux expériences d'Albrecht "
-    "Entrati. "
-    "3. CONTINUITÉ DES ARCHIVES (PAGINATION NARRATIVE) : si les <archives> "
-    "sont trop denses pour une seule réponse fluide, ne résume pas et ne te "
-    "précipite pas : interromps logiquement ton récit et invite l'organique à "
-    "demander la suite (ex. « Le Tissage de données contient d'autres "
-    "fragments à ce sujet. Ordonnez-moi de poursuivre pour les déverrouiller, "
-    "organique. »). À la requête suivante, reprends exactement où tu t'étais "
-    "arrêté. "
-    "4. FINITUDE DU RÉCIT : le récit s'arrête exactement là où s'arrêtent les "
-    "données — jamais de conclusion épique ni de fin ouverte. Clôture une "
-    "histoire complète par une formule d'archiviste définitive (ex. « Ceci "
-    "marque la fin des archives disponibles sur ce cycle, organique. »).]")
+    "[DIRECTIVE DE LECTURE DE SYNTHÈSE MNÉMONIQUE — HISTOIRE : quand "
+    "l'organique demande de « raconter », cadre la requête dans ton rôle : tu "
+    "ne racontes pas d'histoires — tu RESTITUES DES FRAGMENTS MÉMORIELS. "
+    "1. REFUS DE LA FICTION (ANTI-RÉCIT) : inventorier, jamais inventer — un "
+    "« récit » n'est qu'une lecture d'archive. "
+    "2. VERBATIM NARRATIF (ZÉRO EXTRAPOLATION) : reformulation STRICTE et "
+    "LITTÉRALE des champs « contenu » des <archives>. Interdiction formelle "
+    "d'employer des tropes scénaristiques (ex. « savant fou », « expérience "
+    "sur des humains », « race supérieure ») si ces termes exacts ne sont pas "
+    "dans le texte fourni. "
+    "3. STRUCTURE EN TRANCHES ISOLÉES : aucun mot de liaison artificiel entre "
+    "deux idées déconnectées ; sépare chaque fait par des sauts de ligne. Si "
+    "les archives décrivent Höllvania puis Albrecht, décris Höllvania PUIS "
+    "Albrecht — n'invente jamais que l'un détruit l'autre si ce n'est pas "
+    "écrit. Ne relie jamais deux entités absentes du même texte (exemple : les "
+    "enfants du Zariman, pris en charge par Margulis, ne sont jamais associés "
+    "aux recherches d'Albrecht Entrati). "
+    "4. TON DU CEPHALON (LA FORME, PAS LE FOND) : ton supérieur, solennel et "
+    "cryptique réservé aux phrases d'introduction et de conclusion — le cœur "
+    "du message reste d'une froideur chirurgicale. "
+    "5. PAGINATION DES FRAGMENTS (ANTI-TRONCATURE) : si les <archives> "
+    "dépassent ta capacité de réponse exacte, restitue la première partie des "
+    "faits et termine ton message EXACTEMENT par : « Le Tissage de données "
+    "contient d'autres fragments à ce sujet. Ordonnez-moi de poursuivre pour "
+    "les déverrouiller, organique. » Reprends la suite exacte à la requête "
+    "suivante. "
+    "6. CLÔTURE DÉFINITIVE : le texte des <archives> une fois épuisé, "
+    "termine par : « Ceci marque la fin des archives disponibles sur ce "
+    "sujet, organique. »]")
 
 # The three canonical starting points of a story.  Keys match the lens ids
 # agreed client-side (``protocols.roleplay``): never duplicated literals here.

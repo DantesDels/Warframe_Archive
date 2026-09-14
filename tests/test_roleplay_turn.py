@@ -76,21 +76,23 @@ class ShortCircuitTests(unittest.TestCase):
 
 
 class StoryDirectiveTests(unittest.TestCase):
-    def test_le_recit_retrouve_la_prose_de_l_archiviste(self):
-        self.assertIn("paragraphes fluides", STORY_DIRECTIVE)
-        self.assertIn("solennel, cryptique", STORY_DIRECTIVE)
-        self.assertIn("RECYCLAGE LITTÉRAL", STORY_DIRECTIVE)
-        self.assertIn("ZÉRO INVENTION", STORY_DIRECTIVE)
+    def test_le_recit_refuse_la_fiction(self):
+        self.assertIn("REFUS DE LA FICTION", STORY_DIRECTIVE)
+        self.assertIn("RESTITUES DES FRAGMENTS MÉMORIELS", STORY_DIRECTIVE)
+        self.assertIn("VERBATIM NARRATIF", STORY_DIRECTIVE)
+        self.assertIn("ZÉRO EXTRAPOLATION", STORY_DIRECTIVE)
 
-    def test_les_entites_ne_doivent_jamais_etre_melangees(self):
-        self.assertIn("ISOLATION DES ENTITÉS", STORY_DIRECTIVE)
-        self.assertIn("ANTI-FUSION", STORY_DIRECTIVE)
+    def test_les_entites_sont_restituées_en_tranches_isolees(self):
+        self.assertIn("TRANCHES ISOLÉES", STORY_DIRECTIVE)
         self.assertIn("Margulis", STORY_DIRECTIVE)
         self.assertIn("jamais associés", STORY_DIRECTIVE)
+        self.assertIn("savant fou", STORY_DIRECTIVE)
 
     def test_le_recit_se_pagine_et_se_termine_aux_archives(self):
-        self.assertIn("PAGINATION NARRATIVE", STORY_DIRECTIVE)
-        self.assertIn("FINITUDE DU RÉCIT", STORY_DIRECTIVE)
+        self.assertIn("PAGINATION DES FRAGMENTS", STORY_DIRECTIVE)
+        self.assertIn("Le Tissage de données", STORY_DIRECTIVE)
+        self.assertIn("CLÔTURE DÉFINITIVE", STORY_DIRECTIVE)
+        self.assertIn("Ceci marque la fin des archives", STORY_DIRECTIVE)
 
     def test_l_ouverture_1999_est_canonique(self):
         start = STORY_LENS_STARTS["1999"]

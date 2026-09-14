@@ -96,6 +96,14 @@ class SubjectDisambiguationTests(unittest.TestCase):
         self.assertEqual(story_subject(request), "garuda")
         self.assertEqual(story_subject_choices(request), self.CHOICES)
 
+    def test_la_formulation_reele_de_l_utilisateur_est_couverte(self):
+        # "Raconte moi l'histoire de garuda ?" (espace, minuscule, point
+        # d'interrogation) n'est pas une question de lentille : c'est une
+        # disambiguation de sujet.
+        request = "Raconte moi l'histoire de garuda ?"
+        self.assertTrue(is_story_request(request))
+        self.assertEqual(story_subject_choices(request), self.CHOICES)
+
     def test_un_sujet_deja_resolu_n_a_pas_de_choix(self):
         self.assertEqual(story_subject_choices("l'histoire de Vena"), ())
 

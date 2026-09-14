@@ -5,7 +5,8 @@ mixins.  It owns exactly two attributes — the volatile :class:`BotState` and t
 injected :class:`BotServices` — and keeps only the lifecycle here:
 
 * :class:`DispatchMixin` — the ``on_message`` pipeline and the channel gating;
-* :class:`HostileMixin` / :class:`InsultMixin` — probes, répartie, redemption;
+* :class:`HostileMixin` / :class:`InsultMixin` / :class:`SpamMixin` — probes,
+  répartie, redemption, anti-spam gate;
 * :class:`MemberContextMixin` / :class:`RosterMixin` / :class:`SnapshotMixin` /
   :class:`MemberGateMixin` — accreditation, member resolution, matriciel cards;
 * :class:`RoutingMixin` / :class:`StreamMixin` — routing decision, streaming;
@@ -29,9 +30,10 @@ from .mixins import (
     InsultMixin,
     MemberContextMixin,
     MemberGateMixin,
-    RoutingMixin,
     RosterMixin,
+    RoutingMixin,
     SnapshotMixin,
+    SpamMixin,
     StreamMixin,
 )
 
@@ -39,7 +41,7 @@ log = logging.getLogger("warframe_lore.discord.bot")
 
 
 class LoreMasterBot(DispatchMixin, RoutingMixin, StreamMixin, HostileMixin,
-                    InsultMixin, FeedbackMixin, MemberContextMixin,
+                    InsultMixin, SpamMixin, FeedbackMixin, MemberContextMixin,
                     RosterMixin, SnapshotMixin, MemberGateMixin, CommandMixin,
                     discord.Client):
     """Talks to the Oracle through one WebSocket session per channel."""

@@ -1,9 +1,7 @@
 """Speaker accreditation and identity metadata.
 
-Single responsibility (mixin): derive from the Discord role hierarchy the ONLY
-values the Oracle may see — the accredited status label and the creator boolean
-— plus the member-lifecycle hooks.  Raw role snowflakes never leave the bot,
-and the creator identity is never asked for: it is read on ``author.id``.
+Derives from the Discord role hierarchy the ONLY values the Oracle may see — the
+accredited status label and the creator boolean — plus the member-lifecycle hook.
 """
 
 from __future__ import annotations
@@ -23,9 +21,8 @@ class MemberContextMixin:
     """Accréditation (mission-8), identité du locuteur, cycle de vie membre."""
 
     def _accredit(self, author) -> Accreditation:
-        """Highest configured role of the author + the creator override.
-
-        Role IDs are evaluated but never forwarded; whoever owns the configured
+        """Highest configured role of the author + the creator override: role
+        IDs are evaluated but never forwarded, and whoever owns the configured
         snowflake IS the Concepteur, whatever his roles say.
         """
         role_ids = (str(getattr(role, "id", ""))
@@ -36,10 +33,7 @@ class MemberContextMixin:
         return accr
 
     def _is_creator(self, user_id: int | str | None) -> bool:
-        """Derived boolean of the native identity check (never the raw ID).
-
-        Empty config disables the feature: everyone is an unknown organic.
-        """
+        """Derived boolean of the native identity check (never the raw ID)."""
         return bool(self.creator_discord_id and user_id is not None
                     and str(user_id) == self.creator_discord_id)
 
@@ -53,9 +47,7 @@ class MemberContextMixin:
         return bool(accr.creator or accr.status != STATUT_ORGANIQUE)
 
     def _creator_display(self, message: discord.Message) -> str | None:
-        """Display name of the configured Concepteur, or None (not configured,
-        no guild, or member not seen).
-        """
+        """Display name of the Concepteur, or None (unset / no guild / unseen)."""
         guild = getattr(message, "guild", None)
         if guild is None or not self.creator_discord_id:
             return None
@@ -81,10 +73,8 @@ class MemberContextMixin:
 
     @staticmethod
     def _role_names(author) -> list[str]:
-        """Non-default role names of a member (order preserved).
-
-        Drops @everyone (``Role.is_default()`` is a METHOD in discord.py 2.x —
-        calling it, not truth-testing the bound method) and empty names.
+        """Non-default role names of a member (order preserved): drops empty
+        names and @everyone (``is_default()`` is a METHOD in discord.py 2.x).
         """
         names: list[str] = []
         for role in getattr(author, "roles", ()):

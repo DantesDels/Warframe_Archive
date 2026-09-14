@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import logging
 
+from warframe_lore.protocols.roleplay import PERSONA_ORACLE
+
 from ..moderation.hostile_link import HostileLink
 from ..services import RoleplayGateway
 
@@ -45,6 +47,8 @@ class SessionPool:
         gateway = RoleplayGateway(url)
         await gateway.open()
         self.gateways[channel_id] = gateway
+        # A fresh session already runs the default persona: no frame to send.
+        self.personas[channel_id] = PERSONA_ORACLE
         return gateway
 
     async def drop_gateway(self, channel_id: int) -> None:
@@ -54,17 +58,23 @@ class SessionPool:
         if gateway is not None:
             await _close_quiet(gateway.close, "Gateway", channel_id)
 
-    def persona(self, channel_id: int) -> str | None:
-        """Persona currently applied on the channel gateway (``None`` = none)."""
-        return self.personas.get(channel_id)
+    async def apply_persona(self, gateway: RoleplayGateway, channel_id: int,
+                            mode: str) -> None:
+        """Switch the persona of a channel gateway ONCE (not once per turn).
 
-    def note_persona(self, channel_id: int, mode: str) -> None:
+        ``drop_gateway`` clears the cache, so a reconnection always replays the
+        persona frame before the next message.
+        """
+        if self.personas.get(channel_id) == mode:
+            return
+        await gateway.set_persona(mode)
         self.personas[channel_id] = mode
 
     async def evict_hostile(self) -> None:
         """Close the oldest hostile sessions past the cap."""
         while len(self.hostile) > MAX_HOSTILE_SESSIONS:
-            user_id, link = self.hostile.pop(next(iter(self.hostile)))
+            user_id = next(iter(self.hostile))
+            link = self.hostile.pop(user_id)
             await _close_quiet(link.close, "Hostile session", user_id)
 
     def forget_hostile(self, user_id: int) -> HostileLink | None:

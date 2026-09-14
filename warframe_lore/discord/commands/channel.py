@@ -15,29 +15,9 @@ import discord
 from warframe_lore.engram.auth import STATUT_HAUT_COMMANDEMENT
 
 from ..services import LANGUAGES, PERSONAS, ChannelSettings
+from .arguments import DENIED, as_switch, on_off, usage
 
 log = logging.getLogger("warframe_lore.discord.bot.commands")
-
-TRUE_WORDS = frozenset({"on", "oui", "1", "true", "actif", "enable", "enabled"})
-FALSE_WORDS = frozenset({"off", "non", "0", "false", "inactif", "disable",
-                         "disabled"})
-DENIED = ("Ces réglages relèvent de mon Concepteur et du Haut Commandement, "
-          "organique.")
-
-
-def as_switch(argument: str) -> bool | None:
-    """Parse an on/off argument (``None`` when it is not a switch value)."""
-    word = (argument or "").strip().lower()
-    if word in TRUE_WORDS:
-        return True
-    if word in FALSE_WORDS:
-        return False
-    return None
-
-
-def on_off(flag: bool) -> str:
-    """French rendering of a switch (one wording for every confirmation)."""
-    return "activé" if flag else "désactivé"
 
 
 class ChannelCommands:
@@ -79,7 +59,7 @@ class ChannelCommands:
         """One on/off setting (usage reminder when the argument is invalid)."""
         value = as_switch(argument)
         if value is None:
-            await message.channel.send(f"Usage : {self.prefix}{command} on|off")
+            await message.channel.send(usage(self.prefix, command, "on|off"))
             return
         await self._apply(message, field, value)
 
@@ -88,7 +68,7 @@ class ChannelCommands:
         """One enumerated setting (vocabulary shared with the server)."""
         if value not in allowed:
             await message.channel.send(
-                f"Usage : {self.prefix}{field} {' | '.join(allowed)}")
+                usage(self.prefix, field, " | ".join(allowed)))
             return
         await self._apply(message, field, value)
 
@@ -113,5 +93,4 @@ class ChannelCommands:
                 f"langue {settings.lang} | persona {settings.persona}.")
 
 
-__all__ = ["DENIED", "FALSE_WORDS", "TRUE_WORDS", "ChannelCommands",
-           "as_switch", "on_off"]
+__all__ = ["ChannelCommands"]

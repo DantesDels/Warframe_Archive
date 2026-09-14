@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..config import load_config
+from ...config import load_config
 from ..services import (
     ChannelSettingsStore,
     FeedbackStore,

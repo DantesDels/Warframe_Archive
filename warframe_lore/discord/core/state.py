@@ -69,9 +69,9 @@ class BotState:
     # -- member-info refusals (Creator privilege gate) ---------------------
     def refusal_strike(self, user_id: int, key: str) -> int:
         """Count one refusal for ``(user, member)`` and return the count."""
-        _prune(self.refusals, MAX_REFUSAL_USERS)
         pocket = self.refusals.setdefault(user_id, {})
         pocket[key] = pocket.get(key, 0) + 1
+        _prune(self.refusals, MAX_REFUSAL_USERS)
         return pocket[key]
 
     def forget_refusal(self, user_id: int, key: str) -> None:

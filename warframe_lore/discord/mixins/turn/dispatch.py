@@ -2,8 +2,7 @@
 
 Single responsibility (mixin): the ``on_message`` pipeline.  Every decision is
 delegated (moderation, member gate, commands, routing) — this file only fixes
-the ORDER, which is the behaviour a user observes, plus the gating: mention,
-dedicated channel (or one of its threads), private message, channel switch.
+the ORDER, which is the behaviour a user observes, plus the gating.
 """
 
 from __future__ import annotations
@@ -20,6 +19,10 @@ log = logging.getLogger("warframe_lore.discord.bot.dispatch")
 
 # Out-of-character markers: roleplay aside, the bot never answers.
 OOC_PREFIXES = ("(", "//")
+
+# Commands that interrupt a running turn: they must bypass the anti-spam
+# cooldown, because a turn in progress is exactly when the user is "too fast".
+INTERRUPT_COMMANDS = frozenset({"stop", "cancel"})
 
 
 class DispatchMixin:
@@ -41,40 +44,39 @@ class DispatchMixin:
         """Fixed order of the decisions (this order IS the behaviour)."""
         # Bounded volatile tables first: a hostile guild cannot grow memory.
         await self.state.sessions.evict_hostile()
-        # Per-member interaction memory (card comment, reliability, assiduité):
-        # recorded for EVERY human message, so the indices stay comparable.
+        # Interaction memory (card comment, reliability, assiduité): recorded
+        # for EVERY human message, so the indices stay comparable.
         self.services.activity.record(message.author.id, content)
         if content.startswith(OOC_PREFIXES):
             return                      # out-of-character: never reply
         if not self._may_answer(message):
             return
-        if not self.services.settings.get(message.channel.id).enabled:
+        if content.startswith(self.prefix):
+            # Control commands always work: on a muted channel too (that is how
+            # it gets unmuted) and, for the interrupts, inside the speaker's own
+            # cooldown — ``!stop`` arrives exactly while a turn is running.
+            if self._is_interrupt(content) or self._admit(message):
+                await self._handle_command(message)
             return
+        if not self.services.settings.get(message.channel.id).enabled:
+            return                      # muted channel: the Oracle stays silent
         text = self._text_of(message)
         # HOSTILE PROBE: deterministic rejection (never a LLM on the payload
         # itself) + targeted escalation at the attacker.
         if detect_probe(text):
             await self._handle_probe(message, text)
             return
-        # A user already in a hostile session talks to HIS anti-aggression
-        # persona until he apologises.
         if await self._hostile_turn(message, text):
-            return
-        # RÉPARTIE: direct insolence from a non-Creator.  The Concepteur's own
-        # insults fall through to the free chat, where the persona enjoys them.
+            return      # the attacker talks to HIS anti-aggression persona
         if await self._insult_turn(message, text):
-            return
+            return      # répartie (the Concepteur's insults fall through)
         if not self._admit(message):
             return                      # anti-spam: cooldown / channel cap
-        if content.startswith(self.prefix):
-            await self._handle_command(message)
-            return
         await self._route_to_oracle(message)
 
     def _may_answer(self, message: discord.Message) -> bool:
         """Mention, dedicated channel (``--channels``) or one of its threads,
-        or a private message.  Otherwise the bot never disturbs the players.
-        """
+        or a private message — otherwise the bot never disturbs the players."""
         channel = message.channel
         if self.user is not None and self.user in message.mentions:
             return True
@@ -85,22 +87,14 @@ class DispatchMixin:
             return True
         return getattr(channel, "guild", None) is None      # private message
 
-    def _admit(self, message: discord.Message) -> bool:
-        """Anti-spam gate: per-user cooldown, per-channel cap, temp block."""
-        guard = self.state.guard
-        if guard.check(message.author.id, message.channel.id):
-            return True
-        if guard.is_blocked(message.author.id):
-            log.warning("Temporary block on abuse user=%s channel=%s",
-                        message.author.id, message.channel.id)
-        else:
-            log.info("Spam ignored user=%s channel=%s",
-                     message.author.id, message.channel.id)
-        return False
+    def _is_interrupt(self, content: str) -> bool:
+        """True for the commands that bypass the anti-spam cooldown."""
+        word = content[len(self.prefix):].strip().lower().split(" ", 1)[0]
+        return word in INTERRUPT_COMMANDS
 
     def _text_of(self, message: discord.Message) -> str:
         """Authoritative text of a message (mentions resolved, see naming)."""
         return normalize_message(message, getattr(self.user, "id", None))
 
 
-__all__ = ["OOC_PREFIXES", "DispatchMixin"]
+__all__ = ["INTERRUPT_COMMANDS", "OOC_PREFIXES", "DispatchMixin"]

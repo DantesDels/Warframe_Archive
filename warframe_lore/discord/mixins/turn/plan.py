@@ -22,6 +22,7 @@ KIND_MEMBER_MENTION = "member_mention"
 KIND_INTROSPECTION = "introspection"
 KIND_LORE = "lore"
 KIND_FREE = "free"
+KIND_MEMBER_CARD = "member_card"
 
 
 @dataclass(frozen=True)
@@ -73,5 +74,5 @@ class TurnContext:
 
 
 __all__ = ["KIND_CREATOR_INSULT", "KIND_CREATOR_MENTION", "KIND_FREE",
-           "KIND_INTROSPECTION", "KIND_LORE", "KIND_MEMBER_MENTION",
-           "TurnContext"]
+           "KIND_INTROSPECTION", "KIND_LORE", "KIND_MEMBER_CARD",
+           "KIND_MEMBER_MENTION", "TurnContext"]

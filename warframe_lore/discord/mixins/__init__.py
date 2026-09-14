@@ -15,9 +15,9 @@ from .member import (
     RosterMixin,
     SnapshotMixin,
 )
-from .moderation import FeedbackMixin, HostileMixin, InsultMixin
+from .moderation import FeedbackMixin, HostileMixin, InsultMixin, SpamMixin
 from .turn import DispatchMixin, RoutingMixin, StreamMixin
 
 __all__ = ["DispatchMixin", "FeedbackMixin", "HostileMixin", "InsultMixin",
            "MemberContextMixin", "MemberGateMixin", "RoutingMixin",
-           "RosterMixin", "SnapshotMixin", "StreamMixin"]
+           "RosterMixin", "SnapshotMixin", "SpamMixin", "StreamMixin"]

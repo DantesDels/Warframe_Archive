@@ -12,14 +12,14 @@ import logging
 
 import discord
 
+from ..mixins.turn.dispatch import INTERRUPT_COMMANDS
+
 log = logging.getLogger("warframe_lore.discord.bot.commands")
 
 # Command word -> handler name (``CommandMixin`` provides the handlers).
 COMMANDS: dict[str, str] = {
     "reset": "_cmd_reset",
     "ping": "_cmd_ping",
-    "stop": "_cmd_stop",
-    "cancel": "_cmd_stop",
     "stats": "_cmd_stats",
     "fiche": "_cmd_card",
     "carte": "_cmd_card",
@@ -34,6 +34,9 @@ COMMANDS: dict[str, str] = {
     "persona": "_cmd_persona",
     "help": "_cmd_help",
     "aide": "_cmd_help",
+    # The interruption words come from the dispatcher: the bypass list and the
+    # handler can never drift apart.
+    **{word: "_cmd_stop" for word in sorted(INTERRUPT_COMMANDS)},
 }
 
 HELP_LINES = (

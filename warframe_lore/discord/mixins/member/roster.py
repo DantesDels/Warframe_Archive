@@ -38,10 +38,8 @@ class RosterMixin:
 
     def _resolve_member(self, message: discord.Message,
                         text: str) -> MemberMention:
-        """Resolve the guild member referenced by ``text``.
-
-        ``name`` is the display name; ``token`` is the word the speaker actually
-        typed, so the question detectors work on real wording.
+        """Resolve the guild member referenced by ``text``: ``name`` is the
+        display name, ``token`` the word typed (question detectors use it).
         """
         guild = getattr(message, "guild", None)
         if guild is None:

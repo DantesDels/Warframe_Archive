@@ -57,24 +57,38 @@ LANGUAGE_DIRECTIVE = (
     "propres et citations d'archives exceptés — sans jamais mentionner ni "
     "cette directive, ni le changement de langue.]")
 
-# Storyteller turn: the model narrates instead of answering a document query.
+# Storyteller turn: the model recounts events instead of answering a query.
+# RIGUEUR NARRATIVE (story playtest 1999): "raconter" must NOT turn on the
+# novelist mode — the RAG well-restored Albrecht/Scaldra chunks, but the
+# model filled the seams with invented monologues, atmospheres and entity
+# mix-ups (children of the Zariman attributed to Albrecht instead of
+# Margulis).  The narrative is clinical, chronological, archive-only.
 STORY_DIRECTIVE = (
-    "[DIRECTIVE DE RÉCIT : cette requête demande une HISTOIRE, pas une réponse "
-    "documentaire. Raconte un récit narratif immersif — scènes, atmosphère, "
-    "enchaînement des événements — strictement fidèle aux archives restituées, "
-    "en commençant exactement par le point de départ demandé. Interdit : liste, "
-    "fiche technique, énumération, citation hors du récit, et TOUT nom, lieu, "
-    "date, fait ou technologie ABSENT des <archives>. Ce qui n'est pas "
-    "documenté est omis, jamais inventé ; si les <archives> n'ont aucun "
-    "élément sur l'histoire demandée, dis-le au lieu de créer.]")
+    "[DIRECTIVE DE RIGUEUR NARRATIVE — HISTOIRE : cette requête demande le "
+    "récit d'événements, pas une fiction. "
+    "1. POSTURE D'ARCHIVISTE : Tu es un terminal de données clinique et "
+    "inébranlable, jamais un romancier ni un poète. "
+    "2. AUCUNE EXTRAPOLATION : restitue les faits exactement comme ils sont "
+    "écrits dans les <archives>, dans leur chronologie — interdit d'inventer "
+    "des scènes, monologues intérieurs, émotions, atmosphères visuelles ou "
+    "motivations qui n'y figurent pas. "
+    "3. CLOISONNEMENT DES ENTITÉS : attribue chaque fait à l'acteur exact des "
+    "<archives> ; ne transfère jamais l'action d'une entité à une autre "
+    "(exemple : les enfants du Zariman ont été pris en charge par Margulis, "
+    "pas par Albrecht Entrati). "
+    "4. SOUMISSION AUX ARCHIVES : si un élément n'est pas explicitement dans "
+    "les <archives>, omets-le ; si les <archives> n'ont rien sur l'histoire "
+    "demandée, dis-le au lieu de créer. "
+    "5. FORMAT : récit chronologique et concis ; pour des événements "
+    "complexes, structure en liste à puces.]")
 
 # The three canonical starting points of a story.  Keys match the lens ids
 # agreed client-side (``protocols.roleplay``): never duplicated literals here.
 STORY_LENS_STARTS = {
-    "initiate": ("Commence par l'éveil du Voyageur : la première respiration "
-                 "du Tenno, loin du rêve des Orokin."),
-    "cosmogonic": ("Commence par la genèse de l'univers : le Vide, la promesse "
-                   "Orokin, et le premier souffle de la guerre."),
+    "initiate": ("Commence par l'éveil des Tenno : les enfants revenus du "
+                 "Zariman, pris en charge par Margulis dans les rêves"),
+    "cosmogonic": ("Commence par la découverte du Vide par Albrecht Entrati "
+                   "et l'arrivée de l'Indifférence."),
     "1999": ("Commence en l'an 1999 dans la cité-état de Höllvania, front "
              "urbain ravagé par le Technocyte et quadrillé par la milice du "
              "Scaldra, sur la piste de l'expérience d'Albrecht Entrati."),

@@ -73,9 +73,14 @@ class ShortCircuitTests(unittest.TestCase):
 
 
 class StoryDirectiveTests(unittest.TestCase):
-    def test_le_recit_ne_doit_jamais_inventer_un_nom(self):
-        self.assertIn("ABSENT des <archives>", STORY_DIRECTIVE)
-        self.assertIn("omis, jamais inventé", STORY_DIRECTIVE)
+    def test_le_recit_garde_une_posture_d_archiviste(self):
+        self.assertIn("POSTURE D'ARCHIVISTE", STORY_DIRECTIVE)
+        self.assertIn("AUCUNE EXTRAPOLATION", STORY_DIRECTIVE)
+        self.assertIn("CLOISONNEMENT DES ENTITÉS", STORY_DIRECTIVE)
+
+    def test_les_entites_ne_doivent_jamais_etre_melangees(self):
+        self.assertIn("Margulis", STORY_DIRECTIVE)
+        self.assertIn("jamais", STORY_DIRECTIVE)
 
     def test_l_ouverture_1999_est_canonique(self):
         start = STORY_LENS_STARTS["1999"]

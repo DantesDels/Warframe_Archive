@@ -30,7 +30,8 @@ from __future__ import annotations
 
 import sys
 
-from .parser import build_parser, normalize_legacy_argv
+from .legacy import normalize_legacy_argv
+from .parser import build_parser
 from .support import setup_logging
 
 

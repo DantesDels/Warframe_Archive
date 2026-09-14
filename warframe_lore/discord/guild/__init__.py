@@ -24,11 +24,17 @@ from .story import (
     LENS_KEYWORDS,
     LENS_LABELS,
     LENS_QUESTION,
+    STORY_SUBJECT_CHOICES,
     STORY_TRIGGERS,
     StoryAsk,
     detect_story_lens,
     is_story_request,
     parse_lens_answer,
+    parse_subject_answer,
+    story_subject,
+    story_subject_choices,
+    story_subject_question,
+    substitute_story_subject,
 )
 
 __all__ = [
@@ -39,6 +45,7 @@ __all__ = [
     "LENS_LABELS",
     "LENS_QUESTION",
     "LORE_TRIGGERS",
+    "STORY_SUBJECT_CHOICES",
     "STORY_TRIGGERS",
     "Accreditation",
     "RoleHierarchy",
@@ -53,7 +60,12 @@ __all__ = [
     "normalize_mentions",
     "normalize_message",
     "parse_lens_answer",
+    "parse_subject_answer",
     "roles_question",
     "self_info_request",
+    "story_subject",
+    "story_subject_choices",
+    "story_subject_question",
+    "substitute_story_subject",
     "wants_lore",
 ]

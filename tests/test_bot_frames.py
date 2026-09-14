@@ -143,6 +143,31 @@ class StoryFrameTests(unittest.TestCase):
         self.assertFalse(frame["story"])
         self.assertIsNone(frame.get("story_lens"))
 
+    def test_un_recit_a_sujet_ambigu_demande_quel_recit(self):
+        scenario = make_bot()
+        scenario.say("raconte-moi l'histoire de Garuda")
+        question = scenario.channel.sent[-1].content
+        self.assertIn("Vena", question)
+        self.assertIn("archimédienne", question)
+        self.assertNotIn("Par quelle porte", question)  # pas la lentille
+        self.assertIsNone(scenario.gateway.last)        # pas de tour LLM
+
+    def test_le_sujet_choisi_ouvre_le_recit_sur_la_bonne_personne(self):
+        scenario = make_bot()
+        scenario.say("raconte-moi l'histoire de Garuda")
+        scenario.say("1", author=scenario.stranger)
+        frame = scenario.gateway.last
+        self.assertTrue(frame["story"])
+        self.assertEqual(frame["text"], "raconte-moi l'histoire de Vena")
+        self.assertEqual(scenario.stats["by_kind"]["story"], 1)
+
+    def test_une_reponse_inconnue_garde_la_question_du_sujet_ouverte(self):
+        scenario = make_bot()
+        scenario.say("raconte-moi l'histoire de Garuda")
+        scenario.say("n'importe quoi", author=scenario.stranger)
+        self.assertIsNone(scenario.gateway.last)
+        self.assertIn("Vena", scenario.channel.sent[-1].content)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,6 +16,11 @@ from warframe_lore.discord.guild.story import (
     detect_story_lens,
     is_story_request,
     parse_lens_answer,
+    parse_subject_answer,
+    story_subject,
+    story_subject_choices,
+    story_subject_question,
+    substitute_story_subject,
 )
 
 STORY_REQUESTS = (
@@ -80,6 +85,49 @@ class LensQuestionTests(unittest.TestCase):
         self.assertIn(LENS_LABELS[LENS_INITIATE], LENS_QUESTION)
         self.assertIn(LENS_LABELS[LENS_COSMOGONIC], LENS_QUESTION)
         self.assertIn(LENS_LABELS["1999"], LENS_QUESTION)
+
+
+class SubjectDisambiguationTests(unittest.TestCase):
+    CHOICES = ("Vena", "l'archimédienne")
+
+    def test_garuda_designe_deux_recits_distincts(self):
+        request = "raconte-moi l'histoire de Garuda"
+        self.assertTrue(is_story_request(request))
+        self.assertEqual(story_subject(request), "garuda")
+        self.assertEqual(story_subject_choices(request), self.CHOICES)
+
+    def test_un_sujet_deja_resolu_n_a_pas_de_choix(self):
+        self.assertEqual(story_subject_choices("l'histoire de Vena"), ())
+
+    def test_la_question_propose_les_deux_recits(self):
+        question = story_subject_question(self.CHOICES)
+        self.assertIn("1 — Vena", question)
+        self.assertIn("2 — l'archimédienne", question)
+
+    def test_les_reponses_du_menu_sont_reconnues(self):
+        self.assertEqual(parse_subject_answer("1", self.CHOICES), "Vena")
+        self.assertEqual(parse_subject_answer("2", self.CHOICES),
+                         "l'archimédienne")
+
+    def test_les_reponses_par_mots_sont_reconnues(self):
+        self.assertEqual(parse_subject_answer("Je veux Vena",
+                                              self.CHOICES), "Vena")
+        self.assertEqual(parse_subject_answer("l'archimédienne",
+                                              self.CHOICES),
+                         "l'archimédienne")
+
+    def test_une_reponse_inconnue_est_rejetee(self):
+        self.assertIsNone(parse_subject_answer("autre chose", self.CHOICES))
+
+    def test_le_sujet_choisi_remplace_la_mention(self):
+        self.assertEqual(
+            substitute_story_subject("raconte-moi l'histoire de Garuda",
+                                     "Vena"),
+            "raconte-moi l'histoire de Vena")
+        self.assertEqual(
+            substitute_story_subject("raconte-moi l'histoire de garuda",
+                                     "l'archimédienne"),
+            "raconte-moi l'histoire de l'archimédienne")
 
 
 if __name__ == "__main__":

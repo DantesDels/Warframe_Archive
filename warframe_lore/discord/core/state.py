@@ -91,13 +91,19 @@ class BotState:
 
     # -- storyteller starting-point questions ------------------------------
     def open_story_ask(self, channel_id: int, author_id: int,
-                       request: str) -> None:
-        """Remember an unanswered starting-point question of a channel."""
-        self.story_asks[channel_id] = (author_id, request)
+                       request: str, question: str,
+                       choices: tuple[str, ...] = ()) -> None:
+        """Remember an unanswered storyteller question of a channel."""
+        self.story_asks[channel_id] = (author_id, request, question, choices)
         _prune(self.story_asks, MAX_STORY_ASKS)
 
-    def story_ask(self, channel_id: int) -> tuple[int, str] | None:
-        """Pending starting-point question of a channel (``None`` if none)."""
+    def story_ask(self, channel_id: int) -> tuple[int, str, str,
+                                                  tuple[str, ...]] | None:
+        """Pending storyteller question of a channel (``None`` if none).
+
+        ``(author_id, request, question, choices)``: ``choices`` empty means a
+        starting-point (lens) question, non-empty a subject disambiguation.
+        """
         return self.story_asks.get(channel_id)
 
     def close_story_ask(self, channel_id: int) -> None:

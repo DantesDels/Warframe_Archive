@@ -76,10 +76,11 @@ class ShortCircuitTests(unittest.TestCase):
 
 
 class StoryDirectiveTests(unittest.TestCase):
-    def test_le_recit_reste_une_extraction_de_donnees(self):
-        self.assertIn("COMMANDE D'EXTRACTION", STORY_DIRECTIVE)
-        self.assertIn("extracteur de données, jamais un conteur", STORY_DIRECTIVE)
-        self.assertIn("ANCRAGE LEXICAL STRICT", STORY_DIRECTIVE)
+    def test_le_recit_retrouve_la_prose_de_l_archiviste(self):
+        self.assertIn("paragraphes fluides", STORY_DIRECTIVE)
+        self.assertIn("solennel, cryptique", STORY_DIRECTIVE)
+        self.assertIn("RECYCLAGE LITTÉRAL", STORY_DIRECTIVE)
+        self.assertIn("ZÉRO INVENTION", STORY_DIRECTIVE)
 
     def test_les_entites_ne_doivent_jamais_etre_melangees(self):
         self.assertIn("ISOLATION DES ENTITÉS", STORY_DIRECTIVE)
@@ -87,9 +88,9 @@ class StoryDirectiveTests(unittest.TestCase):
         self.assertIn("Margulis", STORY_DIRECTIVE)
         self.assertIn("jamais associés", STORY_DIRECTIVE)
 
-    def test_aucune_conclusion_inventee(self):
-        self.assertIn("AUCUNE CONCLUSION", STORY_DIRECTIVE)
-        self.assertIn("VÉRIFICATION DE CAUSALITÉ", STORY_DIRECTIVE)
+    def test_le_recit_se_pagine_et_se_termine_aux_archives(self):
+        self.assertIn("PAGINATION NARRATIVE", STORY_DIRECTIVE)
+        self.assertIn("FINITUDE DU RÉCIT", STORY_DIRECTIVE)
 
     def test_l_ouverture_1999_est_canonique(self):
         start = STORY_LENS_STARTS["1999"]

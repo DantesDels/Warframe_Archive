@@ -11,9 +11,11 @@ import argparse
 import logging
 import sys
 
+from ..config import load_config
 from .bootstrap import ensure_database, ensure_engram
 from .bot import LoreMasterBot
 from .config import DiscordConfig
+from .core import build_services
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -57,6 +59,11 @@ def launch_bot(token: str | None, ws: str | None = None,
 
     ws_url = ws or config.engram_ws_url
     channels = tuple(channels) or config.allowed_channels
+    # Services composed once, on the shared ledger: the wiki portraits come
+    # from the SAME media index as the web UI (``load_config().output_dir``).
+    services = build_services(db_path=config.activity_db,
+                              output_dir=load_config().output_dir,
+                              images=config.images)
     bot = LoreMasterBot(
         gateway_url=ws_url,
         prefix=prefix or config.prefix,
@@ -64,7 +71,7 @@ def launch_bot(token: str | None, ws: str | None = None,
         allowed_channels=channels,
         creator_discord_id=config.creator_discord_id,
         roles=config.build_roles(),
-        activity_db_path=config.activity_db,
+        services=services,
     )
     # Auto-start the local infrastructure: PostgreSQL (docker compose) then
     # ENGRAM (uvicorn).  The spawned ENGRAM child is stopped with the bot.

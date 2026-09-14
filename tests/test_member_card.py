@@ -7,8 +7,8 @@ from __future__ import annotations
 import unittest
 
 from warframe_lore.discord.moderation.hostility import HostilityTracker
-from warframe_lore.discord.services.activity import MemberActivityStore
-from warframe_lore.discord.services.member_card import MemberCardService
+from warframe_lore.discord.services.cards import MemberCardService, MemberSnapshot
+from warframe_lore.discord.services.ledger import MemberActivityStore
 from warframe_lore.engram.auth import (
     STATUT_HAUT_COMMANDEMENT,
     STATUT_ORGANIQUE,
@@ -145,14 +145,14 @@ class RoleNamesTests(unittest.TestCase):
 class MemberEmbedTests(unittest.TestCase):
     def test_fiche_complete_bien_construite(self):
         card = _Service()
-        info = {
-            "display": "Aze07",
-            "roles": ["CHEF DE CLAN", "PRIME"],
-            "affiliated": True,
-            "status": STATUT_HAUT_COMMANDEMENT,
-            "avatar": "https://cdn.discordapp.com/avatars/1/a.png",
-            "member_id": "4829",
-        }
+        info = MemberSnapshot(
+            display="Aze07",
+            roles=("CHEF DE CLAN", "PRIME"),
+            affiliated=True,
+            status=STATUT_HAUT_COMMANDEMENT,
+            avatar="https://cdn.discordapp.com/avatars/1/a.png",
+            member_id="4829",
+        )
         # 12 interactions sans incartade → "Élevée" ; 2 autres membres à 9
         # messages → assiduité 100% (Très assidu / contient "Assidu").
         for _ in range(12):

@@ -10,6 +10,9 @@ venv/
 # Refactoring prompts 
 REFACTO/
 
+# Règles locales de l'agent (chargées depuis le working tree, non versionnées)
+AGENTS.md
+
 # Sorties du scraper
 out/
 sync_state.json

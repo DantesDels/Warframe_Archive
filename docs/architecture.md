@@ -180,23 +180,43 @@ unique constraint violation on the title.
   short-circuit), `prompt.py` (XML `<archives>` template + guards), `search.py`
   (pgvector cosine), `aliases.py` (nickname → canonical pre-vectorization),
   `probes.py` (SQLi/elevation detection), `sanitize.py` (trailing padding).
-- `roleplay/`: `stream.py` (3-block system prompt + banner + jealousy
-  directive), `identity.py` (deterministic speaker-identity and member-card
-  replies), `memory.py` (per-user sliding window).
+- `roleplay/`: `stream.py` (turn runner: history + streaming), `prompt/`
+  (payload assembly — `blocks.py` BLOC 1 + trailing directives, `directives.py`
+  speaker sheet / civility / jealousy / answer-language texts, `window.py`
+  sliding history), `identity.py` (deterministic speaker-identity and
+  member-card replies), `memory.py` (per-user sliding window).
 - `api/`: `routers/roleplay.py` (WS terminal + `comment` one-shot member
   observation), `document_rag.py`, `container.py` (DI).
 
 ### `warframe_lore/discord` — Loremaster bot (Oracle terminal)
-- `bot.py` `LoreMasterBot`: routing, **matriciel member cards** (Discord embed
-  from real data), creator gating (refuse once → concede à contrecœur),
-  jealousy (creator-pseudo cited), self-report, leetspeak resolution.
-- `guild/members.py`: name resolution (exact/prefix/leetspeak),
-  `is_member_question`, `roles_question`, `self_info_request`, creator-pseudo
-  variants.
-- `services/activity.py` `MemberActivityStore`: persistent SQLite activity
-  ledger (`data/member_activity/member_activity.db`) — count + recent window.
-- `guild/roles.py` `RoleHierarchy`/`Accreditation`: status from Discord roles.
-- `services/gateway.py` `RoleplayGateway`: WS per channel + `comment` round-trip.
+- `bot.py` `LoreMasterBot`: a `discord.Client` composed of single-responsibility
+  mixins; it owns only `state` (`BotState`) and `services` (`BotServices`).
+- `core/`: `state.py` (bounded volatile tables — turns, anaphora, refusals,
+  tracked answers), `sessions.py` (`SessionPool` — one WS gateway per channel +
+  per-attacker hostile links + persona cache), `wiring.py` (`build_services` —
+  every store on ONE batched SQLite ledger).
+- `mixins/turn/`: `dispatch.py` (the `on_message` pipeline and its gating),
+  `plan.py` (`TurnContext` → audit label + wire `MessageFrame`), `routing.py`
+  (RAG/jealousy/member decision), `streaming.py` (placeholder, tokens,
+  reconnect, `!stop`, wiki portrait, reactions).
+- `mixins/member/`: `context.py` (role accreditation → derived status/creator),
+  `roster.py` (name resolution: exact/prefix/leetspeak), `snapshot.py`
+  (`MemberSnapshot` from real Discord data), `gate.py` (**matriciel cards**,
+  creator gating: refuse once → concede à contrecœur).
+- `mixins/moderation/`: `hostile.py` (probes + death sessions + redemption),
+  `insults.py` (répartie), `spam.py` (`BurstGuard` gate), `feedback.py`
+  (👍/👎 verdicts).
+- `commands/`: `prefix.py` (dispatch table + help), `ops.py` (`!reset`/`!ping`/
+  `!stop`/`!stats`), `card.py` (`!fiche`), `channel.py` (per-channel runtime
+  settings), `arguments.py` (switch/vocabulary parsing).
+- `guild/`: `naming.py` (mention normalisation, member-token matching),
+  `questions.py` (`is_member_question`, `roles_question`, `self_info_request`),
+  `lore.py` (RAG-trigger detection), `creator.py` (pseudo variants/jealousy),
+  `roles/` (`RoleHierarchy`/`Accreditation`).
+- `services/`: `transport/` (`RoleplayGateway` — WS per channel, `MessageStreamer`
+  — anti-429 edits, hard split), `ledger/` (`LedgerDB`, `MemberActivityStore`,
+  `StrikeLedger`, `FeedbackStore`, `TurnStats`), `cards/` (`MemberCardService`,
+  `WikiImageService`), `settings.py` (`ChannelSettingsStore`).
 
 ### `warframe_lore/ui` — local web interface
 - `LoreStore`: in-memory cache of megafiles `out/*.json` (meta on read,

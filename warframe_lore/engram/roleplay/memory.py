@@ -1,14 +1,11 @@
 """Per-user short-term conversation memory (mission 6).
 
-Indexes one :class:`Session` per ``message.author.id`` (plus the persona
-slice): each speaker keeps his OWN sliding history — a bounded window of the
-last ``max_pairs`` request/reply pairs — instead of a per-channel stateless
-turn.  An inactivity expiry (``expiry_seconds``) resets a user after silence,
-so stale context never saturates the LLM budget; a hard ``max_users`` cap
-evicts the least-recently-used cell (LRU) so the dictionary stays bounded.
+Indexes one :class:`Session` per ``message.author.id`` (plus the persona slice):
+each speaker keeps his OWN bounded sliding history instead of a per-channel
+stateless turn.  An inactivity expiry resets a user after silence, and a hard
+``max_users`` cap evicts the least-recently-used cell (LRU).
 
-The store is deliberately pure Python (dict + ``time.monotonic``): no
-external cache dependency, and it can be wired into any container.
+Pure Python (dict + ``time.monotonic``): no external cache dependency.
 """
 
 from __future__ import annotations

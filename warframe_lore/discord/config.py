@@ -16,6 +16,12 @@ def _env(name: str, default: str) -> str:
     return os.getenv(name, default)
 
 
+def _env_flag(name: str, default: bool = True) -> bool:
+    """Boolean environment variable (``0``/``off``/``false``/``non`` = off)."""
+    raw = os.getenv(name, "1" if default else "0").strip().lower()
+    return raw not in ("0", "off", "false", "non", "no", "")
+
+
 @dataclass
 class DiscordConfig:
     """Bot settings: token, ENGRAM WS endpoint, prefix, creator identity.
@@ -55,14 +61,18 @@ class DiscordConfig:
     # persona banner tone (mission-8).  Empty file/dir → everyone guest.
     roles_file: str = field(
         default_factory=lambda: _env("DISCORD_ROLES_FILE", ""))
-    # Persistent member-activity SQLite (assiduité / fiabilité / commentaire
-    # de la fiche membre) — survives bot restarts.  Stored in a dedicated
-    # ``data/member_activity/`` folder (auto-created), never at the repo root.
-    # ``:memory:`` disables persistence (tests).
+    # Shared SQLite ledger of the bot (member activity, strike windows, answer
+    # feedback, per-channel settings) — survives restarts.  Stored in a
+    # dedicated ``data/member_activity/`` folder (auto-created), never at the
+    # repo root.  ``:memory:`` disables persistence (tests).
     activity_db: str = field(
         default_factory=lambda: _env(
             "DISCORD_ACTIVITY_DB",
             str(PROJECT_ROOT / "data" / "member_activity" / "member_activity.db")))
+    # Official wiki portraits attached to the lore answers (Public Export media
+    # index — the SAME source as the web UI).  Per-channel override at runtime:
+    # ``!images on|off``.
+    images: bool = field(default_factory=lambda: _env_flag("DISCORD_IMAGES"))
 
     @classmethod
     def load(cls) -> DiscordConfig:

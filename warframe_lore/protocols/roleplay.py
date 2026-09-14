@@ -57,6 +57,10 @@ class MessageFrame(BaseModel):
     role_status: str | None = None
     creator: bool | None = None
     creator_mention: str | None = None
+    # Answer language requested for this channel ("fr" | "en"); ``None`` keeps
+    # the persona default.  Both sides read the same field: no duplicated
+    # literal, no silent drift.
+    lang: str | None = None
     member_name: str | None = None
     member_roles: list[str] | None = None
     member_affiliated: bool | None = None

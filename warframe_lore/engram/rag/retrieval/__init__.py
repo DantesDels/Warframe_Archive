@@ -1,24 +1,28 @@
 """Recherche documentaire : contrat, pgvector, hybride vectoriel + plein texte.
 
-Façade du sous-paquet : :mod:`retriever` (contrat ``Retriever`` + ``RAGHit``),
-:mod:`search` (cosinus pgvector), :mod:`hybrid` (fusion vectoriel + FTS pour
-l'inspector).  Les noms publics restent importables depuis
-``warframe_lore.engram.rag``.
+Façade PARESSEUSE du sous-paquet (voir :mod:`warframe_lore.lazy_facade`) :
+:mod:`retriever` (contrat ``Retriever`` + ``RAGHit``, sans dépendance),
+:mod:`search` (cosinus pgvector) et :mod:`hybrid` (fusion vectoriel + FTS de
+l'inspector).  ``retriever`` reste ainsi importable sans SQLAlchemy.
 """
 
 from __future__ import annotations
 
-from .hybrid import (
-    HybridHit,
-    HybridQuery,
-    HybridSearch,
-    query_terms,
-    strip_context_prefix,
-    ts_rank_normalized,
-)
-from .retriever import RAGHit, Retriever
-from .search import CosinusSearch, set_hnsw_ef_search
+import sys
 
-__all__ = ["CosinusSearch", "HybridHit", "HybridQuery", "HybridSearch",
-           "RAGHit", "Retriever", "query_terms", "set_hnsw_ef_search",
-           "strip_context_prefix", "ts_rank_normalized"]
+from warframe_lore.lazy_facade import install
+
+_EXPORTS = {
+    "CosinusSearch": ".search",
+    "HybridHit": ".hybrid",
+    "HybridQuery": ".hybrid",
+    "HybridSearch": ".hybrid",
+    "RAGHit": ".retriever",
+    "Retriever": ".retriever",
+    "query_terms": ".hybrid",
+    "set_hnsw_ef_search": ".search",
+    "strip_context_prefix": ".hybrid",
+    "ts_rank_normalized": ".hybrid",
+}
+
+install(sys.modules[__name__], _EXPORTS)

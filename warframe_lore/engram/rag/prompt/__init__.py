@@ -1,38 +1,34 @@
 """Prompt RAG et chaînes de garde partagées avec le Roleplay.
 
-Façade du sous-paquet : :mod:`builder` (template système strict en 3 blocs,
-assemblage du contexte ``<archives>``) et :mod:`guards` (textes de sécurité —
-rejet anti-jailbreak, garde d'hallucination, immunité hiérarchique).  Les noms
-publics restent importables depuis ``warframe_lore.engram.rag``.
+Façade PARESSEUSE du sous-paquet (voir :mod:`warframe_lore.lazy_facade`) :
+:mod:`builder` (template système strict en 3 blocs, assemblage du contexte
+``<archives>``) et :mod:`guards` (textes de sécurité, sans aucune dépendance —
+le bot Discord et le Roleplay les importent directement).
 """
 
 from __future__ import annotations
 
-from .builder import (
-    NO_DATA_MARKER,
-    RAG_SYSTEM_TEMPLATE,
-    SUGGESTION_DIRECTIVE,
-    SUGGESTION_MARKER,
-    PromptBuilder,
-    RAGPrompt,
-)
-from .guards import (
-    ARCHIVES_REPLY,
-    HALLUCINATION_GUARD,
-    HIERARCHY_BLOCK,
-    JAILBREAK_BLOCK,
-    JAILBREAK_REJECT,
-    LOGICAL_INFERENCE_BLOCK,
-    OFF_TOPIC_ERROR,
-    OFF_TOPIC_REPLY,
-    RAG_ERROR,
-    RELATIONSHIP_ISOLATION_BLOCK,
-)
+import sys
 
-__all__ = [
-    "ARCHIVES_REPLY", "HALLUCINATION_GUARD", "HIERARCHY_BLOCK",
-    "JAILBREAK_BLOCK", "JAILBREAK_REJECT", "LOGICAL_INFERENCE_BLOCK",
-    "NO_DATA_MARKER", "OFF_TOPIC_ERROR", "OFF_TOPIC_REPLY", "RAG_ERROR",
-    "RAG_SYSTEM_TEMPLATE", "RELATIONSHIP_ISOLATION_BLOCK", "SUGGESTION_DIRECTIVE",
-    "SUGGESTION_MARKER", "PromptBuilder", "RAGPrompt",
-]
+from warframe_lore.lazy_facade import install
+
+_EXPORTS = {
+    "ARCHIVES_REPLY": ".guards",
+    "HALLUCINATION_GUARD": ".guards",
+    "HIERARCHY_BLOCK": ".guards",
+    "JAILBREAK_BLOCK": ".guards",
+    "JAILBREAK_REJECT": ".guards",
+    "LOGICAL_INFERENCE_BLOCK": ".guards",
+    "NO_DATA_MARKER": ".builder",
+    "OFF_TOPIC_ERROR": ".guards",
+    "OFF_TOPIC_REPLY": ".guards",
+    "PromptBuilder": ".builder",
+    "RAGPrompt": ".builder",
+    "RAG_ERROR": ".guards",
+    "RAG_SYSTEM_TEMPLATE": ".builder",
+    "RELATIONSHIP_ISOLATION_BLOCK": ".guards",
+    "SUGGESTION_DIRECTIVE": ".builder",
+    "SUGGESTION_MARKER": ".builder",
+}
+
+install(sys.modules[__name__], _EXPORTS)

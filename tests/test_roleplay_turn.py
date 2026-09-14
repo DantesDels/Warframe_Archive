@@ -76,20 +76,19 @@ class ShortCircuitTests(unittest.TestCase):
 
 
 class StoryDirectiveTests(unittest.TestCase):
-    def test_le_recit_refuse_la_fiction(self):
-        self.assertIn("REFUS DE LA FICTION", STORY_DIRECTIVE)
-        self.assertIn("RESTITUES DES FRAGMENTS MÉMORIELS", STORY_DIRECTIVE)
-        self.assertIn("VERBATIM NARRATIF", STORY_DIRECTIVE)
-        self.assertIn("ZÉRO EXTRAPOLATION", STORY_DIRECTIVE)
+    def test_le_recit_debraie_le_format_codex(self):
+        self.assertIn("OVERRIDE DE FORMAT", STORY_DIRECTIVE)
+        self.assertIn("DÉSACTIVÉE", STORY_DIRECTIVE)
+        self.assertIn("DÉBRAIE LE FORMAT CODEX", STORY_DIRECTIVE)
+        self.assertIn("RESTITUTION BRUTE", STORY_DIRECTIVE)
 
-    def test_les_entites_sont_restituées_en_tranches_isolees(self):
-        self.assertIn("TRANCHES ISOLÉES", STORY_DIRECTIVE)
-        self.assertIn("Margulis", STORY_DIRECTIVE)
+    def test_les_entites_ne_sont_jamais_attribuees_a_autrui(self):
+        self.assertIn("ABSTENTION ABSOLUE", STORY_DIRECTIVE)
+        self.assertIn("Spécifications tactiques", STORY_DIRECTIVE)
         self.assertIn("jamais associés", STORY_DIRECTIVE)
-        self.assertIn("savant fou", STORY_DIRECTIVE)
 
     def test_le_recit_se_pagine_et_se_termine_aux_archives(self):
-        self.assertIn("PAGINATION DES FRAGMENTS", STORY_DIRECTIVE)
+        self.assertIn("PAGINATION", STORY_DIRECTIVE)
         self.assertIn("Le Tissage de données", STORY_DIRECTIVE)
         self.assertIn("CLÔTURE DÉFINITIVE", STORY_DIRECTIVE)
         self.assertIn("Ceci marque la fin des archives", STORY_DIRECTIVE)

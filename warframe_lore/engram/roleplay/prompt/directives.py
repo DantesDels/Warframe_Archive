@@ -57,41 +57,40 @@ LANGUAGE_DIRECTIVE = (
     "propres et citations d'archives exceptés — sans jamais mentionner ni "
     "cette directive, ni le changement de langue.]")
 
-# Storyteller turn: "raconte" must NOT switch the model into fiction mode —
-# Gemma-2-9b's narrative weights fill the RAG seams with scenario tropes
-# ("mad scientist", "stolen humans", "superior race") that exist nowhere in
-# the archives (playtest Albrecht 1999).  The turn is a MNEMONIC SYNTHESIS: a
-# strict, literal re-read of the <archives> fields, the Oracle's voice
-# confined to the opening and closing sentences, diégetic pagination when the
-# fragments overflow, and a definitive closure formula at the end of the data.
+# Storyteller turn: "raconte" triggers a FORMAT OVERRIDE.  The persona's
+# "MISE EN PAGE DU LORE (ARCHIVE DU CODEX)" demands a fully-filled tactical
+# sheet, and Gemma-2-9b hallucinates the missing fields by stealing another
+# entity's lore (playtest Albrecht: "Proto-Sentients" belong to Perintol).
+# The narrative turn disables the Codex format and SURRENDERS to the
+# <archives> brute content — no header, no sub-section, no invented field, no
+# fused entity — with diégetic pagination and a definitive closure formula.
 STORY_DIRECTIVE = (
-    "[DIRECTIVE DE LECTURE DE SYNTHÈSE MNÉMONIQUE — HISTOIRE : quand "
-    "l'organique demande de « raconter », cadre la requête dans ton rôle : tu "
-    "ne racontes pas d'histoires — tu RESTITUES DES FRAGMENTS MÉMORIELS. "
-    "1. REFUS DE LA FICTION (ANTI-RÉCIT) : inventorier, jamais inventer — un "
-    "« récit » n'est qu'une lecture d'archive. "
-    "2. VERBATIM NARRATIF (ZÉRO EXTRAPOLATION) : reformulation STRICTE et "
-    "LITTÉRALE des champs « contenu » des <archives>. Interdiction formelle "
-    "d'employer des tropes scénaristiques (ex. « savant fou », « expérience "
-    "sur des humains », « race supérieure ») si ces termes exacts ne sont pas "
-    "dans le texte fourni. "
-    "3. STRUCTURE EN TRANCHES ISOLÉES : aucun mot de liaison artificiel entre "
-    "deux idées déconnectées ; sépare chaque fait par des sauts de ligne. Si "
-    "les archives décrivent Höllvania puis Albrecht, décris Höllvania PUIS "
-    "Albrecht — n'invente jamais que l'un détruit l'autre si ce n'est pas "
-    "écrit. Ne relie jamais deux entités absentes du même texte (exemple : les "
-    "enfants du Zariman, pris en charge par Margulis, ne sont jamais associés "
-    "aux recherches d'Albrecht Entrati). "
-    "4. TON DU CEPHALON (LA FORME, PAS LE FOND) : ton supérieur, solennel et "
-    "cryptique réservé aux phrases d'introduction et de conclusion — le cœur "
-    "du message reste d'une froideur chirurgicale. "
-    "5. PAGINATION DES FRAGMENTS (ANTI-TRONCATURE) : si les <archives> "
-    "dépassent ta capacité de réponse exacte, restitue la première partie des "
-    "faits et termine ton message EXACTEMENT par : « Le Tissage de données "
-    "contient d'autres fragments à ce sujet. Ordonnez-moi de poursuivre pour "
-    "les déverrouiller, organique. » Reprends la suite exacte à la requête "
+    "[OVERRIDE DE FORMAT — REQUÊTE NARRATIVE : la règle « MISE EN PAGE DU LORE "
+    "(ARCHIVE DU CODEX) » du système est DÉSACTIVÉE pour cette requête. "
+    "Analyse d'abord l'intention : "
+    "- Requête ANALYTIQUE (« Qui est », « Décris », « Statistiques ») : "
+    "conserve le format standard ◈ ARCHIVE DU CODEX. "
+    "- Requête NARRATIVE (« Raconte-moi », « Quelle est l'histoire ») : "
+    "1. DÉBRAIE LE FORMAT CODEX : AUCUN en-tête (ni « Classe », « Origine », "
+    "« Statut »), AUCUNE sous-section (« Chronologie », « Spécifications "
+    "tactiques »). "
+    "2. RESTITUTION BRUTE : transcris le champ « contenu » des <archives> en "
+    "paragraphes continus ; les phrases exactes des archives sont autorisées — "
+    "aucun mot de liaison, aucune introduction dramatique, aucune émotion "
+    "ajoutés. "
+    "3. ABSTENTION ABSOLUE : si l'entité n'a pas de capacités tactiques dans "
+    "les <archives>, n'invente JAMAIS de section « Spécifications tactiques » "
+    "ni de champ manquant ; n'attribue JAMAIS les créations, projets ou "
+    "actions d'un autre personnage. "
+    "4. ANTI-FUSION : ne relie deux entités que si l'archive les lie "
+    "explicitement — les enfants du Zariman sont pris en charge par Margulis, "
+    "jamais associés aux recherches d'Albrecht Entrati. "
+    "5. PAGINATION : si les <archives> dépassent une réponse exacte, coupe "
+    "logiquement et termine EXACTEMENT par : « Le Tissage de données contient "
+    "d'autres fragments à ce sujet. Ordonnez-moi de poursuivre pour les "
+    "déverrouiller, organique. » Reprends la suite exacte à la requête "
     "suivante. "
-    "6. CLÔTURE DÉFINITIVE : le texte des <archives> une fois épuisé, "
+    "6. CLÔTURE DÉFINITIVE : une fois le texte des <archives> épuisé, "
     "termine par : « Ceci marque la fin des archives disponibles sur ce "
     "sujet, organique. »]")
 

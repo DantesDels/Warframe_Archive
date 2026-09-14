@@ -17,13 +17,18 @@ from types import SimpleNamespace
 from sqlalchemy.dialects import postgresql
 
 from warframe_lore.engram.rag import AliasResolver, HybridSearch, PromptBuilder, RAGHit
-from warframe_lore.engram.rag.retrieval.hybrid import (
-    _COSINE_WEIGHT,
-    _FTS_WEIGHT,
-    _section_label,
+from warframe_lore.engram.rag.retrieval.scoring import (
+    COSINE_WEIGHT,
+    FTS_WEIGHT,
+    fuse,
     query_terms,
+    section_label,
     strip_context_prefix,
     ts_rank_normalized,
+)
+from warframe_lore.engram.rag.retrieval.statements import (
+    cosine_statement,
+    fts_statement,
 )
 
 
@@ -145,11 +150,11 @@ class TextHelperTests(unittest.TestCase):
     def test_section_label_prefere_metadata_section(self):
         meta = {"section": "Identité passée > Ordan Karris",
                 "Header 2": "Identité passée"}
-        self.assertEqual(_section_label(meta), "Identité passée > Ordan Karris")
+        self.assertEqual(section_label(meta), "Identité passée > Ordan Karris")
 
     def test_section_label_fallback_hierarchie(self):
         meta = {"Header 2": "Identité passée", "Header 3": "Ordan Karris"}
-        self.assertEqual(_section_label(meta),
+        self.assertEqual(section_label(meta),
                          "Identité passée > Ordan Karris")
 
     def test_ts_rank_normalise(self):
@@ -162,29 +167,25 @@ class FusionTests(unittest.TestCase):
     """La fusion trie MAIS n'écrase jamais les scores par canal."""
 
     def test_deux_canaux_ponderes(self):
-        fused = HybridSearch._fuse(0.62, 12.0 / 13.0)
-        expected = _COSINE_WEIGHT * 0.62 + _FTS_WEIGHT * (12.0 / 13.0)
+        fused = fuse(0.62, 12.0 / 13.0)
+        expected = COSINE_WEIGHT * 0.62 + FTS_WEIGHT * (12.0 / 13.0)
         self.assertAlmostEqual(fused, expected)
 
     def test_cos_only_et_fts_only_conserves(self):
-        self.assertAlmostEqual(HybridSearch._fuse(0.62, None),
-                               _COSINE_WEIGHT * 0.62)
-        self.assertAlmostEqual(HybridSearch._fuse(None, 0.5),
-                               _FTS_WEIGHT * 0.5)
+        self.assertAlmostEqual(fuse(0.62, None), COSINE_WEIGHT * 0.62)
+        self.assertAlmostEqual(fuse(None, 0.5), FTS_WEIGHT * 0.5)
 
     def test_zero_sans_aucun_score(self):
-        self.assertEqual(HybridSearch._fuse(None, None), 0.0)
+        self.assertEqual(fuse(None, None), 0.0)
 
 
 class HybridSQLTests(unittest.TestCase):
     """Les deux canaux existent au niveau SQL avec leurs opérateurs."""
 
-    def setUp(self):
-        self.search = HybridSearch.__new__(HybridSearch)
-        self.search.candidates = 24
+    CANDIDATES = 24
 
     def test_requete_cosine_pgvector(self):
-        sql = str(self.search._cosine_statement([0.0] * 4)
+        sql = str(cosine_statement([0.0] * 4, self.CANDIDATES)
                   .compile(dialect=postgresql.dialect()))
         self.assertIn("<=>", sql)          # opérateur cosine
         self.assertIn("ORDER BY", sql)
@@ -192,7 +193,7 @@ class HybridSQLTests(unittest.TestCase):
         self.assertIn("WHERE", sql)        # embedding IS NOT NULL uniquement
 
     def test_requete_fts_postgresql(self):
-        sql = str(self.search._fts_statement("mercenaire d'os")
+        sql = str(fts_statement("mercenaire d'os", self.CANDIDATES)
                   .compile(dialect=postgresql.dialect()))
         self.assertIn("websearch_to_tsquery", sql)
         self.assertIn("ts_rank_cd", sql)

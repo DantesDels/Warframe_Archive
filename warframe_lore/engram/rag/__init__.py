@@ -34,8 +34,8 @@ _EXPORTS = {
     "CosinusSearch": ".retrieval.search",
     "HALLUCINATION_GUARD": ".prompt.guards",
     "HIERARCHY_BLOCK": ".prompt.guards",
-    "HybridHit": ".retrieval.hybrid",
-    "HybridQuery": ".retrieval.hybrid",
+    "HybridHit": ".retrieval.model",
+    "HybridQuery": ".retrieval.model",
     "HybridSearch": ".retrieval.hybrid",
     "JAILBREAK_BLOCK": ".prompt.guards",
     "JAILBREAK_REJECT": ".prompt.guards",
@@ -59,13 +59,13 @@ _EXPORTS = {
     "detect_probe": ".query.probes",
     "is_identity_question": ".query.probes",
     "is_self_reflection": ".query.probes",
-    "query_terms": ".retrieval.hybrid",
+    "query_terms": ".retrieval.scoring",
     "resolve_alias": ".query.aliases",
     "sanitize_query": ".query.query_guard",
     "set_hnsw_ef_search": ".retrieval.search",
-    "strip_context_prefix": ".retrieval.hybrid",
+    "strip_context_prefix": ".retrieval.scoring",
     "strip_trailing_padding": ".sanitize",
-    "ts_rank_normalized": ".retrieval.hybrid",
+    "ts_rank_normalized": ".retrieval.scoring",
 }
 
 install(sys.modules[__name__], _EXPORTS)

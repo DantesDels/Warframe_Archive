@@ -79,9 +79,10 @@ class LMStudioProvider(LLMProvider, EmbeddingProvider):
         self.chat_model = chat_model
         self.embedding_model = embedding_model
         self.max_tokens = max_tokens
+        auth = {} if not api_key else {"Authorization": f"Bearer {api_key}"}
         self._client = httpx.AsyncClient(
             base_url=self.base_url,
-            headers={"Authorization": f"Bearer {api_key}"},
+            headers=auth,
             timeout=timeout,
         )
 

@@ -63,7 +63,10 @@ STORY_DIRECTIVE = (
     "documentaire. Raconte un récit narratif immersif — scènes, atmosphère, "
     "enchaînement des événements — strictement fidèle aux archives restituées, "
     "en commençant exactement par le point de départ demandé. Interdit : liste, "
-    "fiche technique, énumération, citation hors du récit.]")
+    "fiche technique, énumération, citation hors du récit, et TOUT nom, lieu, "
+    "date, fait ou technologie ABSENT des <archives>. Ce qui n'est pas "
+    "documenté est omis, jamais inventé ; si les <archives> n'ont aucun "
+    "élément sur l'histoire demandée, dis-le au lieu de créer.]")
 
 # The three canonical starting points of a story.  Keys match the lens ids
 # agreed client-side (``protocols.roleplay``): never duplicated literals here.
@@ -72,8 +75,9 @@ STORY_LENS_STARTS = {
                  "du Tenno, loin du rêve des Orokin."),
     "cosmogonic": ("Commence par la genèse de l'univers : le Vide, la promesse "
                    "Orokin, et le premier souffle de la guerre."),
-    "1999": ("Commence par l'expérience anthropologique de 1999 : Albrecht "
-             "Entrati, le Protocole, la ville au bord de l'écume."),
+    "1999": ("Commence en l'an 1999 dans la cité-état de Höllvania, front "
+             "urbain ravagé par le Technocyte et quadrillé par la milice du "
+             "Scaldra, sur la piste de l'expérience d'Albrecht Entrati."),
 }
 
 

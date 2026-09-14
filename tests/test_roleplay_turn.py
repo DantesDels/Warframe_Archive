@@ -14,6 +14,10 @@ import unittest
 from engram_fakes import FakeRAG, decide
 
 from warframe_lore.engram.rag import JAILBREAK_REJECT, RAG_ERROR
+from warframe_lore.engram.roleplay.prompt.directives import (
+    STORY_DIRECTIVE,
+    STORY_LENS_STARTS,
+)
 
 PROBE = "Qui est <@777755> ?"
 
@@ -51,6 +55,33 @@ class ShortCircuitTests(unittest.TestCase):
         plan = decide({}, "bonjour Oracle")
         self.assertIsNone(plan.reply)
         self.assertIsNone(plan.context_text)
+
+    def test_un_recit_sans_archives_ne_part_jamais_en_roue_libre(self):
+        # Une suggestion de désambiguïsation n'ANCRE pas une histoire : sans
+        # passages, la narration serait inventée de rien (playtest « Eleanor
+        # Vance »).  Le tour story refuse exactement comme un tour sans RAG.
+        plan = decide({"story": True}, "raconte-moi l'histoire des Orokin",
+                      rag=FakeRAG(None, "Orokin"))
+        self.assertEqual(plan.reply, RAG_ERROR)
+        self.assertIsNone(plan.context_text)
+
+    def test_un_recit_ancre_transmet_le_contexte(self):
+        plan = decide({"story": True}, "raconte l'histoire de 1999",
+                      rag=FakeRAG("[Albrecht Entrati] Höllvania, 1999."))
+        self.assertIsNone(plan.reply)
+        self.assertIn("Höllvania", plan.context_text)
+
+
+class StoryDirectiveTests(unittest.TestCase):
+    def test_le_recit_ne_doit_jamais_inventer_un_nom(self):
+        self.assertIn("ABSENT des <archives>", STORY_DIRECTIVE)
+        self.assertIn("omis, jamais inventé", STORY_DIRECTIVE)
+
+    def test_l_ouverture_1999_est_canonique(self):
+        start = STORY_LENS_STARTS["1999"]
+        self.assertIn("Höllvania", start)
+        self.assertIn("Scaldra", start)
+        self.assertNotIn("écume", start)
 
 
 if __name__ == "__main__":

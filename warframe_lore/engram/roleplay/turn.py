@@ -55,7 +55,11 @@ async def plan_turn(container: Container, payload: dict, user_text: str,
     if want_rag:
         context_text, suggestion = await container.rag.resolve(
             user_text, context=rag_context)
-    if want_rag and not context_text and suggestion is None:
+    if want_rag and not context_text and (suggestion is None
+                                          or payload.get("story")):
+        # A disambiguation suggestion cannot ANCHOR a narration: a story
+        # without passages would be invented from nothing, so it refuses
+        # exactly like any query left without a trusted passage.
         return TurnPlan(reply=RAG_ERROR)
     reply = (member_reply(payload, persona_mode)
              or identity_reply_for(payload, user_text, persona_mode))

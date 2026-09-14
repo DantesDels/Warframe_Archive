@@ -28,8 +28,10 @@ from .prompt import (
 # model stays inside the provided passages.
 RAG_TEMPERATURE_CAP = 0.1
 # A storyteller turn stays narrative (not extractive): the temperature is only
-# softened, so the model can build scenes while still following the archives.
-STORY_TEMPERATURE = 0.55
+# slightly softened, so the model can build scenes while still staying inside
+# the provided passages (0.55 drifted into invented proper nouns — "Dr Eleanor
+# Vance", cliff-side city — playtest 2026-09-15).
+STORY_TEMPERATURE = 0.3
 
 
 class RoleplayService:

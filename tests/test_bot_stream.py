@@ -53,7 +53,7 @@ def interrupt_after_first_token(scenario, hang) -> None:
 
     async def play() -> None:
         turn = asyncio.create_task(scenario.bot.on_message(FakeMessage(
-            scenario.channel, content="raconte-moi une longue histoire",
+            scenario.channel, content="parle-moi de ta journée",
             author=scenario.stranger)))
         for _ in range(400):
             if hang.messages:

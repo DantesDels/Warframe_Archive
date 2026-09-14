@@ -57,6 +57,31 @@ LANGUAGE_DIRECTIVE = (
     "propres et citations d'archives exceptés — sans jamais mentionner ni "
     "cette directive, ni le changement de langue.]")
 
+# Storyteller turn: the model narrates instead of answering a document query.
+STORY_DIRECTIVE = (
+    "[DIRECTIVE DE RÉCIT : cette requête demande une HISTOIRE, pas une réponse "
+    "documentaire. Raconte un récit narratif immersif — scènes, atmosphère, "
+    "enchaînement des événements — strictement fidèle aux archives restituées, "
+    "en commençant exactement par le point de départ demandé. Interdit : liste, "
+    "fiche technique, énumération, citation hors du récit.]")
+
+# The three canonical starting points of a story.  Keys match the lens ids
+# agreed client-side (``protocols.roleplay``): never duplicated literals here.
+STORY_LENS_STARTS = {
+    "initiate": ("Commence par l'éveil du Voyageur : la première respiration "
+                 "du Tenno, loin du rêve des Orokin."),
+    "cosmogonic": ("Commence par la genèse de l'univers : le Vide, la promesse "
+                   "Orokin, et le premier souffle de la guerre."),
+    "1999": ("Commence par l'expérience anthropologique de 1999 : Albrecht "
+             "Entrati, le Protocole, la ville au bord de l'écume."),
+}
+
+
+def story_directive(lens: str | None) -> str:
+    """Narration directive + the opening scene forced by the chosen lens."""
+    start = STORY_LENS_STARTS.get(lens or "")
+    return "".join([STORY_DIRECTIVE, "\n", start or ""])
+
 
 def speaker_bloc(user_name: str | None, role_status: str | None,
                  history_lines: list[str]) -> str:
@@ -86,4 +111,5 @@ def language_directive(lang: str | None) -> str:
 
 __all__ = ["CIVILITY_DIRECTIVE", "DEFAULT_LANGUAGE", "JEALOUSY_DIRECTIVE",
            "LANGUAGE_DIRECTIVE", "LANGUAGE_NAMES", "NO_HISTORY_LINE",
-           "SPEAKER_HEADER", "language_directive", "speaker_bloc"]
+           "SPEAKER_HEADER", "STORY_DIRECTIVE", "STORY_LENS_STARTS",
+           "language_directive", "speaker_bloc", "story_directive"]

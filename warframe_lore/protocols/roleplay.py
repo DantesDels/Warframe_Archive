@@ -50,6 +50,10 @@ class MessageFrame(BaseModel):
     type: str = FRAME_MESSAGE
     text: str
     rag: bool = False
+    # Storyteller turn: the request opens a narrative (not a document answer),
+    # grounded on the archives from a chosen starting point (lens).
+    story: bool = False
+    story_lens: str | None = None
     user_id: str | int | None = None
     user_name: str | None = None
     user_role: str | None = None

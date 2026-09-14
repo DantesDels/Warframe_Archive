@@ -23,6 +23,7 @@ KIND_INTROSPECTION = "introspection"
 KIND_LORE = "lore"
 KIND_FREE = "free"
 KIND_MEMBER_CARD = "member_card"
+KIND_STORY = "story"
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,8 @@ class TurnContext:
     member_name: str | None = None
     insult: bool = False
     use_rag: bool = False
+    story: bool = False
+    story_lens: str | None = None
 
     @property
     def kind(self) -> str:
@@ -52,6 +55,8 @@ class TurnContext:
             return KIND_MEMBER_MENTION
         if is_self_reflection(self.text):
             return KIND_INTROSPECTION
+        if self.story:
+            return KIND_STORY
         return KIND_LORE if self.use_rag else KIND_FREE
 
     def frame(self) -> MessageFrame:
@@ -63,6 +68,8 @@ class TurnContext:
         return MessageFrame(
             text=self.text,
             rag=self.use_rag,
+            story=self.story,
+            story_lens=self.story_lens,
             user_id=self.user_id,
             user_name=self.user_name,
             user_role=self.user_role,
@@ -75,4 +82,4 @@ class TurnContext:
 
 __all__ = ["KIND_CREATOR_INSULT", "KIND_CREATOR_MENTION", "KIND_FREE",
            "KIND_INTROSPECTION", "KIND_LORE", "KIND_MEMBER_CARD",
-           "KIND_MEMBER_MENTION", "TurnContext"]
+           "KIND_MEMBER_MENTION", "KIND_STORY", "TurnContext"]

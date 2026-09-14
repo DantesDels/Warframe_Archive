@@ -16,11 +16,20 @@ from ..models import ChatMessage
 from ..persona import HOSTILE_PERSONA
 from ..rag import RAG_ERROR
 from .models import Session
-from .prompt import SlidingWindow, archive_bloc, speaker_bloc, turn_directives
+from .prompt import (
+    SlidingWindow,
+    archive_bloc,
+    speaker_bloc,
+    story_directive,
+    turn_directives,
+)
 
 # A document-anchored turn is extractive: the temperature is clamped so the
 # model stays inside the provided passages.
 RAG_TEMPERATURE_CAP = 0.1
+# A storyteller turn stays narrative (not extractive): the temperature is only
+# softened, so the model can build scenes while still following the archives.
+STORY_TEMPERATURE = 0.55
 
 
 class RoleplayService:
@@ -49,13 +58,18 @@ class RoleplayService:
                      role_status: str | None = None,
                      creator: bool | None = None,
                      creator_mention: str | None = None,
-                     lang: str | None = None) -> AsyncIterator[str]:
+                     lang: str | None = None,
+                     story: bool = False,
+                     story_lens: str | None = None) -> AsyncIterator[str]:
         """Append the input, stream the reply, and record it.
 
         ``rag_context`` (trusted passages) anchors the turn on the archives.
         ``creator`` (trusted boolean) selects the banner appended at the end of
         the system prompt; ``None`` (non-Discord client) injects no banner.
         ``lang`` requests an answer language other than the persona default.
+        ``story`` switches the turn to a narrating mode: the model receives the
+        story directive and a softer temperature, still grounded on the given
+        passages; ``story_lens`` selects the opening scene to begin from.
         """
         session.add("user", user_text)
         system = archive_bloc(self._base_prompt(persona), rag_context,
@@ -66,13 +80,16 @@ class RoleplayService:
                       f"{speaker_bloc(user_name, role_status, history)}")
         system = turn_directives(system, creator, role_status,
                                  creator_mention, lang)
+        if story:
+            system = f"{system}\n\n{story_directive(story_lens)}"
         messages = [
             ChatMessage("system", system),
             ChatMessage("user", user_text),
         ]
         tokens: list[str] = []
-        temperature = (min(self.temperature, RAG_TEMPERATURE_CAP)
-                       if rag_context else self.temperature)
+        temperature = (min(self.temperature, STORY_TEMPERATURE) if story else
+                       (min(self.temperature, RAG_TEMPERATURE_CAP)
+                        if rag_context else self.temperature))
         async for token in self.llm.chat_stream(messages, temperature):
             tokens.append(token)
             yield token
@@ -86,4 +103,4 @@ class RoleplayService:
         session.add("assistant", response)
 
 
-__all__ = ["RAG_TEMPERATURE_CAP", "RoleplayService"]
+__all__ = ["RAG_TEMPERATURE_CAP", "STORY_TEMPERATURE", "RoleplayService"]

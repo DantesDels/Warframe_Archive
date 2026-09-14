@@ -11,6 +11,7 @@ import unittest
 
 from discord_fakes import CHANNEL_ID, CREATOR_ID, make_bot
 
+from warframe_lore.discord.guild.story import LENS_COSMOGONIC
 from warframe_lore.discord.mixins.moderation.feedback import (
     REACTION_DOWN,
     REACTION_UP,
@@ -93,6 +94,54 @@ class FrameTests(unittest.TestCase):
         scenario.say("bonjour", author=scenario.creator)
         scenario.say("encore", author=scenario.creator)
         self.assertEqual(scenario.gateway.personas, ["hostile"])
+
+
+class StoryFrameTests(unittest.TestCase):
+    """Storyteller : récit ancré + flux question/réponse du point de départ."""
+
+    def test_un_recit_avec_lentille_est_un_tour_story_ancre(self):
+        scenario = make_bot()
+        scenario.say("raconte-moi l'histoire de 1999")
+        frame = scenario.gateway.last
+        self.assertTrue(frame["story"])
+        self.assertEqual(frame["story_lens"], "1999")
+        self.assertTrue(frame["rag"])
+        self.assertEqual(scenario.stats["by_kind"]["story"], 1)
+
+    def test_un_recit_sans_lentille_demande_le_point_de_depart(self):
+        scenario = make_bot()
+        scenario.say("raconte-moi l'histoire des Orokin")
+        question = scenario.channel.sent[-1].content
+        self.assertIn("Par quelle porte", question)
+        self.assertIsNone(scenario.gateway.last)      # pas de tour LLM
+
+    def test_la_reponse_du_menu_ouvre_le_recit_avec_la_lentille(self):
+        scenario = make_bot()
+        scenario.say("raconte-moi l'histoire des Orokin")
+        scenario.say("2", author=scenario.stranger)
+        frame = scenario.gateway.last
+        self.assertTrue(frame["story"])
+        self.assertEqual(frame["story_lens"], LENS_COSMOGONIC)
+        self.assertEqual(frame["text"], "raconte-moi l'histoire des Orokin")
+
+    def test_une_reponse_inconnue_garde_la_question_ouverte(self):
+        scenario = make_bot()
+        scenario.say("raconte-moi l'histoire des Orokin")
+        scenario.say("n'importe quoi", author=scenario.stranger)
+        self.assertIsNone(scenario.gateway.last)
+        self.assertIn("Par quelle porte",
+                      scenario.channel.sent[-1].content)
+
+    def test_un_autre_auteur_ne_repond_pas_a_la_question(self):
+        scenario = make_bot()
+        scenario.say("raconte-moi l'histoire des Orokin",
+                     author=scenario.creator)
+        scenario.say("1", author=scenario.stranger)
+        # L'organique ne consomme pas l'ouverture du Concepteur : son "1" part
+        # en tour de chat libre, jamais en récit (story=False).
+        frame = scenario.gateway.last
+        self.assertFalse(frame["story"])
+        self.assertIsNone(frame.get("story_lens"))
 
 
 if __name__ == "__main__":

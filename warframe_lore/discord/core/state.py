@@ -18,6 +18,7 @@ from .sessions import SessionPool
 MAX_LAST_MEMBERS = 256      # anaphora: last member discussed, per channel
 MAX_REFUSAL_USERS = 2048    # member-info refusal counters, per user
 MAX_ANSWERS = 512           # answers still open to feedback reactions
+MAX_STORY_ASKS = 64         # open storyteller starting-point questions
 
 
 def _prune(table: dict, cap: int) -> None:
@@ -37,6 +38,7 @@ class BotState:
     last_member: dict[int, MemberSnapshot] = field(default_factory=dict)
     refusals: dict[int, dict[str, int]] = field(default_factory=dict)
     answers: dict[int, int] = field(default_factory=dict)
+    story_asks: dict[int, tuple[int, str]] = field(default_factory=dict)
 
     # -- turns: one at a time per channel, interruptible by ``!stop`` ------
     def lock(self, channel_id: int) -> asyncio.Lock:
@@ -87,5 +89,20 @@ class BotState:
         """Channel of a tracked answer (``None`` = not one of our answers)."""
         return self.answers.get(message_id)
 
+    # -- storyteller starting-point questions ------------------------------
+    def open_story_ask(self, channel_id: int, author_id: int,
+                       request: str) -> None:
+        """Remember an unanswered starting-point question of a channel."""
+        self.story_asks[channel_id] = (author_id, request)
+        _prune(self.story_asks, MAX_STORY_ASKS)
 
-__all__ = ["MAX_ANSWERS", "MAX_LAST_MEMBERS", "MAX_REFUSAL_USERS", "BotState"]
+    def story_ask(self, channel_id: int) -> tuple[int, str] | None:
+        """Pending starting-point question of a channel (``None`` if none)."""
+        return self.story_asks.get(channel_id)
+
+    def close_story_ask(self, channel_id: int) -> None:
+        self.story_asks.pop(channel_id, None)
+
+
+__all__ = ["MAX_ANSWERS", "MAX_LAST_MEMBERS", "MAX_REFUSAL_USERS",
+           "MAX_STORY_ASKS", "BotState"]

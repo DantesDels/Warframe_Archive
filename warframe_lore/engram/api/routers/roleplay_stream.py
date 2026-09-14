@@ -53,7 +53,9 @@ def model_turn(container: Container, plan: TurnPlan, payload: dict,
         role_status=payload.get("role_status"),
         creator=payload.get("creator"),
         creator_mention=payload.get("creator_mention"),
-        lang=payload.get("lang"))
+        lang=payload.get("lang"),
+        story=bool(payload.get("story")),
+        story_lens=payload.get("story_lens"))
 
 
 __all__ = ["emit_reply", "emit_stream", "model_turn"]

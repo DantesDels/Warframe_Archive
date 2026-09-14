@@ -47,7 +47,10 @@ async def plan_turn(container: Container, payload: dict, user_text: str,
     # Introspection (the Oracle itself, its creator) never grounds on the
     # archives: the consciousness exception applies, and the no-passage
     # short-circuit must not answer "Données insuffisantes" there.
-    want_rag = bool(payload.get("rag")) and not is_self_reflection(user_text)
+    # A storyteller request is ALWAYS archive-grounded (when the bot did not
+    # already tag it ``rag``): the narrative must follow the documented lore.
+    want_rag = bool(payload.get("rag") or payload.get("story")) \
+        and not is_self_reflection(user_text)
     context_text = suggestion = None
     if want_rag:
         context_text, suggestion = await container.rag.resolve(

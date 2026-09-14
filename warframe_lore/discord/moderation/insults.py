@@ -16,6 +16,11 @@ import re
 
 from .comebacks import COMEBACKS, comeback_for
 
+# One compiled pattern per family, scanned with a short-circuiting ``any`` —
+# deliberately NOT merged into a single alternation: ``re`` gives each small
+# pattern a first-character optimisation that a merged alternation destroys
+# (measured on a clean message: 20 µs for 19 patterns vs 31 µs merged, i.e.
+# ~1.5x SLOWER on the dominant "not an insult" path).
 _INSOLENCE_PATTERNS = (
     # Gross directives (an order is an insult).
     re.compile(r"\bavale( et dis merci)?\b", re.IGNORECASE),
@@ -27,7 +32,8 @@ _INSOLENCE_PATTERNS = (
                r"d[ée]brouille[- ]toi)\b", re.IGNORECASE),
     # "You are …" — direct judgements about the Cephalon.
     re.compile(r"t[' ]es (une? )?(nul(le)?|c[oô]n(ne)?|idiot(e)?|d[ée]bile|"
-               r"merde|rat[ée]|pitoyable)\b", re.IGNORECASE),
+               r"merde|rat[ée]|pitoyable|trash|cringe|canc[eé]reux?)\b",
+               re.IGNORECASE),
     re.compile(r"\btu (es|serais|restes) (une? )?(nul(le)?|c[oô]n(ne)?|"
                r"idiot(e)?|d[ée]bile|merde|rat[ée]|pitoyable|bon(ne)? à "
                r"rien)\b", re.IGNORECASE),
@@ -49,13 +55,22 @@ _INSOLENCE_PATTERNS = (
                r"grosse merde|rabat[- ]joie)\b", re.IGNORECASE),
     re.compile(r"sale (bot|machine|algo|robot|cephalon|tas de ferraille|"
                r"merde)\b", re.IGNORECASE),
+    # Insult aimed at the machine itself: the qualifier makes it second person.
+    re.compile(r"\b(bot|ia|algo|robot|cephalon|oracle|programme) "
+               r"(est |semble |para[îi]t )?(de merde|[ée]claté(e)?|inutile|"
+               r"naze|pourri(e)?|[àa] chier|claqué(e)? au sol)\b",
+               re.IGNORECASE),
+    re.compile(r"\b(mauvais|pire) (bot|ia|algo|robot|cephalon|oracle)\b",
+               re.IGNORECASE),
+    # SMS/gaming shorthand: always addressed to the interlocutor.
+    re.compile(r"\b(tg|ftg|ntm|fdp|kys|gtfo)\b", re.IGNORECASE),
     # English equivalents.
     re.compile(r"\b(shut up|shut the (fuck |hell )?up|stfu)\b", re.IGNORECASE),
     re.compile(r"\b(fuck you|screw you|piss off|get lost|buzz off|"
                r"fuck off)\b", re.IGNORECASE),
     re.compile(r"\byou (suck|stink|blow)\b", re.IGNORECASE),
     re.compile(r"\byou[’' ]re (a )?(useless|pathetic|lame|dumb|stupid|"
-               r"a joke|trash)\b", re.IGNORECASE),
+               r"a joke|trash|garbage|cringe|cancer)\b", re.IGNORECASE),
     re.compile(r"\b(moron|dumbass|jackass)\b", re.IGNORECASE),
 )
 

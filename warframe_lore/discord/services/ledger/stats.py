@@ -10,9 +10,8 @@ from __future__ import annotations
 
 import math
 import time
-from collections import Counter
+from collections import Counter, deque
 from collections.abc import Callable
-from collections import deque
 
 _LATENCY_SAMPLES = 200
 

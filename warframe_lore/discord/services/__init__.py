@@ -23,10 +23,17 @@ from .ledger import (
     StrikeLedger,
     TurnStats,
 )
-from .settings import ChannelSettings, ChannelSettingsStore
+from .settings import (
+    LANGUAGES,
+    PERSONAS,
+    ChannelSettings,
+    ChannelSettingsStore,
+)
 from .transport import STOP_MARKER, MessageStreamer, RoleplayGateway
 
 __all__ = [
+    "LANGUAGES",
+    "PERSONAS",
     "STOP_MARKER",
     "VERDICT_DOWN",
     "VERDICT_UP",

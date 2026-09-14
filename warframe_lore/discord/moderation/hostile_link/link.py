@@ -15,7 +15,11 @@ import logging
 
 import discord
 
-from warframe_lore.protocols.roleplay import PERSONA_HOSTILE, PERSONA_ORACLE, MessageFrame
+from warframe_lore.protocols.roleplay import (
+    PERSONA_HOSTILE,
+    PERSONA_ORACLE,
+    MessageFrame,
+)
 
 from ...services.transport import MessageStreamer, RoleplayGateway
 

@@ -1,8 +1,10 @@
-"""Shared text helpers of the Discord bot (stopwords, content words).
+"""Shared text helpers of the Discord bot (stopwords, words, mentions).
 
 Both the member-name matcher and the wiki-image lookup must ignore the same
 function words: a French/English stopword is never a member abbreviation, and
 never a candidate entity name for an image.  One definition, two consumers.
+The mention helpers live here too: they are the only place that knows how a
+Discord mention token is spelled.
 """
 
 from __future__ import annotations
@@ -60,5 +62,28 @@ def content_words(text: str, min_len: int = MIN_WORD_LENGTH,
     return ordered
 
 
+def strip_bot_mention(text: str, bot_id: int | str | None) -> str:
+    """Remove the user-to-bot mention tokens (``@Oracle …``)."""
+    if not bot_id:
+        return text
+    mention = str(bot_id)
+    return (text.replace(f"<@{mention}>", "")
+                .replace(f"<@!{mention}>", "").strip())
+
+
+def mention_mapping(message) -> dict[str, str]:
+    """Snowflake → display name of every HUMAN member mentioned (bots out)."""
+    mapping: dict[str, str] = {}
+    for member in getattr(message, "mentions", ()):
+        if getattr(member, "bot", False):
+            continue
+        name = (getattr(member, "display_name", None)
+                or getattr(member, "name", "") or "").strip()
+        if name:
+            mapping[str(getattr(member, "id", ""))] = name
+    return mapping
+
+
 __all__ = ["ENGLISH_STOPWORDS", "FRENCH_STOPWORDS", "MAX_CANDIDATES",
-           "MIN_WORD_LENGTH", "STOPWORDS", "content_words"]
+           "MIN_WORD_LENGTH", "STOPWORDS", "content_words", "mention_mapping",
+           "strip_bot_mention"]

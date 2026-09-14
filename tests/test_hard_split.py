@@ -11,8 +11,12 @@ from __future__ import annotations
 import asyncio
 import unittest
 
-from warframe_lore.discord.services.gateway import RoleplayGateway
-from warframe_lore.discord.services.streamer import STOP_MARKER, MessageStreamer
+from warframe_lore.discord.services.transport import (
+    STOP_MARKER,
+    MessageStreamer,
+    RoleplayGateway,
+)
+from warframe_lore.protocols.roleplay import MessageFrame
 
 
 def _run(coro):
@@ -142,7 +146,8 @@ class GatewayHardSplitTests(unittest.TestCase):
             received.append(token)
             return STOP_MARKER in token
 
-        _run(gw.send("question", on_token=on_token, rag=True))
+        _run(gw.send(MessageFrame(text="question", rag=True),
+                     on_token=on_token))
         self.assertTrue(conn.closed)          # WS fermé (flux résiduel coupé)
         self.assertTrue(gw._closed)
         self.assertIn("déchets", received[0])  # le jeton a bien été vu
@@ -160,7 +165,7 @@ class GatewayHardSplitTests(unittest.TestCase):
             received.append(token)
             return False
 
-        _run(gw.send("question", on_token=on_token))
+        _run(gw.send(MessageFrame(text="question"), on_token=on_token))
         self.assertFalse(conn.closed)          # pas de marqueur : WS intact
         self.assertEqual(received, ["bonjour"])
 

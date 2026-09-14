@@ -8,11 +8,11 @@ Extracted from the monolithic bot so the card logic is unit-testable without
 
 from __future__ import annotations
 
-from .embed import CardEmbedMixin
-from .indices import CardIndicesMixin, _SECURITY_LEVELS
+from ...moderation.hostility import HostilityTracker
 from ..ledger.activity import MemberActivityStore
 from ..ledger.strikes import StrikeLedger
-from ...moderation.hostility import HostilityTracker
+from .embed import CardEmbedMixin
+from .indices import _SECURITY_LEVELS, CardIndicesMixin
 
 
 class MemberCardService(CardIndicesMixin, CardEmbedMixin):

@@ -18,7 +18,7 @@ import discord
 
 from warframe_lore.media import MediaIndex
 
-from ..text import content_words
+from ...text import content_words
 
 log = logging.getLogger("warframe_lore.discord.media")
 

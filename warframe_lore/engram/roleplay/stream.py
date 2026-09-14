@@ -71,8 +71,9 @@ class RoleplayService:
         session.add("user", user_text)
         system = self._archive_bloc(persona, rag_context, user_name, user_role)
         if user_name is not None or role_status is not None or session.turns:
+            history = self.window.render_history(session)
             system = (f"{system}\n\n"
-                      f"{speaker_bloc(user_name, role_status, self.window.render_history(session))}")
+                      f"{speaker_bloc(user_name, role_status, history)}")
         system = self._turn_directives(system, creator, role_status,
                                        creator_mention, lang)
         messages = [

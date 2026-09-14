@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import re
 
-from ..text import STOPWORDS
+from ..text import STOPWORDS, mention_mapping, strip_bot_mention
 
 _WORD_RE = re.compile(r"[a-zà-ÿ][\wà-ÿ]*", re.IGNORECASE)
 
@@ -72,5 +72,17 @@ def normalize_mentions(text: str,
     return out.strip()
 
 
+def normalize_message(message, bot_id: int | str | None) -> str:
+    """Authoritative text of a Discord message.
+
+    The bot mention is removed, then real guild-member mentions are replaced by
+    their display name.  The replacement happens BEFORE the hostile probe: a
+    legitimate "@Aze07" is an accreditation reference, not an echo-ping attack.
+    """
+    content = getattr(message, "content", "") or ""
+    return normalize_mentions(strip_bot_mention(content, bot_id),
+                              mention_mapping(message))
+
+
 __all__ = ["MIN_TOKEN_LENGTH", "leetspeak", "match_member_token",
-           "normalize_mentions"]
+           "normalize_mentions", "normalize_message"]

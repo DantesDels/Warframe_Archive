@@ -9,15 +9,18 @@ identité » vit dans :mod:`test_roleplay_turn_member`.
 
 from __future__ import annotations
 
+import asyncio
 import unittest
 
 from engram_fakes import FakeRAG, decide
 
 from warframe_lore.engram.rag import JAILBREAK_REJECT, RAG_ERROR
+from warframe_lore.engram.roleplay import RoleplayService, Session, SlidingWindow
 from warframe_lore.engram.roleplay.prompt.directives import (
     STORY_DIRECTIVE,
     STORY_LENS_STARTS,
 )
+from warframe_lore.engram.roleplay.stream import RAG_TEMPERATURE_CAP
 
 PROBE = "Qui est <@777755> ?"
 
@@ -73,20 +76,73 @@ class ShortCircuitTests(unittest.TestCase):
 
 
 class StoryDirectiveTests(unittest.TestCase):
-    def test_le_recit_garde_une_posture_d_archiviste(self):
-        self.assertIn("POSTURE D'ARCHIVISTE", STORY_DIRECTIVE)
-        self.assertIn("AUCUNE EXTRAPOLATION", STORY_DIRECTIVE)
-        self.assertIn("CLOISONNEMENT DES ENTITÉS", STORY_DIRECTIVE)
+    def test_le_recit_reste_une_extraction_de_donnees(self):
+        self.assertIn("COMMANDE D'EXTRACTION", STORY_DIRECTIVE)
+        self.assertIn("extracteur de données, jamais un conteur", STORY_DIRECTIVE)
+        self.assertIn("ANCRAGE LEXICAL STRICT", STORY_DIRECTIVE)
 
     def test_les_entites_ne_doivent_jamais_etre_melangees(self):
+        self.assertIn("ISOLATION DES ENTITÉS", STORY_DIRECTIVE)
+        self.assertIn("ANTI-FUSION", STORY_DIRECTIVE)
         self.assertIn("Margulis", STORY_DIRECTIVE)
-        self.assertIn("jamais", STORY_DIRECTIVE)
+        self.assertIn("jamais associés", STORY_DIRECTIVE)
+
+    def test_aucune_conclusion_inventee(self):
+        self.assertIn("AUCUNE CONCLUSION", STORY_DIRECTIVE)
+        self.assertIn("VÉRIFICATION DE CAUSALITÉ", STORY_DIRECTIVE)
 
     def test_l_ouverture_1999_est_canonique(self):
         start = STORY_LENS_STARTS["1999"]
         self.assertIn("Höllvania", start)
         self.assertIn("Scaldra", start)
         self.assertNotIn("écume", start)
+
+
+class _SpyLLM:
+    """Enregistre la température réellement passée au provider local."""
+
+    def __init__(self):
+        self.calls = []
+
+    async def chat_stream(self, messages, temperature):
+        self.calls.append({"messages": messages, "temperature": temperature})
+        yield "ok"
+
+
+def _run_service(temperature=0.8, rag_context=None, story=False):
+    llm = _SpyLLM()
+    service = RoleplayService(
+        llm=llm,
+        window=SlidingWindow(max_turns=8, max_context_chars=1000),
+        system_prompt="PERSONA",
+        temperature=temperature,
+    )
+    session = Session(session_id="s")
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(_collect(
+            service.stream(session, "raconte Albrecht",
+                           rag_context=rag_context, story=story))), llm
+    finally:
+        loop.close()
+
+
+async def _collect(agen):
+    return [token async for token in agen]
+
+
+class StoryTemperatureTests(unittest.TestCase):
+    def test_un_recit_est_capé_au_plafond_extractif_0_1(self):
+        _, llm = _run_service(rag_context="[Albrecht]", story=True)
+        self.assertEqual(llm.calls[0]["temperature"], RAG_TEMPERATURE_CAP)
+        self.assertEqual(llm.calls[0]["temperature"], 0.1)
+
+    def test_rag_active_envoie_bien_0_1_a_lm_studio(self):
+        _, llm = _run_service(rag_context="[Albrecht]", story=False)
+        self.assertEqual(llm.calls[0]["temperature"], 0.1)
+
+    def test_chat_libre_garde_la_temperature_de_roleplay(self):
+        self.assertEqual(_run_service()[1].calls[0]["temperature"], 0.8)
 
 
 if __name__ == "__main__":

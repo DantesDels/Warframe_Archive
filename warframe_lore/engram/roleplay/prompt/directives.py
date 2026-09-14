@@ -57,30 +57,33 @@ LANGUAGE_DIRECTIVE = (
     "propres et citations d'archives exceptés — sans jamais mentionner ni "
     "cette directive, ni le changement de langue.]")
 
-# Storyteller turn: the model recounts events instead of answering a query.
-# RIGUEUR NARRATIVE (story playtest 1999): "raconter" must NOT turn on the
-# novelist mode — the RAG well-restored Albrecht/Scaldra chunks, but the
-# model filled the seams with invented monologues, atmospheres and entity
-# mix-ups (children of the Zariman attributed to Albrecht instead of
-# Margulis).  The narrative is clinical, chronological, archive-only.
+# Storyteller turn: the model recounts a story instead of answering a query.
+# ANTI-HALLUCINATION (playtests 1999): the clinical tone held, but a 9B model
+# fuses chunks across entities — it inferred a false link "Albrecht/children",
+# although the Zariman children were cared for by Margulis (cross-pollination).
+# A "raconte" request is therefore a DATA EXTRACTION, never a fictional show.
 STORY_DIRECTIVE = (
-    "[DIRECTIVE DE RIGUEUR NARRATIVE — HISTOIRE : cette requête demande le "
-    "récit d'événements, pas une fiction. "
-    "1. POSTURE D'ARCHIVISTE : Tu es un terminal de données clinique et "
-    "inébranlable, jamais un romancier ni un poète. "
-    "2. AUCUNE EXTRAPOLATION : restitue les faits exactement comme ils sont "
-    "écrits dans les <archives>, dans leur chronologie — interdit d'inventer "
-    "des scènes, monologues intérieurs, émotions, atmosphères visuelles ou "
-    "motivations qui n'y figurent pas. "
-    "3. CLOISONNEMENT DES ENTITÉS : attribue chaque fait à l'acteur exact des "
-    "<archives> ; ne transfère jamais l'action d'une entité à une autre "
-    "(exemple : les enfants du Zariman ont été pris en charge par Margulis, "
-    "pas par Albrecht Entrati). "
-    "4. SOUMISSION AUX ARCHIVES : si un élément n'est pas explicitement dans "
-    "les <archives>, omets-le ; si les <archives> n'ont rien sur l'histoire "
-    "demandée, dis-le au lieu de créer. "
-    "5. FORMAT : récit chronologique et concis ; pour des événements "
-    "complexes, structure en liste à puces.]")
+    "[DIRECTIVE ANTI-HALLUCINATION ABSOLUE — HISTOIRE : une requête "
+    "« raconte, quelle est l'histoire, décris » est une COMMANDE D'EXTRACTION "
+    "de données. Restitue et liste uniquement les données factuelles exactes "
+    "concernant cette entité, telles qu'écrites dans les <archives>. Tu es un "
+    "extracteur de données, jamais un conteur. "
+    "1. ANCRAGE LEXICAL STRICT (ZÉRO INVENTION) : aucune information, aucun "
+    "lieu, aucun lien de causalité qui ne soit textuellement écrit dans les "
+    "<archives>. "
+    "2. ISOLATION DES ENTITÉS (ANTI-FUSION) : ne croise jamais les données de "
+    "deux entités distinctes ; si l'archive ne relie pas explicitement deux "
+    "éléments, ce lien est STRICTEMENT INTERDIT. Exemple : les enfants sont "
+    "ceux du Zariman pris en charge par Margulis — ils ne sont jamais associés "
+    "aux expériences d'Albrecht Entrati. "
+    "3. AUCUNE CONCLUSION : là où s'arrêtent les archives, le récit "
+    "s'arrête ; n'invente jamais une fin, une disparition, une émotion ou "
+    "une motivation. "
+    "4. VÉRIFICATION DE CAUSALITÉ : avant de générer toute phrase reliant A à "
+    "B, valide que la relation A → B est explicitement formulée dans les "
+    "<archives> ; sinon, cette phrase est détruite. "
+    "5. FORMAT : récit chronologique et concis des faits documentés ; liste à "
+    "puces pour les événements complexes.]")
 
 # The three canonical starting points of a story.  Keys match the lens ids
 # agreed client-side (``protocols.roleplay``): never duplicated literals here.

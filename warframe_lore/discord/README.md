@@ -179,4 +179,4 @@ Grouped by domain; every package exposes a facade in its `__init__.py`:
 | `commands/` | `prefix.py` (dispatch table + help), `ops.py`, `card.py`, `channel.py`, `arguments.py` |
 | `guild/` | `naming.py`, `questions.py`, `lore.py`, `creator.py`, `roles/` (`RoleHierarchy`, `Accreditation`, dump/scan tools) |
 | `moderation/` | Pure defences: `guards.py`, `hostility.py`, `insults.py`, `comebacks.py`, `hostile_link/` |
-| `services/` | `transport/` (`RoleplayGateway`, `MessageStreamer`, hard split, lifecycle), `ledger/` (`LedgerDB`, activity, strikes, feedback, stats), `cards/` (snapshot, indices, embed, wiki images), `settings.py` |
+| `services/` | `transport/gateway/` (`RoleplayGateway` = `connection` + `reader` + `requests` + `controls`), `transport/stream/` (`MessageStreamer`, hard split), `ledger/` (`LedgerDB`, activity, strikes, feedback, stats), `cards/` (snapshot, indices, embed, wiki images), `settings.py` |

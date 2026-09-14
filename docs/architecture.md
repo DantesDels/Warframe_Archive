@@ -213,10 +213,14 @@ unique constraint violation on the title.
   `questions.py` (`is_member_question`, `roles_question`, `self_info_request`),
   `lore.py` (RAG-trigger detection), `creator.py` (pseudo variants/jealousy),
   `roles/` (`RoleHierarchy`/`Accreditation`).
-- `services/`: `transport/` (`RoleplayGateway` — WS per channel, `MessageStreamer`
-  — anti-429 edits, hard split), `ledger/` (`LedgerDB`, `MemberActivityStore`,
-  `StrikeLedger`, `FeedbackStore`, `TurnStats`), `cards/` (`MemberCardService`,
-  `WikiImageService`), `settings.py` (`ChannelSettingsStore`).
+- `services/`: `transport/gateway/` (`RoleplayGateway`, composed of
+  `connection` — handshake/keepalive/close, `reader` — bounded frame queue with
+  per-frame timeout, `requests` — one streamed turn, `controls` — comment /
+  persona / reset frames), `transport/stream/` (`MessageStreamer` anti-429 edits
+  + hard split on the generation-end marker), `ledger/` (`LedgerDB`,
+  `MemberActivityStore`, `StrikeLedger`, `FeedbackStore`, `TurnStats`), `cards/`
+  (`MemberCardService`, `WikiImageService`), `settings.py`
+  (`ChannelSettingsStore`).
 
 ### `warframe_lore/ui` — local web interface
 - `LoreStore`: in-memory cache of megafiles `out/*.json` (meta on read,

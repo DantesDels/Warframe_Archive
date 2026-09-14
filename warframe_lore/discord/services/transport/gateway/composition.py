@@ -1,26 +1,29 @@
-"""WebSocket client towards the ENGRAM Roleplay terminal.
+"""Composition of the roleplay gateway mixins.
 
 Keeps one persistent connection per channel: sends a ``message`` frame and
-streams the received tokens by callback.  Composition of two
-single-responsibility mixins — connection lifecycle (:class:`GatewayLifecycle`)
-and request/response turns (:class:`GatewayRequests`) — so neither the timeouts
-nor the frame handling are mixed together.
+streams the received tokens by callback.  The behaviour lives in four
+single-responsibility mixins — connection lifecycle (:class:`GatewayLifecycle`),
+frame reader (:class:`FrameReaderMixin`), turns (:class:`GatewayRequests`) and
+control frames (:class:`GatewayControls`); this file only wires them and owns the
+shared attributes (socket, frame queue, turn lock).
 """
 
 from __future__ import annotations
 
 import asyncio
 
-from .lifecycle import (
+from .connection import (
     DEFAULT_CONNECT_TIMEOUT,
     DEFAULT_REPLY_TIMEOUT,
-    FRAME_QUEUE_SIZE,
     GatewayLifecycle,
 )
+from .controls import GatewayControls
+from .reader import FRAME_QUEUE_SIZE, FrameReaderMixin
 from .requests import EndHandler, GatewayRequests, TokenHandler
 
 
-class RoleplayGateway(GatewayLifecycle, GatewayRequests):
+class RoleplayGateway(GatewayLifecycle, FrameReaderMixin, GatewayRequests,
+                      GatewayControls):
     """Access point to the Oracle Roleplay, one WS connection per channel."""
 
     def __init__(self, url: str,

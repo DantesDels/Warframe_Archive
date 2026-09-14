@@ -9,7 +9,7 @@ one place.  The ``<archives>`` block is never altered (RAG integrity).
 from __future__ import annotations
 
 from ...auth import banner_for
-from ...rag.guards import HALLUCINATION_GUARD, HIERARCHY_BLOCK, JAILBREAK_BLOCK
+from ...rag import HALLUCINATION_GUARD, HIERARCHY_BLOCK, JAILBREAK_BLOCK
 from .directives import JEALOUSY_DIRECTIVE, language_directive
 
 ARCHIVES_HEADER = "Contexte documentaire restitué ci-dessous :"

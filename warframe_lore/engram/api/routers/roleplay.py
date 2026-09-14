@@ -22,8 +22,8 @@ from ....protocols.roleplay import (
     ErrorFrame,
     OpenFrame,
 )
-from ...rag.context import RAGContext, RAGContextFactory
-from ...rag.query_guard import sanitize_query
+from ...rag import RAGContext, RAGContextFactory
+from ...rag.query.query_guard import sanitize_query
 from ...roleplay import Session
 from ...roleplay.replies import member_comment
 from ...roleplay.turn import plan_turn

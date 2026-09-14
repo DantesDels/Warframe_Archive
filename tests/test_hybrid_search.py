@@ -17,7 +17,7 @@ from types import SimpleNamespace
 from sqlalchemy.dialects import postgresql
 
 from warframe_lore.engram.rag import AliasResolver, HybridSearch, PromptBuilder, RAGHit
-from warframe_lore.engram.rag.hybrid import (
+from warframe_lore.engram.rag.retrieval.hybrid import (
     _COSINE_WEIGHT,
     _FTS_WEIGHT,
     _section_label,

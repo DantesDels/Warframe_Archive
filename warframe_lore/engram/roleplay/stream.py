@@ -14,7 +14,7 @@ from collections.abc import AsyncIterator
 from ..llm import LLMProvider
 from ..models import ChatMessage
 from ..persona import HOSTILE_PERSONA
-from ..rag.guards import RAG_ERROR
+from ..rag import RAG_ERROR
 from .models import Session
 from .prompt import SlidingWindow, archive_bloc, speaker_bloc, turn_directives
 

@@ -26,14 +26,14 @@ from collections.abc import AsyncIterator
 
 from ..llm import EmbeddingProvider, LLMProvider
 from ..models import ChatMessage
-from .aliases import AliasResolver
 from .context import RAGContext
-from .guards import JAILBREAK_REJECT, RAG_ERROR
-from .probes import detect_probe
-from .prompt import PromptBuilder, RAGPrompt
-from .query_guard import _is_anaphoric, _lookup_entity, sanitize_query
-from .retriever import RAGHit, Retriever
-from .rewriter import QueryRewriter
+from .prompt.builder import PromptBuilder, RAGPrompt
+from .prompt.guards import JAILBREAK_REJECT, RAG_ERROR
+from .query.aliases import AliasResolver
+from .query.probes import detect_probe
+from .query.query_guard import _is_anaphoric, _lookup_entity, sanitize_query
+from .query.rewriter import QueryRewriter
+from .retrieval.retriever import RAGHit, Retriever
 from .sanitize import strip_trailing_padding
 
 log = logging.getLogger("warframe_lore.engram.rag")

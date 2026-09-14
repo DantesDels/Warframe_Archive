@@ -22,7 +22,7 @@ from warframe_lore.discord.guild import (
     roles_question,
     self_info_request,
 )
-from warframe_lore.engram.rag.probes import detect_probe
+from warframe_lore.engram.rag import detect_probe
 
 
 class MatchMemberTokenTests(unittest.TestCase):

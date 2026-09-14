@@ -10,7 +10,7 @@ per connection instead (see ``routers/roleplay.py``).
 
 from __future__ import annotations
 
-from ..rag.context import RAGContext, RAGContextFactory
+from ..rag import RAGContext, RAGContextFactory
 
 
 def get_rag_context() -> RAGContext:

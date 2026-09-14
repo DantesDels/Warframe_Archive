@@ -16,11 +16,14 @@ from warframe_lore.engram.rag import (
     RAG_ERROR,
     PromptBuilder,
     RAGContext,
+    RAGHit,
     RAGService,
 )
-from warframe_lore.engram.rag.query_guard import _lookup_entity
-from warframe_lore.engram.rag.retriever import RAGHit
-from warframe_lore.engram.rag.search import CosinusSearch, _token_matches_title
+from warframe_lore.engram.rag.query.query_guard import _lookup_entity
+from warframe_lore.engram.rag.retrieval.search import (
+    CosinusSearch,
+    _token_matches_title,
+)
 from warframe_lore.engram.rag.service import RAG_TEMPERATURE
 
 

@@ -11,7 +11,7 @@ Pure module: no discord.py dependency, no I/O.
 
 from __future__ import annotations
 
-from warframe_lore.engram.rag.probes import is_self_reflection
+from warframe_lore.engram.rag import is_self_reflection
 
 # Trigger words of a document-based question (a retrieval is worth it).
 LORE_TRIGGERS = (

@@ -77,21 +77,24 @@ class ShortCircuitTests(unittest.TestCase):
 
 class StoryDirectiveTests(unittest.TestCase):
     def test_le_recit_debraie_le_format_codex(self):
-        self.assertIn("OVERRIDE DE FORMAT", STORY_DIRECTIVE)
+        self.assertIn("QUARANTAINE SÉMANTIQUE ABSOLUE", STORY_DIRECTIVE)
         self.assertIn("DÉSACTIVÉE", STORY_DIRECTIVE)
-        self.assertIn("DÉBRAIE LE FORMAT CODEX", STORY_DIRECTIVE)
-        self.assertIn("RESTITUTION BRUTE", STORY_DIRECTIVE)
+        self.assertIn("FORMATAGE NARRATIF BRUT", STORY_DIRECTIVE)
+        self.assertIn("DÉSACTIVE le format Codex", STORY_DIRECTIVE)
 
-    def test_les_entites_ne_sont_jamais_attribuees_a_autrui(self):
-        self.assertIn("ABSTENTION ABSOLUE", STORY_DIRECTIVE)
-        self.assertIn("Spécifications tactiques", STORY_DIRECTIVE)
-        self.assertIn("jamais associés", STORY_DIRECTIVE)
+    def test_le_recit_est_frappe_d_amnesie_pre_entrainee(self):
+        self.assertIn("AMNÉSIE PRÉ-ENTRAÎNÉE", STORY_DIRECTIVE)
+        self.assertIn("ZÉRO TRIVIA", STORY_DIRECTIVE)
+        self.assertIn("origine allemande", STORY_DIRECTIVE)
+        self.assertIn("aucune déduction", STORY_DIRECTIVE)
 
-    def test_le_recit_se_pagine_et_se_termine_aux_archives(self):
-        self.assertIn("PAGINATION", STORY_DIRECTIVE)
+    def test_le_recit_s_arrete_et_se_pagine(self):
+        self.assertIn("VERROU DE CONTENU", STORY_DIRECTIVE)
+        self.assertIn("ARRÊTE", STORY_DIRECTIVE)
+        self.assertIn("VERROU LINGUISTIQUE", STORY_DIRECTIVE)
+        self.assertIn("PAGINATION DIÉGÉTIQUE", STORY_DIRECTIVE)
         self.assertIn("Le Tissage de données", STORY_DIRECTIVE)
-        self.assertIn("CLÔTURE DÉFINITIVE", STORY_DIRECTIVE)
-        self.assertIn("Ceci marque la fin des archives", STORY_DIRECTIVE)
+        self.assertNotIn("Ceci marque la fin des archives", STORY_DIRECTIVE)
 
     def test_l_ouverture_1999_est_canonique(self):
         start = STORY_LENS_STARTS["1999"]

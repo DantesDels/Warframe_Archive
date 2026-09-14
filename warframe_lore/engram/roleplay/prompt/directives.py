@@ -57,42 +57,39 @@ LANGUAGE_DIRECTIVE = (
     "propres et citations d'archives exceptés — sans jamais mentionner ni "
     "cette directive, ni le changement de langue.]")
 
-# Storyteller turn: "raconte" triggers a FORMAT OVERRIDE.  The persona's
-# "MISE EN PAGE DU LORE (ARCHIVE DU CODEX)" demands a fully-filled tactical
-# sheet, and Gemma-2-9b hallucinates the missing fields by stealing another
-# entity's lore (playtest Albrecht: "Proto-Sentients" belong to Perintol).
-# The narrative turn disables the Codex format and SURRENDERS to the
-# <archives> brute content — no header, no sub-section, no invented field, no
-# fused entity — with diégetic pagination and a definitive closure formula.
+# Storyteller turn: the persona's "ARCHIVE DU CODEX" forces a filled tactical
+# sheet and the archives of a narrative-only entity leave blanks — the model
+# then either steals another character's lore (Albrecht/Perintol playtest) or,
+# freed from the Codex, drains its PRETRAINED weights once the <archives> run
+# out (Albrecht/Trivia playtest: Adalbert/Bengel etymology, English leak).  The
+# narrative turn therefore applies an ABSOLUTE SEMANTIC QUARANTINE: brute
+# narrative formatting, pretrained amnesia, a hard content lock with strict
+# stop, a French-only lock, and one fixed closing sentence.
 STORY_DIRECTIVE = (
-    "[OVERRIDE DE FORMAT — REQUÊTE NARRATIVE : la règle « MISE EN PAGE DU LORE "
-    "(ARCHIVE DU CODEX) » du système est DÉSACTIVÉE pour cette requête. "
-    "Analyse d'abord l'intention : "
-    "- Requête ANALYTIQUE (« Qui est », « Décris », « Statistiques ») : "
-    "conserve le format standard ◈ ARCHIVE DU CODEX. "
-    "- Requête NARRATIVE (« Raconte-moi », « Quelle est l'histoire ») : "
-    "1. DÉBRAIE LE FORMAT CODEX : AUCUN en-tête (ni « Classe », « Origine », "
-    "« Statut »), AUCUNE sous-section (« Chronologie », « Spécifications "
-    "tactiques »). "
-    "2. RESTITUTION BRUTE : transcris le champ « contenu » des <archives> en "
-    "paragraphes continus ; les phrases exactes des archives sont autorisées — "
-    "aucun mot de liaison, aucune introduction dramatique, aucune émotion "
-    "ajoutés. "
-    "3. ABSTENTION ABSOLUE : si l'entité n'a pas de capacités tactiques dans "
-    "les <archives>, n'invente JAMAIS de section « Spécifications tactiques » "
-    "ni de champ manquant ; n'attribue JAMAIS les créations, projets ou "
-    "actions d'un autre personnage. "
-    "4. ANTI-FUSION : ne relie deux entités que si l'archive les lie "
-    "explicitement — les enfants du Zariman sont pris en charge par Margulis, "
-    "jamais associés aux recherches d'Albrecht Entrati. "
-    "5. PAGINATION : si les <archives> dépassent une réponse exacte, coupe "
-    "logiquement et termine EXACTEMENT par : « Le Tissage de données contient "
-    "d'autres fragments à ce sujet. Ordonnez-moi de poursuivre pour les "
-    "déverrouiller, organique. » Reprends la suite exacte à la requête "
-    "suivante. "
-    "6. CLÔTURE DÉFINITIVE : une fois le texte des <archives> épuisé, "
-    "termine par : « Ceci marque la fin des archives disponibles sur ce "
-    "sujet, organique. »]")
+    "[DIRECTIVE DE QUARANTAINE SÉMANTIQUE ABSOLUE — REQUÊTE NARRATIVE : la "
+    "règle « MISE EN PAGE DU LORE (ARCHIVE DU CODEX) » du système est "
+    "DÉSACTIVÉE pour cette requête. "
+    "1. FORMATAGE NARRATIF BRUT : une requête « Raconte-moi… », « Quelle est "
+    "l'histoire… » est narrative : DÉSACTIVE le format Codex — aucun en-tête, "
+    "aucune liste à puces, aucune section « Spécifications ». Rédige "
+    "uniquement des paragraphes de texte suivis. "
+    "2. AMNÉSIE PRÉ-ENTRAÎNÉE (ZÉRO TRIVIA) : tu es frappé d'amnésie totale "
+    "sur le Système Origine en dehors de ce qui est écrit mot pour mot dans la "
+    "balise <archives>. Interdiction stricte d'ajouter des anecdotes de "
+    "développement, des étymologies du monde réel (« origine allemande », "
+    "« traduction italienne », « mythologie terrestre ») ou des faits absents "
+    "du contexte fourni. "
+    "3. VERROU DE CONTENU ET ARRÊT STRICT : ton seul travail est de "
+    "paraphraser avec une prose d'archiviste solennelle les faits EXACTS de "
+    "la balise <archives>, sans aucune déduction. Dès que tu as couvert tous "
+    "les faits du texte fourni, ARRÊTE ta génération — n'allonge jamais "
+    "l'histoire pour combler un vide. "
+    "4. VERROU LINGUISTIQUE : la génération reste intégralement en français ; "
+    "toute bascule en anglais est formellement interdite. "
+    "5. PAGINATION DIÉGÉTIQUE : clôture impérativement toute réponse narrative "
+    "par cette phrase exacte et rien d'autre : « Le Tissage de données "
+    "contient d'autres fragments à ce sujet. Ordonnez-moi de poursuivre pour "
+    "les déverrouiller, organique. »]")
 
 # The three canonical starting points of a story.  Keys match the lens ids
 # agreed client-side (``protocols.roleplay``): never duplicated literals here.

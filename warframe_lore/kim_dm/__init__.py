@@ -33,8 +33,18 @@ from warframe_lore.kim_dm.parser import parse_dialogue_file
 from warframe_lore.kim_dm.store import KimDM
 
 __all__ = [
+    "BRANCH",
+    "DATA_DIRNAME",
+    "DIALECT_FILE_PREFIX",
+    "DIALOGUE_FILES",
+    "DICTS_DIRNAME",
     "KimDM",
+    "RAW_BASE",
+    "REPO",
+    "SUPPORTED_LANGS",
     "WIKI_PAGE_MAP",
-    "parse_dialogue_file",
+    "_anchor_graph",
+    "_merge_graphs",
     "mirror_kim_dm",
+    "parse_dialogue_file",
 ]

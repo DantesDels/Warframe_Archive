@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +19,7 @@ log = logging.getLogger("warframe_lore.output")
 
 def now_iso_utc() -> str:
     """ISO UTC timestamp (seconds) for the ``generated_at`` metadata."""
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def read_existing_entries(megafile_path: Path) -> dict[str, dict]:

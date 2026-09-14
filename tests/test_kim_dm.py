@@ -9,7 +9,6 @@ from pathlib import Path
 
 from warframe_lore.kim_dm import KimDM, _anchor_graph, parse_dialogue_file
 
-
 ENGINE = "/EE/Types/Engine/"
 
 
@@ -47,7 +46,7 @@ class NativeDialogueTests(unittest.TestCase):
         self.assertEqual(graph["nodes"][0]["type"], ENGINE + "StartDialogueNode")
         self.assertEqual(graph["nodes"][0]["text"], "OfficialRank2Title")
         self.assertNotIn("root", {item["id"] for item in graph["nodes"]})
-        for item, name in zip(graph["nodes"][1:], lookalikes):
+        for item, name in zip(graph["nodes"][1:], lookalikes, strict=True):
             with self.subTest(node_type=name):
                 self.assertEqual(item["type"], name)
                 self.assertEqual(item["kind"], "system")
@@ -161,7 +160,8 @@ class NativeDialogueTests(unittest.TestCase):
         self.assertEqual([c["id"] for c in conversations], ["First", "Second"])
         for conversation, root, ids in zip(conversations, ("dm10", "dm20"),
                                            ({"dm10", "dm12", "dm99"},
-                                            {"dm20", "dm22", "dm99"})):
+                                            {"dm20", "dm22", "dm99"}),
+                                           strict=True):
             graph = conversation["graph"]
             self.assertEqual(graph["rootId"], root)
             self.assertEqual({n["id"] for n in graph["nodes"]}, ids)
@@ -186,7 +186,8 @@ class NativeDialogueTests(unittest.TestCase):
                 self.assertEqual(conversation["script"], [])
 
     def test_localization_preserves_text_and_translates_speakers_everywhere(self):
-        kim_dict = {"/title": "Official title", "/line": " First  line\n\nSecond\r\n{P1}",
+        kim_dict = {"/title": "Official title",
+                    "/line": " First  line\n\nSecond\r\n{P1}",
                     "/name": "Translated name", "/content": "Content\ntranslation",
                     "/choice": "Choice\ntranslation", "/fallback": "Wiki name"}
         native = [
@@ -223,7 +224,8 @@ class NativeDialogueTests(unittest.TestCase):
                           for n in conversation["graph"]["nodes"][1:-1]], expected)
         self.assertEqual([(n["speaker"], n["text"], n["player"])
                           for n in conversation["messages"]], expected)
-        self.assertEqual([n["index"] for n in conversation["messages"]], list(range(1, 7)))
+        self.assertEqual([n["index"] for n in conversation["messages"]],
+                         list(range(1, 7)))
         npc_steps = [s for s in conversation["script"] if s["kind"] == "npc"]
         self.assertEqual([(s["speaker"], s["text"], s["player"]) for s in npc_steps],
                          [entry for entry in expected if not entry[2]])
@@ -281,7 +283,8 @@ class NativeDialogueTests(unittest.TestCase):
         graph = conversation["graph"]
         self.assertEqual(len(graph["nodes"]), len(native))
         self.assertEqual(len(graph["edges"]), len(native) - 1)
-        for item, (name, _, expected_text) in zip(graph["nodes"][1:-1], actions):
+        nodes = graph["nodes"][1:-1]
+        for item, (name, _, expected_text) in zip(nodes, actions, strict=True):
             with self.subTest(node_type=name):
                 self.assertEqual(item["kind"], "system")
                 self.assertEqual(item["type"], ENGINE + name)
@@ -302,7 +305,8 @@ class NativeDialogueTests(unittest.TestCase):
                      if c["id"] == "First")
         graph = first["graph"]
         self.assertEqual([n["id"] for n in graph["nodes"]], ["dm0", "dm1", "dm3"])
-        self.assertEqual(graph["nodes"][1]["text"], "Chat finished\nNext conversation: Next chat")
+        self.assertEqual(graph["nodes"][1]["text"],
+                         "Chat finished\nNext conversation: Next chat")
         self.assertEqual(graph["nodes"][2]["text"], "Chat finished")
         self.assertTrue(all(n["terminal"] for n in graph["nodes"][1:]))
         self.assertEqual(graph["edges"][-1]["target"], "dm3")
@@ -402,8 +406,8 @@ class KimDMLoadTests(unittest.TestCase):
         self.assertEqual(conversation["messages"], [
             {"index": 1, "speaker": "Amir", "text": "English\nline", "player": False,
              "lines": ["English", "line"]},
-            {"index": 2, "speaker": "English name", "text": "English\nline", "player": False,
-             "lines": ["English", "line"]}])
+            {"index": 2, "speaker": "English name", "text": "English\nline",
+             "player": False, "lines": ["English", "line"]}])
         self.assertEqual(dm.graph("Amir", "AmirRank1Convo1"), conversation["graph"])
         self.assertIsNone(dm.conversations_for("Jabir"))
         self.assertIsNone(dm.graph("Amir", "missing"))
@@ -411,8 +415,8 @@ class KimDMLoadTests(unittest.TestCase):
         self.assertIsNone(dm.graph("Missing"))
         self.write_json(self.dicts / "en.json", {"/hello": "Reloaded", "/name": "Name"})
         dm.load()
-        self.assertEqual(dm.conversation("Amir", "AmirRank1Convo1")["messages"][0]["text"],
-                         "Reloaded")
+        reloaded = dm.conversation("Amir", "AmirRank1Convo1")
+        self.assertEqual(reloaded["messages"][0]["text"], "Reloaded")
 
     def test_aggregate_root_preserves_all_shared_and_parallel_routes(self):
         native = [
@@ -436,14 +440,17 @@ class KimDMLoadTests(unittest.TestCase):
         roots = [e for e in aggregate["edges"] if e["source"] == "root"]
         self.assertEqual({e["target"] for e in roots}, {"dm10", "dm20"})
         native_edges = {e["id"]: e for e in first["edges"] + second["edges"]}
-        self.assertEqual({e["id"]: e for e in aggregate["edges"] if e["source"] != "root"},
-                         native_edges)
+        aggregated = {e["id"]: e for e in aggregate["edges"]
+                      if e["source"] != "root"}
+        self.assertEqual(aggregated, native_edges)
         self.assertEqual(len(aggregate["edges"]), len(native_edges) + 2)
-        self.assertEqual(len(aggregate["edges"]), len({e["id"] for e in aggregate["edges"]}))
-        self.assertEqual(len([e for e in aggregate["edges"] if e["source"] == "dm30"]), 5)
+        self.assertEqual(len(aggregate["edges"]),
+                         len({e["id"] for e in aggregate["edges"]}))
+        from_dm30 = [e for e in aggregate["edges"] if e["source"] == "dm30"]
+        self.assertEqual(len(from_dm30), 5)
         self.assertEqual(first, dm.graph("Amir", "First"))
 
-    def test_wiki_anchor_consumer_still_accepts_nodes_and_edges_without_native_fields(self):
+    def test_wiki_anchor_accepts_nodes_and_edges_without_native_fields(self):
         nodes = [{"id": "n_1", "speaker": "Amir", "text": "Hello", "player": False,
                   "terminal": False}, {"id": "n_2", "text": "Goodbye"}]
         edges = [{"source": "n_1", "target": "n_2", "label": ""}]
@@ -452,7 +459,8 @@ class KimDMLoadTests(unittest.TestCase):
         self.assertEqual(graph["nodes"][1:], nodes)
         self.assertEqual(graph["edges"][0], edges[0])
         self.assertEqual(graph["edges"][1]["target"], "n_1")
-        self.assertEqual(_anchor_graph(nodes, edges, "Wiki", force=False)["nodes"], nodes)
+        anchored = _anchor_graph(nodes, edges, "Wiki", force=False)
+        self.assertEqual(anchored["nodes"], nodes)
 
 
 if __name__ == "__main__":

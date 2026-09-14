@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class CanonStatus(str, Enum):
+class CanonStatus(StrEnum):
     """Canon status of a page.
 
     Values:

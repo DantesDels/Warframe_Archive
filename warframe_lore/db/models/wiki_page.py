@@ -54,7 +54,7 @@ class WikiPage(Base):
         Index("idx_wiki_pages_canon", "canon_status"),
     )
 
-    lore_chunks: Mapped[list["LoreChunk"]] = relationship(
+    lore_chunks: Mapped[list[LoreChunk]] = relationship(
         back_populates="wiki_page", cascade="all, delete-orphan")
-    kim_dialogues: Mapped[list["KimDialogue"]] = relationship(
+    kim_dialogues: Mapped[list[KimDialogue]] = relationship(
         back_populates="wiki_page", cascade="all, delete-orphan")

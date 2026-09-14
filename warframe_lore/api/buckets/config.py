@@ -19,7 +19,7 @@ class BucketConfig:
         self._by_id = {b.id: b for b in self.specs}
 
     @classmethod
-    def from_file(cls, path) -> "BucketConfig":
+    def from_file(cls, path) -> BucketConfig:
         data = json.loads(path.read_text(encoding="utf-8"))
         specs = [CategorySpec(**raw) for raw in data.get("buckets", [])]
         return cls(specs)

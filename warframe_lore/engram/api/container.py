@@ -15,9 +15,14 @@ from sqlalchemy.ext.asyncio import (
 from ..config import EngramConfig
 from ..llm import LMStudioProvider
 from ..persona import Persona
-from ..rag import (AliasResolver, CosinusSearch, HybridSearch,
-                   PromptBuilder, RAGService, QueryRewriter)
-from ..roleplay import (RoleplayService, SlidingWindow, UserMemoryStore)
+from ..rag import (
+    CosinusSearch,
+    HybridSearch,
+    PromptBuilder,
+    QueryRewriter,
+    RAGService,
+)
+from ..roleplay import RoleplayService, SlidingWindow, UserMemoryStore
 from .ratelimit import SlidingWindowLimiter
 
 

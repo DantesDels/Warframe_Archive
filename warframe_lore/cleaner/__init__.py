@@ -18,4 +18,5 @@ from __future__ import annotations
 from warframe_lore.cleaner.config import CLEANER_CONFIG_PATH, CleanerConfig
 from warframe_lore.cleaner.pipeline import BULLET_TOKEN, CleanOutput, WikitextCleaner
 
-__all__ = ["WikitextCleaner", "CleanerConfig", "CLEANER_CONFIG_PATH"]
+__all__ = ["BULLET_TOKEN", "CLEANER_CONFIG_PATH", "CleanOutput",
+           "CleanerConfig", "WikitextCleaner"]

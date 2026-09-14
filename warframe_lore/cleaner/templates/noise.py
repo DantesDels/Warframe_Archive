@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import re
 
-from mwparserfromhell.nodes import Template
-
 from warframe_lore.cleaner.config import CleanerConfig
 
 

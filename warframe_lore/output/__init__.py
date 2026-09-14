@@ -4,13 +4,13 @@ Each entry's schema includes ``canon_status`` to allow RAG / notebooks
 to filter official lore from player theories.
 """
 
+from .entries import build_output_entry
 from .models import (
     CanonStatus,
     MegafileMetadata,
     OutputEntry,
     merge_canon_status,
 )
-from .entries import build_output_entry
 from .writer import MegafileManager
 
 __all__ = [

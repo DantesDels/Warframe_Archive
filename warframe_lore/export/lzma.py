@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import lzma
 import logging
+import lzma
 
 log = logging.getLogger(__name__)
 

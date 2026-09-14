@@ -9,13 +9,15 @@ and dies with the request.
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Request
 from starlette.responses import StreamingResponse
 
-from ..deps import get_rag_context
-from ..schemas import RAGRequest, RAGResponse, SourceDocument
 from ...rag import RAGService
 from ...rag.context import RAGContext
+from ..deps import get_rag_context
+from ..schemas import RAGRequest, RAGResponse, SourceDocument
 
 router = APIRouter(prefix="/v1/rag", tags=["rag"])
 
@@ -25,8 +27,9 @@ def _rag(request: Request) -> RAGService:
 
 
 @router.post("")
-async def document_rag(req: RAGRequest, request: Request,
-                       rag_context: RAGContext = Depends(get_rag_context)):
+async def document_rag(
+        req: RAGRequest, request: Request,
+        rag_context: Annotated[RAGContext, Depends(get_rag_context)]):
     service = _rag(request)
     if req.stream:
         return StreamingResponse(

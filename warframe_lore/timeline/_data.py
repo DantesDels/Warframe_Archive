@@ -19,7 +19,7 @@ from __future__ import annotations
 
 # Each node: id, parent_id, label, type, year, note, codex_slug (str | None)
 NODES: list[dict] = [
-    # ------------------------------------------------------------ ères (racines)
+    # ------------------------------ ères (racines)
     {
         "id": "era-orokin", "parent_id": None,
         "label": "L'Empire Orokin", "type": "era", "year": "Le Premier Monde",
@@ -51,7 +51,7 @@ NODES: list[dict] = [
                 "qui n'a jamais eu lieu. Cette branche éclate vers Duviri "
                 "(Drifter) et 1999 (Albrecht).",
     },
-    # -------------------------------------------------- mondes-paradoxes fusionnés
+    # ------------------------------ mondes-paradoxes fusionnés
     # era-quête fusionnés : "L'An 1999" + quête "1999" -> node-1999 ;
     # "Duviri" + quête "The Duviri Paradox" -> node-duviri. Un seul nœud,
     # jamais d'îlot en doublon. Les fragments pendent directement sous l'ère.
@@ -69,7 +69,7 @@ NODES: list[dict] = [
         "note": "Le drame du Drifter pris dans la Spirale infinie entre le "
                 "Vide et la réalité, quête 'The Duviri Paradox' incluse.",
     },
-    # ------------------------------------------------------------ quêtes : Système d'Origine (chemin principal)
+    # ------------------------------ quêtes : Système d'Origine (chemin principal)
     {
         "id": "q-sacrifice", "parent_id": "era-origin",
         "label": "The Sacrifice", "type": "quest", "codex_slug": "the-sacrifice",
@@ -119,7 +119,7 @@ NODES: list[dict] = [
         "note": "Albrecht Entrati, le Requiem et la cavité dans les "
                 "fondations de la réalité.",
     },
-    # ------------------------------------------------------------ quêtes : Zariman (branche paradoxale)
+    # ------------------------------ quêtes : Zariman (branche paradoxale)
     {
         "id": "q-zariman", "parent_id": "era-zariman",
         "label": "Angels of the Zariman", "type": "quest",
@@ -136,13 +136,13 @@ NODES: list[dict] = [
         "label": "Heart of Deimos", "type": "quest", "codex_slug": "heart-of-deimos",
         "note": "Le cœur de l'Infestation, battant sous Deimos.",
     },
-    # ------------------------------------------------------------ quêtes : node-1999 (ère fusionnée)
+    # ------------------------------ quêtes : node-1999 (ère fusionnée)
     {
         "id": "q-hex", "parent_id": "node-1999",
         "label": "The Hex", "type": "quest", "codex_slug": "the-hex",
         "note": "Les six, la KIM et le lien qui défie les boucles.",
     },
-    # ------------------------------------------------------------ personnages
+    # ------------------------------ personnages
     {
         "id": "c-ballas", "parent_id": "era-orokin",
         "label": "Ballas", "type": "character", "codex_slug": "ballas",
@@ -180,7 +180,7 @@ NODES: list[dict] = [
         "note": "L'archef dément : il a pillé la cavité de la réalité, "
                 "falsifié l'éternisme et préparé la veille de 1999.",
     },
-    # ------------------------------------------------------------ lore des Warframes
+    # ------------------------------ lore des Warframes
     {
         "id": "wf-umbra", "parent_id": "q-sacrifice",
         "label": "Excalibur Umbra", "type": "warframe-lore",
@@ -200,7 +200,7 @@ NODES: list[dict] = [
         "note": "La glace levée contre le Loup : son éclat a scellé le "
                 "mur de Cetus et demeure dans la veillée de Saya.",
     },
-    # ------------------------------------------------------------ fragments
+    # ------------------------------ fragments
     {"id": "f-sacrifice-excal", "parent_id": "q-sacrifice",
      "label": "Excalibur Umbra · Ballas", "type": "fragment"},
     {"id": "f-sacrifice-lotus", "parent_id": "q-sacrifice",

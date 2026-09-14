@@ -126,7 +126,8 @@ class ChunkingTests(unittest.TestCase):
         self.assertEqual(chunks[0].section_title, INTRODUCTION_TITLE)
 
     def test_undersized_trailing_block_merged(self) -> None:
-        text = "## Section A\n\n" + "Paragraphe du bloc A assez long pour être retenu. " * 4
+        paragraph = "Paragraphe du bloc A assez long pour être retenu. " * 4
+        text = "## Section A\n\n" + paragraph
         text += "\n## Section B\n\nCourt."
         chunks = chunk_into_lorechunks(text, source_url=URL, page_title="PageX")
         self.assertEqual(len(chunks), 1)
@@ -183,7 +184,8 @@ class ResilienceTests(unittest.TestCase):
 
 
 class _FakeExtractor(BaseExtractor):
-    def __init__(self, page: ExtractedPage, fail: bool = False, delay: float = 0.02) -> None:
+    def __init__(self, page: ExtractedPage, fail: bool = False,
+                 delay: float = 0.02) -> None:
         self.page = page
         self.fail = fail
         self.delay = delay

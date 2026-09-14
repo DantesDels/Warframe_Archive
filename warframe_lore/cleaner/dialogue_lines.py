@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from warframe_lore.cleaner.bullets import BULLET_TOKEN, _BULLET_LINE
+from warframe_lore.cleaner.bullets import _BULLET_LINE, BULLET_TOKEN
 
 
 def normalise_indentation(markdown_text: str) -> str:

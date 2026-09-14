@@ -180,13 +180,17 @@ unique constraint violation on the title.
   short-circuit), `prompt.py` (XML `<archives>` template + guards), `search.py`
   (pgvector cosine), `aliases.py` (nickname → canonical pre-vectorization),
   `probes.py` (SQLi/elevation detection), `sanitize.py` (trailing padding).
-- `roleplay/`: `stream.py` (turn runner: history + streaming), `prompt/`
-  (payload assembly — `blocks.py` BLOC 1 + trailing directives, `directives.py`
-  speaker sheet / civility / jealousy / answer-language texts, `window.py`
-  sliding history), `identity.py` (deterministic speaker-identity and
-  member-card replies), `memory.py` (per-user sliding window).
-- `api/`: `routers/roleplay.py` (WS terminal + `comment` one-shot member
-  observation), `document_rag.py`, `container.py` (DI).
+- `roleplay/`: `stream.py` (turn runner: history + streaming), `turn.py`
+  (`plan_turn` — the deterministic short-circuits BEFORE the LLM: hostile probe,
+  missing archives, guild member, speaker identity), `prompt/` (payload assembly
+  — `blocks.py` BLOC 1 + trailing directives, `directives.py` speaker sheet /
+  civility / jealousy / answer-language texts, `window.py` sliding history),
+  `replies/` (`identity.py` deterministic identity and member answers,
+  `comment.py` one-shot member-card observation), `memory.py` (per-user window).
+- `api/`: `routers/roleplay.py` (WS terminal — transport only: per-IP quota,
+  frame dispatch, per-user session/anaphora), `routers/roleplay_stream.py`
+  (frame emission: deterministic reply, token stream + purged `end`),
+  `document_rag.py`, `container.py` (DI).
 
 ### `warframe_lore/discord` — Loremaster bot (Oracle terminal)
 - `bot.py` `LoreMasterBot`: a `discord.Client` composed of single-responsibility
@@ -213,10 +217,14 @@ unique constraint violation on the title.
   `questions.py` (`is_member_question`, `roles_question`, `self_info_request`),
   `lore.py` (RAG-trigger detection), `creator.py` (pseudo variants/jealousy),
   `roles/` (`RoleHierarchy`/`Accreditation`).
-- `services/`: `transport/` (`RoleplayGateway` — WS per channel, `MessageStreamer`
-  — anti-429 edits, hard split), `ledger/` (`LedgerDB`, `MemberActivityStore`,
-  `StrikeLedger`, `FeedbackStore`, `TurnStats`), `cards/` (`MemberCardService`,
-  `WikiImageService`), `settings.py` (`ChannelSettingsStore`).
+- `services/`: `transport/gateway/` (`RoleplayGateway`, composed of
+  `connection` — handshake/keepalive/close, `reader` — bounded frame queue with
+  per-frame timeout, `requests` — one streamed turn, `controls` — comment /
+  persona / reset frames), `transport/stream/` (`MessageStreamer` anti-429 edits
+  + hard split on the generation-end marker), `ledger/` (`LedgerDB`,
+  `MemberActivityStore`, `StrikeLedger`, `FeedbackStore`, `TurnStats`), `cards/`
+  (`MemberCardService`, `WikiImageService`), `settings.py`
+  (`ChannelSettingsStore`).
 
 ### `warframe_lore/ui` — local web interface
 - `LoreStore`: in-memory cache of megafiles `out/*.json` (meta on read,

@@ -8,7 +8,7 @@ body by the cleaner (``CleanOutput``).
 from __future__ import annotations
 
 import logging
-from typing import Callable
+from collections.abc import Callable
 
 from ..output import CanonStatus
 

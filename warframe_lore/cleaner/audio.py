@@ -3,7 +3,8 @@
 File names left by audio players in quest transcriptions:
     * unique token          -> ``LeekterSlippery.ogg``, ``DCodexA00010Silvana_en.ogg``
     * code created in two   -> ``DWraithQM1CrpArrive0060RJCephalon en.ogg``
-      parts (locale en)       ``DThroneRoom0050Erra en.mp3`` ``BbPainAmbulas00020 en.ogg``
+      parts (locale en)       ``DThroneRoom0050Erra en.mp3``
+                              ``BbPainAmbulas00020 en.ogg``
 Note: ``[a-z0-9_]`` with re.IGNORECASE also accepts uppercase.
 """
 

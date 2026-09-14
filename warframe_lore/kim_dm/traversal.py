@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from warframe_lore.kim_dm.parser import _DialogueFile
 
 
-def build_graph(parser: "_DialogueFile", start: dict) -> dict:
+def build_graph(parser: _DialogueFile, start: dict) -> dict:
     """Full graph reachable from a native start node."""
     visible: dict[int, dict] = {}
     edges: list[dict] = []
@@ -31,7 +31,7 @@ def build_graph(parser: "_DialogueFile", start: dict) -> dict:
             "nodes": list(visible.values()), "edges": edges}
 
 
-def build_messages(parser: "_DialogueFile", start: dict) -> list[dict]:
+def build_messages(parser: _DialogueFile, start: dict) -> list[dict]:
     """Iterative DFS of the replies, no cap nor recursion on cycles."""
     lines: list[dict] = []
     visited: set[int] = set()
@@ -60,7 +60,7 @@ def build_messages(parser: "_DialogueFile", start: dict) -> list[dict]:
     return lines
 
 
-def build_script(parser: "_DialogueFile", start: dict) -> list[dict]:
+def build_script(parser: _DialogueFile, start: dict) -> list[dict]:
     """Existing linear projection: first branch, choices as prompts.
 
     Actions are traversed, never emitted as NPC replies.

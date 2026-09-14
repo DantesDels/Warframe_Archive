@@ -13,13 +13,13 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .models import MegafileMetadata, OutputEntry
 from .fusion import (
     atomic_write_json,
     build_megafile,
     now_iso_utc,
     read_existing_entries,
 )
+from .models import MegafileMetadata, OutputEntry
 
 log = logging.getLogger("warframe_lore.output")
 

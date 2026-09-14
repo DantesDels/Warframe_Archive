@@ -28,7 +28,8 @@ class LoreChunk(BaseModel):
 
     source_url: HttpUrl
     page_title: str = Field(..., min_length=1, description="Nom de la page wiki.")
-    section_title: str = Field(..., min_length=1, description="Titre de la section logique.")
+    section_title: str = Field(..., min_length=1,
+                               description="Titre de la section logique.")
     content: str = Field(
         ..., min_length=MIN_CONTENT_LENGTH, description="Text brut de la section."
     )

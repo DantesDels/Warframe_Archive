@@ -28,12 +28,21 @@ class DetectInsultTests(unittest.TestCase):
                      "fous le camp", "Espèce de connard.", "Tu es une merde.",
                      "t'es nul", "tu ne sers à rien", "tu fais chier",
                      "fait chié", "fait chier", "fais-moi chier",
-                     "t'es chiant", "tu me saoules"):
+                     "t'es chiant", "tu me saoules", "tu me soûles",
+                     "t'es trash", "t'es cringe", "t'es cancéreux"):
             self.assertTrue(detect_insult(text), text)
 
     def test_insultes_anglaises(self):
         for text in ("shut up", "stfu", "fuck you", "screw you",
-                     "you suck", "you're useless", "moron", "dumbass"):
+                     "you suck", "you're useless", "moron", "dumbass",
+                     "you're garbage", "you're cringe", "you're cancer"):
+            self.assertTrue(detect_insult(text), text)
+
+    def test_insultes_visant_la_machine_et_sigles_de_jeu(self):
+        for text in ("bot de merde", "Ce bot est inutile", "Cephalon éclaté",
+                     "l'Oracle semble éclaté", "IA inutile", "pire bot",
+                     "mauvais algo", "Oracle à chier", "programme naze",
+                     "tg", "NTM", "fdp", "kys", "gtfo", "ftg"):
             self.assertTrue(detect_insult(text), text)
 
     def test_lore_et_questions_ne_declenchent_rien(self):
@@ -41,7 +50,10 @@ class DetectInsultTests(unittest.TestCase):
                      "Ce joueur est bon à rien", "qu'est-ce que le Void ?",
                      "Merde, l'ennemi arrive", "Qui est Aze ?",
                      "Le Neon est nul en PvP",
-                     "Qui est @Aze07", "que sais-tu sur les Tenno ?"):
+                     "Qui est @Aze07", "que sais-tu sur les Tenno ?",
+                     "cette quête est cringe", "Ce boss est cancer",
+                     "le bot de Lotus est utile", "l'IA du Codex documente",
+                     "le Cephalon de la station guide le Tenno"):
             self.assertFalse(detect_insult(text), text)
 
     def test_insultes_du_concepteur_detectees_pure(self):

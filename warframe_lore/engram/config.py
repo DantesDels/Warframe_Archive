@@ -99,6 +99,6 @@ class EngramConfig:
             "t'appuyant uniquement sur le contexte fourni."))
 
     @classmethod
-    def load(cls) -> "EngramConfig":
+    def load(cls) -> EngramConfig:
         """Builds a configuration from environment variables."""
         return cls()

@@ -98,7 +98,8 @@ class WikitextCleaner:
                 ``config/cleaner_config.json``).
         """
 
-    def __init__(self, title: str = "", cleaner_config: CleanerConfig | None = None) -> None:
+    def __init__(self, title: str = "",
+                 cleaner_config: CleanerConfig | None = None) -> None:
         self.page_title = title or ""
         self.cleaner_config = cleaner_config or CleanerConfig.load()
 
@@ -143,7 +144,8 @@ class WikitextCleaner:
             elif template_name == "spoiler":
                 parsed.replace(node, render_spoiler_template(node))
             elif must_flag_non_canon(node, self.cleaner_config):
-                parsed.replace(node, render_non_canon_template(node, self.cleaner_config))
+                parsed.replace(
+                    node, render_non_canon_template(node, self.cleaner_config))
             elif must_flag_canon(node, self.cleaner_config):
                 parsed.replace(node, render_canon_template(node, self.cleaner_config))
             elif is_noise_template(template_name, self.cleaner_config) or \

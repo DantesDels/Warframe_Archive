@@ -7,11 +7,11 @@ import urllib.request
 from pathlib import Path
 
 from warframe_lore.kim_dm.constants import (
+    _USER_AGENT,
+    DATA_DIRNAME,
     DIALOGUE_FILES,
     DICTS_DIRNAME,
-    DATA_DIRNAME,
     RAW_BASE,
-    _USER_AGENT,
 )
 
 

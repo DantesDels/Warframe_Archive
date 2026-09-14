@@ -62,7 +62,8 @@ class _DialogueFile:
         if node_type in (_ENGINE + "CheckBooleanScriptDialogueNode",
                          _ENGINE + "ScriptDialogueNode"):
             script = node.get("Script") or {}
-            action = ("Check script" if node_type == _ENGINE + "CheckBooleanScriptDialogueNode"
+            action = ("Check script"
+                      if node_type == _ENGINE + "CheckBooleanScriptDialogueNode"
                       else "Run script")
             return (f"{action}: {self._text_of(script.get('Script'))}"
                     f" :: {self._text_of(script.get('Function'))}")

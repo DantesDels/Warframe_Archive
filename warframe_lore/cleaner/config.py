@@ -29,7 +29,7 @@ class CleanerConfig:
     raw: dict = field(default_factory=dict)
 
     @classmethod
-    def load(cls, path: Path | None = None) -> "CleanerConfig":
+    def load(cls, path: Path | None = None) -> CleanerConfig:
         src = path or CLEANER_CONFIG_PATH
         data = json.loads(src.read_text(encoding="utf-8"))
         t = data.get("templates", {})
@@ -44,7 +44,8 @@ class CleanerConfig:
             lore_keep=tuple(s.get("lore_keep", [])),
             non_canon_templates=frozenset(sp.get("non_canon_templates", [])),
             canon_templates=frozenset(sp.get("canon_templates", [])),
-            marker_non_canon=sp.get("marker_non_canon", "NON-CANON / SPECULATION JOUEUR"),
+            marker_non_canon=sp.get("marker_non_canon",
+                                    "NON-CANON / SPECULATION JOUEUR"),
             marker_canon=sp.get("marker_canon", "CANON OFFICIEL"),
             raw=data,
         )

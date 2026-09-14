@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     BigInteger,
@@ -16,6 +17,13 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
+
+if TYPE_CHECKING:
+    # The relationships below are annotated with the CLASS NAMES (string form):
+    # importing them for real would create a cycle between sibling modules, and
+    # SQLAlchemy resolves them lazily once every model is registered.
+    from .kim_dialogue import KimDialogue
+    from .lore_chunk import LoreChunk
 
 
 class WikiPage(Base):
@@ -54,7 +62,7 @@ class WikiPage(Base):
         Index("idx_wiki_pages_canon", "canon_status"),
     )
 
-    lore_chunks: Mapped[list["LoreChunk"]] = relationship(
+    lore_chunks: Mapped[list[LoreChunk]] = relationship(
         back_populates="wiki_page", cascade="all, delete-orphan")
-    kim_dialogues: Mapped[list["KimDialogue"]] = relationship(
+    kim_dialogues: Mapped[list[KimDialogue]] = relationship(
         back_populates="wiki_page", cascade="all, delete-orphan")

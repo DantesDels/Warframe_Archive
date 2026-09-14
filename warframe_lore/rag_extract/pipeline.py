@@ -56,7 +56,7 @@ class ExtractionPipeline:
             *(self.process_page(url) for url in urls), return_exceptions=True
         )
         chunks: list[LoreChunk] = []
-        for url, outcome in zip(urls, results):
+        for url, outcome in zip(urls, results, strict=True):
             if isinstance(outcome, Exception):
                 logger.error("URL '%s' failed: %s", url, outcome)
                 continue

@@ -1,21 +1,17 @@
-"""WebSocket lifecycle of the ENGRAM roleplay gateway.
+"""WebSocket connection lifecycle of the ENGRAM roleplay gateway.
 
-Single responsibility (mixin): open/close the connection, keep it alive with
+Single responsibility (mixin): open and close the connection, keep it alive with
 the library-level ping (a half-open TCP link is detected in seconds instead of
-waiting for the per-frame reply timeout), read incoming frames into a bounded
-queue and bound the wait for the next frame.  Request/response turns live in
-:mod:`requests`.
+waiting for the per-frame reply timeout) and expose the liveness flag.  Reading
+frames lives in :mod:`reader`, the turns in :mod:`requests`.
 """
 
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 
 from websockets.legacy.client import connect
-
-from warframe_lore.protocols.roleplay import FRAME_ERROR
 
 log = logging.getLogger("warframe_lore.discord.gateway")
 
@@ -32,18 +28,15 @@ DEFAULT_CONNECT_TIMEOUT = 15.0
 PING_INTERVAL_SECONDS = 20.0
 PING_TIMEOUT_SECONDS = 20.0
 
-FRAME_QUEUE_SIZE = 64
-
 
 class GatewayLifecycle:
-    """Connection lifecycle + frame reader (mixed into RoleplayGateway)."""
+    """Connection lifecycle (mixed into RoleplayGateway)."""
 
     url: str
     reply_timeout: float
     connect_timeout: float
     _conn: object | None
     _closed: bool
-    _queue: asyncio.Queue
     _worker: asyncio.Task | None
 
     @property
@@ -52,7 +45,7 @@ class GatewayLifecycle:
         return self._conn is not None and not self._closed
 
     async def open(self) -> None:
-        """Establish the connection and start the stream reader.
+        """Establish the connection and start the frame reader.
 
         The handshake is bounded by ``connect_timeout``: a dead ENGRAM host
         raises instead of hanging the first turn forever.  On ANY failure the
@@ -93,37 +86,6 @@ class GatewayLifecycle:
             await self._conn.close()
             self._conn = None
 
-    async def _next_frame(self) -> dict:
-        """Next frame, or a timeout error frame if the stream stalls.
-
-        The timeout applies PER FRAME (a long stream keeps producing tokens),
-        not to the whole turn: only an idle server is aborted.
-        """
-        try:
-            return await asyncio.wait_for(self._queue.get(),
-                                          self.reply_timeout)
-        except TimeoutError:
-            log.error("WS reply timed out after %.0fs — aborting turn",
-                      self.reply_timeout)
-            return {"type": FRAME_ERROR, "message": "reply timed out"}
-
-    async def _read_loop(self) -> None:
-        """Read the incoming frames and queue them."""
-        try:
-            async for raw in self._conn:
-                await self._queue.put(json.loads(raw))
-        except Exception as exc:  # noqa: BLE001
-            log.warning("WS stream interrupted: %s", exc)
-        finally:
-            # Mark the stream dead and push a sentinel so a ``send()`` waiting
-            # for an ``end`` that will never come is unblocked.
-            self._closed = True
-            try:
-                self._queue.put_nowait(
-                    {"type": FRAME_ERROR, "message": "stream closed by server"})
-            except (asyncio.QueueFull, RuntimeError):
-                pass
-
 
 __all__ = ["DEFAULT_CONNECT_TIMEOUT", "DEFAULT_REPLY_TIMEOUT",
-           "FRAME_QUEUE_SIZE", "GatewayLifecycle"]
+           "PING_INTERVAL_SECONDS", "PING_TIMEOUT_SECONDS", "GatewayLifecycle"]

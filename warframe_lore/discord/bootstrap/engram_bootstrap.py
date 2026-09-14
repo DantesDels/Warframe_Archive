@@ -20,7 +20,7 @@ import time
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
-from .db_bootstrap import _LOCAL_HOSTS
+from .db_bootstrap import LOCAL_HOSTS
 
 log = logging.getLogger("warframe_lore.discord.engram_bootstrap")
 
@@ -47,7 +47,7 @@ def ensure_engram(ws_url: str) -> subprocess.Popen | None:
     """
     parts = urlparse(ws_url)
     host = (parts.hostname or "localhost").lower()
-    if host not in _LOCAL_HOSTS:
+    if host not in LOCAL_HOSTS:
         # Remote ENGRAM: not ours to start or stop.
         return None
     port = parts.port or 8000

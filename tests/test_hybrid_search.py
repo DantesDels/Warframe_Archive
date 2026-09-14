@@ -16,13 +16,15 @@ from types import SimpleNamespace
 
 from sqlalchemy.dialects import postgresql
 
-from warframe_lore.engram.rag import (AliasResolver, PromptBuilder, RAGHit,
-                                      HybridSearch)
-from warframe_lore.engram.rag.hybrid import (query_terms,
-                                             strip_context_prefix,
-                                             ts_rank_normalized,
-                                             _section_label, _COSINE_WEIGHT,
-                                             _FTS_WEIGHT)
+from warframe_lore.engram.rag import AliasResolver, HybridSearch, PromptBuilder, RAGHit
+from warframe_lore.engram.rag.hybrid import (
+    _COSINE_WEIGHT,
+    _FTS_WEIGHT,
+    _section_label,
+    query_terms,
+    strip_context_prefix,
+    ts_rank_normalized,
+)
 
 
 def run(coro):

@@ -12,6 +12,10 @@ Chunking mode per page:
   * KIM dialogue pages (bucket ``Lore_Dialogues_KIM``) keep the dialogue
     mode (whole sessions, ``speakers`` metadata).
 
+Provenance is preserved on (re)upsert: ``category`` prefers the bucket id
+(``page["bucket_id"]``) written by the scraper, and ``source_url`` is
+rebuilt from the ``_source`` base + the page title.
+
 Usage (project root):
     python -m warframe_lore.engram.scripts.ingest [--glob out/Lore_*.json]
 """
@@ -23,20 +27,16 @@ import asyncio
 import json
 import logging
 
-from sqlalchemy import select
-
 from ...config import PROJECT_ROOT
 from ...db import (
-    LoreChunk,
     SQLDatabaseManager,
     sections_from_markdown,
 )
 from ..config import EngramConfig
 from ..llm import LMStudioProvider
+from .embedding import embed_pending
 
 log = logging.getLogger("warframe_lore.engram.ingest")
-
-BATCH = 64  # Taille de batch d'embedding (bge-m3 1024 dims; batch modéré).
 
 _KIM_BUCKET_ID = "Lore_Dialogues_KIM"
 
@@ -49,11 +49,33 @@ INGEST_LOCK_KEY = 0x4B494D5A  # "KIMZ"
 def _is_kim_page(page: dict) -> bool:
     """The megafile entry belongs to the KIM dialogue bucket.
 
-    Older megafiles only carry the bucket ``category`` (title): the KIM
-    bucket title always contains "KIM".
+    ``bucket_id`` (written by the scraper) always wins; the category-title
+    heuristic only covers older megafiles without a ``bucket_id``.
     """
-    return (page.get("bucket_id") == _KIM_BUCKET_ID
-            or "KIM" in page.get("category", ""))
+    bucket_id = page.get("bucket_id")
+    if bucket_id:
+        return bucket_id == _KIM_BUCKET_ID
+    return "KIM" in page.get("category", "")
+
+
+def _page_source_url(page: dict) -> str:
+    """Reconstructs the full page URL from the megafile provenance fields.
+
+    ``_source`` already holds the canonical page URL (site routes and wiki
+    titles alike): return it as-is when it ends with the title, otherwise
+    build it from the base + title (legacy base-form megafiles).
+    """
+    base = (page.get("_source") or "").rstrip("/")
+    title = page.get("page_title") or ""
+    if not base or not title:
+        return ""
+    title_key = title.rstrip("/") if title.startswith("/") \
+        else title.replace(" ", "_")
+    if base.endswith(title_key):
+        return base
+    if title.startswith("/"):
+        return base + title
+    return base + "/" + title_key
 
 
 def load_pages(glob_pattern: str) -> list[dict]:
@@ -69,38 +91,26 @@ def load_pages(glob_pattern: str) -> list[dict]:
     return pages
 
 
-async def embed_pending(sessions, embeddings) -> int:
-    """Computes embeddings for chunks without vectors (batches of ``BATCH``).
-
-    The embedding dimension of the FIRST returned vector is validated against
-    the ``lore_chunks.embedding`` column (vector(1024)): a model port change
-    (wrong dimension) is detected before the first corrupted row is written.
-    """
-    embedding_dim = LoreChunk.__table__.c.embedding.type.dim
-    embedded = 0
-    while True:
-        async with sessions() as session:
-            missing = (await session.execute(
-                select(LoreChunk.id, LoreChunk.content_markdown)
-                .where(LoreChunk.embedding.is_(None))
-                .limit(BATCH))).all()
-        if not missing:
-            break
-        vectors = await embeddings.embed([content for _, content in missing])
-        for vector in vectors:
-            if len(vector) != embedding_dim:
-                raise ValueError(
-                    f"Embedding dimension mismatch: model returned "
-                    f"{len(vector)}, column is vector({embedding_dim}). "
-                    f"Align ENGRAM_EMBED_MODEL / ENGRAM_EMBED_DIM.")
-        async with sessions() as session:
-            for (chunk_id, _), vector in zip(missing, vectors, strict=True):
-                chunk = await session.get(LoreChunk, chunk_id)
-                chunk.embedding = vector
-            await session.commit()
-        embedded += len(missing)
-        log.info("Embeddings computed: %d", embedded)
-    return embedded
+def _upsert_kwargs(page: dict, is_kim: bool) -> dict:
+    """Maps a megafile entry to the ``upsert_cleaned_page`` arguments."""
+    sections = None if is_kim else page.get("sections")
+    if sections is None and not is_kim:
+        # Old megafiles with no "sections" yet: build the semantic
+        # sections on the fly (identical to the parser's output).
+        sections = sections_from_markdown(
+            page.get("content_markdown", ""), page.get("page_title", ""))
+    return {
+        "page_title": page["page_title"],
+        "category": page.get("bucket_id") or page.get("category", ""),
+        "page_id": int(page.get("_pageid") or 0),
+        "touched": page.get("touched"),
+        "last_updated": page.get("last_updated"),
+        "canon_status": page.get("canon_status", "canon"),
+        "content_markdown": page.get("content_markdown", ""),
+        "source_url": _page_source_url(page),
+        "detect_kim_dialogues": is_kim,
+        "sections": sections,
+    }
 
 
 async def run(cfg: EngramConfig, glob_pattern: str) -> int:
@@ -121,26 +131,8 @@ async def run(cfg: EngramConfig, glob_pattern: str) -> int:
         async with manager.advisory_lock(INGEST_LOCK_KEY):
             processed = 0
             for page in pages:
-                page_id = int(page.get("_pageid") or 0)
-                page_title = page["page_title"]
-                is_kim = _is_kim_page(page)
-                sections = None if is_kim else page.get("sections")
-                if sections is None and not is_kim:
-                    # Old megafiles with no "sections" yet: build the semantic
-                    # sections on the fly (identical to the parser's output).
-                    sections = sections_from_markdown(
-                        page.get("content_markdown", ""), page_title)
                 await manager.upsert_cleaned_page(
-                    page_title=page_title,
-                    category=page.get("category", ""),
-                    page_id=page_id,
-                    touched=page.get("touched"),
-                    last_updated=page.get("last_updated"),
-                    canon_status=page.get("canon_status", "canon"),
-                    content_markdown=page.get("content_markdown", ""),
-                    detect_kim_dialogues=is_kim,
-                    sections=sections,
-                )
+                    **_upsert_kwargs(page, _is_kim_page(page)))
                 processed += 1
             log.info("Pages upserted: %d", processed)
             embedded = await embed_pending(
@@ -162,6 +154,8 @@ def main() -> None:
     embedded = asyncio.run(run(EngramConfig.load(), args.glob))
     log.info("Done: %d embedding(s) computed.", embedded)
 
+
+__all__ = ["main", "run"]
 
 if __name__ == "__main__":
     main()

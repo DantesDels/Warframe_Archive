@@ -10,6 +10,7 @@ dataclasses ready to be inserted into ``init_db.sql`` tables:
     * ``news``        -> ``game_updates`` + ``game_announcements``
       (facade over ``updates``/``announcements``)
     * ``rows``/``sites`` -> megafile page -> row-dict mapping
+    * ``rendering``     -> row values -> (title, content) for embedding
     * ``store``       -> per-page DELETE + INSERT persistence
     * ``pipeline``    -> ETL megafiles -> PostgreSQL (advisory-locked)
 

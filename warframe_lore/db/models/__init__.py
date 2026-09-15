@@ -35,6 +35,7 @@ from .game_update import GameUpdate
 from .kim_dialogue import KimDialogue
 from .lore_chunk import LoreChunk
 from .lore_item import LoreItem
+from .structured_chunk import StructuredChunk
 from .sync_state_record import SyncStateRecord
 from .warframe import Warframe
 from .wiki_page import WikiPage
@@ -49,6 +50,7 @@ __all__ = [
     "KimDialogue",
     "LoreChunk",
     "LoreItem",
+    "StructuredChunk",
     "SyncStateRecord",
     "Warframe",
     "WikiPage",

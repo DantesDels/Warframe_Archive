@@ -18,9 +18,11 @@ from ..persona import Persona
 from ..rag import (
     CosinusSearch,
     HybridSearch,
+    MergedRetriever,
     PromptBuilder,
     QueryRewriter,
     RAGService,
+    StructuredSearch,
 )
 from ..roleplay import RoleplayService, SlidingWindow, UserMemoryStore
 from .ratelimit import SlidingWindowLimiter
@@ -32,7 +34,8 @@ class Container:
     def __init__(self, config: EngramConfig | None = None) -> None:
         self.config = config or EngramConfig.load()
         self.engine: AsyncEngine = create_async_engine(
-            self.config.database_url, echo=False)
+            self.config.database_url, echo=False
+        )
         self.sessions = async_sessionmaker(self.engine, expire_on_commit=False)
         self.llm = LMStudioProvider(
             base_url=self.config.lmstudio_base_url,
@@ -43,14 +46,20 @@ class Container:
         )
         self.rag = RAGService(
             embeddings=self.llm,
-            retriever=CosinusSearch(
-                sessions=self.sessions,
+            retriever=MergedRetriever(
+                CosinusSearch(
+                    sessions=self.sessions,
+                    top_k=self.config.top_k,
+                    min_score=self.config.min_score,
+                ),
+                StructuredSearch(sessions=self.sessions, top_k=self.config.top_k),
                 top_k=self.config.top_k,
-                min_score=self.config.min_score),
+            ),
             llm=self.llm,
             prompt_builder=PromptBuilder(
                 system_prompt=self._system_prompt(),
-                max_context_chars=self.config.max_context_chars),
+                max_context_chars=self.config.max_context_chars,
+            ),
             suggestion_min_score=self.config.suggestion_min_score,
             critical_min_score=self.config.critical_min_score,
             query_rewriter=QueryRewriter(llm=self.llm),
@@ -64,11 +73,14 @@ class Container:
         )
         self.roleplay = RoleplayService(
             llm=self.llm,
-            window=SlidingWindow(max_turns=self.config.max_history_turns,
-                                 max_context_chars=self.config.max_context_chars),
+            window=SlidingWindow(
+                max_turns=self.config.max_history_turns,
+                max_context_chars=self.config.max_context_chars,
+            ),
             system_prompt=self._system_prompt(),
-            hostile_prompt=Persona(self.config.system_prompt)
-                .system_prompt(mode="hostile"),
+            hostile_prompt=Persona(self.config.system_prompt).system_prompt(
+                mode="hostile"
+            ),
             temperature=self.config.chat_temperature,
         )
         # Per-user short-term memory: sliding pairs, inactivity expiry, LRU.
@@ -80,10 +92,12 @@ class Container:
         # Anti-DDoS / anti-abuse: max rate per IP (HTTP RAG + WS Roleplay).
         self.rag_limiter = SlidingWindowLimiter(
             max_events=self.config.rate_limit_rag,
-            window_seconds=self.config.rate_limit_rag_window)
+            window_seconds=self.config.rate_limit_rag_window,
+        )
         self.ws_limiter = SlidingWindowLimiter(
             max_events=self.config.rate_limit_ws,
-            window_seconds=self.config.rate_limit_ws_window)
+            window_seconds=self.config.rate_limit_ws_window,
+        )
 
     def _system_prompt(self) -> str:
         """Persona prompt: editable ``persona/oracle`` file, otherwise default."""

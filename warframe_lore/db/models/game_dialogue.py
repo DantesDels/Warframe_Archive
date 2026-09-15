@@ -52,6 +52,12 @@ class GameDialogue(Base):
         server_default="false",
     )
     message_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    parent_message_id: Mapped[int | None] = mapped_column(
+        # Adjacency-list edge: previous message / branching NPC parent.
+        BigInteger,
+        ForeignKey("game_dialogues.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -64,4 +70,5 @@ class GameDialogue(Base):
         ),
         Index("idx_dialogues_page", "wiki_page_id"),
         Index("idx_dialogues_kind", "dialogue_kind"),
+        Index("idx_dialogues_parent", "parent_message_id"),
     )

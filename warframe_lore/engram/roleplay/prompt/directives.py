@@ -104,33 +104,10 @@ STORY_LENS_STARTS = {
 }
 
 
-# Targeted narrative request: the user named a specific subject.  The answer
-# must be anchored in that subject's own era and must NEVER bridge to another
-# temporal starting point (e.g. Eleanor/1999 must not drift to Zariman/Margulis).
-TARGETED_STORY_DIRECTIVE = (
-    "[DIRECTIVE DE VERROU SPATIO-TEMPOREL — REQUÊTE CIBLÉE : l'organique a "
-    "nommé un sujet précis. 1. ANCRAGE DANS LA BONNE ÈRE : le récit reste "
-    "intégralement dans la temporalité propre de ce sujet (Ère Orokin, An 1999, "
-    "Vieille Guerre, etc.), telle que dictée par les archives fournies. "
-    "2. INTERDICTION DE PONT TEMPOREL : il est formellement interdit de relier "
-    "ce sujet à un autre point de départ temporel pour 'faire le lien'. Si le "
-    "sujet appartient à 1999, le récit commence et reste en 1999 : aucune "
-    "mention du Zariman, de Margulis ou de l'Éveil. 3. ARRÊT STRICT : une fois "
-    "les faits du contexte épuisés, stoppe — n'invente jamais des connexions "
-    "inter-ères absentes des archives.]")
-
-
 def story_directive(lens: str | None) -> str:
     """Narration directive + the opening scene forced by the chosen lens."""
     start = STORY_LENS_STARTS.get(lens or "")
     return "".join([STORY_DIRECTIVE, "\n", start or ""])
-
-
-def targeted_story_directive(era: str | None = None) -> str:
-    """Era-anchored directive for a targeted narrative request."""
-    if not era:
-        return TARGETED_STORY_DIRECTIVE
-    return f"{TARGETED_STORY_DIRECTIVE}\n  - Ère imposée par les archives : {era}."
 
 
 def speaker_bloc(user_name: str | None, role_status: str | None,
@@ -162,5 +139,4 @@ def language_directive(lang: str | None) -> str:
 __all__ = ["CIVILITY_DIRECTIVE", "DEFAULT_LANGUAGE", "JEALOUSY_DIRECTIVE",
            "LANGUAGE_DIRECTIVE", "LANGUAGE_NAMES", "NO_HISTORY_LINE",
            "SPEAKER_HEADER", "STORY_DIRECTIVE", "STORY_LENS_STARTS",
-           "TARGETED_STORY_DIRECTIVE", "language_directive", "speaker_bloc",
-           "story_directive", "targeted_story_directive"]
+           "language_directive", "speaker_bloc", "story_directive"]

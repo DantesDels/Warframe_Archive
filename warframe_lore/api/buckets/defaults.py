@@ -76,4 +76,15 @@ DEFAULT_BUCKETS: list[CategorySpec] = [
         title_exclude=["/Quotes", "/Transcript", "/KIM", "Kinemantik",
                        "Fables & Frontiers", "Fragment"],
     ),
+    CategorySpec(
+        id="Lore_Site_Officiel_FR",
+        title="Site officiel (FR)",
+        filename="Lore_Site_Officiel_FR.json",
+        source="warframe-com-fr",
+        categories=["/fr"],
+        title_include=["/fr"],
+        title_exclude=["/shop", "/prime-", "/supporter", "/download",
+                       "/zendesk", "/promocode", "/signup", "/login",
+                       "/account", "/gemini", "/heirloom", "/code"],
+    ),
 ]

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-from ..api import assign_pages
+from ..api import TouchedInfo, assign_pages
 
 if TYPE_CHECKING:
     pass
@@ -54,7 +54,12 @@ class ScraperDeltaMixin:
         if not assigned_pages:
             return {}
 
-        touched_info = self.source.check_updates(list(assigned_pages.keys()))
+        touched_info: dict[str, TouchedInfo] = {}
+        by_source: dict[str, list[str]] = defaultdict(list)
+        for title, bucket_spec in assigned_pages.items():
+            by_source[self._source_for(bucket_spec).name].append(title)
+        for source_name, titles in by_source.items():
+            touched_info.update(self.sources[source_name].check_updates(titles))
 
         # Freshness: the sync state is loaded ONCE per bucket (before: one
         # SELECT per page -> O(pages) round-trips).
@@ -71,7 +76,9 @@ class ScraperDeltaMixin:
             if info is None or info.missing:
                 continue
             needs_fetch = True
-            if not force and self.db is not None:
+            # Without a freshness signal (e.g. a site page whose server sends
+            # no ETag/Last-Modified), the page is refetched every cycle.
+            if not force and self.db is not None and info.touched is not None:
                 stored = fresh_by_bucket.get(bucket_id, {}).get(page_title)
                 needs_fetch = not (
                     stored is not None and stored.get("touched") == info.touched)

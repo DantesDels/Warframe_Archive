@@ -24,6 +24,19 @@ class Config:
     source_url_base: str = "https://wiki.warframe.com/wiki/"
     user_agent: str = "WarframeLoreScraper/1.0 (data engineering; contact: local)"
 
+    # --- www.warframe.com (official marketing site, French routes) ---
+    site_url: str = "https://www.warframe.com"
+    site_prefix: str = "/fr"
+    site_seed: str = "/fr"
+    site_max_pages: int = 3000
+    # Transactional segments excluded from the crawl: shop, account and
+    # support pages are not archived lore candidates.
+    site_exclude_segments: tuple = (
+        "/account", "/signup", "/login", "/download", "/zendesk",
+        "/shop", "/prime-access", "/prime-resurgence", "/supporter-packs",
+        "/heirloom", "/gemini", "/promocode", "/code",
+    )
+
     # --- Request robustness ---
     request_timeout: float = 60.0        # seconds per HTTP request
     max_retries: int = 5                 # transient-failure retries per request
@@ -73,6 +86,7 @@ def load_config() -> Config:
     cfg = Config()
 
     cfg.api_url = os.getenv("WF_API_URL", cfg.api_url)
+    cfg.site_url = os.getenv("WF_SITE_URL", cfg.site_url)
     cfg.output_dir = Path(os.getenv("WF_OUTPUT_DIR", str(cfg.output_dir)))
     cfg.database_url = os.getenv("WF_DATABASE_URL", cfg.database_url)
 

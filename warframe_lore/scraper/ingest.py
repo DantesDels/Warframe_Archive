@@ -27,12 +27,13 @@ class ScraperIngestMixin:
     async def _clean_and_store(self, *, bucket_spec, page_title: str,
                                page_obj, bucket_id: str):
         """Cleans a page and writes it to JSON + SQL. Returns the JSON entry."""
-        content_wikitext = getattr(page_obj, "content", "") or ""
-        if not content_wikitext.strip():
+        content_raw = getattr(page_obj, "content", "") or ""
+        if not content_raw.strip():
             log.warning("Empty content for '%s' -- skipping.", page_title)
             return None
 
-        clean_output = self.cleaner.clean(content_wikitext)
+        cleaner = self._cleaner_for(bucket_spec)
+        clean_output = cleaner.clean(content_raw)
         markdown_text = clean_output.markdown.strip()
         if len(markdown_text) < 20:
             log.warning("Page '%s' cleaned to <20 characters -- skipping.",
@@ -75,7 +76,11 @@ class ScraperIngestMixin:
             content_markdown=markdown_text,
             canon_status=canon_status,
             pageid=page_id,
-            source_wiki_url=self.config.source_url_base,
+            source_wiki_url=(
+                self.config.site_url
+                if bucket_spec.source == "warframe-com-fr"
+                else self.config.source_url_base
+            ),
         )
         output_entry.extra["bucket_id"] = bucket_id
         if sections is not None:

@@ -15,6 +15,7 @@ from .buckets import (
     assign_pages,
 )
 from .client import MediaWikiSource
+from .site_html import SiteHtmlSource
 
 __all__ = [
     "BaseSource",
@@ -27,4 +28,5 @@ __all__ = [
     "ResolvedBucket",
     "assign_pages",
     "MediaWikiSource",
+    "SiteHtmlSource",
 ]

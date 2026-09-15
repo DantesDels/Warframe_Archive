@@ -19,8 +19,8 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING
 
-from ..api import BucketConfig, CategoryCatalog, MediaWikiSource
-from ..cleaner import CleanerConfig, WikitextCleaner
+from ..api import BucketConfig, CategoryCatalog, MediaWikiSource, SiteHtmlSource
+from ..cleaner import CleanerConfig, HtmlCleaner, WikitextCleaner
 from ..config import Config, load_config
 from ..db import SQLDatabaseManager
 from ..output import MegafileManager
@@ -53,9 +53,19 @@ class Scraper(CanonSignalsMixin, ScraperDeltaMixin,
                  database_url: str | None = None) -> None:
         self.config = config or load_config()
         self.buckets = bucket_config or BucketConfig()
-        self.source = MediaWikiSource(self.config)
-        self.catalog = CategoryCatalog(self.source)
-        self.cleaner = WikitextCleaner(cleaner_config=CleanerConfig.load())
+        self.sources = {
+            "mediawiki-warframe": MediaWikiSource(self.config),
+            "warframe-com-fr": SiteHtmlSource(self.config),
+        }
+        # Backward-compatible default alias (the wiki remains the main source).
+        self.source = self.sources.get("mediawiki-warframe")
+        self.catalog = CategoryCatalog(self.sources)
+        self.cleaners = {
+            "mediawiki-warframe": WikitextCleaner(
+                cleaner_config=CleanerConfig.load()),
+            "warframe-com-fr": HtmlCleaner(),
+        }
+        self.cleaner = self.cleaners.get("mediawiki-warframe")
         self.output = MegafileManager(self.config.output_dir)
         # ``database_url=None`` -> JSON-only mode (--skip-sql).
         self.database_url = database_url or (
@@ -66,6 +76,14 @@ class Scraper(CanonSignalsMixin, ScraperDeltaMixin,
         # Speculation category resolution (for page-level canon_status):
         # set of speculative page titles.
         self._speculation_titles: set[str] = set()
+
+    def _source_for(self, spec):
+        """Backend implementation owning ``spec`` (falls back to the wiki)."""
+        return self.sources.get(spec.source, self.source)
+
+    def _cleaner_for(self, spec):
+        """Cleaner matching the bucket's source format (wiki vs site HTML)."""
+        return self.cleaners.get(spec.source, self.cleaner)
 
     # ------------------------------------------------------------------ runs
     def run(self, force: bool = False) -> None:

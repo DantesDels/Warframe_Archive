@@ -45,7 +45,7 @@ class ScraperSyncMixin:
             titles_to_fetch = needs_fetch_per_bucket.get(spec.id, [])
             if not titles_to_fetch:
                 continue
-            fetched_pages = self.source.fetch_pages(titles_to_fetch)
+            fetched_pages = self._source_for(spec).fetch_pages(titles_to_fetch)
             fetched_by_title.update(fetched_pages)
             log.info("Fetched %d page(s) for bucket '%s'.",
                      len(fetched_pages), spec.id)
@@ -74,11 +74,7 @@ class ScraperSyncMixin:
                     filename=spec.filename,
                     bucket_title=spec.title,
                     new_entries=new_entries,
-                    metadata_note=(
-                        "Content cleaned from the WARFRAME wiki (MediaWiki). "
-                        "Canon/non-canon status included. "
-                        "Ready for LLM / NotebookLM ingestion."
-                    ),
+                    metadata_note=self._source_note(spec.source),
                     live_titles=live_titles,
                 )
                 # Delta acknowledgment ONLY after successful JSON publication
@@ -100,3 +96,18 @@ class ScraperSyncMixin:
                             spec.id)
 
         log.info("Synchronization complete.")
+
+    @staticmethod
+    def _source_note(source_name: str) -> str:
+        """Megafile provenance note describing the bucket's backend."""
+        if source_name == "warframe-com-fr":
+            return (
+                "Content cleaned from www.warframe.com/fr (official site). "
+                "French news, guides and narrative pages, canonical as published. "
+                "Ready for LLM / NotebookLM ingestion."
+            )
+        return (
+            "Content cleaned from the WARFRAME wiki (MediaWiki). "
+            "Canon/non-canon status included. "
+            "Ready for LLM / NotebookLM ingestion."
+        )

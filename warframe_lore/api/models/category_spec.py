@@ -13,6 +13,8 @@ class CategorySpec:
         id: unique bucket identifier (used for state tracking).
         title: human-readable label (becomes the ``category`` field of entries).
         filename: output megafile name (e.g. ``Lore_Quetes.json``).
+        source: backend source name that owns this bucket (e.g.
+            ``mediawiki-warframe``, ``warframe-com-fr``).
         categories: actual source category names to resolve.
         prefix: title prefixes to expand via ``list=allpages`` (source
             complementary to categories, useful when the wiki does not
@@ -24,6 +26,7 @@ class CategorySpec:
     id: str
     title: str
     filename: str
+    source: str = "mediawiki-warframe"
     categories: list[str] = field(default_factory=list)
     prefix: list[str] = field(default_factory=list)
     title_include: list[str] = field(default_factory=list)

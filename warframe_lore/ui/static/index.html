@@ -23,6 +23,14 @@
         <button class="nav-item" data-view="dashboard">
           <span class="nav-icon">◈</span> Vue d'ensemble
         </button>
+        <a class="nav-item" href="/inspector/"
+           title="Recherche sémantique hybride (cosine + Full-Text) et auditeur RAG">
+          <span class="nav-icon">🔍</span> RAG Inspector
+        </a>
+        <a class="nav-item" href="/timeline/"
+           title="Chronologie exhaustive de l'Éternisme (ères, quêtes, fragments)">
+          <span class="nav-icon">✦</span> Timeline
+        </a>
         <button class="nav-item" data-view="kim">
           <span class="nav-icon">💬</span> Terminal KIM
         </button>
@@ -93,6 +101,10 @@
           <button class="back-btn" id="kim-back" data-back="kim">←</button>
           <h2 id="kim-title"></h2>
         </div>
+        <div id="kim-convs" class="kim-convs">
+          <span class="kim-convs-label">Discussion :</span>
+          <select id="kim-convs-select" class="kim-convs-select" aria-label="Choisir une discussion"></select>
+        </div>
         <div class="view-tabs scrollbar-hide">
           <button class="view-tab active" data-tab="chat">Messagerie</button>
           <button class="view-tab" data-tab="sim">Simulateur</button>
@@ -143,6 +155,9 @@
     <button class="bnav-item" data-view="kim">
       <span class="bnav-icon">💬</span><span>Terminal KIM</span>
     </button>
+    <a class="bnav-item" href="/timeline/">
+      <span class="bnav-icon">✦</span><span>Timeline</span>
+    </a>
     <button class="bnav-item" data-view="search">
       <span class="bnav-icon">🔍</span><span>Recherche</span>
     </button>

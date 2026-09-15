@@ -34,7 +34,7 @@ body {
   line-height: 1.6;
 }
 
-#app { display: flex; height: 100vh; }
+#app { display: flex; height: 100vh; height: 100dvh; }
 
 /* ------------------------------------------------------------- sidebar */
 #sidebar {
@@ -46,7 +46,9 @@ body {
   border-right: 1px solid var(--hairline);
   padding: 24px 14px;
   overflow-y: auto;
+  scrollbar-width: none;
 }
+#sidebar::-webkit-scrollbar { display: none; }
 
 .brand { display: flex; align-items: center; gap: 12px; padding: 2px 10px 26px; }
 .brand-logo {
@@ -78,6 +80,7 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 }
 .nav-item:hover { background: var(--bg-card); color: var(--text-strong); }
 .nav-item:active { background: var(--bg-hover); }
+a.nav-item { text-decoration: none; }
 .nav-item.active {
   background: var(--bg-card);
   color: var(--text-strong);
@@ -231,7 +234,7 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 }
 
 /* ---------------------------------------------------------------- views */
-.view { flex: 1; overflow-y: auto; padding: 30px 36px; }
+.view { flex: 1; overflow-y: auto; overflow-x: hidden; padding: clamp(16px, 2.5vw, 36px); }
 .hidden { display: none; }
 
 .view-head { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
@@ -267,7 +270,7 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   background: var(--bg-card);
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
-  padding: 22px;
+  padding: clamp(16px, 2.2vw, 22px);
   box-shadow: var(--shadow);
 }
 .stat-card .value { font-size: 28px; font-weight: 800; color: var(--text-strong); letter-spacing: -0.5px; }
@@ -284,7 +287,7 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   background: var(--bg-card);
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
-  padding: 24px;
+  padding: clamp(16px, 2.4vw, 24px);
   cursor: pointer;
   box-shadow: var(--shadow);
   transition: transform 0.15s, background 0.15s, border-color 0.15s;
@@ -370,6 +373,46 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 }
 .segment-count { font-size: 10.5px; opacity: 0.75; }
 
+/* Sélecteur de conversations KIM (découpage par section « ### Conversation … ») */
+.kim-convs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.kim-convs-label {
+  color: var(--text-dim);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
+}
+.kim-convs-select {
+  flex: 1 1 520px;
+  max-width: 560px;
+  min-width: 0;
+  appearance: none;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--text-strong);
+  background-color: var(--bg-card);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%237c8aa5' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 8px 34px 8px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.kim-convs-select:hover { border-color: rgba(34, 211, 238, 0.5); }
+.kim-convs-select:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+}
+.kim-convs-select option { background-color: var(--bg-card); color: var(--text); }
+
 .snippet { color: var(--text-dim); font-size: 12.5px; margin-top: 3px; }
 
 /* ---------------------------------------------------------------- chat */
@@ -389,6 +432,26 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   color: var(--text-dim);
 }
 .chat-line .text { font-size: 16px; line-height: 1.6; white-space: pre-wrap; color: var(--text); }
+/* Chat aéré : une réplique = un ``<li>`` isolé (équivalent ``ul space-y-2``
+   + ``li`` à bordure gauche et fond alterné). */
+.chat-line .chat-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.chat-line .chat-line-item {
+  border-left: 2px solid rgba(34, 211, 238, 0.65);
+  border-radius: 0 8px 8px 0;
+  background: rgba(30, 41, 59, 0.35);
+  padding: 4px 12px;
+  margin: 0 0 6px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.chat-line .chat-line-item:nth-child(even) {
+  background: rgba(30, 41, 59, 0.55);
+}
 .chat-line.player {
   background: rgba(34, 211, 238, 0.08);
   margin-left: 28px;
@@ -453,7 +516,7 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .sim-option:active { transform: translateY(1px); }
 #sim-end {
   text-align: center;
-  padding: 26px;
+  padding: clamp(16px, 2.4vw, 26px);
   border-radius: 12px;
   background: var(--bg-card);
   margin-top: 8px;
@@ -595,6 +658,38 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   border-radius: 12px;
   background: rgba(34, 211, 238, 0.06);
 }
+/* Citations : texte + auteur regroupés dans un seul bloc unifié. */
+.markdown blockquote.quote-block p { margin: 2px 0; }
+.markdown blockquote.quote-block .cite-text { margin: 2px 0; }
+.markdown blockquote.quote-block .cite-author {
+  margin-top: 6px;
+  font-size: 12.5px;
+  font-style: italic;
+  opacity: 0.75;
+  color: var(--text-dim);
+}
+/* Aération des citations : chaque réplique isolée sur une ligne (équivalent
+   ``ul space-y-2``), bordure gauche + fond alterné (équivalent Tailwind
+   ``border-l-2 border-cyan-500 py-1.5 bg-slate-800/30 rounded-r``). */
+.markdown blockquote.quote-block ul.cite-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.markdown blockquote.quote-block li.cite-line {
+  border-left: 2px solid rgba(34, 211, 238, 0.65);
+  border-radius: 0 8px 8px 0;
+  background: rgba(30, 41, 59, 0.35);
+  padding: 4px 12px;
+  margin: 0 0 6px;
+}
+.markdown blockquote.quote-block li.cite-line:nth-child(even) {
+  background: rgba(30, 41, 59, 0.55);
+}
+.markdown blockquote.quote-block li.cite-line .cite-text {
+  display: block;
+  color: var(--text);
+}
 .stage {
   display: inline-block;
   color: var(--text-dim);
@@ -613,6 +708,34 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 }
 .markdown a { color: var(--accent); text-decoration: none; }
 .markdown a:hover { text-decoration: underline; }
+.markdown img { max-width: 100%; height: auto; border-radius: 8px; }
+.markdown table { display: block; width: 100%; overflow-x: auto; }
+
+/* ------------------------------------------------------- notes de mise à jour */
+.patch-history { margin-top: 28px; }
+.patch-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-strong);
+  margin: 22px 0 4px;
+}
+.patch-version {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 18px;
+  margin: 24px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+}
+.patch-notes-list {
+  list-style: disc;
+  list-style-position: inside;
+  color: var(--text);
+}
+.patch-note {
+  margin: 0 0 8px;
+  padding-left: 6px;
+}
 
 /* ----------------------------------------------------------------- raw */
 details.raw-block {
@@ -809,6 +932,7 @@ table.raw-table td:empty { background: transparent; border-color: transparent; }
   background: #0a1220;
   border-radius: 14px;
   overflow: hidden;
+  padding-top: 44px;
 }
 .vue-flow {
   background:
@@ -867,10 +991,62 @@ table.raw-table td:empty { background: transparent; border-color: transparent; }
   font-size: 11.5px;
   line-height: 1.35;
   color: var(--text);
-  max-height: 78px;
-  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-height: none;
+  height: auto;
 }
 .fc-nbody.fc-term { color: var(--canon); }
+
+/* Nœuds-système (ancre racine « … begins » / marqueur de fin) : gris mat. */
+.fc-nstart,
+.fc-nend {
+  min-height: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+  cursor: default;
+}
+.fc-nstart .fc-nhead,
+.fc-nend .fc-nhead { display: none; }
+.fc-nstart .fc-nbody,
+.fc-nend .fc-nbody {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  max-height: none;
+  overflow: visible;
+  text-align: center;
+}
+
+/* Nœuds-système d'état (popups du jeu : booléens, compteurs). */
+.fc-nsystem {
+  min-height: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.10);
+  border: 1px dashed rgba(139, 92, 246, 0.55);
+  cursor: default;
+}
+.fc-nsystem .fc-nhead { display: none; }
+.fc-nsystem .fc-nbody {
+  font-size: 10.5px;
+  color: var(--text);
+  max-height: none;
+  overflow: visible;
+  text-align: center;
+}
+/* Chemistry : bordure dorée (rarement affichée hors popup). */
+.fc-nsystem-chem {
+  background: rgba(212, 175, 55, 0.10);
+  border-style: solid;
+  border-color: #d4af37;
+}
+.fc-nsystem-chem .fc-nbody {
+  color: #e9d48b;
+  font-weight: 600;
+}
 
 /* ----------------------------------------------------------- responsive */
 /* Tablette : rail d'icônes compact (768–900 px). */

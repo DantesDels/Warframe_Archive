@@ -1,5 +1,4 @@
-requests>=2.31.0
-mwparserfromhell>=0.6.5
-SQLAlchemy>=2.0
-asyncpg>=0.29
-pgvector>=0.3
+# Cephalon Archive — environnement Python
+# Le manifest de vérité des dépendances est pyproject.toml ([project] +
+# optional-dependencies) ; ce fichier est l'amorce du venv.
+-e .[discord,test]

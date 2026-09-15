@@ -1,23 +1,29 @@
-# Couche `cleaner` — Nettoyage
+# `cleaner` Layer — Cleaning
 
-Responsabilité : transformer le **Wikitext** brut en **Markdown propre pour
-LLM** (bruit supprimé, canon détecté, dialogues normalisés).
+Responsibility: transform raw **Wikitext** into **clean Markdown for LLMs**
+(noise removed, canon detected, dialogues normalized).
 
-## Contenu
+## Contents
 
-| Fichier | Rôle |
+The package is organized by theme (one module = one responsibility):
+
+| Module | Role |
 |---|---|
-| `preprocessing.py` | strip HTML, commentaires, tables, Lua, transclusion |
-| `templates.py` | suppression/rendu des templates MediaWiki (bruit, voir `config/cleaner_config.json`) |
-| `sections.py` | filtrage des sections gameplay vs lore (`gameplay_exclude` / `lore_keep`) |
-| `formatting.py` | normalisation des liens, markdown, dialogues, headings |
-| `pipeline.py` | `WikitextCleaner` : orchestre le tout (un seul point d'entrée) |
+| `config.py` | `CleanerConfig`: loads rules from `config/cleaner_config.json` |
+| `preprocessing.py` | Purge of raw content (comments, tables, code) + `mwparserfromhell` parsing |
+| `html.py`, `blocks.py` | Sanitization: HTML conversion, files/images, transclusion |
+| `templates/` | MediaWiki templates subpackage: `noise.py` (noise + fallback), `render.py` (quote, spoiler, canon), `signal.py` (inline canon/non-canon detection) |
+| `links.py`, `markup.py` | Link and Markdown normalization (bold/italic…) |
+| `dialogue_lines.py`, `bullets.py`, `headings.py` | Dialogues (`> **Name:** …`), lists, Markdown headings |
+| `footers.py`, `audio.py`, `kim_instructions.py` | Removal of footer noise, audio files, KIM dialogue instructions |
+| `sections.py`, `sections_classify.py`, `polish.py` | Filtering of gameplay vs lore blocks, empty galleries, blank lines |
+| `pipeline.py` | `WikitextCleaner`: orchestrates everything (single entry point) + `CleanOutput` |
 
-## Règles externalisées
+## Externalized Rules
 
-Les constantes de nettoyage vivent dans `config/cleaner_config.json` et sont
-injectées dans `CleanerConfig` (Dependency Injection, SOLID). Modifiez les
-règles sans toucher au code.
+Cleaning constants live in `config/cleaner_config.json` and are injected
+into `CleanerConfig` (Dependency Injection, SOLID). Edit the rules without
+touching the code.
 
 ```jsonc
 // config/cleaner_config.json
@@ -30,14 +36,15 @@ règles sans toucher au code.
 
 ## Canon
 
-- Détection de la page dans `Category:Speculation` → `speculation`.
-- Marqueurs inline `[NON-CANON / SPECULATION JOUEUR]` / `[CANON OFFICIEL]`.
-- `merge_canon_status()` (couche `output`) retient le statut le plus prudent.
+- Inline detection via `templates/signal.py` (`{{Speculation}}`, `{{Canon}}`…);
+  the final page-level status is computed by the scraper (cross-referenced with
+  `Category:Speculation`) and merged by `merge_canon_status()` (output layer),
+  which retains the most cautious status.
 
 ## Dialogues
 
-Les dialogues sont normalisés en blocquotes Markdown `> **Nom:** parole`,
-format attendu par la couche `db` (chunking mode dialogue + `kim_parser`).
+Dialogues are normalized into Markdown blockquotes `> **Name:** speech`,
+the format expected by the `db` layer (dialogue-mode chunking + `kim_parser`).
 
 ## Usage
 
@@ -45,5 +52,6 @@ format attendu par la couche `db` (chunking mode dialogue + `kim_parser`).
 from warframe_lore.cleaner import WikitextCleaner
 
 cleaner = WikitextCleaner()
-markdown = cleaner.clean(wikitext_raw)
+result = cleaner.clean(wikitext_raw)     # CleanOutput(markdown, …)
+markdown = result.markdown
 ```

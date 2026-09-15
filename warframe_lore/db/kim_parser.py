@@ -1,12 +1,12 @@
-"""Extraction des dialogues KIM depuis le Markdown nettoyé.
+"""Extraction of KIM dialogues from cleaned Markdown.
 
-Les pages KIM (``Kinemantik Instant Messenger``) sont rendues par le
-cleaner sous forme de blockquotes lisibles :
+The KIM pages (``Kinemantik Instant Messenger``) are rendered by the
+cleaner as readable blockquotes:
     ``> **Amir:** Salut Tenno, t'as vu le nouveau graff ?``
     ``> **Arthur:** ...``
 
-Ce module convertit ce rendu en lignes structurées pour la table
-``kim_dialogues`` (locuteur + texte + ordre chronologique).
+This module converts this rendering into structured rows for the
+``kim_dialogues`` table (speaker + text + chronological order).
 """
 
 from __future__ import annotations
@@ -14,22 +14,24 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-# Format gras (sortie du cleaner) : '> **Amir:** texte'.
-# NB : le deux-points est DANS le gras (``**Amir:**`` = ``**`` + ``Amir:`` + ``**``).
+from .kim_filter import is_dialogue_junk
+
+# Bold format (cleaner output): '> **Amir:** text'.
+# NB: the colon is INSIDE the bold (``**Amir:**`` = ``**`` + ``Amir:`` + ``**``).
 _KIM_BOLD_LINE_PATTERN = re.compile(
     r"^>\s*\*\*(?P<line>[^*]+?)\*\*\s*(?P<text>.*)$"
 )
-# Format simple : '> Amir : texte' (fallback).
+# Plain format: '> Amir : text' (fallback).
 _KIM_PLAIN_LINE_PATTERN = re.compile(
     r"^>\s*(?P<speaker>[^:]+?)\s*:\s*(?P<text>.*)$"
 )
-# Option de branche KIM (choix du joueur) : '> > choix texte'.
+# KIM branch option (player choice): '> > choice text'.
 _KIM_CHOICE_LINE_PATTERN = re.compile(r"^>\s*>\s*(?P<text>.+)$")
 
 
 @dataclass(frozen=True)
 class KimMessage:
-    """Un message structuré extrait d'une discussion KIM."""
+    """A structured message extracted from a KIM conversation."""
 
     message_order: int
     speaker: str
@@ -39,10 +41,10 @@ class KimMessage:
 
 
 def extract_kim_messages(markdown_text: str) -> list[KimMessage]:
-    """Extrait les messages KIM structurés d'un Markdown nettoyé.
+    """Extracts structured KIM messages from cleaned Markdown.
 
-    Retourne ``[]`` si le texte ne contient aucune ligne de dialogue au
-    format attendu.  L'ordre retourné correspond à l'ordre d'apparition.
+    Returns ``[]`` if the text contains no dialogue line in the expected
+    format.  The returned order matches the order of appearance.
     """
     messages: list[KimMessage] = []
     for line in markdown_text.split("\n"):
@@ -55,11 +57,11 @@ def extract_kim_messages(markdown_text: str) -> list[KimMessage]:
             message_text = match.group("text").strip()
             player_choice = False
         else:
-            # ``> > option`` : choix de branche = saisie du joueur (KIM).
+            # ``> > option``: branch choice = player input (KIM).
             choice = _KIM_CHOICE_LINE_PATTERN.match(stripped_line)
             if choice is not None:
                 choice_text = choice.group("text").strip()
-                if choice_text:
+                if choice_text and not is_dialogue_junk("", choice_text):
                     messages.append(KimMessage(
                         message_order=len(messages),
                         speaker="",
@@ -76,9 +78,13 @@ def extract_kim_messages(markdown_text: str) -> list[KimMessage]:
             player_choice = False
         if not speaker_name or not message_text:
             continue
-        # Filtre les artefacts du cleaner (blockquotes de spoiler, etc.) : un
-        # vrai nom de locuteur ne contient ni '*' ni '_' ni de balises.
+        # Filters out cleaner artifacts (spoiler blockquotes, etc.): a real
+        # speaker name contains neither '*' nor '_' nor tags.
         if not _looks_like_speaker_name(speaker_name):
+            continue
+        # Business exclusion: UI labels, patch-note phrases, loot/drop
+        # mechanics and bare numeric values never enter the table.
+        if is_dialogue_junk(speaker_name, message_text):
             continue
         messages.append(KimMessage(
             message_order=len(messages),
@@ -91,11 +97,14 @@ def extract_kim_messages(markdown_text: str) -> list[KimMessage]:
 
 
 def _looks_like_speaker_name(candidate: str) -> bool:
-    """Vrai si le 'locuteur' ressemble à un personnage KIM plausible.
+    """True if the 'speaker' looks like a plausible KIM character.
 
-    Exclut les artefacts de mise en forme (``*_SPOILERS_* _``, ``**[...]``)
-    qui n'ont pas de nom propre.
+    Excludes formatting artifacts (``*_SPOILERS_* _``, ``**[...]``) that
+    have no proper name, and whole sentences pushed into the leading bold
+    segment ("Banishing an Eximus enemy will remove its Aura ..., eg:").
     """
-    if any(marker in candidate for marker in ("*", "_", "]", "}")):
+    if any(marker in candidate for marker in ("*", "_", "]", "}", ":")):
+        return False
+    if len(candidate) > 40:
         return False
     return candidate[0].isalpha() and candidate[0].isupper()

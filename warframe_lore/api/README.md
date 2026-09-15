@@ -1,39 +1,42 @@
-# Couche `api` — Extraction
+# `api` Layer — Extraction
 
-Responsabilité : accéder aux sources de données (wiki MediaWiki Warframe) et
-résoudre le **scope** du scraping (buckets de catégories).
+Responsibility: access data sources (Warframe MediaWiki wiki) and resolve
+the **scraping scope** (category buckets).
 
-## Contenu
+## Contents
 
-| Fichier | Rôle |
+| File | Role |
 |---|---|
-| `base.py` | Interface abstraite `BaseSource` + types `CategorySpec`, `PageData`, `TouchedInfo` |
-| `client.py` | `MediaWikiSource` : client HTTP vers `api.php` (retries, backoff, politesse) |
-| `categories.py` | `BucketConfig`, `CategoryCatalog`, `ResolvedBucket`, `assign_pages` : résolution des buckets/catégories en pages |
-| `models.py` | Types de transport des données API |
+| `base.py` | Abstract interface `BaseSource` (source contract) |
+| `http.py` | `RetryableHttp`: HTTP client with retries, backoff, politeness; `MediaWikiSourceError` |
+| `mediawiki.py` | `MediaWikiSource`: composition (categories + queries) |
+| `mediawiki_categories.py` | `MediaWikiCategoryMixin`: `resolve_categories` (recursive), `resolve_prefix` |
+| `mediawiki_queries.py` | `MediaWikiQueryMixin`: `fetch_pages`, `check_updates` (`touched` field) |
+| `buckets/` | `BucketConfig` (`config.py`), `CategoryCatalog`/`ResolvedBucket`/`assign_pages` (`catalog.py`), `defaults.py` (8 default buckets) |
+| `client.py`, `categories.py` | **Compatibility facades** (re-export public APIs) |
+| `models/` | Transport types, one file per class: `page_data.py`, `touched_info.py`, `category_spec.py` |
 
 ## Concepts
 
-- **Bucket** : unité logique de collecte (ex: `Lore_Quetes`, `Lore_Dialogues_KIM`).
-  Un bucket = un ensemble de catégories wiki + filtres (`title_include`,
-  `title_exclude`) ; chaque bucket produit un megafile JSON et un ensemble
-  d'enregistrements SQL.
-- **Résolution** : les catégories sont parcourues de façon récursive (sous-
-  catégories jusqu'à `max_category_depth`). Les pages sont assignées au premier
-  bucket qui correspond.
-- **Delta** : chaque `PageData` porte `last_updated` pour décider, en amont de
-  l'extraction, si la page nécessite un re-téléchargement (mode incrémental).
+- **Bucket**: logical collection unit (e.g. `Lore_Quetes`, `Lore_Dialogues_KIM`).
+  A bucket = a set of wiki categories + filters (`title_include`,
+  `title_exclude`); each bucket produces a JSON megafile and a set of
+  SQL records.
+- **Resolution**: categories are traversed recursively (sub-categories up to
+  `max_category_depth`). Pages are assigned to the first matching bucket.
+- **Delta**: each `PageData` carries `touched` to decide, upstream of
+  extraction, whether the page needs re-downloading (incremental mode).
 
-## Facile à étendre
+## Easy to Extend
 
-Toute nouvelle source implémente `BaseSource` (ex: `RedditSource`, `ForumSource`)
-et se branche sur le même pipeline de nettoyage.
+Any new source implements `BaseSource` (e.g. `RedditSource`, `ForumSource`)
+and plugs into the same cleaning pipeline.
 
-## Exemple d'usage (config buckets)
+## Usage Example (Bucket Configuration)
 
 ```python
 from warframe_lore.api import BucketConfig
 
-cfg = BucketConfig()                    # 8 buckets par défaut
-cfg = BucketConfig.from_file("buckets.json")  # ou custom
+cfg = BucketConfig()                    # 8 default buckets
+cfg = BucketConfig.from_file("config/buckets.json")  # or custom
 ```

@@ -1,0 +1,100 @@
+"""Streaming of one Oracle turn into a Discord message.
+
+Placeholder, typing indicator, token streaming (hard split), one reconnect,
+``!stop`` finalisation, then the answer finishing (portrait, reactions, stats).
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import time
+
+import discord
+
+from ...services import MessageStreamer
+from .plan import TurnContext
+
+log = logging.getLogger("warframe_lore.discord.bot.stream")
+
+THINKING = "*Oracle réfléchit…*"
+UNREACHABLE = "*Oracle est injoignable — serveur ENGRAM éteint.*"
+
+
+class StreamMixin:
+    """Transport d'un tour : placeholder, jetons, reconnect, finition."""
+
+    async def _stream_turn(self, message: discord.Message,
+                           context: TurnContext) -> None:
+        """Stream one Oracle reply into a message edited token by token."""
+        channel_id = message.channel.id
+        started = time.monotonic()
+        placeholder = await message.channel.send(THINKING)
+        streamer = MessageStreamer(placeholder)
+        typing = asyncio.create_task(self._keep_typing(message))
+        try:
+            await self._send_turn(channel_id, context, streamer)
+        except asyncio.CancelledError:
+            # ``!stop``: cutting the stream also stops the LLM server-side.
+            log.info("Oracle turn interrupted channel=%s", channel_id)
+            await self.state.sessions.drop_gateway(channel_id)
+            await placeholder.edit(content=f"{streamer.text or '*aucun texte*'}"
+                                           "\n*… réponse interrompue.*")
+            raise
+        except ConnectionError as exc:
+            self.services.stats.record_error()
+            log.warning("Oracle unreachable (%s) — turn dropped", exc)
+            await placeholder.edit(content=UNREACHABLE)
+            return
+        finally:
+            typing.cancel()
+        await streamer.finish()
+        self.services.stats.record_turn(context.kind, time.monotonic() - started,
+                                        rag=context.use_rag)
+        await self._finish_answer(placeholder, streamer, context)
+
+    async def _send_turn(self, channel_id: int, context: TurnContext,
+                         streamer: MessageStreamer) -> None:
+        """Send the frame, reconnecting ONCE on a dead stream (then replay)."""
+        sessions = self.state.sessions
+        frame = context.frame()
+        for attempt in (1, 2):
+            gateway = await sessions.gateway(channel_id, self.gateway_url)
+            await sessions.apply_persona(gateway, channel_id,
+                                         context.settings.persona)
+            try:
+                await gateway.send(frame, on_token=streamer.add)
+                return
+            except ConnectionError as exc:
+                if attempt == 2:
+                    raise
+                log.warning("Oracle connection lost (%s) — reconnecting", exc)
+            await sessions.drop_gateway(channel_id)
+            # Purge the buffer: never concatenate the failed attempt.
+            streamer.reset()
+
+    async def _finish_answer(self, placeholder: discord.Message,
+                             streamer: MessageStreamer,
+                             context: TurnContext) -> None:
+        """Empty-reply cleanup, wiki portrait, then the feedback reactions."""
+        if streamer.empty and placeholder.content == THINKING:
+            gateway = self.state.sessions.gateways.get(placeholder.channel.id)
+            if gateway is None or not gateway.active:
+                await placeholder.edit(content=UNREACHABLE)
+            else:
+                await placeholder.delete()
+            return
+        if context.settings.images and await self.services.images.ensure():
+            portrait = await self.services.images.file_for_text(streamer.text)
+            if portrait is not None:
+                await placeholder.edit(attachments=[portrait])
+        await self.open_feedback(placeholder, placeholder.channel.id)
+
+    async def _keep_typing(self, message: discord.Message) -> None:
+        """Typing indicator refreshed until the reply is complete."""
+        while True:
+            await message.channel.typing()
+            await asyncio.sleep(self.typing_interval)
+
+
+__all__ = ["THINKING", "UNREACHABLE", "StreamMixin"]

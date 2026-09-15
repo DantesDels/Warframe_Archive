@@ -1,100 +1,98 @@
-# Roadmap et Vision — Projet "Cephalon Archive"
+# Roadmap and Vision — "Cephalon Archive" Project
 
-**Objectif :** Créer la base de connaissances ultime sur l'univers de Warframe,
-exploitable par des Modèles de Langage (LLM) et des applications RAG
+**Goal:** Create the ultimate knowledge base for the Warframe universe,
+usable by Language Models (LLMs) and RAG applications
 (Retrieval-Augmented Generation).
 
 ---
 
-## 1. Modularité : Les Fondations du Projet
+## 1. Modularity: Project Foundations
 
-Le projet repose sur une architecture découplée (voir `docs/architecture.md`).
-Chaque composant a une responsabilité unique, ce qui permet de faire évoluer une
-brique sans casser le reste du système.
+The project relies on a decoupled architecture (see `docs/architecture.md`).
+Each component has a single responsibility, allowing one module to evolve
+without breaking the rest of the system.
 
-- **Extraction (`api`) :** gère uniquement la communication avec l'API
-  MediaWiki (interface `BaseSource`). Si l'API change, seul ce module est impacté.
-- **Nettoyage (`cleaner`) :** transforme le Wikitext en Markdown propre, avec
-  filtrage du bruit, des sections gameplay et de la canonique.
-- **Synchronisation (`sync`) :** assure le mode "Delta" (ne traiter que les
-  nouveautés), relayé par la suite à la base SQL.
-- **Persistance SQL (`db`) :** PostgreSQL normalisé (3NF), embeddings pgvector,
-  chunking RAG (`ChunkManager`), delta via base.
-- **Export (`output`) :** formate la donnée finale (megafiles JSON par bucket,
-  avec `canon_status`).
-- **Évolutivité des sources :** l'architecture permet d'ajouter facilement de
-  nouveaux "Clients" (ex: `RedditScraper` pour r/Warframe, `ForumScraper` pour
-  les patch notes officiels) qui viendront se brancher sur le même pipeline.
+- **Extraction (`api`):** handles only communication with the MediaWiki API
+  (`BaseSource` interface). If the API changes, only this module is affected.
+- **Cleaning (`cleaner`):** transforms Wikitext into clean Markdown, with
+  filtering of noise, gameplay sections, and canon detection.
+- **Synchronization (`sync`):** ensures "Delta" mode (only process new items),
+  later relayed to the SQL database.
+- **SQL Persistence (`db`):** normalized PostgreSQL (3NF), pgvector embeddings,
+  RAG chunking (`ChunkManager`), database-backed delta.
+- **Export (`output`):** formats the final data (JSON megafiles per bucket,
+  with `canon_status`).
+- **Source Extensibility:** the architecture allows easily adding new "Clients"
+  (e.g. `RedditScraper` for r/Warframe, `ForumScraper` for official patch
+  notes) that plug into the same pipeline.
 
-## 2. Scalabilité : Industrialisation et Passage à l'Échelle
+## 2. Scalability: Industrialization and Scaling
 
-Pour dépasser les limites d'un simple carnet personnel et créer un outil
-utilisable massivement, l'architecture peut évoluer vers des standards Cloud et
-Big Data.
+To go beyond the limits of a personal notebook and create a tool usable at
+scale, the architecture can evolve toward Cloud and Big Data standards.
 
-- **Scraping HTTP robuste (fait) :** `requests` + retries/backoff/politesse
-  intégrés ; asynchrone côté base (SQLAlchemy 2.0 async + asyncpg). Un passage
-  complet en `aiohttp` permettrait de paralléliser davantage l'extraction.
-- **Base de Données Vectorielle (amorcé) :** la couche `db` stocke désormais
-  chaque chunk avec son embedding `vector(384)` (pgvector). Le réseau JSON n'est
-  plus seul : les recherches sémantiques pourront se faire directement en SQL.
-- **Pipeline CI/CD (à venir) :** déploiement sur GitHub Actions ou AWS Lambda
-  avec déclencheur cron ; le script s'exécute de manière autonome (par exemple
-  chaque mardi après les mises à jour de Warframe) et met à jour la base sans
-  intervention humaine.
+- **Robust HTTP Scraping (done):** `requests` + built-in retries/backoff/
+  politeness; async database side (SQLAlchemy 2.0 async + asyncpg). A full
+  switch to `aiohttp` would allow further parallelization of extraction.
+- **Vector Database (started):** the `db` layer now stores each chunk with its
+  `vector(384)` embedding (pgvector). The JSON network is no longer alone:
+  semantic searches can be performed directly in SQL.
+- **CI/CD Pipeline (upcoming):** deployment on GitHub Actions or AWS Lambda
+  with a cron trigger; the script runs autonomously (e.g. every Tuesday after
+  Warframe updates) and updates the database without human intervention.
 
-## 3. Optimisations Techniques (Data Prep)
+## 3. Technical Optimizations (Data Prep)
 
-La qualité de la donnée pour les LLM est un axe produit permanent.
+Data quality for LLMs is a permanent product axis.
 
-- **Chunking Intelligent (fait, Phase 2.5) :** `ChunkManager` découpe les
-  longues pages en blocs sémantiques (target 1200c, dialogues 2500c) en
-  respectant les titres (`##`/`###`) et les paragraphes. Deux passes :
-  structurelle (headers en métadonnées) + récursive avec chevauchement, plus un
-  mode dédié aux dialogues KIM/JDR/Quêtes (`speakers` en métadonnées).
-- **Enrichissement par Métadonnées (partiel) :** chaque chunk porte des
-  métadonnées exploitables (hiérarchie de titres, locuteurs) stockées en JSONB
-  et filtrables par l'index GIN avant envoi au LLM. Une passe NLP de tagging
-  automatique (ex: `Tags: [Grineer, Clonage, Tyl Regor]`) reste possible.
-- **Détection du canon (fait) :** chaque entrée expose `canon_status`
-  (`canon` / `speculation` / `community_theory`) détecté via
-  `Category:Speculation` et les marqueurs inline ; `merge_canon_status` retient
-  le statut le plus prudent.
-- **Gestion du Multimédia (à venir) :** extraction systématique des URL
-  d'images (portraits, cartes, symboles) pour que les futures interfaces
-  affichent l'image du personnage avec sa réponse textuelle.
+- **Smart Chunking (done, Phase 2.5):** `ChunkManager` splits long pages into
+  semantic blocks (target 1200c, dialogues 2500c) while respecting headings
+  (`##`/`###`) and paragraphs. Two passes: structural (headers in metadata)
+  + recursive with overlap, plus a dedicated mode for KIM/RPG/Quest dialogues
+  (`speakers` in metadata).
+- **Metadata Enrichment (partial):** each chunk carries usable metadata
+  (heading hierarchy, speakers) stored as JSONB and filterable via GIN index
+  before sending to the LLM. An NLP pass for automatic tagging (e.g.
+  `Tags: [Grineer, Clonage, Tyl Regor]`) remains possible.
+- **Canon Detection (done):** each entry exposes `canon_status`
+  (`canon` / `speculation` / `community_theory`) detected via
+  `Category:Speculation` and inline markers; `merge_canon_status` retains the
+  most cautious status.
+- **Multimedia Management (upcoming):** systematic extraction of image URLs
+  (portraits, maps, symbols) so that future interfaces display the character's
+  image alongside the text response.
 
-## 4. Cas d'Usage Actuels (MVP - Produit Minimum Viable)
+## 4. Current Use Cases (MVP - Minimum Viable Product)
 
-Avec la base JSON (megafiles) et la couche SQL (pgvector + JSONB) injectées dans
-un outil type NotebookLM ou un pipeline RAG, voici ce qui est déjà réalisable :
+With the JSON database (megafiles) and the SQL layer (pgvector + JSONB) fed
+into a NotebookLM-type tool or an RAG pipeline, the following is already
+achievable:
 
-- **L'Oracle de Warframe :** un assistant capable de croiser les textes du jeu
-  pour répondre à des questions complexes sans "halluciner" (ex: "Quelle est la
-  chronologie de la rébellion de Parvos Granum ?"), en filtrant le canon.
-- **Maître du Jeu Virtuel (GM) :** en utilisant spécifiquement les données du
-  JDR "Fables & Frontiers" et du système KIM (mode dialogue dédié, locuteurs
-  conservés), l'IA peut incarner Amir et faire jouer des campagnes inédites avec
-  les règles exactes de cet univers.
-- **Audit de Lore :** l'IA peut analyser l'intégralité du texte pour repérer les
-  incohérences scénaristiques ou les intrigues non résolues (plot holes) laissées
-  par Digital Extremes au fil des années.
+- **The Warframe Oracle:** an assistant capable of cross-referencing game
+  texts to answer complex questions without "hallucinating" (e.g. "What is
+  the chronology of Parvos Granum's rebellion?"), while filtering canon.
+- **Virtual Game Master (GM):** using specifically the "Fables & Frontiers"
+  RPG data and the KIM system (dedicated dialogue mode, speakers preserved),
+  the AI can embody Amir and run original campaigns with the exact rules of
+  this universe.
+- **Lore Audit:** the AI can analyze the entire text to spot narrative
+  inconsistencies or unresolved plot holes left by Digital Extremes over the
+  years.
 
-## 5. Évolutions Futures (La Vision à Long Terme)
+## 5. Future Developments (Long-Term Vision)
 
-Une fois la donnée parfaitement structurée et vectorisée, le projet peut
-s'ouvrir à des applications tierces via des frameworks comme LangChain ou
-LlamaIndex.
+Once the data is perfectly structured and vectorized, the project can open up
+to third-party applications via frameworks like LangChain or LlamaIndex.
 
-- **Application RAG Autonome et Bot Discord :** développement d'un backend
-  Python connecté à un Bot Discord ou une interface Web (Streamlit/Vue.js). Les
-  joueurs posent une question sur leur serveur, le bot interroge la base
-  vectorielle, et l'IA formule la réponse instantanément.
-- **Générateur de Contenu Automatisé :** couplage de la base avec des
-  générateurs IA vocaux (ElevenLabs) et visuels (Midjourney). L'outil pourrait
-  scripter, illustrer et narrer automatiquement des vidéos d'analyse de lore à
-  chaque nouvelle mise à jour.
-- **Personas IA Interactifs :** création d'agents conversationnels adoptant la
-  personnalité psychologique et le vocabulaire exact d'un personnage précis
-  (ex: un chatbot "Ballas" qui débate de la philosophie Orokin en utilisant
-  exclusivement son style rhétorique extrait du wiki).
+- **Standalone RAG Application and Discord Bot:** development of a Python
+  backend connected to a Discord Bot or Web interface (Streamlit/Vue.js).
+  Players ask a question on their server, the bot queries the vector database,
+  and the AI formulates the answer instantly.
+- **Automated Content Generator:** coupling the database with AI voice
+  generators (ElevenLabs) and visual generators (Midjourney). The tool could
+  script, illustrate, and narrate automated lore analysis videos with each
+  new update.
+- **Interactive AI Personas:** creation of conversational agents adopting the
+  psychological personality and exact vocabulary of a specific character
+  (e.g. a "Ballas" chatbot that debates Orokin philosophy using exclusively
+  his rhetorical style extracted from the wiki).

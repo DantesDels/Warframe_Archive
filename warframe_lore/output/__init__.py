@@ -1,14 +1,14 @@
-"""Couche Output : écriture des megafiles JSON pour les consommateurs.
+"""Output layer: JSON megafile writing for consumers.
 
-Le schéma de chaque entrée inclut ``canon_status`` pour permettre au RAG /
-aux notebooks de filtrer le lore officiel des théories des joueurs.
+Each entry's schema includes ``canon_status`` to allow RAG / notebooks
+to filter official lore from player theories.
 """
 
+from .entries import build_output_entry
 from .models import (
     CanonStatus,
     MegafileMetadata,
     OutputEntry,
-    build_output_entry,
     merge_canon_status,
 )
 from .writer import MegafileManager

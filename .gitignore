@@ -7,21 +7,44 @@ dist/
 .venv/
 venv/
 
+# Refactoring prompts 
+REFACTO/
+
+# Règles locales de l'agent (chargées depuis le working tree, non versionnées)
+AGENTS.md
+
 # Sorties du scraper
 out/
 sync_state.json
 
-# Logs d'exécution locale
+# Dumps locaux d'inspection (scripts dump_scraper.py)
+data/raw/
+
+# Logs d'exécution locale (dossier dédié)
+logs/
 runtime_*.log
 
 # Cache média / Public Export (téléchargeable)
 cache/
 
 # Config locale
-buckets.json.local
+config/buckets.json.local
+
+# Base d'activité membre du bot (runtime)
+*.db
+*.db-shm
+*.db-wal
 
 # Env
 .env
+config/discord_roles.json
+
+# Node (RAG Inspector / Vite)
+node_modules/
+
+# Artefacts de débogage du timeline (dumps ELK / logs locaux)
+warframe_lore/ui/timeline/debug-elk.mjs
+warframe_lore/ui/timeline/preview.log
 
 # IDE / OS
 .vscode/

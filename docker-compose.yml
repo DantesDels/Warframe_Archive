@@ -1,0 +1,22 @@
+# ENGRAM — infrastructure PostgreSQL + pgvector (vecteurs 384d BGE-M3).
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: engram-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: warframe
+      POSTGRES_PASSWORD: warframe
+      POSTGRES_DB: warframe_lore
+    ports:
+      - "5432:5432"
+    volumes:
+      - engram_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warframe -d warframe_lore"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  engram_pgdata:

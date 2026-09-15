@@ -26,24 +26,29 @@ const elHtml = (tag, cls, html) => {
  *
  * Ne touche QUE le rendu visuel : le titre brut reste utilisé pour le
  * routage (URL) et les requêtes API.  Supprime les suffixes/prefixes
- * techniques du wiki : ``/Transcript``, ``/Quotes`` et ``Fragment/``.
+ * techniques du wiki : ``/Transcript``, ``/Quotes`` et ``Fragment(s)/``.
  *  Ex. "Angels of the Zariman/Transcript" -> "Angels of the Zariman",
- *  "Hunhow/Quotes" -> "Hunhow", "Fragment/Buried Debts" -> "Buried Debts".
+ *  "Hunhow/Quotes" -> "Hunhow", "Fragments/Cephalon" -> "Cephalon",
+ *  "Fragment/Buried Debts" -> "Buried Debts".
  */
 function formatDisplayName(title) {
   if (!title) return title;
-  return String(title)
+  const raw = String(title).trim();
+  const out = raw
     .replace(/\/Transcript/gi, "")
     .replace(/\/Quotes/gi, "")
-    .replace(/Fragment\//gi, "")
+    .replace(/Fragments?\//gi, "")
+    .replace(/Kinemantik Instant Messenger\//gi, "")
     .replace(/\s+/g, " ")
     .trim();
+  return out || raw;
 }
 
 /* ------------------------------------------------------------ api helpers */
 let pendingRequests = 0;
 let busyTimer = null;
 const apiCache = new Map();
+const API_CACHE_TTL_MS = 5000;
 
 function setBusy(busy) {
   pendingRequests = Math.max(0, pendingRequests + (busy ? 1 : -1));
@@ -60,14 +65,20 @@ function setBusy(busy) {
 }
 
 async function api(path, { cache = true } = {}) {
-  if (cache && apiCache.has(path)) return apiCache.get(path);
+  if (cache && apiCache.has(path)) {
+    const hit = apiCache.get(path);
+    if (Date.now() < hit.expiresAt) return hit.data;
+    apiCache.delete(path);
+  }
   setBusy(true);
   try {
     const response = await fetch(path);
     if (!response.ok) throw new Error(`${path} -> ${response.status}`);
     const data = await response.json();
     if (data && data.error) throw new Error(data.error);
-    if (cache) apiCache.set(path, data);
+    if (cache) {
+      apiCache.set(path, { data, expiresAt: Date.now() + API_CACHE_TTL_MS });
+    }
     return data;
   } finally {
     setBusy(false);
@@ -138,7 +149,7 @@ const MEDIAWIKI_MAGIC = /^_{2}[A-Z_]{2,}_{2}$/;
 // Lignes-pointeurs de navigation KIM (``{Continues/Same/Jump ...}``, préfixés
 // ``{If ...}``, ``> **>``, ``> >``) : la réplique est déjà montrée dans la
 // branche référencée -> ligne ignorée.
-const KIM_POINTER_LINE = /^>\s*\*{0,3}\s*>?\s*(?:\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*|(?:\{[^{}:\n]*?\}\s*)+?\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*)/i;
+const KIM_POINTER_LINE = /^>[ \t]*(?:\*{1,3}[ \t]*)?(?:>[ \t]*)?(?:\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*|(?:\{[^{}:\n]*?\}\s*)+?\{[^{}:\n]*?(?:continues?|contiue|same|goes|jump)[^{}:\n]*)/i;
 
 /* ---------------------------------------------------- blocs wikitext bruts */
 const RAW_END = /^customcollapsible/i;
@@ -227,6 +238,74 @@ function rawBlockHtml(run) {
   );
 }
 
+const CITE_AUTHOR_RE = /^[—–]\s*/;
+const CITE_SPEAKER_RE = /^\s*\*\*[^*:]+:\*\*/;
+const CITE_CONTINUATION_RE = /^(#{1,6}\s+\S|\|)|[{}]/;
+
+// Parseur de citations : accumule tout le texte d'une citation (lignes ``>``,
+// lignes de continuation, ``>`` vides) jusqu'au délimiteur d'auteur (ligne
+// débutant par ``—``/``–``, préfixée ``>`` ou non). Renvoie un tableau de
+// blocs propres : ``[{ text, author }]`` (un seul bloc parent par citation).
+function collectQuoteBlocks(lines, start) {
+  const blocks = [];
+  let cur = null;
+  let prevBlank = false;
+  let i = start;
+  while (i < lines.length) {
+    const raw = lines[i];
+    const body = raw.startsWith(">")
+      ? raw.replace(/^>\s?/, "").trim()
+      : raw.trim();
+    if (CITE_AUTHOR_RE.test(body)) {
+      if (cur) { cur.author = body; blocks.push(cur); cur = null; }
+      else if (body) { blocks.push({ text: "", author: body }); }
+      prevBlank = false;
+      i++;
+      continue;
+    }
+    if (raw.startsWith(">")) {
+      if (!body) { prevBlank = true; i++; continue; }
+      if (cur && cur.author) cur = null;
+      if (!cur) cur = { text: "", author: null };
+      if (cur.text) cur.text += "\n";
+      cur.text += body;
+      prevBlank = false;
+      i++;
+      continue;
+    }
+    if (!body) {
+      if (cur) { blocks.push(cur); cur = null; }
+      prevBlank = true; i++; continue;
+    }
+    if (cur && !cur.author && !prevBlank && !CITE_CONTINUATION_RE.test(body)) {
+      if (cur.text) cur.text += "\n";
+      cur.text += body;
+      prevBlank = false;
+      i++;
+      continue;
+    }
+    break;
+  }
+  if (cur) blocks.push(cur);
+  return { blocks, end: i };
+}
+
+function quoteBlockHtml(block) {
+  const paragraphs = block.text.split("\n").filter(Boolean);
+  if (!block.author && paragraphs.length && paragraphs.every((l) => CITE_SPEAKER_RE.test(l))) {
+    // Fidélité KIM : répliques ``**locuteur:**`` -> une bulle par ligne.
+    return paragraphs.map((l) => renderBlockquote("> " + l)).join("");
+  }
+  const items = paragraphs
+    .map((s) => `<li class="cite-line"><span class="cite-text">${renderInline(s)}</span></li>`)
+    .join("");
+  const body = `<ul class="cite-lines">${items}</ul>`;
+  const author = block.author
+    ? `<div class="cite-author">${renderInline(block.author)}</div>`
+    : "";
+  return `<blockquote class="quote-block">${body}${author}</blockquote>`;
+}
+
 function renderBlockquote(line) {
   const body = line.replace(/^>\s?/, "");
   const m = body.match(/^\*\*(?<speaker>[^*:]+):\*\*(?<rest>.*)$/s);
@@ -285,8 +364,9 @@ function markdownToHtml(markdown) {
     }
     if (line.startsWith(">")) {
       closeList();
-      html.push(renderBlockquote(line));
-      i++;
+      const { blocks, end } = collectQuoteBlocks(lines, i);
+      for (const block of blocks) html.push(quoteBlockHtml(block));
+      i = end;
       continue;
     }
     if (line.startsWith("### ")) { closeList(); html.push(`<h3>${renderInline(line.slice(4))}</h3>`); i++; continue; }
@@ -398,6 +478,11 @@ function showView(name, opts = {}) {
 /* --------------------------------------------------------------- routing */
 const navStack = [];
 
+// Compteur de génération de route : chaque navigation l'incrémente.  Les
+// rendus asynchrones capturent la valeur au démarrage et abandonnent si une
+// navigation plus récente a eu lieu entre-temps (guarde anti-course).
+let routeEpoch = 0;
+
 function navigate(path, { push = true } = {}) {
   if (push) navStack.push(path);
   const prev = window.location.hash;
@@ -416,6 +501,7 @@ function goBack() {
 }
 
 function handleRoute() {
+  routeEpoch++;
   const hash = window.location.hash.replace(/^#/, "") || "dashboard";
   // Resynchronise la pile quand l'utilisateur utilise les boutons ← / → du navigateur.
   if (navStack[navStack.length - 1] !== hash) {
@@ -435,7 +521,7 @@ function handleRoute() {
       break;
     case "page":
       renderPage(p0, p1);
-      showView("page", { bucketId: p0, labels: [bucketTitle(p0), p1] });
+      showView("page", { bucketId: p0, labels: [bucketTitle(p0), formatDisplayName(p1)] });
       break;
     case "kim": renderKim(); showView("kim", { labels: ["Terminal KIM"] }); break;
     case "kim-chat":
@@ -450,11 +536,13 @@ function handleRoute() {
 
 /* -------------------------------------------------------------- dashboard */
 async function renderDashboard() {
+  const epoch = routeEpoch;
   const cards = $("#stats-cards");
   if (!state.stats) {
     cards.innerHTML = skeletonRows(4);
     state.stats = await api("/api/stats");
   }
+  if (epoch !== routeEpoch) return;
   const stats = state.stats;
 
   cards.innerHTML = "";
@@ -497,11 +585,13 @@ async function renderDashboard() {
 
 /* ------------------------------------------------------------------ bucket */
 async function renderBucket(bucketId) {
+  const epoch = routeEpoch;
   const bucket = state.buckets.find((b) => b.id === bucketId);
   $("#bucket-title").textContent = bucket ? bucket.title : bucketId;
   const container = $("#bucket-pages");
   container.innerHTML = skeletonRows(6);
   const pages = await api(`/api/pages?bucket=${encodeURIComponent(bucketId)}`);
+  if (epoch !== routeEpoch) return;
   container.innerHTML = "";
   for (const page of pages) {
     const item = el("div", "page-list-item");
@@ -551,11 +641,32 @@ function makeSpoilerHint(reason) {
     `<div><strong>Spoiler</strong>&nbsp;: <span class="spoiler-reason">${text}</span></div>`);
 }
 
+// Notes de mise à jour : rendu structuré des ``[{version, notes[]}]`` servis
+// par l'API (équivalent du ``v-for``) — un en-tête de version + sa liste.
+function renderPatchNotes(patchNotes) {
+  const section = el("section", "patch-history");
+  section.appendChild(el("h2", "patch-title", "Notes de mise à jour"));
+  for (const patch of patchNotes) {
+    const header = el("h3", "patch-version", `Mise à jour ${patch.version}`);
+    const list = el("ul", "patch-notes-list");
+    for (const note of patch.notes || []) {
+      const item = el("li", "patch-note");
+      item.innerHTML = renderInline(note);
+      list.appendChild(item);
+    }
+    section.appendChild(header);
+    section.appendChild(list);
+  }
+  return section;
+}
+
 async function renderPage(bucketId, title) {
+  const epoch = routeEpoch;
   $("#page-title").textContent = formatDisplayName(title);
   const host = $("#page-content");
   host.innerHTML = skeletonRows(8);
   const page = await api(`/api/page?bucket=${encodeURIComponent(bucketId)}&title=${encodeURIComponent(title)}`);
+  if (epoch !== routeEpoch) return;
   host.innerHTML = "";
   if (!page) { host.appendChild(emptyState("Page introuvable dans l'archive.")); return; }
   $("#page-badges").innerHTML = canonBadge(page.canon_status);
@@ -568,6 +679,9 @@ async function renderPage(bucketId, title) {
   const body = el("div", "markdown");
   body.innerHTML = markdownToHtml(content);
   host.appendChild(body);
+  if (page.patch_notes && page.patch_notes.length) {
+    host.appendChild(renderPatchNotes(page.patch_notes));
+  }
 }
 
 /* -------------------------------------------------------------------- kim */
@@ -577,6 +691,9 @@ async function renderPage(bucketId, title) {
  *   * Citations         -> pages .../Quotes (répliques de campagne)
  */
 let kimSegment = "all";
+let kimChatTitle = null;
+let kimConvList = [];
+let kimConvActive = null;
 
 function kimSegmentOf(page) {
   if (/Fables & Frontiers/i.test(page.page_title)) return "fnf";
@@ -610,21 +727,25 @@ function renderKimSegments(dialogues) {
 }
 
 async function renderKim() {
+  const epoch = routeEpoch;
   const media = await ensureMedia();
   const container = $("#kim-list");
   container.innerHTML = skeletonRows(8);
   const dialogues = await api("/api/kim");
-  renderKimSegments(dialogues);
+  if (epoch !== routeEpoch) return;
+  const useful = dialogues.filter((d) => (d.conversations || 0) > 0);
+  renderKimSegments(useful);
   container.innerHTML = "";
   const shown = kimSegment === "all"
-    ? dialogues
-    : dialogues.filter((d) => kimSegmentOf(d) === kimSegment);
+    ? useful
+    : useful.filter((d) => kimSegmentOf(d) === kimSegment);
   for (const d of shown) {
     const item = el("div", "page-list-item kim-item");
     const thumb = media && media.titles[d.page_title];
     if (thumb) item.prepend(mediaImg(thumb, "media-thumb", d.page_title));
     const name = el("span", "name", formatDisplayName(d.page_title));
-    const meta = el("span", "meta", `${d.line_count} lignes`);
+    const meta = el("span", "meta",
+      `${d.conversations ? d.conversations + " conversations · " : ""}${d.line_count} lignes`);
     item.appendChild(name);
     item.appendChild(meta);
     item.addEventListener("click", () => navigate(`kim-chat?${encodeURIComponent(d.page_title)}`));
@@ -634,7 +755,17 @@ async function renderKim() {
 }
 
 /* -------------------------------------------------------------- kim chat */
+/* Vue détail d'un personnage KIM : les conversations (branches découpées
+ * par ``_split_kim_conversations`` côté serveur) sont sélectionnables une à
+ * une, à l'instar de browse.wf.  Chaque conversation alimente la messagerie,
+ * le simulateur et le flowchart. */
 async function renderKimChat(title) {
+  const epoch = routeEpoch;
+  kimChatTitle = title;
+  kimConvActive = null;
+  window.__flowchartInstance = null;
+  window.__flowchartOpen = title;
+  window.__flowchartConv = null;
   $("#kim-title").textContent = title;
   document.querySelector("#view-kim-chat .kim-header-thumb")?.remove();
   const media = await ensureMedia();
@@ -646,54 +777,142 @@ async function renderKimChat(title) {
   const container = $("#kim-chat");
   container.innerHTML = skeletonRows(8);
   const data = await api(`/api/kim?title=${encodeURIComponent(title)}`);
-  const messages = Array.isArray(data) ? data : data.messages;
-  const spoiler = Array.isArray(data) ? null : data.spoiler;
-  container.innerHTML = "";
+  if (epoch !== routeEpoch) return;
+  kimConvList = data.conversations || [];
+  renderKimConversations();
+  setKimTabs("chat");
+  if (kimConvList.length) {
+    await selectKimConversation(kimConvList[0].id);
+  } else {
+    container.innerHTML = "";
+    container.appendChild(emptyState("Aucune conversation détectée dans cette page."));
+    kimSimCache.title = null;
+  }
+}
 
+function kimRankShort(rank) {
+  return (rank || "").replace(/^\s*rank\s*/i, "").trim();
+}
+
+function renderKimConversations() {
+  const host = $("#kim-convs");
+  if (!kimConvList.length) {
+    host.classList.add("hidden");
+    return;
+  }
+  host.classList.remove("hidden");
+  // Le <select> peut avoir été écrasé (ex: innerHTML="") : on le recrée.
+  let select = $("#kim-convs-select");
+  if (!select) {
+    host.innerHTML = "";
+    host.appendChild(el("span", "kim-convs-label", "Discussion :"));
+    select = el("select", "kim-convs-select");
+    select.id = "kim-convs-select";
+    select.setAttribute("aria-label", "Choisir une discussion");
+    select.addEventListener("change", (event) => {
+      const convId = event.target.value;
+      if (convId) selectKimConversation(convId);
+    });
+    host.appendChild(select);
+  }
+  select.innerHTML = "";
+  // Tri alphanumérique naturel : Story1 < Story2 < Story10 (et non Story1 < Story10 < Story2).
+  const sorted = [...kimConvList].sort((a, b) =>
+    (a.title || "").localeCompare(b.title || "", undefined,
+      { numeric: true, sensitivity: "base" }));
+  for (const conversation of sorted) {
+    const short = kimRankShort(conversation.rank);
+    const label = short ? `${short} · ${conversation.title}` : conversation.title;
+    const option = el("option", "", label);
+    option.value = conversation.id;
+    option.title = conversation.rank
+      ? `${conversation.rank} — ${conversation.title}` : conversation.title;
+    if (kimConvActive === conversation.id) option.selected = true;
+    select.appendChild(option);
+  }
+  select.value = kimConvActive || "";
+}
+
+async function selectKimConversation(convId) {
+  const epoch = routeEpoch;
+  const conversation = kimConvList.find((c) => c.id === convId);
+  if (!conversation || conversation.id === kimConvActive) return;
+  kimConvActive = conversation.id;
+  window.__flowchartConv = conversation.id;
+  // Les onglets Flowchart et Simulateur dépendent de la conversation courante.
+  kimSimCache.title = null;
+  kimSimFetchedTitle = null;
+  stopSimAuto();
+  simResetUi();
+  document.querySelectorAll("#kim-sim .spoiler-hint").forEach((h) => h.remove());
+  if (window.__flowchartInstance) {
+    try { window.__flowchartInstance.unmount(); } catch (_) { /* déjà détruit */ }
+    window.__flowchartInstance = null;
+  }
+  $("#kim-chart").innerHTML = "";
+  renderKimConversations();
+  const container = $("#kim-chat");
+  container.innerHTML = skeletonRows(6);
+  const data = await api(`/api/kim?title=${encodeURIComponent(kimChatTitle)}&conv=${encodeURIComponent(convId)}`);
+  if (epoch !== routeEpoch) return;
+  renderKimChatMessages(data.messages || [], data.spoiler || null);
+}
+
+async function renderKimChatMessages(messages, spoiler) {
+  const container = $("#kim-chat");
+  container.innerHTML = "";
+  const media = await ensureMedia();
   const body = el("div", "chat-stack");
   messages.forEach((message, index) => {
     const player = !!message.player;
     const line = el("div", `chat-line${index % 2 ? " alt" : ""}${player ? " player" : ""}`);
     const cell = el("div", "chat-body");
     cell.appendChild(el("div", "who", player ? "Vous" : (message.speaker || "")));
-    cell.appendChild(elHtml("div", "text", renderInline(message.text || "")));
+    const textLines = (message.lines && message.lines.length)
+      ? message.lines
+      : [message.text || ""];
+    const lineList = el("ul", "chat-lines");
+    for (const lineText of textLines) {
+      if (!lineText.trim()) continue;
+      const item = el("li", "chat-line-item");
+      item.innerHTML = renderInline(lineText);
+      lineList.appendChild(item);
+    }
+    cell.appendChild(lineList);
     if (!player && media) {
-      const f = mediaFor(media, message.speaker, title);
+      const f = mediaFor(media, message.speaker, kimChatTitle);
       if (f) line.appendChild(mediaImg(f, "chat-avatar", message.speaker));
     }
     line.appendChild(cell);
     body.appendChild(line);
   });
   if (!messages.length) body.appendChild(el("div", "snippet", "Aucun message."));
-
   if (spoiler) body.prepend(makeSpoilerHint(spoiler));
   container.appendChild(body);
-
-  // Onglets Messagerie / Simulateur / Flowchart
-  const chartHost = $("#kim-chart");
-  chartHost.classList.add("hidden");
-  $("#kim-sim").classList.add("hidden");
-  document.querySelectorAll(".view-tab").forEach((tab) => {
-    tab.classList.toggle("active", tab.dataset.tab === "chat");
-  });
-  window.__flowchartInstance = null;
-  window.__flowchartOpen = title;
-  if (kimSimCache.title !== title) kimSimCache.title = null;
 }
 
-function switchKimTab(tab) {
-  if (tab !== "sim") stopSimAuto();
+function setKimTabs(tab) {
   document.querySelectorAll(".view-tab").forEach((t) =>
     t.classList.toggle("active", t.dataset.tab === tab));
   $("#kim-chat").classList.toggle("hidden", tab !== "chat");
   const chartHost = $("#kim-chart");
   chartHost.classList.toggle("hidden", tab !== "chart");
-  const simHost = $("#kim-sim");
-  simHost.classList.toggle("hidden", tab !== "sim");
+  $("#kim-sim").classList.toggle("hidden", tab !== "sim");
+}
+
+function switchKimTab(tab) {
+  if (tab !== "sim") stopSimAuto();
+  setKimTabs(tab);
   if (tab === "chart") {
     const title = window.__flowchartOpen || $("#kim-title").textContent;
+    const conv = window.__flowchartConv || kimConvActive || "";
+    const epoch = routeEpoch;
+    const chartHost = $("#kim-chart");
     chartHost.innerHTML = skeletonRows(5);
-    api(`/api/graph?title=${encodeURIComponent(title)}`).then((graph) => {
+    const route = `/api/graph?title=${encodeURIComponent(title)}` +
+      (conv ? `&conv=${encodeURIComponent(conv)}` : "");
+    api(route).then((graph) => {
+      if (epoch !== routeEpoch) return;
       chartHost.innerHTML = "";
       if (window.mountFlowchart) {
         window.__flowchartInstance = mountFlowchart(chartHost, {
@@ -776,9 +995,11 @@ function renderSimPrompt() {
     const btn = el("button", "sim-option", option.text);
     btn.addEventListener("click", () => {
       kimSimState.waiting = false;
-      appendSimBubble({ speaker: "", text: option.text, player: true, ends: false });
-      prompt.innerHTML = "";
       prompt.classList.add("hidden");
+      prompt.innerHTML = "";
+      const chosen = { speaker: "", text: option.text, player: true, ends: !!option.ends };
+      appendSimBubble(chosen);
+      if (option.ends) { simEnd(); return; }
       kimSimState.cursor++;
       simNext();
     });
@@ -788,24 +1009,25 @@ function renderSimPrompt() {
   kimSimState.waiting = true;
 }
 
-/* Avance jusqu'à la prochaine interruption (prompt / fin / boucle). */
+/* Avance d'UNE réplique par appel (fin / prompt suivant / saut) : la lecture
+ * automatique défile réplique par réplique, le bouton « Suivant » itère à la
+ * main.  Un saut ``jump_to`` est exécuté comme une seule étape, sans
+ * enchaîner sur la cible dans la foulée. */
 function simNext() {
   if (kimSimState.done || kimSimState.waiting) return;
   const script = kimSimCache.script;
-  while (true) {
-    if (kimSimState.cursor >= script.length) { simEnd(); return; }
-    const step = script[kimSimState.cursor];
-    if (step.jump_to != null) {
-      if (kimSimState.seen.has(kimSimState.cursor)) { simEnd(); return; }
-      kimSimState.seen.add(kimSimState.cursor);
-      kimSimState.cursor = step.jump_to;
-      continue;
-    }
-    if (step.kind === "prompt") { renderSimPrompt(); return; }
-    kimSimState.cursor++;
-    appendSimBubble(step);
-    if (step.ends) { simEnd(); return; }
+  if (kimSimState.cursor >= script.length) { simEnd(); return; }
+  const step = script[kimSimState.cursor];
+  if (step.jump_to != null) {
+    if (kimSimState.seen.has(kimSimState.cursor)) { simEnd(); return; }
+    kimSimState.seen.add(kimSimState.cursor);
+    kimSimState.cursor = step.jump_to;
+    return;
   }
+  if (step.kind === "prompt") { renderSimPrompt(); return; }
+  kimSimState.cursor++;
+  appendSimBubble(step);
+  if (step.ends) { simEnd(); return; }
 }
 
 function stopSimAuto() {
@@ -824,12 +1046,17 @@ function toggleSimAuto() {
 }
 
 async function openSimulator() {
+  const epoch = routeEpoch;
   const title = window.__flowchartOpen || $("#kim-title").textContent;
+  const conv = window.__flowchartConv || kimConvActive || "";
   kimSimMedia = await ensureMedia();
   if (kimSimCache.title !== title) {
     simResetUi();
     simSetStatus("Chargement du script…");
-    const data = await api(`/api/kim?mode=sim&title=${encodeURIComponent(title)}`);
+    const route = `/api/kim?mode=sim&title=${encodeURIComponent(title)}` +
+      (conv ? `&conv=${encodeURIComponent(conv)}` : "");
+    const data = await api(route);
+    if (epoch !== routeEpoch) return;
     kimSimCache = { title, script: data.script || [], spoiler: data.spoiler || null, revealed: false };
     kimSimFetchedTitle = title;
     simResetUi();
@@ -848,9 +1075,11 @@ async function openSimulator() {
 
 /* ------------------------------------------------------------------ recent */
 async function renderRecent() {
+  const epoch = routeEpoch;
   const container = $("#recent-list");
   container.innerHTML = skeletonRows(8);
   const recent = await api("/api/recent?limit=30");
+  if (epoch !== routeEpoch) return;
   container.innerHTML = "";
   for (const page of recent) {
     const item = el("div", "page-list-item");
@@ -953,6 +1182,7 @@ function renderTagChips() {
 
 /* Applique les filtres actifs + requête -> navigation vers les résultats. */
 async function runSearch() {
+  const epoch = routeEpoch;
   const input = $("#search-input");
   const parsed = parseTagTokens(input.value);
   const q = parsed.query;
@@ -964,6 +1194,7 @@ async function runSearch() {
   if (canon) params.set("canon", canon.id);
   $("#search-results").innerHTML = skeletonRows(10);
   const results = await api(`/api/search?${params}`);
+  if (epoch !== routeEpoch) return;
   const container = $("#search-results");
   container.innerHTML = "";
   let lastGroup = null;
@@ -1169,20 +1400,23 @@ async function init() {
     tab.addEventListener("click", () => switchKimTab(tab.dataset.tab));
   });
 
+  // Sélecteur de discussion KIM (dropdown)
+  $("#kim-convs-select")?.addEventListener("change", (event) => {
+    const convId = event.target.value;
+    if (convId) selectKimConversation(convId);
+  });
+
   // Contrôles du simulateur KIM
   $("#sim-advance").addEventListener("click", simNext);
   $("#sim-auto").addEventListener("click", toggleSimAuto);
   $("#sim-restart").addEventListener("click", () => { simResetUi(); simNext(); });
   $("#sim-replay").addEventListener("click", () => { simResetUi(); simNext(); });
 
-  // Reload
-  $("#btn-reload").addEventListener("click", async () => {
-    state = { buckets: [], currentBucket: null, currentPageTitle: null, stats: null };
-    mediaCache = null;
-    kimSimMedia = null;
-    apiCache.clear();
-    await init();
-    handleRoute();
+  // Reload : purger tous les caches applicatifs (api, médias, état interne)
+  // puis recharge r la page : le plus fiable pour réinitialiser listeners,
+  // state et DOM (évite les doubles bindings après un "init" en doublon).
+  $("#btn-reload").addEventListener("click", () => {
+    window.location.reload();
   });
 
   // Omnibox : saisie + tags + autocomplétion
@@ -1228,7 +1462,10 @@ async function init() {
     if (event.key === "ArrowDown") { moveDropdown(1); event.preventDefault(); return; }
     if (event.key === "ArrowUp") { moveDropdown(-1); event.preventDefault(); return; }
     if (event.key === "Enter") {
-      if (dropdownItems.length) { activateDropdown(); return; }
+      event.preventDefault();
+      // Choix actif dans le dropdown (navigué aux flèches) -> activation.
+      // Sinon : recherche complète sur le libellé courant.
+      if (dropdownIndex >= 0) { activateDropdown(); return; }
       hideDropdown();
       navigate("search");
       runSearch();

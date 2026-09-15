@@ -6,6 +6,8 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .envfile import load_dotenv
+
 # Project root is the parent of the package directory.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -22,6 +24,19 @@ class Config:
     source_url_base: str = "https://wiki.warframe.com/wiki/"
     user_agent: str = "WarframeLoreScraper/1.0 (data engineering; contact: local)"
 
+    # --- www.warframe.com (official marketing site, French routes) ---
+    site_url: str = "https://www.warframe.com"
+    site_prefix: str = "/fr"
+    site_seed: str = "/fr"
+    site_max_pages: int = 3000
+    # Transactional segments excluded from the crawl: shop, account and
+    # support pages are not archived lore candidates.
+    site_exclude_segments: tuple = (
+        "/account", "/signup", "/login", "/download", "/zendesk",
+        "/shop", "/prime-access", "/prime-resurgence", "/supporter-packs",
+        "/heirloom", "/gemini", "/promocode", "/code",
+    )
+
     # --- Request robustness ---
     request_timeout: float = 60.0        # seconds per HTTP request
     max_retries: int = 5                 # transient-failure retries per request
@@ -30,20 +45,16 @@ class Config:
     per_request_limit: int = 50          # pages/categories fetched per API call
 
     # --- Incremental sync ---
-    state_file: Path = field(default_factory=lambda: PROJECT_ROOT / "sync_state.json")
     output_dir: Path = field(default_factory=lambda: PROJECT_ROOT / "out")
     output_format: str = "json"          # 'json' (megafiles) + sql (PostgreSQL)
 
-    # --- PostgreSQL (persistance SQL, choix "SQL + JSON en parallèle") ---
+    # --- PostgreSQL (SQL persistence, "SQL + JSON in parallel" approach) ---
     database_url: str = "postgresql+asyncpg://warframe:warframe@localhost:5432/warframe_lore"
 
     # --- Scope ---
-    # Logical buckets -> list of real wiki category names (subcategories are
-    # resolved automatically). Tune freely without changing code.
-    buckets: dict = field(default_factory=dict)
-
-    # Namespaces to keep (0 = main/article). Everything else is skipped
-    # (Talk:, User:, File:, Conclave:, etc.).
+    # Buckets are configured externally (buckets.json), via BucketConfig — not
+    # duplicated here. Namespaces to keep (0 = main/article). Everything else
+    # is skipped (Talk:, User:, File:, Conclave:, etc.).
     include_namespaces: frozenset = frozenset({0})
 
     # Page titles / prefixes to always exclude (case-insensitive substring).
@@ -65,12 +76,18 @@ class Config:
 
 
 def load_config() -> Config:
-    """Build a Config, applying environment-variable overrides."""
+    """Build a Config, applying environment-variable overrides.
+
+    ``config.py`` is now the single entry point for ``WF_*`` variables: the
+    ``.env`` file is loaded here (not via an import side-effect of ``engram``/
+    ``discord``), so ``cephalon run`` sees the exact same overrides.
+    """
+    load_dotenv()
     cfg = Config()
 
     cfg.api_url = os.getenv("WF_API_URL", cfg.api_url)
+    cfg.site_url = os.getenv("WF_SITE_URL", cfg.site_url)
     cfg.output_dir = Path(os.getenv("WF_OUTPUT_DIR", str(cfg.output_dir)))
-    cfg.state_file = Path(os.getenv("WF_STATE_FILE", str(cfg.state_file)))
     cfg.database_url = os.getenv("WF_DATABASE_URL", cfg.database_url)
 
     cfg.max_retries = int(os.getenv("WF_MAX_RETRIES", str(cfg.max_retries)))

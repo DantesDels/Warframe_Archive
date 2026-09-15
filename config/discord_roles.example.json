@@ -1,0 +1,26 @@
+{
+  "commandement": {
+    "FONDATEUR": "",
+    "MODÉRATEURS": "",
+    "CHEFS DE CLAN": ""
+  },
+  "structure_clan": {
+    "『 PRIME 』": "",
+    "『 PILIERS 』": "",
+    "[ LÉGENDAIRES ]": "",
+    "RECRUTEURS": "",
+    "CLAN": "",
+    "SPÉCIALISTE": "",
+    "VÉTÉRAN": "",
+    "ADEPTE": "",
+    "NOVICE": ""
+  },
+  "affiliations": {
+    "ALLIANCE": ""
+  },
+  "generaux": {
+    "WARFRAME": "",
+    "SOULFRAME": "",
+    "MEMBRES": ""
+  }
+}

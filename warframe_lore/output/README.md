@@ -1,41 +1,50 @@
-# Couche `output` — Export
+# `output` Layer — Export
 
-Responsabilité : formater la donnée finale pour les consommateurs (moteurs LLM,
-notebooks, RAG) sous forme de **megafiles JSON** par bucket.
+Responsibility: format the final data for consumers (LLM engines,
+notebooks, RAG) as **JSON megafiles** per bucket.
 
-## Contenu
+## Contents
 
-| Fichier | Rôle |
+| File | Role |
 |---|---|
-| `models.py` | `OutputEntry`, `MegafileMetadata`, `CanonStatus`, `build_output_entry`, `merge_canon_status` |
-| `writer.py` | `MegafileManager` : écrit un fichier JSON par bucket dans `out/` |
+| `models/` | Models, one file per class: `canon_status.py` (`CanonStatus` + `merge_canon_status`), `output_entry.py` (`OutputEntry`), `megafile_metadata.py` (`MegafileMetadata`) |
+| `entries.py` | `build_output_entry`: factory compliant with the documented JSON schema |
+| `fusion.py` | `read_existing_entries`, `build_megafile`, `atomic_write_json`, `now_iso_utc`: incremental merge + atomic write |
+| `writer.py` | `MegafileManager.merge_and_write`: merge a bucket and write the megafile to `out/` |
 
-## Modèle de sortie
+## Output Model
 
-Chaque entrée expose (entre autres) :
+Each entry exposes (among others):
 
-- `title` — titre de la page wiki
-- `content_markdown` — contenu nettoyé (Markdown prêt pour LLM)
+- `page_title` — wiki page title
+- `content_markdown` — cleaned content (LLM-ready Markdown)
 - `canon_status` — `canon` / `speculation` / `community_theory`
-- `source_url` — URL de la page source
-- `last_updated` — date de dernière modification (utile au delta)
+- `source` — source page URL
+- `last_updated` — last modification date (useful for delta)
 
 ## Canon
 
-`merge_canon_status(*statuses)` combine plusieurs statuts (pages ou versions)
-et retient le **plus prudent** :
+`merge_canon_status(*statuses)` combines multiple statuses (pages or versions)
+and retains the **most cautious**:
 `community_theory` > `speculation` > `canon`.
 
-Cela permet à un RAG d'ignorer les théories des joueurs quand on cherche du
-canon strictement officiel.
+This allows an RAG to ignore player theories when strictly official canon is
+sought.
 
 ## Usage
 
 ```python
 from warframe_lore.output import MegafileManager, build_output_entry, CanonStatus
 
-entry = build_output_entry(title=..., content_markdown=...,
-                           canon_status=CanonStatus.CANON, ...)
+entry = build_output_entry(
+    page_title="Excalibur", category="Warframes",
+    touched="2026-09-05T12:00:00Z", content_markdown="# Excalibur\n…",
+    canon_status=CanonStatus.CANON, pageid=123,
+    source_wiki_url="https://wiki.warframe.com/wiki/",
+)
 manager = MegafileManager(output_dir="out")
-manager.write_bucket(bucket_id="Lore_Quetes", entries=[entry])
+manager.merge_and_write(
+    filename="Lore_Warframes.json", bucket_title="Warframes",
+    new_entries=[entry], metadata_note="…", live_titles={"Excalibur"},
+)
 ```

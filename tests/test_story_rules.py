@@ -24,6 +24,10 @@ from warframe_lore.discord.guild.story import (
     story_subject_question,
     substitute_story_subject,
 )
+from warframe_lore.engram.roleplay.prompt import (
+    TARGETED_STORY_DIRECTIVE,
+    targeted_story_directive,
+)
 
 STORY_REQUESTS = (
     "raconte-moi l'histoire des Orokin",
@@ -160,6 +164,25 @@ class SubjectDisambiguationTests(unittest.TestCase):
             substitute_story_subject("raconte-moi l'histoire de garuda",
                                      "l'archimédienne"),
             "raconte-moi l'histoire de l'archimédienne")
+
+
+class TargetedStoryDirectiveTests(unittest.TestCase):
+    """Verrou spatio-temporel pour les requêtes ciblées."""
+
+    def test_forbids_temporal_bridge(self):
+        directive = targeted_story_directive("1999")
+        self.assertIn("INTERDICTION DE PONT TEMPOREL", directive)
+        self.assertIn("Zariman", directive)
+        self.assertIn("Margulis", directive)
+
+    def test_anchors_in_named_era(self):
+        directive = targeted_story_directive("Ère Orokin")
+        self.assertIn("Ère imposée par les archives", directive)
+        self.assertIn("Ère Orokin", directive)
+
+    def test_default_directive_without_era(self):
+        self.assertIn("VERROU SPATIO-TEMPOREL", TARGETED_STORY_DIRECTIVE)
+        self.assertIn("ANCRAGE DANS LA BONNE ÈRE", TARGETED_STORY_DIRECTIVE)
 
 
 if __name__ == "__main__":

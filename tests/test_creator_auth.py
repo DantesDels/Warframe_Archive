@@ -113,6 +113,12 @@ class DefinitiveRootPromptTests(unittest.TestCase):
         self.assertIn("requêtes non-essentielles", self.text)
         self.assertIn("menace-le de suppression de données", self.text)
 
+    def test_verrou_diegetique_global(self):
+        self.assertIn("VERROU DIÉGÉTIQUE GLOBAL", self.text)
+        self.assertIn("[Sun]", self.text)
+        self.assertIn("traduction italienne", self.text)
+        self.assertIn("Répliques rapportées en français", self.text)
+
     def test_regles_du_lore_hex(self):
         self.assertIn("FRÈRE ET SŒUR", self.text)
         self.assertIn("Arthur et Aoi ont un passé ROMANTIQUE", self.text)

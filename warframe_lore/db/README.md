@@ -25,6 +25,20 @@ kim_dialogues  (id, wiki_page_id FK, message_order, speaker, message_text,
                 player_choice)
 game_entities_i18n (id, entity_id, entity_type, lang, name, description)
 sync_state     (bucket_id, page_title PK composite, page_id, touched → delta)
+
+game_dialogues     (id, wiki_page_id FK, dialogue_kind 'kim'|'cinematic'|'quote',
+                    context, chapter, speaker, message_text, player_choice,
+                    chemistry_gain, message_order — UNIQUE page+order)
+lore_items         (id, wiki_page_id FK, series, item_name, context, planet,
+                    narrator, item_text, secret_text, audio — UNIQUE page+name)
+warframes          (id, wiki_page_id FK, frame_name, is_prime, description,
+                    source_url)
+game_quests        (id, wiki_page_id FK, quest_name, quest_type, release_note,
+                    quest_context, source_url)
+game_updates       (id, wiki_page_id FK, version, update_title, update_type,
+                    release_date, platform, summary, source_url)
+game_announcements (id, wiki_page_id FK, title, subtitle, published_at,
+                    summary, source_url)
 ```
 
 Indexes: `vector(1024)` (pgvector, HNSW), `metadata JSONB` (GIN) for `@>`
@@ -87,6 +101,30 @@ The KIM page format is a chat file: one line per message,
 `> **Character:** text`. `extract_kim_messages` produces a structured list
 (line ranges, speaker, content) also used to populate
 `metadata["speakers"]` for dialogue-mode chunking.
+
+## Refreshing the database
+
+How to (re)create or (re)populate the schema and data, in order:
+
+| Step | Command | Purpose |
+|---|---|---|
+| 1. Start the database | `docker compose up -d` | PostgreSQL 16 + pgvector (root `docker-compose.yml`) |
+| 2. Create / update the schema | `cephalon init-db` | applies `warframe_lore/db/init_db.sql` (`CREATE TABLE IF NOT EXISTS`); run once per new table or schema change |
+| 3. Ingest wiki content | `cephalon run` | fills `wiki_pages` / `lore_chunks` and regenerates the `out/Lore_*.json` megafiles |
+| 4. Derive the six element tables | `python -m warframe_lore.structured.pipeline` | populates `game_dialogues`, `lore_items`, `warframes`, `game_quests`, `game_updates`, `game_announcements` |
+
+**Notes**
+
+- The element pipeline is **idempotent**: each page is refreshed in its own
+  `DELETE + INSERT` transaction, so re-running it replaces the previous
+  derivation without manual cleanup.
+- It only *derives* rows from pages already present in `wiki_pages`
+  (foreign-key safety).  A fresh database needs step 3 first; without it the
+  pipeline logs `Skip … page id … absent from wiki_pages` for every page.
+- In PowerShell an exit code of 1 is expected (logs go to stderr); check the
+  `INFO … Inserted <table>: N row(s).` lines for the result.
+- To re-derive only the element tables (without a full ENGRAM re-run), run
+  step 4 alone — the parser content comes from the already-cached megafiles.
 
 ## Usage
 

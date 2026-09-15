@@ -23,6 +23,7 @@ from .models import (
     GameEntityI18n,
     KimDialogue,
     LoreChunk,
+    StructuredChunk,
     SyncStateRecord,
     WikiPage,
 )
@@ -33,6 +34,7 @@ __all__ = [
     "LoreChunk",
     "KimDialogue",
     "GameEntityI18n",
+    "StructuredChunk",
     "SyncStateRecord",
     "SQLDatabaseManager",
     "ChunkManager",

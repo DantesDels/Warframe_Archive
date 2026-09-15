@@ -14,16 +14,17 @@ storage or clients — it consumes abstractions injected via the `Container`.
 | `config.py` | `EngramConfig`: DB/LLM URLs, models, top_k, windows (overridable via `ENGRAM_*` env vars) |
 | `persona.py` | `Persona`: system prompt read from `persona/oracle` (editable on the fly) |
 | `llm/` | `base.py` (`LLMProvider` / `EmbeddingProvider` interfaces), `lmstudio.py` (`LMStudioProvider`, OpenAI-compatible) |
-| `rag/` | `retriever.py` (`Retriever` contract + `RAGHit`), `search.py` (`CosinusSearch` pgvector), `prompt.py` (`PromptBuilder`), `service.py` (`RAGService`) |
+| `rag/` | `retriever.py` (`Retriever` contract + `RAGHit`), `search.py` (`CosinusSearch` pgvector), `structured_search.py` (`StructuredSearch`), `merged.py` (`MergedRetriever`), `prompt.py` (`PromptBuilder`), `service.py` (`RAGService`) |
 | `roleplay/` | `models.py` (`Session`/`Turn`), `turn.py` (`plan_turn` — deterministic short-circuits BEFORE the LLM: probe, missing archives, guild member, speaker identity), `stream.py` (`RoleplayService` streaming), `prompt/` (`blocks.py` BLOC 1 + directives de fin, `directives.py` fiche interlocuteur / civilité / jalousie / langue, `window.py` `SlidingWindow`), `replies/` (`identity.py` deterministic speaker-identity + member-card replies, `comment.py` one-shot member observation), `memory.py` (`UserMemoryStore`) |
 | `api/` | `main.py` (FastAPI), `container.py` (service composition), `schemas.py` (HTTP), `routers/` (`document_rag.py`, `roleplay.py` WS terminal — transport only, `roleplay_stream.py` frame emission) |
-| `scripts/` | `ingest.py`: ETL from JSON megafiles → vectorized `lore_chunks` |
+| `scripts/` | `ingest.py`: ETL from JSON megafiles → vectorized `lore_chunks`; `embed_structured.py`: embed the six element tables → `structured_chunks` |
 
 ## Architecture
 
 ```
 EngramConfig ──► Container (DI) ──┬─► LMStudioProvider (chat + embed)
-                                  ├─► CosinusSearch (Retriever pgvector)
+                                  ├─► MergedRetriever ─┬─► CosinusSearch (lore_chunks pgvector)
+                                  │                    └─► StructuredSearch (structured_chunks pgvector)
                                   ├─► RAGService  → POST /v1/rag
                                   └─► RoleplayService → WS /v1/roleplay
 ```
@@ -36,8 +37,12 @@ core.
 ## Document RAG
 
 1. The question is vectorized (`bge-m3`, 1024d) via LM Studio;
-2. `CosinusSearch` queries `lore_chunks.embedding` by cosine similarity
-   pgvector (operator `<=>`, HNSW index), limited by `top_k` + `min_score`;
+2. `MergedRetriever` runs BOTH channels in parallel — `CosinusSearch`
+   queries `lore_chunks.embedding` by cosine similarity pgvector (operator
+   `<=>`, HNSW index) and `StructuredSearch` queries `structured_chunks`
+   (the embedded six element tables: warframes, quests, updates,
+   announcements, lore items, dialogues) — merged by score, capped at
+   `top_k`;
 3. `PromptBuilder` assembles **a single XML-strict system message**: persona,
    `<archives>{context}</archives>` tags and fixed fallback directives
    (Gemma-2 better delimits internal knowledge / context / instructions
@@ -90,6 +95,9 @@ docker compose up -d
 
 # Schema + ingestion + vectorization
 python -m warframe_lore.engram.scripts.ingest --glob "out/Lore_*.json"
+
+# Embed the six human-readable element tables
+python -m warframe_lore.engram.scripts.embed_structured   # optional --kinds
 
 # API
 uvicorn warframe_lore.engram.api.main:app --port 8000

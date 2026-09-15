@@ -7,7 +7,7 @@ from collections import Counter
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..db.models import GameDialogue
+from ..db.models import GameDialogue, KimDialogue
 from .dialogues import parse_dialogues
 from .store import store
 
@@ -52,8 +52,18 @@ def dialogue_rows(kind: str, context: str, markdown: str) -> list[dict]:
 async def kim_page(
     session: AsyncSession, counts: Counter, page_id: int, title: str, markdown: str
 ) -> None:
+    """Route KIM pages to the correct table: ``kim_dialogues`` for kind='kim',
+    ``game_dialogues`` for ``quote`` pages found in the KIM megafile bucket."""
     kind, context = kim_context(title)
     rows = dialogue_rows(kind, context, markdown)
+    if kind == "kim":
+        # kim_dialogues is a dedicated table: dialogue_kind is implicit.
+        rows = [
+            {key: value for key, value in row.items() if key != "dialogue_kind"}
+            for row in rows
+        ]
+        await store(session, KimDialogue, page_id, rows, "kim_dialogues", counts)
+        return
     await store(session, GameDialogue, page_id, rows, "game_dialogues", counts)
 
 

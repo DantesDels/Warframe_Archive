@@ -178,6 +178,7 @@ package with its own README (see [Documentation](#documentation)). See
 - `kim_dialogues` — KIM dialogue fragments (speaker, text, FR/EN versions).
 - `game_entities_i18n` — localized entities (en/fr), join on `entity_id`.
 - `sync_state_records` — database delta (page, checksum, timestamps).
+- `structured_chunks` — the six element tables (dialogues, lore items, warframes, quests, updates, announcements) rendered + embedded (pgvector, 1024d); HNSW index, merged with `lore_chunks` by `MergedRetriever`.
 
 ### Founding Design Decisions
 
@@ -619,10 +620,12 @@ docker compose up -d                  # 1. PostgreSQL 16 + pgvector
 pip install -r requirements.txt       # 2. dependencies
 python -m warframe_lore --init-db     # 3. schema (or: cephalon init-db)
 cephalon run                         # 4. delta ingestion (JSON + SQL + embeddings)
-# 5. LM Studio: local server :1234, load gemma-2-9b-it + bge-m3
+python -m warframe_lore.structured.pipeline   # 5. six element tables (dialogues, warframes…)
+python -m warframe_lore.engram.scripts.embed_structured  # 6. embed them → structured_chunks
+# 7. LM Studio: local server :1234, load gemma-2-9b-it + bge-m3
 uvicorn warframe_lore.engram.api.app:app --port 8000 --app-dir warframe_lore
 #    (or: cd warframe_lore/engram && uvicorn api.app:app --port 8000)
-# 6. Discord bot (optional):
+# 8. Discord bot (optional):
 DISCORD_TOKEN=... python -m warframe_lore.discord.main --channels <ID>
 #    (or: cephalon bot run --channels <ID>)
 ```

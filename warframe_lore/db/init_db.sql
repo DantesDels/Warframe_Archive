@@ -97,19 +97,27 @@ CREATE TABLE IF NOT EXISTS kim_dialogues (
     id                BIGSERIAL PRIMARY KEY,
     wiki_page_id      BIGINT      NOT NULL
                       REFERENCES wiki_pages (page_id) ON DELETE CASCADE,
+    context           TEXT,                           -- quête / personnage
+    chapter           TEXT,                           -- chapitre '##' de la scène
     message_order     INT         NOT NULL,          -- ordre chronologique du message
     speaker           TEXT        NOT NULL,          -- locuteur (ex: "Amir")
     message_text      TEXT        NOT NULL,          -- contenu du message
     player_choice     BOOLEAN     NOT NULL DEFAULT FALSE,
-    timestamp         TEXT,                          -- heure du message si disponible
-    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    chemistry_gain    BOOLEAN     NOT NULL DEFAULT FALSE,
+    parent_message_id BIGINT      REFERENCES kim_dialogues (id) ON DELETE SET NULL,
     UNIQUE (wiki_page_id, message_order)
 );
 
--- Mise à niveau additive : distinction des choix du joueur.
+-- Mise à niveau additive pour les bases créées avant l'ajout de ces colonnes.
 ALTER TABLE kim_dialogues ADD COLUMN IF NOT EXISTS player_choice BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE kim_dialogues ADD COLUMN IF NOT EXISTS context TEXT;
+ALTER TABLE kim_dialogues ADD COLUMN IF NOT EXISTS chapter TEXT;
+ALTER TABLE kim_dialogues ADD COLUMN IF NOT EXISTS chemistry_gain BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE kim_dialogues ADD COLUMN IF NOT EXISTS parent_message_id BIGINT
+    REFERENCES kim_dialogues (id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_kim_page ON kim_dialogues (wiki_page_id);
+CREATE INDEX IF NOT EXISTS idx_kim_parent ON kim_dialogues (parent_message_id);
 
 -- ----------------------------------------------------------------------------
 -- 4. Table game_entities_i18n : entités du jeu localisées (Warframe Public
@@ -172,12 +180,18 @@ CREATE TABLE IF NOT EXISTS game_dialogues (
     player_choice     BOOLEAN     NOT NULL DEFAULT FALSE,
     chemistry_gain    BOOLEAN     NOT NULL DEFAULT FALSE,
     message_order     INT         NOT NULL,           -- ordre dans la page
+    parent_message_id BIGINT      REFERENCES game_dialogues (id) ON DELETE SET NULL,
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (wiki_page_id, message_order)
 );
 
+-- Mise à niveau additive pour les bases créées avant l'ajout de ces colonnes.
+ALTER TABLE game_dialogues ADD COLUMN IF NOT EXISTS parent_message_id BIGINT
+    REFERENCES game_dialogues (id) ON DELETE SET NULL;
+
 CREATE INDEX IF NOT EXISTS idx_dialogues_page ON game_dialogues (wiki_page_id);
 CREATE INDEX IF NOT EXISTS idx_dialogues_kind ON game_dialogues (dialogue_kind);
+CREATE INDEX IF NOT EXISTS idx_dialogues_parent ON game_dialogues (parent_message_id);
 
 -- ----------------------------------------------------------------------------
 -- 7. Table lore_items : collectibles de lore trouvés en jeu (fragments,
@@ -283,3 +297,30 @@ CREATE TABLE IF NOT EXISTS game_announcements (
 
 CREATE INDEX IF NOT EXISTS idx_announcements_published
     ON game_announcements (published_at);
+
+-- ----------------------------------------------------------------------------
+-- 12. Table structured_chunks : corpus embarqué des 6 tables lecture humaine.
+--     Chaque ligne source (warframes, quêtes, updates, annonces, fragments,
+--     dialogues) est rendue en texte « searchable » puis embarquée via bge-m3.
+--     Le retriever RAG fusionne ce corpus avec lore_chunks (cosine merge).
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS structured_chunks (
+    id            BIGSERIAL PRIMARY KEY,
+    kind          TEXT        NOT NULL,   -- table source (ex: 'warframes')
+    source_id     BIGINT      NOT NULL,   -- PK de la ligne source
+    wiki_page_id  BIGINT      NOT NULL
+                  REFERENCES wiki_pages (page_id) ON DELETE CASCADE,
+    title         TEXT        NOT NULL,   -- titre affiché dans le prompt
+    content       TEXT        NOT NULL,   -- texte rendu pour embedding
+    metadata      JSONB       DEFAULT '{}',
+    embedding     vector(1024),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (kind, source_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_structured_kind
+    ON structured_chunks (kind);
+CREATE INDEX IF NOT EXISTS idx_structured_page
+    ON structured_chunks (wiki_page_id);
+CREATE INDEX IF NOT EXISTS idx_structured_embedding
+    ON structured_chunks USING hnsw (embedding vector_cosine_ops);

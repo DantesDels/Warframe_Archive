@@ -9,8 +9,9 @@ Stack: SQLAlchemy 2.0 async + asyncpg + pgvector.
 
 | File / Package | Role |
 |---|---|
-| `models/` | ORM, one file per class: `base.py`, `wiki_page.py`, `lore_chunk.py`, `kim_dialogue.py`, `game_entity_i18n.py`, `sync_state_record.py` |
+| `models/` | ORM, one file per class: `base.py`, `wiki_page.py`, `lore_chunk.py`, `kim_dialogue.py`, `game_entity_i18n.py`, `sync_state_record.py`, `structured_chunk.py` (+ the six element tables) |
 | `manager/` | `SQLDatabaseManager`: mixin composition `base.py` (connection, `run_ddl_script`), `ingest.py` (upsert page/chunks/dialogues), `entities.py` (upsert `game_entities_i18n`), `delta.py` (sync state), `queries.py` (stats, recent), `sql_helpers.py` |
+| `migrations/` | One-shot scripts: `dialogue_tree_graph.sql` (kim_dialogues upgrade, KIM data transfer, `parent_message_id` graph columns on both dialogue tables) + `link_dialogue_trees` / `tree_link` (adjacency-list linking) |
 | `chunks/` | `ChunkManager` / `RAGChunk` / `chunk_markdown`: Markdown splitting into RAG chunks (`patterns.py` KIM rules, `splitters.py`, `split.py`) |
 | `kim_parser.py` | `extract_kim_messages`: KIM message extraction from dialogue blocks |
 
@@ -21,14 +22,15 @@ wiki_pages     (page_id PK, namespace, page_title UNIQUE, touched → delta,
                 canon_status, content_markdown)
 lore_chunks    (id, wiki_page_id FK, chunk_index, content_markdown,
                 metadata JSONB, embedding vector(1024))
-kim_dialogues  (id, wiki_page_id FK, message_order, speaker, message_text,
-                player_choice)
+kim_dialogues  (id, wiki_page_id FK, context, chapter,
+                message_order, speaker, message_text, player_choice,
+                chemistry_gain, parent_message_id — UNIQUE page+order)
 game_entities_i18n (id, entity_id, entity_type, lang, name, description)
 sync_state     (bucket_id, page_title PK composite, page_id, touched → delta)
 
 game_dialogues     (id, wiki_page_id FK, dialogue_kind 'kim'|'cinematic'|'quote',
                     context, chapter, speaker, message_text, player_choice,
-                    chemistry_gain, message_order — UNIQUE page+order)
+                    chemistry_gain, message_order, parent_message_id — UNIQUE page+order)
 lore_items         (id, wiki_page_id FK, series, item_name, context, planet,
                     narrator, item_text, secret_text, audio — UNIQUE page+name)
 warframes          (id, wiki_page_id FK, frame_name, is_prime, description,
@@ -39,6 +41,9 @@ game_updates       (id, wiki_page_id FK, version, update_title, update_type,
                     release_date, platform, summary, source_url)
 game_announcements (id, wiki_page_id FK, title, subtitle, published_at,
                     summary, source_url)
+structured_chunks (id, kind, source_id FK, wiki_page_id FK, title, content,
+                    metadata JSONB, embedding vector(1024),
+                    UNIQUE kind+source_id)
 ```
 
 Indexes: `vector(1024)` (pgvector, HNSW), `metadata JSONB` (GIN) for `@>`
@@ -110,14 +115,28 @@ How to (re)create or (re)populate the schema and data, in order:
 |---|---|---|
 | 1. Start the database | `docker compose up -d` | PostgreSQL 16 + pgvector (root `docker-compose.yml`) |
 | 2. Create / update the schema | `cephalon init-db` | applies `warframe_lore/db/init_db.sql` (`CREATE TABLE IF NOT EXISTS`); run once per new table or schema change |
+| 2b. One-shot migration | `psql -U <user> -d warframe_lore -f warframe_lore/db/migrations/dialogue_tree_graph.sql` | additive `parent_message_id` on both dialogue tables, `kim_dialogues` schema upgrade, KIM data transfer out of `game_dialogues` (once per existing database) |
+| 2c. Link dialogue trees | `python -m warframe_lore.db.migrations.link_dialogue_trees` | computes and stores `parent_message_id` (adjacency list) for both dialogue tables (needs 2b first) |
 | 3. Ingest wiki content | `cephalon run` | fills `wiki_pages` / `lore_chunks` and regenerates the `out/Lore_*.json` megafiles |
-| 4. Derive the six element tables | `python -m warframe_lore.structured.pipeline` | populates `game_dialogues`, `lore_items`, `warframes`, `game_quests`, `game_updates`, `game_announcements` |
+| 4. Derive the element tables | `python -m warframe_lore.structured.pipeline` | populates `game_dialogues` (cinematics/quotes), `kim_dialogues` (KIM pages), `lore_items`, `warframes`, `game_quests`, `game_updates`, `game_announcements` |
+| 5. Embed the element tables | `python -m warframe_lore.engram.scripts.embed_structured` | renders each element-table row to a searchable text and embeds it (bge-m3) into `structured_chunks` for the RAG retriever |
 
 **Notes**
 
+- The migration `dialogue_tree_graph.sql` is idempotent and transaction-atomic
+  (`BEGIN`/`COMMIT`): re-running it against a partially migrated database is
+  safe. It is a **one-shot data transfer** (KIM rows move out of
+  `game_dialogues`), unlike `init_db.sql` which only holds schema DDL.
+- After the migration, `game_dialogues` no longer contains KIM rows:
+  re-run step 5 (`embed_structured --kinds game_dialogues kim_dialogues`) so
+  the RAG corpus stays aligned (the old `game_dialogues` KIM chunks are
+  replaced by `kim_dialogues` chunks).
 - The element pipeline is **idempotent**: each page is refreshed in its own
   `DELETE + INSERT` transaction, so re-running it replaces the previous
   derivation without manual cleanup.
+- `embed_structured` is likewise idempotent (advisory-locked, `DELETE` per
+  kind then insert) and filterable with `--kinds <names...>`; it requires
+  LM Studio up to compute the bge-m3 embeddings.
 - It only *derives* rows from pages already present in `wiki_pages`
   (foreign-key safety).  A fresh database needs step 3 first; without it the
   pipeline logs `Skip … page id … absent from wiki_pages` for every page.

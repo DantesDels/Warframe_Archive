@@ -14,6 +14,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from .kim_filter import is_dialogue_junk
+
 # Bold format (cleaner output): '> **Amir:** text'.
 # NB: the colon is INSIDE the bold (``**Amir:**`` = ``**`` + ``Amir:`` + ``**``).
 _KIM_BOLD_LINE_PATTERN = re.compile(
@@ -59,7 +61,7 @@ def extract_kim_messages(markdown_text: str) -> list[KimMessage]:
             choice = _KIM_CHOICE_LINE_PATTERN.match(stripped_line)
             if choice is not None:
                 choice_text = choice.group("text").strip()
-                if choice_text:
+                if choice_text and not is_dialogue_junk("", choice_text):
                     messages.append(KimMessage(
                         message_order=len(messages),
                         speaker="",
@@ -80,6 +82,10 @@ def extract_kim_messages(markdown_text: str) -> list[KimMessage]:
         # speaker name contains neither '*' nor '_' nor tags.
         if not _looks_like_speaker_name(speaker_name):
             continue
+        # Business exclusion: UI labels, patch-note phrases, loot/drop
+        # mechanics and bare numeric values never enter the table.
+        if is_dialogue_junk(speaker_name, message_text):
+            continue
         messages.append(KimMessage(
             message_order=len(messages),
             speaker=speaker_name,
@@ -94,8 +100,11 @@ def _looks_like_speaker_name(candidate: str) -> bool:
     """True if the 'speaker' looks like a plausible KIM character.
 
     Excludes formatting artifacts (``*_SPOILERS_* _``, ``**[...]``) that
-    have no proper name.
+    have no proper name, and whole sentences pushed into the leading bold
+    segment ("Banishing an Eximus enemy will remove its Aura ..., eg:").
     """
-    if any(marker in candidate for marker in ("*", "_", "]", "}")):
+    if any(marker in candidate for marker in ("*", "_", "]", "}", ":")):
+        return False
+    if len(candidate) > 40:
         return False
     return candidate[0].isalpha() and candidate[0].isupper()

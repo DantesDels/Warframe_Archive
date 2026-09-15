@@ -24,8 +24,7 @@ class SyncStateRecord(Base):
     page_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     touched: Mapped[str | None] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now())
-
-    __table_args__ = (
-        Index("idx_sync_bucket", "bucket_id"),
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+    __table_args__ = (Index("idx_sync_bucket", "bucket_id"),)

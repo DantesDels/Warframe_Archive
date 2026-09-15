@@ -1,4 +1,4 @@
-"""A message from a KIM conversation (parsed dialogue line)."""
+"""Warframe index entry (base or Prime), from the official site."""
 
 from __future__ import annotations
 
@@ -9,8 +9,6 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
-    Index,
-    Integer,
     Text,
     UniqueConstraint,
     func,
@@ -21,29 +19,31 @@ from .base import Base
 from .wiki_page import WikiPage
 
 
-class KimDialogue(Base):
-    """A message from a KIM conversation (parsed dialogue line)."""
+class Warframe(Base):
+    """One row of the warframe directory (catalog / index only).
 
-    __tablename__ = "kim_dialogues"
+    ``frame_name`` is the base name ("Ash"); ``is_prime`` selects the
+    variant.  ``description`` holds the official French blurb.
+    """
+
+    __tablename__ = "warframes"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     wiki_page_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("wiki_pages.page_id", ondelete="CASCADE"), nullable=False
     )
-    message_order: Mapped[int] = mapped_column(Integer, nullable=False)
-    speaker: Mapped[str] = mapped_column(Text, nullable=False)
-    message_text: Mapped[str] = mapped_column(Text, nullable=False)
-    player_choice: Mapped[bool] = mapped_column(
+    frame_name: Mapped[str] = mapped_column(Text, nullable=False)
+    is_prime: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
-    timestamp: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
-    wiki_page: Mapped[WikiPage] = relationship(back_populates="kim_dialogues")
+    wiki_page: Mapped[WikiPage] = relationship(back_populates="warframes")
 
     __table_args__ = (
-        UniqueConstraint("wiki_page_id", "message_order", name="uq_kim_page_order"),
-        Index("idx_kim_page", "wiki_page_id"),
+        UniqueConstraint("frame_name", "is_prime", name="uq_warframe_variant"),
     )

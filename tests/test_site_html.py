@@ -115,6 +115,14 @@ class SiteHtmlSourceTests(unittest.TestCase):
         self.assertFalse(info.missing)
         self.assertIsNone(info.touched)
 
+    def test_fetch_pages_assigns_deterministic_sql_pageids(self):
+        a = self.source.fetch_pages(["/fr/news/welcome"])["/fr/news/welcome"]
+        b = self.source.fetch_pages(["/fr/news/welcome"])["/fr/news/welcome"]
+        other = self.source.fetch_pages(["/fr"])["/fr"]
+        self.assertGreater(a.pageid, 0)
+        self.assertEqual(a.pageid, b.pageid)
+        self.assertNotEqual(a.pageid, other.pageid)
+
     def test_fetch_pages_returns_html_url_and_touched(self):
         page = self.source.fetch_pages(["/fr/news/welcome", "/fr/nope"])[
             "/fr/news/welcome"]

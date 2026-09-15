@@ -8,12 +8,22 @@ fetched as raw HTML (cleaned upstream by the ``HtmlCleaner``).
 
 from __future__ import annotations
 
+import zlib
 from urllib.parse import urlsplit
 
 from .base import BaseSource
 from .models import PageData, TouchedInfo
 from .site_crawl import crawl_paths
 from .site_http import SiteHttp
+
+
+def site_page_id(path: str) -> int:
+    """Deterministic per-route id (31-bit) for the SQL page identity.
+
+    The site has no MediaWiki page ids; a stable integer keeps ``wiki_pages``
+    and ``lore_chunks`` keyed per page instead of all collapsing on 0.
+    """
+    return zlib.crc32(("fr:" + path).encode("utf-8")) & 0x7FFFFFFF
 
 
 class SiteHtmlSource(BaseSource):
@@ -72,7 +82,8 @@ class SiteHtmlSource(BaseSource):
                 continue
             html, touched = fetched
             pages[title] = PageData(
-                pageid=0, title=title, namespace=0, touched=touched,
+                pageid=site_page_id(title), title=title, namespace=0,
+                touched=touched,
                 url=self.config.site_url + title, content=html,
             )
         return pages

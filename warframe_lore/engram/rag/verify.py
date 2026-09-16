@@ -6,10 +6,11 @@ weights and invents named entities absent from the ``<archives>`` (playtest
 "Eleanor" -> "Perrin Sequence", "née à Höllvania").  This module is the ONLY
 deterministic protection: every capitalized NAMED ENTITY of the generated
 answer must appear in the retrieved context.  Ordinary vocabulary — a Codex
-field label ("Motivations", "Stratégie") or a word the narrative already
-spells lowercase — is a layout artifact, not an entity, and never triggers
-the gate.  An answer introducing unsupported entities is replaced with the
-abstention chain.
+field label ("Motivations", "Stratégie"), a word the narrative already
+spells lowercase, or a common noun the French article contracts before
+("l'Empire Orokin") — is a layout artifact, not an entity, and never
+triggers the gate.  An answer introducing unsupported entities is replaced
+with the abstention chain.
 
 The corpus is the RAG ``<archives>`` context ONLY — never the persona, which
 carries a game-wide Warframe vocabulary ("Margulis", "Zariman", "Sentient")
@@ -76,14 +77,21 @@ def extract_entities(text: str) -> set[str]:
 def _ordinary_word(entity: str, answer: str) -> bool:
     """Ordinary vocabulary, not a proper name (template capital escaped).
 
-    Two independent signals: the exact word recurs in LOWERCASE in the
+    Three independent signals: the exact word recurs in LOWERCASE in the
     answer — the sheet capitalizes field labels while the narrative spells
-    the same word lowercase, and invented proper names are NEVER lowercase —
-    or the word belongs to the curated French narrative list (label-only
-    sheet occurrence, playtest « Ballas »).  The lowercase signal is
-    language-agnostic; the list is French-only.
+    the same word lowercase, and invented proper names are NEVER lowercase;
+    the word belongs to the curated French narrative list (label-only sheet
+    occurrence, playtest « Ballas »); or it is introduced by a contracted
+    determiner (``l'Empire``, ``d'Alad``) — French elides the article before
+    a COMMON noun, never before a proper name in the model's grammatical
+    French.  The lowercase signal is language-agnostic; the list and the
+    elision are French-only.
     """
     if entity in _FR_COMMON:
+        return True
+    elided = re.compile(
+        rf"\b(?:l|d|qu)['’]\s*{re.escape(entity)}\b", re.IGNORECASE)
+    if elided.search(answer):
         return True
     pattern = re.compile(rf"\b{re.escape(entity)}\b", re.IGNORECASE)
     return any(match.group(0).islower() for match in pattern.finditer(answer))

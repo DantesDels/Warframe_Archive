@@ -14,9 +14,10 @@ from collections.abc import AsyncIterator
 from ..llm import LLMProvider
 from ..models import ChatMessage
 from ..persona import HOSTILE_PERSONA
-from ..rag import RAG_ERROR
+from ..rag import CONFABULATION_ERROR, RAG_ERROR, verify_answer
 from .models import Session
 from .prompt import (
+    STORY_LENS_STARTS,
     SlidingWindow,
     archive_bloc,
     leverian_directive,
@@ -80,6 +81,11 @@ class RoleplayService:
         subject and anchors the narrative in that subject's own era.
         ``leverian_warframe`` forces the tale to be grounded on Drusus'
         Leverian narration for that frame.
+
+        An archive-grounded turn (``rag_context`` set) is buffered and passed
+        through the deterministic entity gate (:mod:`...rag.verify`): the full
+        response is emitted only once every named entity is present in the
+        retrieved passages, otherwise the abstention chain is served instead.
         """
         session.add("user", user_text)
         system = archive_bloc(self._base_prompt(persona), rag_context,
@@ -107,9 +113,31 @@ class RoleplayService:
                         if rag_context else self.temperature))
         async for token in self.llm.chat_stream(messages, temperature):
             tokens.append(token)
-            yield token
+            if rag_context is None:
+                yield token
         response = "".join(tokens)
-        if not response:
+        if rag_context is not None:
+            # Deterministic post-generation gate: buffer the FULL response and
+            # verify every named entity against the retrieved <archives> before
+            # a single token reaches the client — streamed tokens cannot be
+            # recalled, and prompt guards cannot stop the model from draining
+            # its pre-trained weights ("Perrin Sequence" for a Höllvania
+            # subject).  Unsupported entities -> the abstention chain.
+            if not response:
+                response = RAG_ERROR
+            else:
+                lens_open = (STORY_LENS_STARTS.get(story_lens or "")
+                             if story and not targeted_era else "")
+                allowed = " ".join(filter(None, (
+                    user_name, user_role, targeted_era, leverian_warframe,
+                    lens_open,
+                )))
+                ok, _ = verify_answer(response, rag_context,
+                                      extra_allowed=allowed)
+                if not ok:
+                    response = CONFABULATION_ERROR
+            yield response
+        elif not response:
             # Empty generation (silent/aborted model): serve the abstention
             # chain instead of staying silent — the terminal never stalls and
             # the message never "vanishes" client-side.

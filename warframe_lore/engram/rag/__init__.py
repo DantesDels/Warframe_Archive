@@ -32,6 +32,7 @@ _EXPORTS = {
     "ARCHIVES_REPLY": ".prompt.guards",
     "AliasResolver": ".query.aliases",
     "CosinusSearch": ".retrieval.search",
+    "CONFABULATION_ERROR": ".prompt.guards",
     "HALLUCINATION_GUARD": ".prompt.guards",
     "HIERARCHY_BLOCK": ".prompt.guards",
     "HybridHit": ".retrieval.model",
@@ -68,6 +69,7 @@ _EXPORTS = {
     "strip_context_prefix": ".retrieval.scoring",
     "strip_trailing_padding": ".sanitize",
     "ts_rank_normalized": ".retrieval.scoring",
+    "verify_answer": ".verify",
 }
 
 install(sys.modules[__name__], _EXPORTS)

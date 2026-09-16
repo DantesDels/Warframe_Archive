@@ -56,7 +56,8 @@ def model_turn(container: Container, plan: TurnPlan, payload: dict,
         lang=payload.get("lang"),
         story=bool(payload.get("story")),
         story_lens=payload.get("story_lens"),
-        targeted_era=payload.get("targeted_era"))
+        targeted_era=payload.get("targeted_era"),
+        leverian_warframe=payload.get("leverian_warframe"))
 
 
 __all__ = ["emit_reply", "emit_stream", "model_turn"]

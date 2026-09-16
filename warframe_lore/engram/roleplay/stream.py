@@ -19,6 +19,7 @@ from .models import Session
 from .prompt import (
     SlidingWindow,
     archive_bloc,
+    leverian_directive,
     speaker_bloc,
     story_directive,
     targeted_story_directive,
@@ -64,7 +65,8 @@ class RoleplayService:
                      lang: str | None = None,
                      story: bool = False,
                      story_lens: str | None = None,
-                     targeted_era: str | None = None) -> AsyncIterator[str]:
+                     targeted_era: str | None = None,
+                     leverian_warframe: str | None = None) -> AsyncIterator[str]:
         """Append the input, stream the reply, and record it.
 
         ``rag_context`` (trusted passages) anchors the turn on the archives.
@@ -76,6 +78,8 @@ class RoleplayService:
         passages; ``story_lens`` selects the opening scene to begin from.
         ``targeted_era`` overrides the lens menu for a specifically named
         subject and anchors the narrative in that subject's own era.
+        ``leverian_warframe`` forces the tale to be grounded on Drusus'
+        Leverian narration for that frame.
         """
         session.add("user", user_text)
         system = archive_bloc(self._base_prompt(persona), rag_context,
@@ -91,6 +95,8 @@ class RoleplayService:
                 system = f"{system}\n\n{targeted_story_directive(targeted_era)}"
             else:
                 system = f"{system}\n\n{story_directive(story_lens)}"
+            if leverian_warframe:
+                system = f"{system}\n\n{leverian_directive(leverian_warframe)}"
         messages = [
             ChatMessage("system", system),
             ChatMessage("user", user_text),

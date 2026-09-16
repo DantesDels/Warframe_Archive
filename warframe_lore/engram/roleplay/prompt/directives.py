@@ -119,6 +119,21 @@ TARGETED_STORY_DIRECTIVE = (
     "les faits du contexte épuisés, stoppe — n'invente jamais des connexions "
     "inter-ères absentes des archives.]")
 
+# Leverian Warframe: Drusus Leverian is the canonical narrator for these
+# frames.  The model must ground the tale on his Leverian gallery and treat
+# his narration as the primary source.
+LEVERIAN_DIRECTIVE = (
+    "[DIRECTIVE SOURCES DU LEVERIAN — Ce Warframe possède une galerie Leverian "
+    "narrée par Drusus Leverian. Tu DOIS te baser sur les dires de Drusus et "
+    "les artefacts du Leverian pour raconter cette histoire. Privilégie les "
+    "passages du contexte où Drusus est le narrateur. Ne mélange pas cette "
+    "version avec des récits tiers ou des spéculations communautaires.]")
+
+
+def leverian_directive(frame: str) -> str:
+    """Directive anchoring a Warframe story to Drusus' Leverian gallery."""
+    return f"{LEVERIAN_DIRECTIVE}\n  - Warframe Leverian ciblé : {frame}."
+
 
 def story_directive(lens: str | None) -> str:
     """Narration directive + the opening scene forced by the chosen lens."""
@@ -160,7 +175,8 @@ def language_directive(lang: str | None) -> str:
 
 
 __all__ = ["CIVILITY_DIRECTIVE", "DEFAULT_LANGUAGE", "JEALOUSY_DIRECTIVE",
-           "LANGUAGE_DIRECTIVE", "LANGUAGE_NAMES", "NO_HISTORY_LINE",
-           "SPEAKER_HEADER", "STORY_DIRECTIVE", "STORY_LENS_STARTS",
-           "TARGETED_STORY_DIRECTIVE", "language_directive", "speaker_bloc",
+           "LANGUAGE_DIRECTIVE", "LANGUAGE_NAMES", "LEVERIAN_DIRECTIVE",
+           "NO_HISTORY_LINE", "SPEAKER_HEADER", "STORY_DIRECTIVE",
+           "STORY_LENS_STARTS", "TARGETED_STORY_DIRECTIVE",
+           "language_directive", "leverian_directive", "speaker_bloc",
            "story_directive", "targeted_story_directive"]

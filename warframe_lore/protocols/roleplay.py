@@ -57,6 +57,9 @@ class MessageFrame(BaseModel):
     # Targeted narrative subject: when the user names a specific entity, this
     # era overrides the lens menu and anchors the answer in that subject's era.
     targeted_era: str | None = None
+    # Leverian Warframe: the canonical telling of this Warframe's story is in
+    # Drusus' Leverian gallery; the model must ground its answer on that source.
+    leverian_warframe: str | None = None
     user_id: str | int | None = None
     user_name: str | None = None
     user_role: str | None = None

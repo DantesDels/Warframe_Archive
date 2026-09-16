@@ -13,8 +13,10 @@ from warframe_lore.discord.guild.story import (
     LENS_INITIATE,
     LENS_LABELS,
     LENS_QUESTION,
+    LEVERIAN_WARFRAMES,
     MENU_INDEX_ERROR,
     TARGETED_SUBJECT_ERAS,
+    detect_leverian_warframe,
     detect_story_lens,
     detect_targeted_era,
     is_out_of_range_index,
@@ -27,7 +29,9 @@ from warframe_lore.discord.guild.story import (
     substitute_story_subject,
 )
 from warframe_lore.engram.roleplay.prompt import (
+    LEVERIAN_DIRECTIVE,
     TARGETED_STORY_DIRECTIVE,
+    leverian_directive,
     targeted_story_directive,
 )
 
@@ -85,6 +89,28 @@ class StoryDetectionTests(unittest.TestCase):
         # Garuda a deux récits distincts : elle doit rester en dehors du
         # mapping canonique pour que la question de disambiguation soit posée.
         self.assertNotIn("garuda", TARGETED_SUBJECT_ERAS)
+
+    def test_une_warframe_leverian_est_detectee(self):
+        for text, frame in (
+            ("raconte-moi l'histoire d'Ash", "ash"),
+            ("raconte l'histoire de Nova", "nova"),
+            ("conte-moi la légende de Voruna", "voruna"),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(detect_leverian_warframe(text), frame)
+
+    def test_une_warframe_sans_leverian_n_est_pas_detectee(self):
+        self.assertIsNone(detect_leverian_warframe(
+            "raconte-moi l'histoire d'Excalibur"))
+        self.assertIsNone(detect_leverian_warframe(
+            "raconte-moi l'histoire d'Eleanor"))
+
+    def test_le_leverian_couvre_les_warframes_du_catalogue(self):
+        # La liste est issue de la page wiki "Leverian" (galeries de Drusus).
+        self.assertEqual(
+            LEVERIAN_WARFRAMES,
+            frozenset(("ash", "atlas", "dante", "gauss", "grendel", "ivara",
+                       "lavos", "nezha", "nova", "styanax", "voruna")))
 
 
 class LensAnswerTests(unittest.TestCase):
@@ -202,6 +228,20 @@ class TargetedStoryDirectiveTests(unittest.TestCase):
     def test_default_directive_without_era(self):
         self.assertIn("VERROU SPATIO-TEMPOREL", TARGETED_STORY_DIRECTIVE)
         self.assertIn("ANCRAGE DANS LA BONNE ÈRE", TARGETED_STORY_DIRECTIVE)
+
+
+class LeverianDirectiveTests(unittest.TestCase):
+    """La narration des Warframes du Leverian s'ancre sur Drusus."""
+
+    def test_naming_drusus_and_the_oracle_source(self):
+        directive = leverian_directive("ash")
+        self.assertIn("Drusus", directive)
+        self.assertIn("Leverian", directive)
+        self.assertIn("ash", directive)
+
+    def test_default_directive_mentions_drusus(self):
+        self.assertIn("Drusus", LEVERIAN_DIRECTIVE)
+        self.assertIn("Leverian", LEVERIAN_DIRECTIVE)
 
 
 if __name__ == "__main__":

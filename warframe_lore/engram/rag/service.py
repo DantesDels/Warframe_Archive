@@ -19,9 +19,10 @@ from typing import TYPE_CHECKING
 from ..models import ChatMessage
 from .pipeline import RetrievalPipeline
 from .prompt.builder import PromptBuilder, RAGPrompt
-from .prompt.guards import JAILBREAK_REJECT, RAG_ERROR
+from .prompt.guards import CONFABULATION_ERROR, JAILBREAK_REJECT, RAG_ERROR
 from .retrieval.retriever import RAGHit, Retriever
 from .sanitize import strip_trailing_padding
+from .verify import verify_answer
 
 if TYPE_CHECKING:
     from ..llm import EmbeddingProvider, LLMProvider
@@ -89,7 +90,13 @@ class RAGService:
     async def answer_with_sources(self, question: str,
                                   context: RAGContext | None = None
                                   ) -> tuple[str, list[RAGHit]]:
-        """Model answer + relevant passages (short-circuit otherwise)."""
+        """Model answer + relevant passages (short-circuit otherwise).
+
+        The generated answer passes the deterministic entity gate
+        (:mod:`.verify`) before being served: named entities absent from the
+        retrieved ``<archives>`` are confabulations and trigger the abstention
+        chain instead.
+        """
         hits, prompt, bypass = await self.retrieve(question, context=context)
         short = self._short_circuit(prompt, bypass)
         if short is not None:
@@ -98,20 +105,31 @@ class RAGService:
         async for token in self.llm.chat_stream(self._messages(prompt),
                                                 RAG_TEMPERATURE):
             chunks.append(token)
-        return strip_trailing_padding("".join(chunks)), hits
+        answer = strip_trailing_padding("".join(chunks))
+        ok, _ = verify_answer(answer, prompt.context)
+        return (answer if ok else CONFABULATION_ERROR), hits
 
     async def stream_answer(self, question: str,
                             context: RAGContext | None = None
                             ) -> AsyncIterator[str]:
-        """Iterates over response tokens (exact error if short-circuit)."""
+        """Buffers, verifies and yields the answer (exact error if short-circuit).
+
+        Same entity gate as :meth:`answer_with_sources`: the full response is
+        assembled first, checked against the retrieved ``<archives>``, then
+        emitted — streamed tokens cannot be recalled once sent.
+        """
         _, prompt, bypass = await self.retrieve(question, context=context)
         short = self._short_circuit(prompt, bypass)
         if short is not None:
             yield short
             return
+        chunks: list[str] = []
         async for token in self.llm.chat_stream(self._messages(prompt),
                                                 RAG_TEMPERATURE):
-            yield token
+            chunks.append(token)
+        answer = "".join(chunks)
+        ok, _ = verify_answer(answer, prompt.context)
+        yield answer if ok else CONFABULATION_ERROR
 
     @staticmethod
     def _short_circuit(prompt: RAGPrompt, bypass: bool) -> str | None:

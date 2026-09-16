@@ -18,14 +18,17 @@ def build_output_entry(
     canon_status: CanonStatus,
     pageid: int | None,
     source_wiki_url: str,
+    page_url: str | None = None,
 ) -> OutputEntry:
     """Builds an :class:`OutputEntry` conforming to the documented schema.
 
     ``source_wiki_url`` is the wiki base URL (e.g.
-    ``https://wiki.warframe.com/wiki/``).
+    ``https://wiki.warframe.com/wiki/``).  ``page_url`` overrides the
+    base + title reconstruction with the canonical page URL (needed by the
+    French wiki, whose stored title carries a ``(fr)`` suffix).
     """
     date_last_updated = (touched or "")[:10]  # YYYY-MM-DD
-    source_page_url = source_wiki_url + page_title.replace(" ", "_")
+    source_page_url = page_url or (source_wiki_url + page_title.replace(" ", "_"))
     return OutputEntry(
         page_title=page_title,
         category=category,

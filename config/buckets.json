@@ -135,6 +135,115 @@
         "/heirloom",
         "/code"
       ]
+    },
+    {
+      "id": "Lore_Site_Officiel_EN",
+      "title": "Site officiel (EN)",
+      "filename": "Lore_Site_Officiel_EN.json",
+      "source": "warframe-com-en",
+      "categories": [
+        "/en"
+      ],
+      "title_include": [
+        "/en"
+      ],
+      "title_exclude": [
+        "/shop",
+        "/prime-",
+        "/supporter",
+        "/download",
+        "/zendesk",
+        "/promocode",
+        "/signup",
+        "/login",
+        "/account",
+        "/gemini",
+        "/heirloom",
+        "/code"
+      ]
+    },
+    {
+      "id": "Lore_Quetes_FR",
+      "title": "Quêtes (wiki FR)",
+      "filename": "Lore_Quetes_FR.json",
+      "source": "mediawiki-warframe-fr",
+      "categories": [
+        "Quêtes"
+      ],
+      "title_include": [],
+      "title_exclude": [
+        "/Transcript"
+      ]
+    },
+    {
+      "id": "Lore_Characters_FR",
+      "title": "Personnages (wiki FR)",
+      "filename": "Lore_Characters_FR.json",
+      "source": "mediawiki-warframe-fr",
+      "categories": [
+        "Personnages"
+      ],
+      "title_include": [],
+      "title_exclude": [
+        "/Quotes",
+        "/Citations",
+        "/Transcript",
+        "/KIM"
+      ]
+    },
+    {
+      "id": "Lore_Dialogues_Quotes_FR",
+      "title": "Lignes de dialogue (wiki FR)",
+      "filename": "Lore_Dialogues_Quotes_FR.json",
+      "source": "mediawiki-warframe-fr",
+      "categories": [
+        "Citations"
+      ],
+      "title_include": [
+        "/Citations",
+        "/Quotes"
+      ],
+      "title_exclude": []
+    },
+    {
+      "id": "Lore_Cosmologie_Factions_FR",
+      "title": "Factions & cosmologie (wiki FR)",
+      "filename": "Lore_Cosmologie_Factions_FR.json",
+      "source": "mediawiki-warframe-fr",
+      "categories": [
+        "Factions"
+      ],
+      "title_include": [],
+      "title_exclude": []
+    },
+    {
+      "id": "Lore_Fragments_FR",
+      "title": "Fragments (wiki FR)",
+      "filename": "Lore_Fragments_FR.json",
+      "source": "mediawiki-warframe-fr",
+      "categories": [
+        "Lore"
+      ],
+      "title_include": [
+        "Fragment"
+      ],
+      "title_exclude": []
+    },
+    {
+      "id": "Lore_Univers_Histoire_FR",
+      "title": "Univers & histoire (wiki FR)",
+      "filename": "Lore_Univers_Histoire_FR.json",
+      "source": "mediawiki-warframe-fr",
+      "categories": [
+        "Lore"
+      ],
+      "title_include": [],
+      "title_exclude": [
+        "/Quotes",
+        "/Transcript",
+        "/KIM",
+        "Fragment"
+      ]
     }
   ]
 }

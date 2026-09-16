@@ -69,6 +69,14 @@ class ScraperIngestMixin:
             )
 
         # -- JSON writing (megafile).
+        base_by_source = {
+            "warframe-com-fr": self.config.site_url,
+            "warframe-com-en": self.config.site_url,
+            "mediawiki-warframe-fr": self.config.source_url_base_fr,
+        }
+        source_wiki_url = base_by_source.get(
+            bucket_spec.source, self.config.source_url_base)
+        is_fr_wiki = bucket_spec.source == "mediawiki-warframe-fr"
         output_entry = build_output_entry(
             page_title=page_title,
             category=bucket_spec.title,
@@ -76,13 +84,14 @@ class ScraperIngestMixin:
             content_markdown=markdown_text,
             canon_status=canon_status,
             pageid=page_id,
-            source_wiki_url=(
-                self.config.site_url
-                if bucket_spec.source == "warframe-com-fr"
-                else self.config.source_url_base
-            ),
+            source_wiki_url=source_wiki_url,
+            page_url=(source_url if is_fr_wiki else None),
         )
         output_entry.extra["bucket_id"] = bucket_id
+        if is_fr_wiki and source_url:
+            # Canonical page URL: engram re-upserts from the megafile and the
+            # stored title ("Ballas (fr)") cannot rebuild it from a base.
+            output_entry.extra["page_url"] = source_url
         if sections is not None:
             output_entry.extra["sections"] = sections
 

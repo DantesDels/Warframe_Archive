@@ -61,10 +61,15 @@ def _is_kim_page(page: dict) -> bool:
 def _page_source_url(page: dict) -> str:
     """Reconstructs the full page URL from the megafile provenance fields.
 
-    ``_source`` already holds the canonical page URL (site routes and wiki
-    titles alike): return it as-is when it ends with the title, otherwise
+    ``page_url`` carries the canonical page URL when the stored title was
+    suffixed (e.g. French wiki ``"Ballas (fr)"``): return it as-is.  ``_source``
+    already holds the canonical page URL (site routes and wiki titles alike)
+    for the other pages: return it when it ends with the title, otherwise
     build it from the base + title (legacy base-form megafiles).
     """
+    canonical = page.get("page_url")
+    if canonical:
+        return canonical
     base = (page.get("_source") or "").rstrip("/")
     title = page.get("page_title") or ""
     if not base or not title:

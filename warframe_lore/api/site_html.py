@@ -1,4 +1,4 @@
-"""Official French marketing site source (www.warframe.com/fr).
+"""Official marketing site source (www.warframe.com/fr and /en).
 
 Implements :class:`BaseSource` for a plain HTML site: the catalogue is
 discovered by crawling the internal links (see ``site_crawl``), freshness
@@ -17,22 +17,33 @@ from .site_crawl import crawl_paths
 from .site_http import SiteHttp
 
 
-def site_page_id(path: str) -> int:
-    """Deterministic per-route id (31-bit) for the SQL page identity.
+def site_page_id(path: str, namespace: str = "fr") -> int:
+    """Deterministic per-route id (31/32-bit) for the SQL page identity.
 
     The site has no MediaWiki page ids; a stable integer keeps ``wiki_pages``
-    and ``lore_chunks`` keyed per page instead of all collapsing on 0.
+    and ``lore_chunks`` keyed per page instead of all collapsing on 0.  ``fr``
+    keeps the historical 31-bit ``crc32("fr:" + path)`` value (already in the
+    database); ``en`` routes use a disjoint high range (``2^31 | crc32``) so
+    language families can never collide and English pages sort after native
+    wiki ids (English remains the truth authority in dossier ordering).
     """
+    if namespace == "en":
+        return (1 << 31) | (zlib.crc32(("en:" + path).encode("utf-8"))
+                            & 0x3FFFFFFF)
     return zlib.crc32(("fr:" + path).encode("utf-8")) & 0x7FFFFFFF
 
 
 class SiteHtmlSource(BaseSource):
-    """Warframe marketing site, French routes (/fr)."""
+    """Warframe marketing site (language routes: /fr, /en)."""
 
     name = "warframe-com-fr"
 
-    def __init__(self, config) -> None:
+    def __init__(self, config, *, prefix: str | None = None,
+                 id_namespace: str = "fr", name: str | None = None) -> None:
         self.config = config
+        self.name = name or type(self).name
+        self.prefix = prefix or config.site_prefix
+        self.id_namespace = id_namespace
         self.http = SiteHttp(
             site_url=config.site_url,
             user_agent=config.user_agent,
@@ -51,7 +62,7 @@ class SiteHtmlSource(BaseSource):
         for seed in category_names:
             resolved[seed] = crawl_paths(
                 self.http.get_text, seed,
-                prefix=self.config.site_prefix,
+                prefix=self.prefix,
                 host=self._host(),
                 exclude=self.config.site_exclude_segments,
                 max_pages=self.config.site_max_pages,
@@ -82,7 +93,8 @@ class SiteHtmlSource(BaseSource):
                 continue
             html, touched = fetched
             pages[title] = PageData(
-                pageid=site_page_id(title), title=title, namespace=0,
+                pageid=site_page_id(title, self.id_namespace), title=title,
+                namespace=0,
                 touched=touched,
                 url=self.config.site_url + title, content=html,
             )

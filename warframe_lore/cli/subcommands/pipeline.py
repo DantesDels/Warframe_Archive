@@ -21,6 +21,7 @@ def register(sub: argparse._SubParsersAction) -> None:
     _add_recent(sub)
     _add_buckets(sub)
     _add_init_db(sub)
+    _add_update(sub)
 
 
 def _add_run(sub) -> None:
@@ -75,6 +76,18 @@ def _add_init_db(sub) -> None:
     parser.add_argument("--database-url", type=str, default=None)
     parser.add_argument("--bucket-config", type=Path, default=None)
     parser.set_defaults(func=cmd._cmd_init_database)
+
+
+def _add_update(sub) -> None:
+    parser = sub.add_parser(
+        "update",
+        help="Full chain: scraper → structured ETL → export "
+             "→ static lists (no UI, no kim-dm).",
+    )
+    parser.add_argument("--force", action="store_true",
+                        help="Re-process everything (ignore the delta).")
+    parser.add_argument("--database-url", type=str, default=None)
+    parser.set_defaults(func=cmd._cmd_update)
 
 
 __all__ = ["register"]

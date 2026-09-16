@@ -107,3 +107,23 @@ async def _cmd_export_entities_impl(args) -> None:
         stats = await client.sync(manager, langs=langs, force=args.force)
     print(f"Public Export: {stats['entities']} entities written, "
           f"{stats['assets']} assets processed, {stats['skipped']} failures.")
+
+
+async def _cmd_update_impl(args) -> None:
+    """``cephalon update`` — the single-command chain (scraper → ETL →
+    export → static lists, no UI, no kim-dm).
+    """
+    from ..update.run import run_update
+
+    config, _ = build_config(args)
+    database_url = args.database_url or config.database_url
+    results = await run_update(
+        database_url, force=getattr(args, "force", False))
+    # ---- report for phase 4 (static lists):
+    lists = results.get("lists", {})
+    if lists.get("written"):
+        print(f"story_eras: written ({lists.get('frames', '?')} frames, "
+              f"{lists.get('kim', '?')} KIM, {lists.get('quests', '?')} "
+              f"quests, {lists.get('leverian', '?')} leverian).")
+    else:
+        print("story_eras: no change (zero-diff).")

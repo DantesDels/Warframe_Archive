@@ -35,6 +35,9 @@ async def regenerate_story_eras(
     "leverian": int}``.  ``written`` is ``True`` only when the rendered
     content differs from the current file (zero-diff on a no-op update).
     """
+    from warframe_lore.discord.guild.story import (  # ambiguous subjects
+        STORY_SUBJECT_CHOICES,
+    )
     from warframe_lore.discord.guild.story_eras import (  # curated base
         LEVERIAN_WARFRAMES,
         TARGETED_SUBJECT_ERAS,
@@ -60,6 +63,7 @@ async def regenerate_story_eras(
         kim_subjects=kim_subjects_from_contexts(kim_contexts),
         quest_titles=quest_titles,
         leverian_frames=leverian_frames_from_chunks(leverian, frames),
+        ambiguous=frozenset(STORY_SUBJECT_CHOICES),
     )
 
     rendered = render_story_eras(mapping, leverian_frames)

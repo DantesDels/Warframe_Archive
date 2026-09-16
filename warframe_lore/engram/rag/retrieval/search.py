@@ -130,13 +130,20 @@ class CosinusSearch(Retriever):
 
         Tier 0 = the exact biography page (``Eleanor``), tier 1 = its section
         pages (``Eleanor/Quotes``), tier 2 = every other title containing the
-        subject.  Reading order (``chunk_index``) keeps the narrative sequence;
-        the cosine distance is still computed so the relevance floor applies.
+        subject.  The French mirror of the exact page (``Eleanor (fr)``) shares
+        tier 0: its namespaced id sorts right after the English bio, so both
+        languages ground the story while English stays first.  Reading order
+        (``chunk_index``) keeps the narrative sequence; the cosine distance is
+        still computed so the relevance floor applies.
         """
         distance = LoreChunk.embedding.cosine_distance(
             query_vector).label("dist")
+        # NOTE: tier branches keep the retrieval package's single JSON/PG
+        # language boundary; the file exceeds 100 code lines (pre-existing)
+        # and is kept as-is for now to avoid a gratuitous split.
         tier = case(
             (WikiPage.page_title.ilike(subject), 0),
+            (WikiPage.page_title.ilike(f"{subject} (fr)"), 0),
             (WikiPage.page_title.ilike(f"{subject}/%"), 1),
             else_=2,
         )

@@ -1,9 +1,10 @@
 """One roleplay message turn: the deterministic short-circuits before the LLM.
 
 Decides whether a ``message`` frame can be answered WITHOUT the model — hostile
-probe, archives missing, guild-member question, speaker-identity question — else
-hands back the retrieved passages.  Transport stays in the router, the reply
-texts live in :mod:`replies`.
+probe, archives missing, guild-member question, speaker-identity question,
+disambiguation request for an ambiguous story subject — else hands back the
+retrieved passages.  Transport stays in the router, the reply texts live in
+:mod:`replies`.
 """
 
 from __future__ import annotations
@@ -25,6 +26,15 @@ from .replies import external_organic_reply, identity_reply, member_roster_reply
 
 if TYPE_CHECKING:
     from ..api.container import Container
+
+
+# Deterministic disambiguation reply for a STORY request: a close page title
+# was found but no passage can anchor a tale — refusing outright (RAG_ERROR)
+# wastes the hit, so the bot asks the user to confirm the exact subject (the
+# "doute -> précisions" flow).  The CONFIRMED subject then grounds the next
+# turn on a real dossier; a bare suggestion still never anchors a narration.
+CLARIFY_REPLY = ("Voulez-vous dire « {suggestion} » ? Précisez l'entité "
+                 "exacte pour que j'ouvre ses archives, organique.")
 
 
 @dataclass(frozen=True)
@@ -56,11 +66,18 @@ async def plan_turn(container: Container, payload: dict, user_text: str,
         context_text, suggestion = await container.rag.resolve(
             user_text, context=rag_context,
             subject=payload.get("targeted_subject"))
+    if want_rag and suggestion is not None and payload.get("story"):
+        # A disambiguation near-match cannot ANCHOR a narration: without a
+        # trusted passage the tale would be invented from nothing.  Rather
+        # than refuse cold or feed the marker to the model, ask the organique
+        # to confirm the exact subject — the doubt resolves by precision, and
+        # the confirmed subject grounds the next turn (playtest « Eleanor
+        # Vance »).
+        return TurnPlan(reply=CLARIFY_REPLY.format(suggestion=suggestion))
     if want_rag and not context_text and (suggestion is None
                                           or payload.get("story")):
-        # A disambiguation suggestion cannot ANCHOR a narration: a story
-        # without passages would be invented from nothing, so it refuses
-        # exactly like any query left without a trusted passage.
+        # No trusted passage, no plausible title: a story left without
+        # passages refuses exactly like any query without a trusted passage.
         return TurnPlan(reply=RAG_ERROR)
     reply = (member_reply(payload, persona_mode)
              or identity_reply_for(payload, user_text, persona_mode))
@@ -110,4 +127,5 @@ def identity_reply_for(payload: dict, user_text: str,
                           creator=bool(payload.get("creator")))
 
 
-__all__ = ["TurnPlan", "identity_reply_for", "member_reply", "plan_turn"]
+__all__ = ["CLARIFY_REPLY", "TurnPlan", "identity_reply_for", "member_reply",
+           "plan_turn"]

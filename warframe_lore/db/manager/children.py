@@ -62,8 +62,7 @@ async def replace_dialogues(session: AsyncSession, page_id: int,
             message_order=message.message_order,
             speaker=message.speaker,
             message_text=message.message_text,
-            player_choice=message.player_choice,
-            timestamp=message.timestamp))
+            player_choice=message.player_choice))
     return len(messages)
 
 

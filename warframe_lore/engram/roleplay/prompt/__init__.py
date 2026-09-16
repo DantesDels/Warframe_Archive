@@ -11,6 +11,7 @@ from .blocks import ARCHIVES_HEADER, archive_bloc, turn_directives
 from .directives import (
     CIVILITY_DIRECTIVE,
     DEFAULT_LANGUAGE,
+    EN_PRIMACY_DIRECTIVE,
     JEALOUSY_DIRECTIVE,
     LANGUAGE_DIRECTIVE,
     LANGUAGE_NAMES,
@@ -30,10 +31,10 @@ from .window import SlidingWindow
 
 __all__ = [
     "ARCHIVES_HEADER", "CIVILITY_DIRECTIVE", "DEFAULT_LANGUAGE",
-    "JEALOUSY_DIRECTIVE", "LANGUAGE_DIRECTIVE", "LANGUAGE_NAMES",
-    "LEVERIAN_DIRECTIVE", "NO_HISTORY_LINE", "SPEAKER_HEADER",
-    "STORY_DIRECTIVE", "STORY_LENS_STARTS", "TARGETED_STORY_DIRECTIVE",
-    "SlidingWindow", "archive_bloc", "language_directive",
-    "leverian_directive", "speaker_bloc", "story_directive",
-    "targeted_story_directive", "turn_directives",
+    "EN_PRIMACY_DIRECTIVE", "JEALOUSY_DIRECTIVE", "LANGUAGE_DIRECTIVE",
+    "LANGUAGE_NAMES", "LEVERIAN_DIRECTIVE", "NO_HISTORY_LINE",
+    "SPEAKER_HEADER", "STORY_DIRECTIVE", "STORY_LENS_STARTS",
+    "TARGETED_STORY_DIRECTIVE", "SlidingWindow", "archive_bloc",
+    "language_directive", "leverian_directive", "speaker_bloc",
+    "story_directive", "targeted_story_directive", "turn_directives",
 ]

@@ -104,6 +104,19 @@ STORY_LENS_STARTS = {
 }
 
 
+# Bilingual archives primacy: the dossier may hold the same entity in the
+# English source AND in its French translation.  English is the primary
+# source (ingested first, tier-0 of the dossier); French is a reading aid
+# that must never contradict it.  Complements the dossier ordering.
+EN_PRIMACY_DIRECTIVE = (
+    "[DIRECTIVE DE PRIMAUTÉ DES ARCHIVES ANGLAISES : le dossier peut contenir "
+    "la même entité dans sa version anglaise d'origine ET dans sa traduction "
+    "française. La version ANGLAISE fait foi : c'est la source primaire. En "
+    "cas d'écart entre les deux, fonde ton récit sur la version anglaise — la "
+    "française n'est qu'une aide de lecture et ne doit jamais la contredire "
+    "ni la compléter de ton propre chef.]")
+
+
 # Targeted narrative request: the user named a specific subject.  The answer
 # must be anchored in that subject's own era and must NEVER bridge to another
 # temporal starting point (e.g. Eleanor/1999 must not drift to Zariman/Margulis).
@@ -138,14 +151,16 @@ def leverian_directive(frame: str) -> str:
 def story_directive(lens: str | None) -> str:
     """Narration directive + the opening scene forced by the chosen lens."""
     start = STORY_LENS_STARTS.get(lens or "")
-    return "".join([STORY_DIRECTIVE, "\n", start or ""])
+    return "".join([STORY_DIRECTIVE, "\n", EN_PRIMACY_DIRECTIVE, "\n",
+                    start or ""])
 
 
 def targeted_story_directive(era: str | None = None) -> str:
     """Era-anchored directive for a targeted narrative request."""
     if not era:
-        return TARGETED_STORY_DIRECTIVE
-    return f"{TARGETED_STORY_DIRECTIVE}\n  - Ère imposée par les archives : {era}."
+        return "".join([TARGETED_STORY_DIRECTIVE, "\n", EN_PRIMACY_DIRECTIVE])
+    return "".join([TARGETED_STORY_DIRECTIVE, "\n", EN_PRIMACY_DIRECTIVE,
+                    f"\n  - Ère imposée par les archives : {era}."])
 
 
 def speaker_bloc(user_name: str | None, role_status: str | None,
@@ -174,9 +189,9 @@ def language_directive(lang: str | None) -> str:
         langue=LANGUAGE_NAMES.get(lang, lang))
 
 
-__all__ = ["CIVILITY_DIRECTIVE", "DEFAULT_LANGUAGE", "JEALOUSY_DIRECTIVE",
-           "LANGUAGE_DIRECTIVE", "LANGUAGE_NAMES", "LEVERIAN_DIRECTIVE",
-           "NO_HISTORY_LINE", "SPEAKER_HEADER", "STORY_DIRECTIVE",
-           "STORY_LENS_STARTS", "TARGETED_STORY_DIRECTIVE",
+__all__ = ["CIVILITY_DIRECTIVE", "DEFAULT_LANGUAGE", "EN_PRIMACY_DIRECTIVE",
+           "JEALOUSY_DIRECTIVE", "LANGUAGE_DIRECTIVE", "LANGUAGE_NAMES",
+           "LEVERIAN_DIRECTIVE", "NO_HISTORY_LINE", "SPEAKER_HEADER",
+           "STORY_DIRECTIVE", "STORY_LENS_STARTS", "TARGETED_STORY_DIRECTIVE",
            "language_directive", "leverian_directive", "speaker_bloc",
            "story_directive", "targeted_story_directive"]

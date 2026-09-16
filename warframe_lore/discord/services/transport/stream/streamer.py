@@ -5,6 +5,7 @@ the routing; the hard split lives in :mod:`hard_split` (pure, unit-testable).
 Replies longer than Discord's hard 2000-char content limit keep their HEAD on
 the placeholder and page the overflow into follow-up messages, so a long story
 (or a single buffered gate frame) is never dropped silently by a refused edit.
+Pages cut after word boundaries, never mid-word.
 """
 
 from __future__ import annotations
@@ -23,10 +24,40 @@ log = logging.getLogger("warframe_lore.discord.streamer")
 # Hard content limit of a Discord message: editing past it fails with a 400.
 DISCORD_MESSAGE_LIMIT = 2000
 
+# Page cuts may only happen after these separators: never mid-word.
+_WORD_BREAKS = (" ", "\n")
 
-def _chunk(text: str, size: int = DISCORD_MESSAGE_LIMIT) -> list[str]:
-    """Successive ``size``-bounded slices of ``text`` (empty stays empty)."""
-    return [text[i:i + size] for i in range(0, len(text), size)]
+
+def _break(text: str, start: int, limit: int) -> int:
+    """Cut point for ``text[start:]``, at most ``limit`` chars ahead.
+
+    The whole limit when the boundary is already after a separator or at the
+    end; otherwise after the LAST separator inside the window (the page may be
+    shorter, but the next never starts mid-word).  Always advances.
+    """
+    end = min(start + limit, len(text))
+    if end == len(text) or text[end] in _WORD_BREAKS:
+        return end
+    window = text[start:end]
+    for sep in _WORD_BREAKS:
+        pos = window.rfind(sep)
+        if pos >= 1:
+            return start + pos + 1
+    return end
+
+
+def _pages(text: str, limit: int = DISCORD_MESSAGE_LIMIT) -> list[str]:
+    """``limit``-bounded slices of ``text``, cut on word boundaries.
+
+    Concatenating the pages rebuilds ``text`` exactly (slices of the source).
+    """
+    slices: list[str] = []
+    start = 0
+    while start < len(text):
+        end = _break(text, start, limit)
+        slices.append(text[start:end])
+        start = end
+    return slices
 
 
 class MessageStreamer:
@@ -91,23 +122,24 @@ class MessageStreamer:
     async def flush(self) -> None:
         """Push the accumulated text to Discord, paging past 2000 chars.
 
-        The placeholder holds the HEAD ``text[:2000]`` (edited while it grows);
-        the overflow ``text[2000:]`` is delivered as follow-up messages, only
+        The placeholder holds the HEAD (the first word-bounded page, edited
+        while it grows); the overflow is delivered as follow-up messages, only
         the not-yet-sent delta each time.  A refused edit/send aborts the flush
         without losing the turn: the turn ends cleanly, the head stays shown.
         """
         if not self._parts:
             return
         text = self.text
-        head = text[:DISCORD_MESSAGE_LIMIT]
+        head_end = _break(text, 0, DISCORD_MESSAGE_LIMIT)
+        head = text[:head_end]
         if head != self.message.content:
             try:
                 await self.message.edit(content=head)
             except discord.HTTPException as exc:
                 log.debug("Edit refused/failed on Discord: %s", exc)
                 return
-        self._sent = max(self._sent, min(len(text), DISCORD_MESSAGE_LIMIT))
-        for page in _chunk(text[self._sent:]):
+        self._sent = max(self._sent, head_end)
+        for page in _pages(text[self._sent:]):
             try:
                 await self.message.channel.send(page)
             except discord.HTTPException as exc:

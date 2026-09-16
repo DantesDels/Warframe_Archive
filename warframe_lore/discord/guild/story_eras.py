@@ -28,12 +28,9 @@ TARGETED_SUBJECT_ERAS: dict[str, str] = {
     "lettie": "1999 (Höllvania)",
     "lizzie": "1999 (Höllvania)",
     "loid": "1999 (Höllvania)",
-    "lyon": "1999 (Höllvania)",
-    "marie": "1999 (Höllvania)",
     "minerva": "1999 (Höllvania)",
     "ollie": "1999 (Höllvania)",
     "quincy": "1999 (Höllvania)",
-    "roathe": "1999 (Höllvania)",
     "scaldra": "1999 (Höllvania)",
     "technocyte": "1999 (Höllvania)",
     "techrot": "1999 (Höllvania)",
@@ -41,6 +38,10 @@ TARGETED_SUBJECT_ERAS: dict[str, str] = {
     "velimir": "1999 (Höllvania)",
     "viktor": "1999 (Höllvania)",
     "zeke": "1999 (Höllvania)",
+    # XX99
+    "lyon": "XX99",
+    "marie": "XX99",
+    "roathe": "XX99",
     # l'Ère Corpus
     "alad v": "l'Ère Corpus",
     "corpus": "l'Ère Corpus",
@@ -212,7 +213,6 @@ TARGETED_SUBJECT_ERAS: dict[str, str] = {
     "the archwing": "l'Éveil du Tenno",
     "the businessman": "l'Éveil du Tenno",
     "the lotus eaters": "l'Éveil du Tenno",
-    "the new war": "l'Éveil du Tenno",
     "the sacrifice": "l'Éveil du Tenno",
     "the second dream": "l'Éveil du Tenno",
     "the sergeant": "l'Éveil du Tenno",
@@ -240,6 +240,10 @@ TARGETED_SUBJECT_ERAS: dict[str, str] = {
     "yonta": "l'Éveil du Tenno",
     "zariman": "l'Éveil du Tenno",
     "zephyr": "l'Éveil du Tenno",
+    # la Nouvelle Guerre
+    "the new war": "la Nouvelle Guerre",
+    # l'Ancienne Paix
+    "the old peace": "l'Ancienne Paix",
     # la Vieille Guerre
     "archon": "la Vieille Guerre",
     "archon amar": "la Vieille Guerre",
@@ -248,7 +252,6 @@ TARGETED_SUBJECT_ERAS: dict[str, str] = {
     "hunhow": "la Vieille Guerre",
     "old war": "la Vieille Guerre",
     "sentient": "la Vieille Guerre",
-    "the old peace": "la Vieille Guerre",
     "vieille guerre": "la Vieille Guerre",
 }
 

@@ -124,6 +124,21 @@ def detect_targeted_era(text: str) -> str | None:
     return None
 
 
+def targeted_subject_mention(text: str) -> str | None:
+    """Matched subject KEY of a targeted story request, or ``None``.
+
+    Same first-match scan as :func:`detect_targeted_era` but returns the
+    mention itself (``"eleanor"``, ``"the hex"``…) instead of the era label:
+    the ENGRAM dossier retrieval anchors the story corpus on the wiki pages
+    whose title contains this very key.
+    """
+    low = (text or "").lower()
+    for mention in TARGETED_SUBJECT_ERAS:
+        if mention in low:
+            return mention
+    return None
+
+
 def detect_leverian_warframe(text: str) -> str | None:
     """Name of a Warframe whose story is told by Drusus in the Leverian.
 

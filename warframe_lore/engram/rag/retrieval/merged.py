@@ -43,3 +43,23 @@ class MergedRetriever(Retriever):
                 if result is not None:
                     return result
         return None
+
+    async def dossier(self, subject: str,
+                      query_vector: list[float]) -> list[RAGHit]:
+        """Narrative-first page dossier across sub-retrievers that support it.
+
+        Only the channels owning a ``dossier`` method contribute (CosinusSearch
+        for lore_chunks).  The sub-retriever order preserves the biography
+        page first; the dedup policy matches :meth:`search`.
+        """
+        gathered: list[RAGHit] = []
+        for retriever in self.retrievers:
+            method = getattr(retriever, "dossier", None)
+            if method is not None:
+                gathered.extend(await method(subject, query_vector))
+        merged: dict[tuple[str, str], RAGHit] = {}
+        for hit in gathered:
+            key = (hit.page_title, hit.content)
+            if key not in merged:
+                merged[key] = hit
+        return list(merged.values())

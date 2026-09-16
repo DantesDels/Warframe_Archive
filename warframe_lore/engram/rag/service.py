@@ -63,18 +63,20 @@ class RAGService:
         return self.pipeline.alias_resolver
 
     async def retrieve(self, question: str,
-                       context: RAGContext | None = None
+                       context: RAGContext | None = None, *,
+                       subject: str | None = None
                        ) -> tuple[list[RAGHit], RAGPrompt, bool]:
         """Kept passages, assembled prompt and short-circuit flag.
 
         ``bypass`` signals the absence of a trusted passage AND of a
         disambiguation clue: the LLM must not be called.
         """
-        outcome = await self.pipeline.run(question, context)
+        outcome = await self.pipeline.run(question, context, subject=subject)
         return outcome.hits, outcome.prompt, outcome.bypass
 
     async def resolve(self, question: str,
-                      context: RAGContext | None = None
+                      context: RAGContext | None = None, *,
+                      subject: str | None = None
                       ) -> tuple[str | None, str | None]:
         """Context/suggestion for a Roleplay turn (WS).
 
@@ -82,7 +84,8 @@ class RAGService:
         the exact error string.  Otherwise the context is safe (never an empty
         marker) and a non-null ``suggestion`` means disambiguation.
         """
-        _, prompt, bypass = await self.retrieve(question, context=context)
+        _, prompt, bypass = await self.retrieve(question, context=context,
+                                                subject=subject)
         if bypass:
             return None, None
         return prompt.context, prompt.suggestion

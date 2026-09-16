@@ -23,7 +23,7 @@ class FakeRAG:
         self.suggestion = suggestion
         self.calls: list[str] = []
 
-    async def resolve(self, question: str, context=None):
+    async def resolve(self, question: str, context=None, subject=None):
         self.calls.append(question)
         return self.context, self.suggestion
 

@@ -28,6 +28,13 @@ _BOUNDARY = re.compile(r"[.!?:]\s+")
 # A capitalized word, French/English, ≥2 chars ("J'", "L'", digits excluded).
 _CAPWORD = re.compile(r"\b([A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-Þà-öø-ÿ]{1,})\b")
 
+# Accent folding: French orthographic variants of the same word
+# ("Indifférence" ↔ "Indifference") must resolve to the archived spelling.
+_ACCENT_MAP = str.maketrans(
+    "àâäáãåçèéêëẽíìîïñòóôõöùúûüýÿ",
+    "aaaaaaceeeeeiiiinooooouuuuyy",
+)
+
 # Fixed formatting scaffold of the persona (Codex sheet labels + the story
 # pagination closing sentence).  Structural, never factual: these words are
 # allowed even though they do not live in the retrieved passages.
@@ -50,6 +57,34 @@ def extract_entities(text: str) -> set[str]:
     return entities
 
 
+def _candidates(entity: str) -> list[str]:
+    """Grounded forms: the word, its accented folded form, and (for a plural)
+    the singular of each.  French adjectives in ``-ique`` are also folded to
+    their archived ``-ic`` spelling (``britannique`` -> ``britannic``).
+    All must be checked against the verbatim corpus."""
+    forms = [entity, entity.translate(_ACCENT_MAP)]
+    if entity.endswith("s"):
+        singular = entity[:-1]
+        forms.extend((singular, singular.translate(_ACCENT_MAP)))
+    folded = list(forms)
+    for form in folded:
+        if form.endswith("ique"):
+            forms.append(form[:-4] + "ic")
+    return forms
+
+
+def _grounded(entity: str, corpus: str) -> bool:
+    """Word is grounded verbatim, or as an orthographic variant of a
+    corpus word: French accented spelling ("Indifférence"), French
+    pluralization ("Protoframes") and French adjectives in "-ique"
+    ("Britannique") of archived terms are the SAME lexeme as the retrieved
+    passages, not confabulations.  Every accepted form must still resolve
+    to a verbatim corpus word, so invented names ("Perrin", "Zariman")
+    stay rejected.
+    """
+    return any(form in corpus for form in _candidates(entity))
+
+
 def verify_answer(answer: str, context: str,
                   extra_allowed: str = "") -> tuple[bool, set[str]]:
     """True when every entity of ``answer`` appears in ``context``.
@@ -64,7 +99,7 @@ def verify_answer(answer: str, context: str,
     corpus = allowed.lower()
     unsupported = {
         entity for entity in entities
-        if entity not in corpus and entity not in TRUSTED_ALLOW
+        if not _grounded(entity, corpus) and entity not in TRUSTED_ALLOW
     }
     return (len(unsupported) == 0, unsupported)
 

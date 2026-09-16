@@ -54,7 +54,8 @@ async def plan_turn(container: Container, payload: dict, user_text: str,
     context_text = suggestion = None
     if want_rag:
         context_text, suggestion = await container.rag.resolve(
-            user_text, context=rag_context)
+            user_text, context=rag_context,
+            subject=payload.get("targeted_subject"))
     if want_rag and not context_text and (suggestion is None
                                           or payload.get("story")):
         # A disambiguation suggestion cannot ANCHOR a narration: a story

@@ -57,6 +57,11 @@ class MessageFrame(BaseModel):
     # Targeted narrative subject: when the user names a specific entity, this
     # era overrides the lens menu and anchors the answer in that subject's era.
     targeted_era: str | None = None
+    # Page-title anchor of that subject (the matched ``TARGETED_SUBJECT_ERAS``
+    # key, e.g. ``"eleanor"``): the ENGRAM dossier retrieval walks the wiki
+    # pages whose title contains this key, so the story corpus carries the
+    # subject's own narrative page instead of only semantic neighbours.
+    targeted_subject: str | None = None
     # Leverian Warframe: the canonical telling of this Warframe's story is in
     # Drusus' Leverian gallery; the model must ground its answer on that source.
     leverian_warframe: str | None = None

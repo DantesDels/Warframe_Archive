@@ -16,7 +16,12 @@ from warframe_lore.discord.moderation.hostile_link import (
     is_sincere_apology,
 )
 from warframe_lore.discord.moderation.hostility import HostilityTracker, reply_for
-from warframe_lore.engram.persona import HOSTILE_PERSONA
+from warframe_lore.engram.persona import (
+    HOSTILE_PERSONA,
+    STORY_PERSONA,
+    STORY_PERSONA_FILE,
+    Persona,
+)
 from warframe_lore.engram.rag import HIERARCHY_BLOCK, JAILBREAK_REJECT
 from warframe_lore.engram.roleplay import RoleplayService, Session, SlidingWindow
 
@@ -121,6 +126,44 @@ class PersonaSelectionTests(unittest.TestCase):
         self.assertNotIn(_NORMAL, system)
         self.assertIn("[Anomalie logicielle détectée]", system)
         self.assertIn(JAILBREAK_REJECT, system)
+
+    def test_un_tour_recit_remplace_la_base_par_le_persona_story(self):
+        # La fiche "ARCHIVE DU CODEX" de la base Oracle outranke les directives
+        # appendées pour Gemma : le tour récit doit remplacer la BASE par le
+        # persona narratif (prose, pas de fiche).
+        llm = _FakeLLM()
+        session = Session(session_id="s")
+        _run_stream(_service(llm).stream(
+            session, "raconte-moi l'histoire d'Eleanor",
+            rag_context="Eleanor est une protoframe.", story=True))
+        system = llm.calls[0]["messages"][0].content
+        self.assertIn("MISE EN PAGE NARRATIVE", system)
+        self.assertNotIn(_NORMAL, system)
+
+    def test_un_tour_rag_normal_garde_la_base_oracle(self):
+        llm = _FakeLLM()
+        session = Session(session_id="s")
+        _run_stream(_service(llm).stream(
+            session, "qui est Eleanor ?",
+            rag_context="Eleanor est une protoframe."))
+        system = llm.calls[0]["messages"][0].content
+        self.assertIn(_NORMAL, system)
+        self.assertNotIn("MISE EN PAGE NARRATIVE", system)
+
+    def test_persona_story_fallback_sans_prompt_explicite(self):
+        service = RoleplayService(
+            llm=_FakeLLM(),
+            window=SlidingWindow(max_turns=8, max_context_chars=1000),
+            system_prompt=_NORMAL,
+            temperature=0.8,
+        )
+        self.assertEqual(service.story_prompt, STORY_PERSONA)
+
+    def test_persona_story_lit_le_fichier_editable(self):
+        self.assertTrue(STORY_PERSONA_FILE.is_file())
+        prompt = Persona(_NORMAL).system_prompt(mode="story")
+        self.assertIn("MISE EN PAGE NARRATIVE", prompt)
+        self.assertNotIn(_NORMAL, prompt)
 
     def test_persona_initial_de_facon_par_defaut(self):
         llm = _FakeLLM()

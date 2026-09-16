@@ -110,23 +110,23 @@ class StoryFrameTests(unittest.TestCase):
 
     def test_un_recit_sans_lentille_demande_le_point_de_depart(self):
         scenario = make_bot()
-        scenario.say("raconte-moi l'histoire des Orokin")
+        scenario.say("raconte-moi l'histoire de l'Infestation")
         question = scenario.channel.sent[-1].content
         self.assertIn("Par quelle porte", question)
         self.assertIsNone(scenario.gateway.last)      # pas de tour LLM
 
     def test_la_reponse_du_menu_ouvre_le_recit_avec_la_lentille(self):
         scenario = make_bot()
-        scenario.say("raconte-moi l'histoire des Orokin")
+        scenario.say("raconte-moi l'histoire de l'Infestation")
         scenario.say("2", author=scenario.stranger)
         frame = scenario.gateway.last
         self.assertTrue(frame["story"])
         self.assertEqual(frame["story_lens"], LENS_COSMOGONIC)
-        self.assertEqual(frame["text"], "raconte-moi l'histoire des Orokin")
+        self.assertEqual(frame["text"], "raconte-moi l'histoire de l'Infestation")
 
     def test_une_reponse_inconnue_garde_la_question_ouverte(self):
         scenario = make_bot()
-        scenario.say("raconte-moi l'histoire des Orokin")
+        scenario.say("raconte-moi l'histoire de l'Infestation")
         scenario.say("n'importe quoi", author=scenario.stranger)
         self.assertIsNone(scenario.gateway.last)
         self.assertIn("Par quelle porte",
@@ -134,7 +134,7 @@ class StoryFrameTests(unittest.TestCase):
 
     def test_un_autre_auteur_ne_repond_pas_a_la_question(self):
         scenario = make_bot()
-        scenario.say("raconte-moi l'histoire des Orokin",
+        scenario.say("raconte-moi l'histoire de l'Infestation",
                      author=scenario.creator)
         scenario.say("1", author=scenario.stranger)
         # L'organique ne consomme pas l'ouverture du Concepteur : son "1" part
@@ -142,6 +142,15 @@ class StoryFrameTests(unittest.TestCase):
         frame = scenario.gateway.last
         self.assertFalse(frame["story"])
         self.assertIsNone(frame.get("story_lens"))
+
+    def test_un_recit_a_sujet_cible_saute_le_menu_et_ancre_l_ere(self):
+        scenario = make_bot()
+        scenario.say("raconte-moi l'histoire d'Eleanor")
+        frame = scenario.gateway.last
+        self.assertTrue(frame["story"])
+        self.assertEqual(frame["targeted_era"], "1999 (Höllvania)")
+        self.assertIsNone(frame.get("story_lens"))
+        self.assertEqual(scenario.stats["by_kind"]["story"], 1)
 
     def test_un_recit_a_sujet_ambigu_demande_quel_recit(self):
         scenario = make_bot()

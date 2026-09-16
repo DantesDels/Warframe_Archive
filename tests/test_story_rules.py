@@ -14,7 +14,9 @@ from warframe_lore.discord.guild.story import (
     LENS_LABELS,
     LENS_QUESTION,
     MENU_INDEX_ERROR,
+    TARGETED_SUBJECT_ERAS,
     detect_story_lens,
+    detect_targeted_era,
     is_out_of_range_index,
     is_story_request,
     parse_lens_answer,
@@ -65,7 +67,24 @@ class StoryDetectionTests(unittest.TestCase):
             "raconte l'histoire de l'univers et d'Albrecht"))
 
     def test_aucune_lentille_pas_de_point_de_depart(self):
-        self.assertIsNone(detect_story_lens("raconte l'histoire des Orokin"))
+        self.assertIsNone(detect_story_lens("raconte l'histoire de l'Infestation"))
+
+    def test_un_sujet_cible_renvoie_son_ere(self):
+        for text, era in (
+            ("raconte-moi l'histoire d'Eleanor", "1999 (Höllvania)"),
+            ("raconte-moi l'histoire d'Albrecht", "l'Ère Orokin"),
+            ("raconte-moi l'histoire des Tenno", "l'Éveil du Tenno"),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(detect_targeted_era(text), era)
+
+    def test_un_sujet_inconnu_n_a_pas_d_ere_ciblee(self):
+        self.assertIsNone(detect_targeted_era("raconte l'histoire de l'Infestation"))
+
+    def test_les_sujets_ambigus_ne_sont_pas_dans_le_mapping(self):
+        # Garuda a deux récits distincts : elle doit rester en dehors du
+        # mapping canonique pour que la question de disambiguation soit posée.
+        self.assertNotIn("garuda", TARGETED_SUBJECT_ERAS)
 
 
 class LensAnswerTests(unittest.TestCase):

@@ -12,6 +12,12 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+# Canonical era mapping for targeted narrative requests (generated from the
+# archive database: wiki_pages, kim_dialogues, game_dialogues, warframes,
+# game_quests).  Keys are lowercase substrings; values are era labels injected
+# into the targeted-story directive.
+from .story_eras import TARGETED_SUBJECT_ERAS
+
 # Narrative triggers (FR/EN): "raconte-moi l'histoire de…" and friends.
 # A lore QUESTION ("Quelle est l'histoire des Orokin ?") is NOT a story: the
 # trigger word must carry the REQUEST (verbative "raconte") or a possessive
@@ -105,6 +111,19 @@ def detect_story_lens(text: str) -> str | None:
     return hits[0] if len(hits) == 1 else None
 
 
+def detect_targeted_era(text: str) -> str | None:
+    """Canonical era of a specifically named subject, or ``None``.
+
+    When a story request names one of these subjects, the bot must skip the
+    lens menu and anchor the narrative directly in that subject's era.
+    """
+    low = (text or "").lower()
+    for mention, era in TARGETED_SUBJECT_ERAS.items():
+        if mention in low:
+            return era
+    return None
+
+
 def parse_lens_answer(text: str) -> str | None:
     """Interpret the answer to :data:`LENS_QUESTION` (menu number or words)."""
     low = (text or "").strip().lower()
@@ -177,7 +196,8 @@ def substitute_story_subject(request: str, subject: str) -> str:
 __all__ = ["LENS_1999", "LENS_COSMOGONIC", "LENS_INITIATE",
            "LENS_KEYWORDS", "LENS_LABELS", "LENS_QUESTION",
            "MENU_INDEX_ERROR", "STORY_SUBJECT_CHOICES", "STORY_TRIGGERS",
-           "StoryAsk", "detect_story_lens", "is_out_of_range_index",
-           "is_story_request", "parse_lens_answer", "parse_subject_answer",
-           "story_subject", "story_subject_choices", "story_subject_question",
+           "TARGETED_SUBJECT_ERAS", "StoryAsk", "detect_story_lens",
+           "detect_targeted_era", "is_out_of_range_index", "is_story_request",
+           "parse_lens_answer", "parse_subject_answer", "story_subject",
+           "story_subject_choices", "story_subject_question",
            "substitute_story_subject"]

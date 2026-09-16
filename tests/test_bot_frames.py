@@ -152,6 +152,14 @@ class StoryFrameTests(unittest.TestCase):
         self.assertIsNone(frame.get("story_lens"))
         self.assertEqual(scenario.stats["by_kind"]["story"], 1)
 
+    def test_un_recit_de_warframe_leverian_ancre_sur_drusus(self):
+        scenario = make_bot()
+        scenario.say("raconte-moi l'histoire d'Ash")
+        frame = scenario.gateway.last
+        self.assertTrue(frame["story"])
+        self.assertEqual(frame["leverian_warframe"], "ash")
+        self.assertEqual(frame["targeted_era"], "l'Éveil du Tenno")
+
     def test_un_recit_a_sujet_ambigu_demande_quel_recit(self):
         scenario = make_bot()
         scenario.say("raconte-moi l'histoire de Garuda")

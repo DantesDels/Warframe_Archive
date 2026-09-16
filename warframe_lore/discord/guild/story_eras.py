@@ -251,3 +251,20 @@ TARGETED_SUBJECT_ERAS: dict[str, str] = {
     "the old peace": "la Vieille Guerre",
     "vieille guerre": "la Vieille Guerre",
 }
+
+# Warframes whose canonical story is told by Drusus in the Leverian.
+# When a story request names one of them, the answer must be anchored on
+# Drusus' narration in the Leverian gallery.
+LEVERIAN_WARFRAMES: frozenset[str] = frozenset((
+    "ash",
+    "atlas",
+    "dante",
+    "gauss",
+    "grendel",
+    "ivara",
+    "lavos",
+    "nezha",
+    "nova",
+    "styanax",
+    "voruna",
+))

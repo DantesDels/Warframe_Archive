@@ -18,6 +18,7 @@ from ...guild import (
     LENS_QUESTION,
     MENU_INDEX_ERROR,
     creator_mentioned,
+    detect_leverian_warframe,
     detect_story_lens,
     detect_targeted_era,
     is_out_of_range_index,
@@ -119,6 +120,7 @@ class RoutingMixin:
             request = substitute_story_subject(request, subject)
             lens = detect_story_lens(request)
             targeted_era = detect_targeted_era(request)
+            leverian_warframe = detect_leverian_warframe(request)
         else:
             lens = parse_lens_answer(text)
             if lens is None:
@@ -129,6 +131,7 @@ class RoutingMixin:
                     await message.channel.send(question)
                 return
             targeted_era = None
+            leverian_warframe = None
         self.state.close_story_ask(channel_id)
         mention = self._resolve_member(message, request)
         self.state.remember_member(channel_id,
@@ -136,7 +139,8 @@ class RoutingMixin:
         settings = self.services.settings.get(channel_id)
         context = self._turn_context(message, request, settings, mention)
         context = replace(context, story=True, story_lens=lens,
-                          targeted_era=targeted_era)
+                          targeted_era=targeted_era,
+                          leverian_warframe=leverian_warframe)
         self._audit(channel_id, context)
         await self._stream_turn(message, context)
 
@@ -159,6 +163,7 @@ class RoutingMixin:
         story = is_story_request(text)
         story_lens = detect_story_lens(text) if story else None
         targeted_era = detect_targeted_era(text) if story else None
+        leverian_warframe = detect_leverian_warframe(text) if story else None
         # An explicit temporal lens (e.g. "...en 1999") overrides the default
         # era inferred from a named subject.
         if story_lens is not None:
@@ -171,7 +176,8 @@ class RoutingMixin:
             user_roles=tuple(self._role_names(message.author)),
             creator_mention=creator_mention, member_name=mention.name,
             insult=detect_insult(text), use_rag=use_rag, story=story,
-            story_lens=story_lens, targeted_era=targeted_era)
+            story_lens=story_lens, targeted_era=targeted_era,
+            leverian_warframe=leverian_warframe)
 
     @staticmethod
     def _audit(channel_id: int, context: TurnContext) -> None:

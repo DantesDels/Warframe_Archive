@@ -142,6 +142,18 @@ class VerifyUnitTests(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(bad, set())
 
+    def test_nom_commun_elide_capitalise_accepte(self):
+        # « l'Empire Orokin » : le français élide l'article devant un nom
+        # COMMUN, jamais devant un nom propre dans la grammaire du modèle —
+        # « Empire » est du vocabulaire d'univers, pas une entité inventée
+        # (playtest « Ballas » : « empire » était le SEUL mot bloquant un
+        # récit entièrement sourcé).
+        ok, bad = verify_answer(
+            "Ballas servait l'Empire Orokin.",
+            "Ballas est un exécuteur des Orokin.")
+        self.assertTrue(ok)
+        self.assertEqual(bad, set())
+
     def test_label_capitalise_duplique_en_prose_accepte(self):
         # Un mot courant capitalisé par la fiche puis repris en minuscules
         # dans la prose : même mot, pas un nom inventé — le signal couvre du

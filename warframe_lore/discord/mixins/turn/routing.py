@@ -19,6 +19,7 @@ from ...guild import (
     MENU_INDEX_ERROR,
     creator_mentioned,
     detect_story_lens,
+    detect_targeted_era,
     is_out_of_range_index,
     is_story_request,
     normalize_message,
@@ -78,9 +79,10 @@ class RoutingMixin:
                                                   question, choices)
                         await message.channel.send(question)
                         return
-                    if context.story_lens is None:
-                        # Story request without an obvious starting point: the
-                        # bot asks the human THEIR opening (never guesses it).
+                    if context.story_lens is None and context.targeted_era is None:
+                        # Story request without an obvious starting point and
+                        # without a recognized targeted subject: the bot asks
+                        # the human THEIR opening (never guesses it).
                         self.state.open_story_ask(channel_id,
                                                   message.author.id, text,
                                                   LENS_QUESTION)
@@ -116,6 +118,7 @@ class RoutingMixin:
                 return
             request = substitute_story_subject(request, subject)
             lens = detect_story_lens(request)
+            targeted_era = detect_targeted_era(request)
         else:
             lens = parse_lens_answer(text)
             if lens is None:
@@ -125,13 +128,15 @@ class RoutingMixin:
                 else:
                     await message.channel.send(question)
                 return
+            targeted_era = None
         self.state.close_story_ask(channel_id)
         mention = self._resolve_member(message, request)
         self.state.remember_member(channel_id,
                                    self._mention_snapshot(mention))
         settings = self.services.settings.get(channel_id)
         context = self._turn_context(message, request, settings, mention)
-        context = replace(context, story=True, story_lens=lens)
+        context = replace(context, story=True, story_lens=lens,
+                          targeted_era=targeted_era)
         self._audit(channel_id, context)
         await self._stream_turn(message, context)
 
@@ -153,6 +158,11 @@ class RoutingMixin:
         # RAG in: the story is told from the lore, not invented from nothing.
         story = is_story_request(text)
         story_lens = detect_story_lens(text) if story else None
+        targeted_era = detect_targeted_era(text) if story else None
+        # An explicit temporal lens (e.g. "...en 1999") overrides the default
+        # era inferred from a named subject.
+        if story_lens is not None:
+            targeted_era = None
         use_rag = bool(settings.rag and (wants_lore(text) or story)
                        and not mention.found and not creator_mention)
         return TurnContext(
@@ -161,7 +171,7 @@ class RoutingMixin:
             user_roles=tuple(self._role_names(message.author)),
             creator_mention=creator_mention, member_name=mention.name,
             insult=detect_insult(text), use_rag=use_rag, story=story,
-            story_lens=story_lens)
+            story_lens=story_lens, targeted_era=targeted_era)
 
     @staticmethod
     def _audit(channel_id: int, context: TurnContext) -> None:

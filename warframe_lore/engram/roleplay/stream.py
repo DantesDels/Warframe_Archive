@@ -21,6 +21,7 @@ from .prompt import (
     archive_bloc,
     speaker_bloc,
     story_directive,
+    targeted_story_directive,
     turn_directives,
 )
 
@@ -62,7 +63,8 @@ class RoleplayService:
                      creator_mention: str | None = None,
                      lang: str | None = None,
                      story: bool = False,
-                     story_lens: str | None = None) -> AsyncIterator[str]:
+                     story_lens: str | None = None,
+                     targeted_era: str | None = None) -> AsyncIterator[str]:
         """Append the input, stream the reply, and record it.
 
         ``rag_context`` (trusted passages) anchors the turn on the archives.
@@ -72,6 +74,8 @@ class RoleplayService:
         ``story`` switches the turn to a narrating mode: the model receives the
         story directive and a softer temperature, still grounded on the given
         passages; ``story_lens`` selects the opening scene to begin from.
+        ``targeted_era`` overrides the lens menu for a specifically named
+        subject and anchors the narrative in that subject's own era.
         """
         session.add("user", user_text)
         system = archive_bloc(self._base_prompt(persona), rag_context,
@@ -83,7 +87,10 @@ class RoleplayService:
         system = turn_directives(system, creator, role_status,
                                  creator_mention, lang)
         if story:
-            system = f"{system}\n\n{story_directive(story_lens)}"
+            if targeted_era:
+                system = f"{system}\n\n{targeted_story_directive(targeted_era)}"
+            else:
+                system = f"{system}\n\n{story_directive(story_lens)}"
         messages = [
             ChatMessage("system", system),
             ChatMessage("user", user_text),

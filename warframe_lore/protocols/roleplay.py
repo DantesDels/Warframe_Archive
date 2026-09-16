@@ -54,6 +54,9 @@ class MessageFrame(BaseModel):
     # grounded on the archives from a chosen starting point (lens).
     story: bool = False
     story_lens: str | None = None
+    # Targeted narrative subject: when the user names a specific entity, this
+    # era overrides the lens menu and anchors the answer in that subject's era.
+    targeted_era: str | None = None
     user_id: str | int | None = None
     user_name: str | None = None
     user_role: str | None = None

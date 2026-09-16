@@ -43,6 +43,7 @@ class TurnContext:
     use_rag: bool = False
     story: bool = False
     story_lens: str | None = None
+    targeted_era: str | None = None
 
     @property
     def kind(self) -> str:
@@ -70,6 +71,7 @@ class TurnContext:
             rag=self.use_rag,
             story=self.story,
             story_lens=self.story_lens,
+            targeted_era=self.targeted_era,
             user_id=self.user_id,
             user_name=self.user_name,
             user_role=self.user_role,

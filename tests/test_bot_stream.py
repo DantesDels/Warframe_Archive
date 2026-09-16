@@ -20,6 +20,9 @@ from discord_fakes import (
 )
 
 from warframe_lore.discord.mixins.turn.streaming import THINKING, UNREACHABLE
+from warframe_lore.discord.services.transport.stream.streamer import (
+    DISCORD_MESSAGE_LIMIT,
+)
 
 
 class ReconnectTests(unittest.TestCase):
@@ -94,6 +97,31 @@ class InterruptTests(unittest.TestCase):
         scenario = make_bot(gateway=hang, cooldown=30.0)
         interrupt_after_first_token(scenario, hang)
         self.assertIn("Réponse interrompue.", scenario.channel.texts)
+
+
+class LongReplyTests(unittest.TestCase):
+    """Réponses au-delà de la limite Discord : pagination en messages."""
+
+    def test_une_longue_reponse_page_au_dela_de_2000(self):
+        # Un récit entier arrive en UN seul jeton (voie bufférisée du garde-fou) :
+        # le placeholder garde la tête, le dépassement part en message(s) suivi(s).
+        story = " ".join(["Eleanor, la protoframe de l'ère 1999, resta fidèle "
+                          "au clan, liée à ses camarades par le lien mental."] * 40)
+        self.assertGreater(len(story), DISCORD_MESSAGE_LIMIT)
+        scenario = make_bot(gateway=ScriptedGateway(tokens=(story,)))
+        scenario.say("parle-moi de ta journée")
+        messages = list(scenario.channel.sent)
+        self.assertEqual(messages[0].content, story[:DISCORD_MESSAGE_LIMIT])
+        self.assertGreaterEqual(len(messages), 2)
+        for message in messages:
+            self.assertLessEqual(len(message.content), DISCORD_MESSAGE_LIMIT)
+        self.assertEqual("".join(m.content for m in messages), story)
+
+    def test_une_reponse_courte_reste_un_seul_message(self):
+        scenario = make_bot()
+        scenario.say("parle-moi de ta journée")
+        self.assertEqual(len(scenario.channel.sent), 1)
+        self.assertEqual(scenario.channel.sent[0].content, "Bonjour, organique.")
 
 
 if __name__ == "__main__":

@@ -44,6 +44,7 @@ class TurnContext:
     story: bool = False
     story_lens: str | None = None
     targeted_era: str | None = None
+    targeted_subject: str | None = None
     leverian_warframe: str | None = None
 
     @property
@@ -73,6 +74,7 @@ class TurnContext:
             story=self.story,
             story_lens=self.story_lens,
             targeted_era=self.targeted_era,
+            targeted_subject=self.targeted_subject,
             leverian_warframe=self.leverian_warframe,
             user_id=self.user_id,
             user_name=self.user_name,

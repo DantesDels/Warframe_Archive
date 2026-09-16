@@ -27,6 +27,7 @@ from warframe_lore.discord.guild.story import (
     story_subject_choices,
     story_subject_question,
     substitute_story_subject,
+    targeted_subject_mention,
 )
 from warframe_lore.engram.roleplay.prompt import (
     LEVERIAN_DIRECTIVE,
@@ -84,6 +85,27 @@ class StoryDetectionTests(unittest.TestCase):
 
     def test_un_sujet_inconnu_n_a_pas_d_ere_ciblee(self):
         self.assertIsNone(detect_targeted_era("raconte l'histoire de l'Infestation"))
+
+    def test_un_sujet_cible_renvoie_son_ancre_de_titre(self):
+        """La mention (clé du mapping) ancre la récupération dossier."""
+        self.assertEqual(
+            targeted_subject_mention("raconte-moi l'histoire d'Eleanor"),
+            "eleanor")
+        self.assertEqual(
+            targeted_subject_mention("raconte-moi l'histoire des Tenno"),
+            "tenno")
+        self.assertIsNone(
+            targeted_subject_mention("raconte l'histoire de l'Infestation"))
+
+    def test_la_mention_et_l_ere_restent_en_phase(self):
+        """La mention n'existe QUE quand une ère ciblée est détectée."""
+        for text in ("raconte-moi l'histoire d'Eleanor",
+                     "raconte-moi l'histoire d'Albrecht",
+                     "raconte-moi l'histoire des Tenno",
+                     "raconte l'histoire de l'Infestation"):
+            with self.subTest(text=text):
+                self.assertEqual(bool(detect_targeted_era(text)),
+                                 bool(targeted_subject_mention(text)))
 
     def test_les_sujets_ambigus_ne_sont_pas_dans_le_mapping(self):
         # Garuda a deux récits distincts : elle doit rester en dehors du

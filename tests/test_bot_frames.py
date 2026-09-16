@@ -149,6 +149,7 @@ class StoryFrameTests(unittest.TestCase):
         frame = scenario.gateway.last
         self.assertTrue(frame["story"])
         self.assertEqual(frame["targeted_era"], "1999 (Höllvania)")
+        self.assertEqual(frame["targeted_subject"], "eleanor")
         self.assertIsNone(frame.get("story_lens"))
         self.assertEqual(scenario.stats["by_kind"]["story"], 1)
 
@@ -159,6 +160,7 @@ class StoryFrameTests(unittest.TestCase):
         self.assertTrue(frame["story"])
         self.assertEqual(frame["leverian_warframe"], "ash")
         self.assertEqual(frame["targeted_era"], "l'Éveil du Tenno")
+        self.assertEqual(frame["targeted_subject"], "ash")
 
     def test_un_recit_a_sujet_ambigu_demande_quel_recit(self):
         scenario = make_bot()

@@ -29,6 +29,7 @@ from ...guild import (
     story_subject_choices,
     story_subject_question,
     substitute_story_subject,
+    targeted_subject_mention,
     wants_lore,
 )
 from ...moderation.insults import detect_insult
@@ -121,6 +122,8 @@ class RoutingMixin:
             lens = detect_story_lens(request)
             targeted_era = detect_targeted_era(request)
             leverian_warframe = detect_leverian_warframe(request)
+            targeted_subject = (targeted_subject_mention(request)
+                                if targeted_era is not None else None)
         else:
             lens = parse_lens_answer(text)
             if lens is None:
@@ -131,6 +134,7 @@ class RoutingMixin:
                     await message.channel.send(question)
                 return
             targeted_era = None
+            targeted_subject = None
             leverian_warframe = None
         self.state.close_story_ask(channel_id)
         mention = self._resolve_member(message, request)
@@ -140,6 +144,7 @@ class RoutingMixin:
         context = self._turn_context(message, request, settings, mention)
         context = replace(context, story=True, story_lens=lens,
                           targeted_era=targeted_era,
+                          targeted_subject=targeted_subject,
                           leverian_warframe=leverian_warframe)
         self._audit(channel_id, context)
         await self._stream_turn(message, context)
@@ -168,6 +173,10 @@ class RoutingMixin:
         # era inferred from a named subject.
         if story_lens is not None:
             targeted_era = None
+        # Page-title anchor of the named subject (None without a targeted era):
+        # the ENGRAM dossier retrieval walks the subject's own wiki pages.
+        targeted_subject = (targeted_subject_mention(text)
+                            if targeted_era is not None else None)
         use_rag = bool(settings.rag and (wants_lore(text) or story)
                        and not mention.found and not creator_mention)
         return TurnContext(
@@ -177,6 +186,7 @@ class RoutingMixin:
             creator_mention=creator_mention, member_name=mention.name,
             insult=detect_insult(text), use_rag=use_rag, story=story,
             story_lens=story_lens, targeted_era=targeted_era,
+            targeted_subject=targeted_subject,
             leverian_warframe=leverian_warframe)
 
     @staticmethod

@@ -74,6 +74,60 @@ class VerifyUnitTests(unittest.TestCase):
             "Le syndrome de Pelham la frappa jeune.", CONTEXT)
         self.assertTrue(ok)
 
+    def test_pluriel_du_contexte_autorise(self):
+        # "Protoframes" est le pluriel capitalisé de "protoframe", présent
+        # à l'identique dans le contexte : même lexème, pas une confabulation.
+        ok, _ = verify_answer(
+            "Eleanor fut l'une des Protoframes d'Albrecht.",
+            "Eleanor est une protoframe créée par Albrecht.")
+        self.assertTrue(ok)
+
+    def test_pluriel_hors_contexte_rejete(self):
+        # "Zarimans" ramène au singulier "zariman", absent du contexte : la
+        # réduction au singulier n'autorise jamais un nom hors corpus.
+        ok, bad = verify_answer(
+            "Eleanor rejoignit les Zarimans.", CONTEXT)
+        self.assertFalse(ok)
+        self.assertIn("zarimans", bad)
+
+    def test_variante_accentuee_du_contexte_autorisee(self):
+        # "Indifférence" est l'orthographe française d'« indifference », déjà
+        # dans le contexte : même entité, pas une confabulation.
+        ok, _ = verify_answer(
+            "Entrati fut emporté par l'Indifférence.",
+            "Entrati is taken by the Indifference.")
+        self.assertTrue(ok)
+
+    def test_variante_accentuee_hors_contexte_rejetee(self):
+        # "Perrín" (accent) ne se réduit ni au verbe accentué ni sans accent :
+        # un nom inventé reste rejeté même accentué.
+        ok, bad = verify_answer(
+            "Eleanor rejoignit le Clan Perrín.", CONTEXT)
+        self.assertFalse(ok)
+        self.assertIn("perrín", bad)
+
+    def test_pluriel_accentue_du_contexte_autorise(self):
+        ok, _ = verify_answer(
+            "Les Indifférences hantent le système.",
+            "The Indifference haunts the Origin System.")
+        self.assertTrue(ok)
+
+    def test_adjectif_francais_ique_du_contexte_autorise(self):
+        # « Britannique » est l'adjectif français de « Britannic », présent à
+        # l'identique dans le contexte : même lexème, autre orthographe.
+        ok, _ = verify_answer(
+            "Eleanor était une Britannique devenue protoframe.",
+            "Eleanor is a Britannic woman turned protoframe.")
+        self.assertTrue(ok)
+
+    def test_adjectif_ique_hors_contexte_rejete(self):
+        # « Perrinique » se réduirait à « perrinic », absent du contexte :
+        # un nom inventé ne passe ni par l'accent ni par le suffixe.
+        ok, bad = verify_answer(
+            "Eleanor rejoignit la Perrinique.", CONTEXT)
+        self.assertFalse(ok)
+        self.assertIn("perrinique", bad)
+
 
 def _run(agen):
     loop = asyncio.new_event_loop()

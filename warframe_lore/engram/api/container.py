@@ -81,6 +81,9 @@ class Container:
             hostile_prompt=Persona(self.config.system_prompt).system_prompt(
                 mode="hostile"
             ),
+            story_prompt=Persona(self.config.system_prompt).system_prompt(
+                mode="story"
+            ),
             temperature=self.config.chat_temperature,
         )
         # Per-user short-term memory: sliding pairs, inactivity expiry, LRU.

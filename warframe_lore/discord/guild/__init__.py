@@ -41,6 +41,7 @@ from .story import (
     story_subject_choices,
     story_subject_question,
     substitute_story_subject,
+    targeted_subject_mention,
 )
 
 __all__ = [
@@ -79,5 +80,6 @@ __all__ = [
     "story_subject_choices",
     "story_subject_question",
     "substitute_story_subject",
+    "targeted_subject_mention",
     "wants_lore",
 ]

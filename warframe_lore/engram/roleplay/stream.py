@@ -13,7 +13,7 @@ from collections.abc import AsyncIterator
 
 from ..llm import LLMProvider
 from ..models import ChatMessage
-from ..persona import HOSTILE_PERSONA
+from ..persona import HOSTILE_PERSONA, STORY_PERSONA
 from ..rag import CONFABULATION_ERROR, RAG_ERROR, verify_answer
 from .models import Session
 from .prompt import (
@@ -42,17 +42,27 @@ class RoleplayService:
 
     def __init__(self, llm: LLMProvider, window: SlidingWindow,
                  system_prompt: str, temperature: float = 0.8,
-                 hostile_prompt: str | None = None) -> None:
+                 hostile_prompt: str | None = None,
+                 story_prompt: str | None = None) -> None:
         self.llm = llm
         self.window = window
         self.system_prompt = system_prompt
         self.temperature = temperature
         self.hostile_prompt = hostile_prompt or HOSTILE_PERSONA
+        self.story_prompt = story_prompt or STORY_PERSONA
 
-    def _base_prompt(self, persona: str) -> str:
-        """Base prompt of the current persona (oracle or hostile)."""
+    def _base_prompt(self, persona: str, story: bool = False) -> str:
+        """Base prompt of the current persona (oracle, hostile or story).
+
+        A narrative turn swaps the Oracle root for the storyteller root: the
+        "ARCHIVE DU CODEX" sheet in the base prompt outranks appended
+        directives for Gemma-2-9b, so the narrative persona must replace it at
+        base level instead of overriding it afterwards.
+        """
         if persona == "hostile":
             return self.hostile_prompt
+        if story:
+            return self.story_prompt
         return self.system_prompt
 
     async def stream(self, session: Session, user_text: str,
@@ -88,7 +98,7 @@ class RoleplayService:
         retrieved passages, otherwise the abstention chain is served instead.
         """
         session.add("user", user_text)
-        system = archive_bloc(self._base_prompt(persona), rag_context,
+        system = archive_bloc(self._base_prompt(persona, story), rag_context,
                               user_name, user_role)
         if user_name is not None or role_status is not None or session.turns:
             history = self.window.render_history(session)

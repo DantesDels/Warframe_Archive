@@ -63,7 +63,8 @@ class RetrievalPipeline:
         self.alias_resolver = alias_resolver or AliasResolver()
 
     async def run(self, question: str,
-                  context: RAGContext | None = None) -> Retrieval:
+                  context: RAGContext | None = None, *,
+                  subject: str | None = None) -> Retrieval:
         """One retrieval, with its audit line (see the module docstring)."""
         question = sanitize_query(question)
         if not question:
@@ -75,6 +76,10 @@ class RetrievalPipeline:
                                     self.query_rewriter)
         vector = (await self.embeddings.embed([search]))[0]
         found = await self.retriever.search(vector)
+        if subject:
+            dossier = await self._dossier(subject, vector)
+            if dossier:
+                found = self._merge_dedup(dossier + found)
         floor = relevance_floor(self.suggestion_min_score,
                                 self.critical_min_score)
         kept = keep_relevant(found, floor)
@@ -92,7 +97,8 @@ class RetrievalPipeline:
         prompt = self.prompt_builder.build(question, kept, alias_note=alias_note,
                                            suggestion=suggestion)
         bypass = not kept and suggestion is None
-        self._audit(question, search, found, suggestion, bypass, prompt)
+        self._audit(question, search, found, suggestion, bypass, prompt,
+                    subject=subject)
         return Retrieval(hits=kept, prompt=prompt, bypass=bypass)
 
     def _abstain(self, question: str, rejected: bool = False) -> Retrieval:
@@ -120,13 +126,36 @@ class RetrievalPipeline:
             return None
         return await suggest(question)
 
+    async def _dossier(self, subject: str,
+                       vector: list[float]) -> list[RAGHit]:
+        """Subject-page passages for a targeted story (``[]`` if unsupported)."""
+        method = getattr(self.retriever, "dossier", None)
+        if method is None:
+            return []
+        return await method(subject, vector)
+
+    @staticmethod
+    def _merge_dedup(hits: list[RAGHit]) -> list[RAGHit]:
+        """Dedup by passage identity; first occurrence wins (dossier first)."""
+        seen: set[tuple[str, str]] = set()
+        merged: list[RAGHit] = []
+        for hit in hits:
+            key = (hit.page_title, hit.content)
+            if key not in seen:
+                seen.add(key)
+                merged.append(hit)
+        return merged
+
     @staticmethod
     def _audit(question: str, search: str, found: list[RAGHit],
                suggestion: str | None, bypass: bool,
-               prompt: RAGPrompt) -> None:
+               prompt: RAGPrompt, *,
+               subject: str | None = None) -> None:
         """One INFO line per retrieval: isolates missing data (ETL) from model
         disobedience."""
         note = f" search_q={search!r}" if search != question else ""
+        if subject:
+            note += f" dossier={subject!r}"
         log.info("Audit RAG question=%r%s hit=%d suggestion=%r bypass=%s "
                  "ctx_car=%d ctx=%r...", question, note, len(found),
                  suggestion, bypass, len(prompt.context),

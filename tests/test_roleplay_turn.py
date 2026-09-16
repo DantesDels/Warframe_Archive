@@ -59,12 +59,42 @@ class ShortCircuitTests(unittest.TestCase):
         self.assertIsNone(plan.reply)
         self.assertIsNone(plan.context_text)
 
-    def test_un_recit_sans_archives_ne_part_jamais_en_roue_libre(self):
-        # Une suggestion de désambiguïsation n'ANCRE pas une histoire : sans
-        # passages, la narration serait inventée de rien (playtest « Eleanor
-        # Vance »).  Le tour story refuse exactement comme un tour sans RAG.
+    def test_un_recit_ambigu_demande_une_precision(self):
+        # Une suggestion de désambiguïsation n'ANCRE toujours pas une histoire
+        # (sans passages, la narration serait inventée de rien — playtest
+        # « Eleanor Vance »), mais le doute se résout par une précision : le
+        # bot demande à l'organique de confirmer l'entité exacte au lieu de
+        # refuser à froid.  La confirmation ancre le tour suivant.
         plan = decide({"story": True}, "raconte-moi l'histoire des Orokin",
                       rag=FakeRAG(None, "Orokin"))
+        self.assertIsNone(plan.context_text)
+        self.assertIn("Voulez-vous dire « Orokin » ?", plan.reply or "")
+
+    def test_un_recit_ambigu_avec_marqueur_demande_une_precision(self):
+        # Flow RÉEL : ``resolve`` rend un contexte-marqueur [SUGGESTION] non
+        # vide en même temps que la suggestion.  Un récit ne narre jamais sur
+        # ce marqueur — il demande la précision.
+        marker = ("[SUGGESTION] Correspondance partielle dans les archives : "
+                  "« Orokin ».")
+        plan = decide({"story": True}, "raconte-moi l'histoire des Orokin",
+                      rag=FakeRAG(marker, "Orokin"))
+        self.assertIsNone(plan.context_text)
+        self.assertIn("Voulez-vous dire « Orokin » ?", plan.reply or "")
+
+    def test_suggestion_non_recit_passe_le_marqueur_au_llm(self):
+        # Hors récit, la désambiguïsation garde le chemin LLM : le marqueur
+        # traverse tel quel (comportement historique inchangé).
+        marker = ("[SUGGESTION] Correspondance partielle dans les archives : "
+                  "« Hildryn ».")
+        plan = decide({"rag": True}, "qui est Hildry ?",
+                      rag=FakeRAG(marker, "Hildryn"))
+        self.assertIsNone(plan.reply)
+        self.assertEqual(plan.context_text, marker)
+
+    def test_un_recit_sans_aucune_piste_refuse(self):
+        # Aucun passage, aucune suggestion : le tour story refuse exactement
+        # comme un tour documentaire laissé sans passage de confiance.
+        plan = decide({"story": True}, "raconte-moi l'histoire des Orokin")
         self.assertEqual(plan.reply, RAG_ERROR)
         self.assertIsNone(plan.context_text)
 

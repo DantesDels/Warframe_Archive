@@ -33,6 +33,7 @@ from warframe_lore.engram.roleplay.prompt import (
     LEVERIAN_DIRECTIVE,
     TARGETED_STORY_DIRECTIVE,
     leverian_directive,
+    story_directive,
     targeted_story_directive,
 )
 
@@ -250,6 +251,13 @@ class TargetedStoryDirectiveTests(unittest.TestCase):
     def test_default_directive_without_era(self):
         self.assertIn("VERROU SPATIO-TEMPOREL", TARGETED_STORY_DIRECTIVE)
         self.assertIn("ANCRAGE DANS LA BONNE ÈRE", TARGETED_STORY_DIRECTIVE)
+
+    def test_les_archives_anglaises_font_foi(self):
+        # Complément bilingue de l'ordre du dossier (EN avant FR) : en cas
+        # d'écart EN/FR, la version anglaise est la source primaire.
+        self.assertIn("ANGLAISE fait foi", targeted_story_directive("1999"))
+        self.assertIn("ANGLAISE fait foi", story_directive("1999"))
+        self.assertIn("source primaire", targeted_story_directive())
 
 
 class LeverianDirectiveTests(unittest.TestCase):

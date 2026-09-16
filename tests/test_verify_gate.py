@@ -128,6 +128,39 @@ class VerifyUnitTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("perrinique", bad)
 
+    def test_vocabulaire_francais_ordinaire_capitalise_accepte(self):
+        # « Motivations », « Stratégie », « Conseil »… : champs adaptatifs de
+        # la fiche Codex (le persona autorise « Adapte les champs à
+        # l'entité ») et vocabulaire courant capitalisé par la mise en page —
+        # du vocabulaire ordinaire, pas une entité nommée (playtest
+        # « Ballas » : un récit fidèle fut rejeté à tort sur 9 mots
+        # génériques, nom inventé aucun).
+        ok, bad = verify_answer(
+            "Ballas : Domination, Espionnage, Stratégie. Obsédé par Margulis, "
+            "traître au Conseil des Anciens, il servit la machine militaire.",
+            "Ballas est un exécuteur des Sept. Il aimait Margulis.")
+        self.assertTrue(ok)
+        self.assertEqual(bad, set())
+
+    def test_label_capitalise_duplique_en_prose_accepte(self):
+        # Un mot courant capitalisé par la fiche puis repris en minuscules
+        # dans la prose : même mot, pas un nom inventé — le signal couvre du
+        # vocabulaire hors liste (« machinations »), sans dictionnaire.
+        ok, bad = verify_answer(
+            "Machinations : son plan. Ses machinations furent secrètes.",
+            "Ballas est un exécuteur.")
+        self.assertTrue(ok)
+        self.assertEqual(bad, set())
+
+    def test_nom_invente_meme_capitalise_rejete(self):
+        # La porte reste fermée aux noms inventés : « Vaule » n'est ni dans
+        # les archives, ni du vocabulaire courant, ni en minuscules dans la
+        # réponse — confabulation, abstention.
+        ok, bad = verify_answer(
+            "Ballas servait la Vaule des Sept.", CONTEXT)
+        self.assertFalse(ok)
+        self.assertIn("vaule", bad)
+
 
 def _run(agen):
     loop = asyncio.new_event_loop()

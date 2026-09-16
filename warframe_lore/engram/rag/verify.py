@@ -4,9 +4,12 @@ Prompt-level guard rails (``HALLUCINATION_GUARD``, ``STORY_DIRECTIVE`` …)
 depend on model obedience, which fails: the model drains its pre-trained
 weights and invents named entities absent from the ``<archives>`` (playtest
 "Eleanor" -> "Perrin Sequence", "née à Höllvania").  This module is the ONLY
-deterministic protection: every capitalized word of the generated answer
-must appear in the retrieved context.  An answer introducing unsupported
-entities is replaced with the abstention chain.
+deterministic protection: every capitalized NAMED ENTITY of the generated
+answer must appear in the retrieved context.  Ordinary vocabulary — a Codex
+field label ("Motivations", "Stratégie") or a word the narrative already
+spells lowercase — is a layout artifact, not an entity, and never triggers
+the gate.  An answer introducing unsupported entities is replaced with the
+abstention chain.
 
 The corpus is the RAG ``<archives>`` context ONLY — never the persona, which
 carries a game-wide Warframe vocabulary ("Margulis", "Zariman", "Sentient")
@@ -46,6 +49,19 @@ TRUSTED_ALLOW = frozenset({
     "tactiques", "territoire", "tissage", "type",
 })
 
+# Ordinary French narrative vocabulary that the sheet capitalizes as ADAPTIVE
+# field labels ("Adapte les champs à l'entité"): a layout artifact, NOT a
+# named entity.  Curated top of the playtest « Ballas » — a faithful récit was
+# rejected on exactly these generic words although no invented name was
+# present.  Unverified French words still go through the lowercase-in-answer
+# signal (:func:`_ordinary_word`); invented names are absent from this list
+# and stay rejected.
+_FR_COMMON = frozenset({
+    "ancien", "anciens", "conseil", "domination", "espionnage", "militaire",
+    "militaires", "motivation", "motivations", "obsédé", "obsédée",
+    "obsédés", "stratégie", "stratégies", "traître", "traîtres",
+})
+
 def extract_entities(text: str) -> set[str]:
     """Lowercased capitalized words of ``text``, sentence-initial excluded."""
     clean = _MD_CLEAN.sub(" ", text)
@@ -55,6 +71,22 @@ def extract_entities(text: str) -> set[str]:
         for word in words[1:]:
             entities.add(word.lower())
     return entities
+
+
+def _ordinary_word(entity: str, answer: str) -> bool:
+    """Ordinary vocabulary, not a proper name (template capital escaped).
+
+    Two independent signals: the exact word recurs in LOWERCASE in the
+    answer — the sheet capitalizes field labels while the narrative spells
+    the same word lowercase, and invented proper names are NEVER lowercase —
+    or the word belongs to the curated French narrative list (label-only
+    sheet occurrence, playtest « Ballas »).  The lowercase signal is
+    language-agnostic; the list is French-only.
+    """
+    if entity in _FR_COMMON:
+        return True
+    pattern = re.compile(rf"\b{re.escape(entity)}\b", re.IGNORECASE)
+    return any(match.group(0).islower() for match in pattern.finditer(answer))
 
 
 def _candidates(entity: str) -> list[str]:
@@ -87,10 +119,13 @@ def _grounded(entity: str, corpus: str) -> bool:
 
 def verify_answer(answer: str, context: str,
                   extra_allowed: str = "") -> tuple[bool, set[str]]:
-    """True when every entity of ``answer`` appears in ``context``.
+    """True when every NAMED entity of ``answer`` appears in ``context``.
 
     ``extra_allowed`` covers per-turn trusted metadata the model may echo
     (speaker pseudonym/status, targeted era label, Leverian frame name).
+    Ordinary vocabulary is never an entity: template-capitalized labels and
+    words the narrative spells lowercase bypass the gate, ONLY invented
+    proper names absent from the retrieved passages are confabulations.
     Returns ``(True, set())`` for a fully sourced answer, or
     ``(False, unsupported)`` listing the confabulated entities.
     """
@@ -99,7 +134,9 @@ def verify_answer(answer: str, context: str,
     corpus = allowed.lower()
     unsupported = {
         entity for entity in entities
-        if not _grounded(entity, corpus) and entity not in TRUSTED_ALLOW
+        if not _grounded(entity, corpus)
+        and entity not in TRUSTED_ALLOW
+        and not _ordinary_word(entity, answer)
     }
     return (len(unsupported) == 0, unsupported)
 

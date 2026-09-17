@@ -59,16 +59,20 @@ TRUSTED_ALLOW = frozenset({
 })
 
 # Ordinary French narrative vocabulary that the sheet capitalizes as ADAPTIVE
-# field labels ("Adapte les champs à l'entité"): a layout artifact, NOT a
+# field labels ("Adapte les champs à l'entité") or as free-form Codex status
+# VALUES ("Statut Mnémonique : Déchu, Manipulateur"): a layout artifact, NOT a
 # named entity.  Curated top of the playtest « Ballas » — a faithful récit was
 # rejected on exactly these generic words although no invented name was
-# present.  Unverified French words still go through the lowercase-in-answer
-# signal (:func:`_ordinary_word`); invented names are absent from this list
-# and stay rejected.
+# present.  The adjectives below are ALSO absent from the archive, so the
+# whole-corpus vocabulary cannot excuse them; unverified French words still go
+# through the lowercase-in-answer signal (:func:`_ordinary_word`), and invented
+# names are absent from this list and stay rejected.
 _FR_COMMON = frozenset({
-    "ancien", "anciens", "conseil", "domination", "espionnage", "militaire",
-    "militaires", "motivation", "motivations", "obsédé", "obsédée",
-    "obsédés", "stratégie", "stratégies", "traître", "traîtres",
+    "ancien", "anciens", "conseil", "domination", "énergétique",
+    "énergétiques", "espionnage", "militaire", "militaires", "manipulateur",
+    "manipulateurs", "manipulatrice", "manipulatrices", "motivation",
+    "motivations", "obsédé", "obsédée", "obsédés", "stratégie", "stratégies",
+    "traître", "traîtres",
 })
 
 def extract_entities(text: str) -> set[str]:

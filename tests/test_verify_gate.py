@@ -152,6 +152,16 @@ class VerifyUnitTests(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(bad, set())
 
+    def test_adjectif_de_statut_absent_du_corpus_accepte(self):
+        # « Manipulateur » / « Énergétique » : adjectifs français ordinaires
+        # dans la VALEUR libre d'un champ Codex, absents du corpus — l'ancrage
+        # archive ne peut rien pour eux, la liste curée les couvre.
+        ok, bad = verify_answer(
+            "Statut Mnémonique : Déchu, Manipulateur. "
+            "Capacités : Manipulation Énergétique.", CONTEXT)
+        self.assertTrue(ok)
+        self.assertEqual(bad, set())
+
     def test_nom_commun_elide_capitalise_accepte(self):
         # « l'Empire Orokin » : le français élide l'article devant un nom
         # COMMUN, jamais devant un nom propre dans la grammaire du modèle —

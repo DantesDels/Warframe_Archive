@@ -356,6 +356,14 @@ class _SilentLLM:
         yield  # pragma: no cover - kept as an async generator
 
 
+class _FailingLLM:
+    """Generation that aborts mid-stream (model down, context overflow)."""
+
+    async def chat_stream(self, messages, temperature):
+        raise RuntimeError("LLM server error: context size has been exceeded")
+        yield  # pragma: no cover - kept as an async generator
+
+
 class StreamGateTests(unittest.TestCase):
     def _service(self, llm, vocabulary=None):
         return RoleplayService(
@@ -425,6 +433,20 @@ class StreamGateTests(unittest.TestCase):
             rag_context=CONTEXT, story=True))
         self.assertEqual(tokens, [CONFABULATION_ERROR])
 
+    def test_panne_llm_tour_archive_abstention(self):
+        # Serveur tombé / contexte épuisé : la panne est servie comme
+        # l'abstention, jamais comme une erreur brute.
+        tokens = _run(self._service(_FailingLLM()).stream(
+            Session(session_id="s"), "qui est Eleanor ?",
+            rag_context=CONTEXT))
+        self.assertEqual(tokens, [RAG_ERROR])
+
+    def test_panne_llm_chat_libre_abstention(self):
+        # Aucun token émis avant la panne : le terminal ne reste pas muet.
+        tokens = _run(self._service(_FailingLLM()).stream(
+            Session(session_id="s"), "bonjour"))
+        self.assertEqual(tokens, [RAG_ERROR])
+
 
 class _FakeEmbed:
     async def embed(self, texts):
@@ -464,6 +486,19 @@ class HttpGateTests(unittest.TestCase):
             "Eleanor ?", context=RAGContext(user_key="u")))
         self.assertEqual(
             answer, "Eleanor fut convoquée par le Conclave des Entrati.")
+
+    def test_panne_llm_abstention_http(self):
+        # La route documentaire ne répond jamais 500 : la panne devient
+        # l'abstention, sources conservées.
+        answer, hits = run(self._service(_FailingLLM()).answer_with_sources(
+            "Eleanor ?", context=RAGContext(user_key="u")))
+        self.assertEqual(answer, RAG_ERROR)
+        self.assertTrue(hits)
+
+    def test_panne_llm_abstention_http_stream(self):
+        tokens = _run(self._service(_FailingLLM()).stream_answer(
+            "Eleanor ?", context=RAGContext(user_key="u")))
+        self.assertEqual(tokens, [RAG_ERROR])
 
 
 if __name__ == "__main__":

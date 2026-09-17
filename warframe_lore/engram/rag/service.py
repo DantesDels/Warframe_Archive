@@ -8,11 +8,15 @@ short-circuit strings, a full answer with its sources, or a token stream.
 
 Short-circuit: without a trusted passage the LLM is NEVER called — the exact
 :const:`RAG_ERROR` is returned (or :const:`JAILBREAK_REJECT` for a hostile
-probe).  Formatting artifacts are stripped from the FINAL text only.
+probe).  Formatting artifacts are stripped from the FINAL text only.  A FAILED
+generation (model unreachable, context overflow) is served as the very same
+abstention string: the document route never answers 500 and the stream never
+breaks mid-flight.
 """
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
@@ -34,6 +38,8 @@ if TYPE_CHECKING:
 # RAG inference temperature: 0.1 -> analytical/deterministic without blocking
 # the engine (Gemma-2-9b-it Q4_K_M on 8 GB VRAM).
 RAG_TEMPERATURE = 0.1
+
+log = logging.getLogger("warframe_lore.engram.rag.service")
 
 
 class RAGService:
@@ -101,16 +107,21 @@ class RAGService:
         The generated answer passes the deterministic entity gate
         (:mod:`.verify`) before being served: named entities absent from the
         retrieved ``<archives>`` are confabulations and trigger the abstention
-        chain instead.
+        chain instead.  A failed generation (model down, context overflow)
+        degrades to the same abstention chain: this route never answers 500.
         """
         hits, prompt, bypass = await self.retrieve(question, context=context)
         short = self._short_circuit(prompt, bypass)
         if short is not None:
             return short, []
         chunks: list[str] = []
-        async for token in self.llm.chat_stream(self._messages(prompt),
-                                                RAG_TEMPERATURE):
-            chunks.append(token)
+        try:
+            async for token in self.llm.chat_stream(self._messages(prompt),
+                                                    RAG_TEMPERATURE):
+                chunks.append(token)
+        except Exception as exc:  # noqa: BLE001 (LLM down -> abstention)
+            log.error("Generation failed (%s) — serving abstention", exc)
+            return RAG_ERROR, hits
         answer = strip_trailing_padding("".join(chunks))
         ok, _ = await verify_answer_with_archive(
             answer, prompt.context, self.vocabulary)
@@ -123,7 +134,9 @@ class RAGService:
 
         Same entity gate as :meth:`answer_with_sources`: the full response is
         assembled first, checked against the retrieved ``<archives>``, then
-        emitted — streamed tokens cannot be recalled once sent.
+        emitted — streamed tokens cannot be recalled once sent.  A failed
+        generation yields the exact abstention string instead of breaking the
+        stream.
         """
         _, prompt, bypass = await self.retrieve(question, context=context)
         short = self._short_circuit(prompt, bypass)
@@ -131,9 +144,14 @@ class RAGService:
             yield short
             return
         chunks: list[str] = []
-        async for token in self.llm.chat_stream(self._messages(prompt),
-                                                RAG_TEMPERATURE):
-            chunks.append(token)
+        try:
+            async for token in self.llm.chat_stream(self._messages(prompt),
+                                                    RAG_TEMPERATURE):
+                chunks.append(token)
+        except Exception as exc:  # noqa: BLE001 (LLM down -> abstention)
+            log.error("Generation failed (%s) — serving abstention", exc)
+            yield RAG_ERROR
+            return
         answer = "".join(chunks)
         ok, _ = await verify_answer_with_archive(
             answer, prompt.context, self.vocabulary)

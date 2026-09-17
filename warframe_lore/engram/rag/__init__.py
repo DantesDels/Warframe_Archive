@@ -34,6 +34,7 @@ _EXPORTS = {
     "AliasResolver": ".query.aliases",
     "CosinusSearch": ".retrieval.search",
     "CONFABULATION_ERROR": ".prompt.guards",
+    "DossierPage": ".retrieval.retriever",
     "HALLUCINATION_GUARD": ".prompt.guards",
     "HIERARCHY_BLOCK": ".prompt.guards",
     "HybridHit": ".retrieval.model",

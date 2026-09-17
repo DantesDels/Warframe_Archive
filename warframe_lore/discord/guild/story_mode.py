@@ -33,6 +33,17 @@ STORY_CONTINUATION_TRIGGERS = (
 )
 STORY_CONTINUATION_MAX_WORDS = 5
 
+# Automatic continuation policy: a storyteller turn chains at most this many
+# parts by itself (each one reads the NEXT page of the subject's dossier)
+# before handing the floor back to the human — one part already costs a full
+# local generation, and the channel stays locked for the whole chain.
+STORY_AUTO_PARTS = 3
+
+# BLOC 3 of an automatic continuation: the human asked once, so the model
+# receives this short resumption instead of a subject-less message.  Retrieval
+# still runs on the request that opened the narrative (``retrieval_text``).
+STORY_CONTINUATION_PROMPT = "Poursuis le récit."
+
 
 @dataclass(frozen=True)
 class StoryMode:
@@ -84,7 +95,9 @@ def detect_story_mode(text: str) -> StoryMode:
 
 
 __all__ = [
+    "STORY_AUTO_PARTS",
     "STORY_CONTINUATION_MAX_WORDS",
+    "STORY_CONTINUATION_PROMPT",
     "STORY_CONTINUATION_TRIGGERS",
     "StoryMode",
     "detect_story_mode",

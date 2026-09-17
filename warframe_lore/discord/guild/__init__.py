@@ -45,7 +45,9 @@ from .story import (
     targeted_subject_mention,
 )
 from .story_mode import (
+    STORY_AUTO_PARTS,
     STORY_CONTINUATION_MAX_WORDS,
+    STORY_CONTINUATION_PROMPT,
     STORY_CONTINUATION_TRIGGERS,
     StoryMode,
     detect_story_mode,
@@ -63,7 +65,9 @@ __all__ = [
     "LORE_TRIGGERS",
     "MENU_INDEX_ERROR",
     "STORY_SUBJECT_CHOICES",
+    "STORY_AUTO_PARTS",
     "STORY_CONTINUATION_MAX_WORDS",
+    "STORY_CONTINUATION_PROMPT",
     "STORY_CONTINUATION_TRIGGERS",
     "STORY_TRIGGERS",
     "TARGETED_SUBJECT_ERAS",

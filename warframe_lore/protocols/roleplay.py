@@ -16,9 +16,15 @@ answered by exactly one ``comment`` frame (non-streamed).
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from pydantic import BaseModel
+
+# Size of ONE narrative part: the number of dossier chunks a story turn reads
+# and the step the client advances its cursor by.  Both sides read this single
+# constant, so a part never re-narrates the passages of the previous one.
+STORY_DOSSIER_PAGE = 12
 
 # ----------------------------------------------------------------- frame types
 FRAME_OPEN = "open"
@@ -71,6 +77,11 @@ class MessageFrame(BaseModel):
     # instead of on a subject-less message.  Only the SEARCH uses this field:
     # the model still receives ``text``.
     retrieval_text: str | None = None
+    # Progress cursor of an open narrative: how many dossier chunks (in
+    # ``STORY_DOSSIER_PAGE`` steps) have ALREADY been narrated.  Retrieval then
+    # serves the NEXT page of the subject's dossier, so a continuation brings
+    # new material instead of repeating the passages of the previous part.
+    dossier_offset: int = 0
     user_id: str | int | None = None
     user_name: str | None = None
     user_role: str | None = None
@@ -141,10 +152,30 @@ class TokenFrame(BaseModel):
 
 
 class EndFrame(BaseModel):
-    """Final frame of a turn, with the full accumulated text."""
+    """Final frame of a turn, with the full accumulated text.
+
+    ``story_more`` tells the client that MORE dossier material exists behind
+    the cursor it sent: a narrative turn can then be continued (automatically
+    or on order) and a client unaware of the field simply stops there.
+    """
 
     type: str = FRAME_END
     text: str
+    story_more: bool = False
+
+
+@dataclass(frozen=True)
+class TurnOutcome:
+    """Terminal outcome of one streamed turn, as the CLIENT reads it."""
+
+    story_more: bool = False
+
+    @classmethod
+    def from_end_frame(cls, payload: dict[str, Any] | None) -> TurnOutcome:
+        """Read an ``end`` payload (``None`` or malformed: no continuation)."""
+        if not payload:
+            return cls()
+        return cls(story_more=bool(payload.get("story_more")))
 
 
 class ErrorFrame(BaseModel):
@@ -165,6 +196,7 @@ __all__ = [
     "FRAME_OPEN", "FRAME_TOKEN", "FRAME_END", "FRAME_ERROR", "FRAME_COMMENT",
     "FRAME_MESSAGE", "FRAME_PERSONA", "FRAME_RESET",
     "PERSONA_ORACLE", "PERSONA_HOSTILE", "PERSONA_MODES", "PersonaMode",
+    "STORY_DOSSIER_PAGE", "TurnOutcome",
     "MessageFrame", "PersonaFrame", "ResetFrame", "CommentRequestFrame",
     "OpenFrame", "TokenFrame", "EndFrame", "ErrorFrame", "CommentFrame",
 ]

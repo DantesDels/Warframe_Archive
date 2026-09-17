@@ -48,6 +48,9 @@ class TurnContext:
     leverian_warframe: str | None = None
     # Continuation of an open narrative: the request its retrieval must replay.
     retrieval_text: str | None = None
+    # Progress cursor of an open narrative: how many dossier chunks have already
+    # been narrated (the next part reads the page AFTER them).
+    dossier_offset: int = 0
 
     @property
     def kind(self) -> str:
@@ -79,6 +82,7 @@ class TurnContext:
             targeted_subject=self.targeted_subject,
             leverian_warframe=self.leverian_warframe,
             retrieval_text=self.retrieval_text,
+            dossier_offset=self.dossier_offset,
             user_id=self.user_id,
             user_name=self.user_name,
             user_role=self.user_role,

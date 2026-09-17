@@ -65,6 +65,12 @@ class MessageFrame(BaseModel):
     # Leverian Warframe: the canonical telling of this Warframe's story is in
     # Drusus' Leverian gallery; the model must ground its answer on that source.
     leverian_warframe: str | None = None
+    # Search anchor of a CONTINUATION: an explicit follow-up ("continue") names
+    # no subject of its own, so the bot replays the request that opened the
+    # narrative and sends it here — retrieval then runs on the anchored subject
+    # instead of on a subject-less message.  Only the SEARCH uses this field:
+    # the model still receives ``text``.
+    retrieval_text: str | None = None
     user_id: str | int | None = None
     user_name: str | None = None
     user_role: str | None = None

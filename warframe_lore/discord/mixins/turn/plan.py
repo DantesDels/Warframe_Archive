@@ -46,6 +46,8 @@ class TurnContext:
     targeted_era: str | None = None
     targeted_subject: str | None = None
     leverian_warframe: str | None = None
+    # Continuation of an open narrative: the request its retrieval must replay.
+    retrieval_text: str | None = None
 
     @property
     def kind(self) -> str:
@@ -76,6 +78,7 @@ class TurnContext:
             targeted_era=self.targeted_era,
             targeted_subject=self.targeted_subject,
             leverian_warframe=self.leverian_warframe,
+            retrieval_text=self.retrieval_text,
             user_id=self.user_id,
             user_name=self.user_name,
             user_role=self.user_role,

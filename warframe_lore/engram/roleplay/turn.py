@@ -21,6 +21,7 @@ from ..rag import (
     detect_probe,
     is_identity_question,
     is_self_reflection,
+    sanitize_query,
 )
 from .replies import external_organic_reply, identity_reply, member_roster_reply
 
@@ -63,8 +64,13 @@ async def plan_turn(container: Container, payload: dict, user_text: str,
         and not is_self_reflection(user_text)
     context_text = suggestion = None
     if want_rag:
+        # A CONTINUATION of an open narrative names no subject of its own
+        # ("continue"): the bot sends the request that anchored the story and
+        # the SEARCH runs on it.  The model still receives the user's wording.
+        search_text = sanitize_query(
+            str(payload.get("retrieval_text") or user_text))
         context_text, suggestion = await container.rag.resolve(
-            user_text, context=rag_context,
+            search_text, context=rag_context,
             subject=payload.get("targeted_subject"))
     if want_rag and suggestion is not None and payload.get("story"):
         # A disambiguation near-match cannot ANCHOR a narration: without a

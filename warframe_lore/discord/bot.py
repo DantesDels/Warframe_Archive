@@ -9,7 +9,8 @@ injected :class:`BotServices` — and keeps only the lifecycle here:
   répartie, redemption, anti-spam gate;
 * :class:`MemberContextMixin` / :class:`RosterMixin` / :class:`SnapshotMixin` /
   :class:`MemberGateMixin` — accreditation, member resolution, matriciel cards;
-* :class:`RoutingMixin` / :class:`StreamMixin` — routing decision, streaming;
+* :class:`RoutingMixin` / :class:`StoryMixin` / :class:`StreamMixin` — routing
+  decision, storyteller anchoring, streaming;
 * :class:`FeedbackMixin` — thumbs-up / thumbs-down verdicts;
 * :class:`CommandMixin` — the ``!prefix`` commands.
 """
@@ -34,16 +35,17 @@ from .mixins import (
     RoutingMixin,
     SnapshotMixin,
     SpamMixin,
+    StoryMixin,
     StreamMixin,
 )
 
 log = logging.getLogger("warframe_lore.discord.bot")
 
 
-class LoreMasterBot(DispatchMixin, RoutingMixin, StreamMixin, HostileMixin,
-                    InsultMixin, SpamMixin, FeedbackMixin, MemberContextMixin,
-                    RosterMixin, SnapshotMixin, MemberGateMixin, CommandMixin,
-                    discord.Client):
+class LoreMasterBot(DispatchMixin, RoutingMixin, StoryMixin, StreamMixin,
+                    HostileMixin, InsultMixin, SpamMixin, FeedbackMixin,
+                    MemberContextMixin, RosterMixin, SnapshotMixin,
+                    MemberGateMixin, CommandMixin, discord.Client):
     """Talks to the Oracle through one WebSocket session per channel."""
 
     def __init__(self, gateway_url: str, prefix: str,

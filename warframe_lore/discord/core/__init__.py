@@ -11,6 +11,7 @@ from .state import (
     MAX_ANSWERS,
     MAX_LAST_MEMBERS,
     MAX_REFUSAL_USERS,
+    MAX_STORY_MODES,
     BotState,
 )
 from .wiring import (
@@ -26,6 +27,7 @@ __all__ = [
     "MAX_HOSTILE_SESSIONS",
     "MAX_LAST_MEMBERS",
     "MAX_REFUSAL_USERS",
+    "MAX_STORY_MODES",
     "STRIKE_INSULTS",
     "STRIKE_PROBES",
     "BotServices",

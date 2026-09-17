@@ -5,7 +5,8 @@ from __future__ import annotations
 from .dispatch import OOC_PREFIXES, DispatchMixin
 from .plan import TurnContext
 from .routing import RoutingMixin
+from .story import StoryMixin
 from .streaming import StreamMixin
 
-__all__ = ["OOC_PREFIXES", "DispatchMixin", "RoutingMixin", "StreamMixin",
-           "TurnContext"]
+__all__ = ["OOC_PREFIXES", "DispatchMixin", "RoutingMixin", "StoryMixin",
+           "StreamMixin", "TurnContext"]

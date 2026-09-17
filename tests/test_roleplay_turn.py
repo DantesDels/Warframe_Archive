@@ -105,6 +105,28 @@ class ShortCircuitTests(unittest.TestCase):
         self.assertIn("Höllvania", plan.context_text)
 
 
+class RetrievalAnchorTests(unittest.TestCase):
+    """Suivi d'un récit : la RECHERCHE porte sur la requête qui l'a ancré.
+
+    « continue » ne nomme aucun sujet : sans cette requête de reprise, l'embedding
+    du suivi ne matche plus les passages et le plancher de pertinence les écarte
+    — le tour retomberait sur « Données insuffisantes ».
+    """
+
+    def test_un_suivi_est_cherche_sur_la_requete_du_recit(self):
+        rag = FakeRAG("du contexte")
+        plan = decide({"story": True,
+                       "retrieval_text": "Raconte moi l'histoire de ballas"},
+                      "continue", rag=rag)
+        self.assertEqual(rag.calls, ["Raconte moi l'histoire de ballas"])
+        self.assertEqual(plan.context_text, "du contexte")
+
+    def test_sans_reprise_la_recherche_porte_sur_le_message(self):
+        rag = FakeRAG("du contexte")
+        decide({"rag": True}, "qui est Ballas ?", rag=rag)
+        self.assertEqual(rag.calls, ["qui est Ballas ?"])
+
+
 class StoryDirectiveTests(unittest.TestCase):
     def test_le_recit_debraie_le_format_codex(self):
         self.assertIn("QUARANTAINE SÉMANTIQUE ABSOLUE", STORY_DIRECTIVE)

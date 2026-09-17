@@ -214,6 +214,49 @@ class PipelineDossierTests(unittest.TestCase):
         self.assertIsNone(suggestion)
         self.assertFalse(more)
 
+    def test_une_continuation_ne_resert_pas_les_voisins_semantiques(self):
+        # La recherche sémantique est calculée sur le MÊME vecteur à chaque
+        # partie : la re-servir re-ancre le modèle sur les mêmes faits
+        # saillants (playtest : parties 2 et 3 quasi identiques).  Une
+        # continuation ne reçoit QUE la page suivante du dossier.
+        retriever = FakeRetriever(
+            [hit(9, 0.64, page="KIM", content="voisin sémantique invariant")],
+            dossier=[hit(1, 0.60, page="Ballas", content="Der erste Traum")],
+            more=True)
+        service = make_service(retriever)
+        context_text, suggestion, more = run(service.resolve(
+            "raconte-moi l'histoire de Ballas", subject="ballas", offset=12))
+        self.assertTrue(more)
+        self.assertIn("Der erste Traum", context_text)
+        self.assertNotIn("voisin sémantique invariant", context_text)
+
+    def test_la_suite_garde_les_chapitres_sous_le_plancher(self):
+        # Le plancher de pertinence est calibré sur la requête d'OUVERTURE ;
+        # les derniers chapitres du dossier (quotes, trivia) y tombent souvent.
+        # Sur une continuation, la page est le corpus du sujet par construction
+        # (titre = sujet, ordre de lecture) : on la sert telle quelle.
+        retriever = FakeRetriever(
+            [hit(9, 0.64, page="KIM", content="voisin")],
+            dossier=[hit(1, 0.44, page="Ballas/Quotes",
+                         content="chapitre tardif du dossier")],
+            more=True)
+        service = make_service(retriever)
+        context_text, suggestion, more = run(service.resolve(
+            "raconte-moi l'histoire de Ballas", subject="ballas", offset=24))
+        self.assertTrue(more)
+        self.assertIn("chapitre tardif du dossier", context_text)
+
+    def test_une_continuation_sans_page_clot_la_suite(self):
+        # Curseur au-delà du dernier fragment : aucune page, plus de suite.
+        retriever = FakeRetriever(
+            [hit(9, 0.64, page="KIM", content="voisin")], dossier=[])
+        service = make_service(retriever)
+        context_text, suggestion, more = run(service.resolve(
+            "raconte-moi l'histoire de Ballas", subject="ballas", offset=60))
+        self.assertIsNone(context_text)
+        self.assertIsNone(suggestion)
+        self.assertFalse(more)
+
 
 class MergedDossierTests(unittest.TestCase):
     """``MergedRetriever.dossier`` délègue et dédoublonne entre canaux."""

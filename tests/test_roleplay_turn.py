@@ -22,7 +22,10 @@ from warframe_lore.engram.roleplay.prompt import (
     story_directive,
     targeted_story_directive,
 )
-from warframe_lore.engram.roleplay.stream import RAG_TEMPERATURE_CAP
+from warframe_lore.engram.roleplay.stream import (
+    RAG_TEMPERATURE_CAP,
+    STORY_CONTINUATION_TEMPERATURE,
+)
 from warframe_lore.engram.roleplay.turn import STORY_EXHAUSTED_REPLY
 
 PROBE = "Qui est <@777755> ?"
@@ -210,7 +213,8 @@ class _SpyLLM:
         yield "ok"
 
 
-def _run_service(temperature=0.8, rag_context=None, story=False):
+def _run_service(temperature=0.8, rag_context=None, story=False,
+                 story_continuation=False):
     llm = _SpyLLM()
     service = RoleplayService(
         llm=llm,
@@ -223,7 +227,8 @@ def _run_service(temperature=0.8, rag_context=None, story=False):
     try:
         return loop.run_until_complete(_collect(
             service.stream(session, "raconte Albrecht",
-                           rag_context=rag_context, story=story))), llm
+                           rag_context=rag_context, story=story,
+                           story_continuation=story_continuation))), llm
     finally:
         loop.close()
 
@@ -237,6 +242,13 @@ class StoryTemperatureTests(unittest.TestCase):
         _, llm = _run_service(rag_context="[Albrecht]", story=True)
         self.assertEqual(llm.calls[0]["temperature"], RAG_TEMPERATURE_CAP)
         self.assertEqual(llm.calls[0]["temperature"], 0.1)
+
+    def test_une_continuation_releve_le_plafond_pour_casser_l_echo(self):
+        _, llm = _run_service(rag_context="[Albrecht]", story=True,
+                              story_continuation=True)
+        self.assertEqual(llm.calls[0]["temperature"],
+                         STORY_CONTINUATION_TEMPERATURE)
+        self.assertEqual(llm.calls[0]["temperature"], 0.35)
 
     def test_rag_active_envoie_bien_0_1_a_lm_studio(self):
         _, llm = _run_service(rag_context="[Albrecht]", story=False)

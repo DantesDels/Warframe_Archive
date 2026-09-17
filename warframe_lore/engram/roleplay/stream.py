@@ -40,6 +40,12 @@ RAG_TEMPERATURE_CAP = 0.1
 # (0.3 still drifted into invented atmosphere and entity mix-ups — playtest
 # "Albrecht/children of the Zariman").
 STORY_TEMPERATURE = RAG_TEMPERATURE_CAP
+# A continuation of a RUNNING tale runs a bit warmer: the previous parts sit
+# in the prompt history and, at the extractive cap, the model re-emits them
+# verbatim whenever the next dossier page is sparse (live probe: Difflib
+# 0.989 / 0.915 between alternate parts).  The looser cap breaks that echo
+# while the archive gate still anchors the part on the retrieved page.
+STORY_CONTINUATION_TEMPERATURE = 0.35
 
 log = logging.getLogger("warframe_lore.engram.roleplay.stream")
 
@@ -142,7 +148,9 @@ class RoleplayService:
             ChatMessage("user", user_text),
         ]
         tokens: list[str] = []
-        temperature = (min(self.temperature, STORY_TEMPERATURE) if story else
+        story_cap = (STORY_CONTINUATION_TEMPERATURE if story_continuation
+                     else STORY_TEMPERATURE)
+        temperature = (min(self.temperature, story_cap) if story else
                        (min(self.temperature, RAG_TEMPERATURE_CAP)
                         if rag_context else self.temperature))
         try:
@@ -190,4 +198,5 @@ class RoleplayService:
         session.add("assistant", response)
 
 
-__all__ = ["RAG_TEMPERATURE_CAP", "STORY_TEMPERATURE", "RoleplayService"]
+__all__ = ["RAG_TEMPERATURE_CAP", "STORY_CONTINUATION_TEMPERATURE",
+           "STORY_TEMPERATURE", "RoleplayService"]

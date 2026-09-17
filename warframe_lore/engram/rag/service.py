@@ -22,13 +22,14 @@ from .prompt.builder import PromptBuilder, RAGPrompt
 from .prompt.guards import CONFABULATION_ERROR, JAILBREAK_REJECT, RAG_ERROR
 from .retrieval.retriever import RAGHit, Retriever
 from .sanitize import strip_trailing_padding
-from .verify import verify_answer
+from .verify import verify_answer_with_archive
 
 if TYPE_CHECKING:
     from ..llm import EmbeddingProvider, LLMProvider
     from .context import RAGContext
     from .query.aliases import AliasResolver
     from .query.rewriter import QueryRewriter
+    from .vocabulary import ArchiveVocabulary
 
 # RAG inference temperature: 0.1 -> analytical/deterministic without blocking
 # the engine (Gemma-2-9b-it Q4_K_M on 8 GB VRAM).
@@ -43,8 +44,10 @@ class RAGService:
                  suggestion_min_score: float = 0.5,
                  critical_min_score: float | None = None,
                  query_rewriter: QueryRewriter | None = None,
-                 alias_resolver: AliasResolver | None = None) -> None:
+                 alias_resolver: AliasResolver | None = None,
+                 vocabulary: ArchiveVocabulary | None = None) -> None:
         self.llm = llm
+        self.vocabulary = vocabulary
         self.pipeline = RetrievalPipeline(
             embeddings, retriever, prompt_builder,
             suggestion_min_score=suggestion_min_score,
@@ -109,7 +112,8 @@ class RAGService:
                                                 RAG_TEMPERATURE):
             chunks.append(token)
         answer = strip_trailing_padding("".join(chunks))
-        ok, _ = verify_answer(answer, prompt.context)
+        ok, _ = await verify_answer_with_archive(
+            answer, prompt.context, self.vocabulary)
         return (answer if ok else CONFABULATION_ERROR), hits
 
     async def stream_answer(self, question: str,
@@ -131,7 +135,8 @@ class RAGService:
                                                 RAG_TEMPERATURE):
             chunks.append(token)
         answer = "".join(chunks)
-        ok, _ = verify_answer(answer, prompt.context)
+        ok, _ = await verify_answer_with_archive(
+            answer, prompt.context, self.vocabulary)
         yield answer if ok else CONFABULATION_ERROR
 
     @staticmethod

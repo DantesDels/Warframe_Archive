@@ -3,10 +3,13 @@
 Le garde-fou ``verify_answer`` doit rejeter toute réponse du modèle qui
 introduit des entités nommées absentes du contexte RAG — et uniquement
 celles-là (pas de faux positifs sur les débuts de phrase, les labels du
-format Codex ni les métadonnées de l'interlocuteur).  La moitié « stream »
-vérifie que la porte est branchée sur ``RoleplayService.stream`` : un tour
-ancré sur les archives est bufferisé puis émis APRÈS vérification, sinon la
-chaîne d'abstention remplace la réponse.
+format Codex ni les métadonnées de l'interlocuteur).  Quand un vocabulaire
+d'archive est branché (``ArchiveVocabulary``), ``verify_answer_with_archive``
+élargit la vérité terrain à TOUT le corpus : une entité archivée ailleurs est
+fidèle, un nom absent de toute page reste une confabulation.  La moitié
+« stream » vérifie que la porte est branchée sur ``RoleplayService.stream`` :
+un tour ancré sur les archives est bufferisé puis émis APRÈS vérification,
+sinon la chaîne d'abstention remplace la réponse.
 """
 
 from __future__ import annotations
@@ -14,15 +17,22 @@ from __future__ import annotations
 import asyncio
 import unittest
 
+from sqlalchemy.dialects import postgresql
+
 from warframe_lore.engram.rag import (
     CONFABULATION_ERROR,
     RAG_ERROR,
+    ArchiveVocabulary,
     PromptBuilder,
     RAGContext,
     RAGHit,
     RAGService,
 )
-from warframe_lore.engram.rag.verify import extract_entities, verify_answer
+from warframe_lore.engram.rag.verify import (
+    extract_entities,
+    verify_answer,
+    verify_answer_with_archive,
+)
 from warframe_lore.engram.roleplay import RoleplayService, Session, SlidingWindow
 
 # Eleanor's real archives (ground truth from the database).
@@ -191,6 +201,124 @@ def run(coro):
     return asyncio.new_event_loop().run_until_complete(coro)
 
 
+class _FakeVocabulary:
+    """Archive simulée : ``known`` porte les mots présents quelque part."""
+
+    def __init__(self, known=()):
+        self.known = set(known)
+        self.calls = []
+
+    async def unknown(self, words):
+        self.calls.append(set(words))
+        return set(words) - self.known
+
+
+class ArchiveGateTests(unittest.TestCase):
+    """L'ancrage corpus entier : excuse une entité archivée AILLEURS."""
+
+    def test_sans_vocabulaire_le_gate_local_rejette(self):
+        ok, bad = run(verify_answer_with_archive(
+            "Eleanor fut membre du Clan Perrin Sequence.", CONTEXT))
+        self.assertFalse(ok)
+        self.assertIn("perrin", bad)
+
+    def test_entite_archivee_ailleurs_excusee(self):
+        # « Conclave », « Entrati » : absents des passages locaux mais
+        # présents dans l'archive — pas des confabulations.
+        vocabulary = _FakeVocabulary(known={"conclave", "entrati"})
+        ok, bad = run(verify_answer_with_archive(
+            "Eleanor fut convoquée par le Conclave des Entrati.", CONTEXT,
+            vocabulary))
+        self.assertTrue(ok)
+        self.assertEqual(bad, set())
+        self.assertEqual(vocabulary.calls, [{"conclave", "entrati"}])
+
+    def test_nom_invente_absent_de_l_archive_reste_rejete(self):
+        # Le vocabulaire n'excuse que ce qui existe : « Vaule » est absent de
+        # toute l'archive — confabulation malgré le vocabulaire.
+        vocabulary = _FakeVocabulary(known={"conclave"})
+        ok, bad = run(verify_answer_with_archive(
+            "Eleanor servait Vaule.", CONTEXT, vocabulary))
+        self.assertFalse(ok)
+        self.assertEqual(bad, {"vaule"})
+
+    def test_aucun_appel_si_le_gate_local_accepte(self):
+        vocabulary = _FakeVocabulary(known={"eleanor"})
+        ok, bad = run(verify_answer_with_archive(
+            "Eleanor est journaliste.", CONTEXT, vocabulary))
+        self.assertTrue(ok)
+        self.assertEqual(vocabulary.calls, [])
+
+
+class _Rows:
+    def __init__(self, row):
+        self.row = row
+
+    def first(self):
+        return self.row
+
+
+class _FakeSession:
+    """Rend une ligne si le motif cherche un mot ``present`` dans l'archive."""
+
+    def __init__(self, present):
+        self.present = present
+        self.statements = []
+
+    async def execute(self, statement):
+        self.statements.append(statement)
+        params = statement.compile(dialect=postgresql.dialect()).params
+        pattern = next(v for v in params.values() if isinstance(v, str))
+        word = pattern.removeprefix("\\y").removesuffix("\\y")
+        return _Rows((1,) if word in self.present else None)
+
+
+class _Ctx:
+    def __init__(self, session):
+        self.session = session
+
+    async def __aenter__(self):
+        return self.session
+
+    async def __aexit__(self, *exc):
+        return False
+
+
+class _FakeSessions:
+    def __init__(self, session):
+        self.session = session
+
+    def __call__(self):
+        return _Ctx(self.session)
+
+
+class ArchiveVocabularyTests(unittest.TestCase):
+    def _vocabulary(self, present):
+        session = _FakeSession(present)
+        return ArchiveVocabulary(sessions=_FakeSessions(session)), session
+
+    def test_mot_present_et_mot_absent(self):
+        vocabulary, _ = self._vocabulary({"empire"})
+        self.assertEqual(run(vocabulary.unknown({"empire", "vaule"})),
+                         {"vaule"})
+
+    def test_presence_memoisee_une_seule_requete(self):
+        vocabulary, session = self._vocabulary({"empire"})
+        run(vocabulary.unknown({"empire"}))
+        run(vocabulary.unknown({"empire"}))
+        self.assertEqual(len(session.statements), 1)
+
+    def test_requete_a_frontiere_de_mot(self):
+        # Frontière de mot (``~*``) : une sous-chaîne ne doit pas ancrer un
+        # nom inventé dans un mot plus long.
+        vocabulary, session = self._vocabulary(set())
+        run(vocabulary.unknown({"vaule"}))
+        sql = str(session.statements[0].compile(
+            dialect=postgresql.dialect()))
+        self.assertIn("~*", sql)
+        self.assertIn("LIMIT", sql)
+
+
 class _FakeLLM:
     def __init__(self, output):
         self.output = output
@@ -219,12 +347,13 @@ class _SilentLLM:
 
 
 class StreamGateTests(unittest.TestCase):
-    def _service(self, llm):
+    def _service(self, llm, vocabulary=None):
         return RoleplayService(
             llm=llm,
             window=SlidingWindow(max_turns=8, max_context_chars=1000),
             system_prompt="PERSONA",
             temperature=0.8,
+            vocabulary=vocabulary,
         )
 
     def test_reponse_confabulee_remplacee(self):
@@ -267,6 +396,25 @@ class StreamGateTests(unittest.TestCase):
             Session(session_id="s"), "bonjour"))
         self.assertEqual(tokens, [RAG_ERROR])
 
+    def test_entite_archivee_ailleurs_emise(self):
+        # Même porte, vocabulaire d'archive branché : « Conclave »/« Entrati »
+        # existent ailleurs dans l'archive → la réponse fidèle est émise.
+        llm = _FakeLLM("Eleanor fut convoquée par le Conclave des Entrati.")
+        tokens = _run(self._service(
+            llm, _FakeVocabulary({"conclave", "entrati"})).stream(
+            Session(session_id="s"), "raconte Albrecht",
+            rag_context=CONTEXT, story=True))
+        self.assertEqual(
+            tokens, ["Eleanor fut convoquée par le Conclave des Entrati."])
+
+    def test_entite_absente_de_l_archive_abstention(self):
+        llm = _FakeLLM("Eleanor fut convoquée par le Conclave des Entrati.")
+        tokens = _run(self._service(
+            llm, _FakeVocabulary({"conclave"})).stream(
+            Session(session_id="s"), "raconte Albrecht",
+            rag_context=CONTEXT, story=True))
+        self.assertEqual(tokens, [CONFABULATION_ERROR])
+
 
 class _FakeEmbed:
     async def embed(self, texts):
@@ -280,10 +428,10 @@ class _FakeRetriever:
 
 
 class HttpGateTests(unittest.TestCase):
-    def _service(self, llm):
+    def _service(self, llm, vocabulary=None):
         return RAGService(
             embeddings=_FakeEmbed(), retriever=_FakeRetriever(), llm=llm,
-            prompt_builder=PromptBuilder("persona"))
+            prompt_builder=PromptBuilder("persona"), vocabulary=vocabulary)
 
     def test_reponse_http_confabulee_remplacee(self):
         llm = _FakeLLM("Eleanor appartient au Clan Perrin Sequence.")
@@ -296,6 +444,16 @@ class HttpGateTests(unittest.TestCase):
         answer, _ = run(self._service(llm).answer_with_sources(
             "Eleanor ?", context=RAGContext(user_key="u")))
         self.assertEqual(answer, "Eleanor est la sœur d Arthur.")
+
+    def test_entite_archivee_ailleurs_conservee(self):
+        # Vocabulaire d'archive branché : une entité absente des passages
+        # locaux mais archivée ailleurs n'est plus prise pour une invention.
+        llm = _FakeLLM("Eleanor fut convoquée par le Conclave des Entrati.")
+        answer, _ = run(self._service(
+            llm, _FakeVocabulary({"conclave", "entrati"})).answer_with_sources(
+            "Eleanor ?", context=RAGContext(user_key="u")))
+        self.assertEqual(
+            answer, "Eleanor fut convoquée par le Conclave des Entrati.")
 
 
 if __name__ == "__main__":

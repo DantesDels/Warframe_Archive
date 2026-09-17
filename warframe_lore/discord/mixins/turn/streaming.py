@@ -1,7 +1,7 @@
 """Streaming of one Oracle turn into a Discord message.
 
 Placeholder, typing indicator, token streaming (hard split), one reconnect,
-``!stop`` finalisation, then the answer finishing (portrait, reactions, stats).
+``!stop`` finalisation, then the answer finishing (reactions, stats).
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ class StreamMixin:
         await streamer.finish()
         self.services.stats.record_turn(context.kind, time.monotonic() - started,
                                         rag=context.use_rag)
-        await self._finish_answer(placeholder, streamer, context)
+        await self._finish_answer(placeholder, streamer)
         return outcome
 
     async def _send_turn(self, channel_id: int, context: TurnContext,
@@ -82,9 +82,8 @@ class StreamMixin:
         raise ConnectionError("reconnection attempts exhausted")
 
     async def _finish_answer(self, placeholder: discord.Message,
-                             streamer: MessageStreamer,
-                             context: TurnContext) -> None:
-        """Empty-reply cleanup, wiki portrait, then the feedback reactions."""
+                             streamer: MessageStreamer) -> None:
+        """Empty-reply cleanup, then the feedback reactions."""
         if streamer.empty and placeholder.content == THINKING:
             gateway = self.state.sessions.gateways.get(placeholder.channel.id)
             if gateway is None or not gateway.active:
@@ -92,10 +91,6 @@ class StreamMixin:
             else:
                 await placeholder.delete()
             return
-        if context.settings.images and await self.services.images.ensure():
-            portrait = await self.services.images.file_for_text(streamer.text)
-            if portrait is not None:
-                await placeholder.edit(attachments=[portrait])
         await self.open_feedback(placeholder, placeholder.channel.id)
 
     async def _keep_typing(self, message: discord.Message) -> None:

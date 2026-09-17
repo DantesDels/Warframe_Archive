@@ -1,7 +1,7 @@
 """Réglages runtime d'un salon : persistés, validés, appliqués au tour suivant.
 
 Le bot était configuré au lancement uniquement ; ces commandes règlent un salon
-à chaud (langue, archives, images, persona, silence) et le réglage persiste dans
+à chaud (langue, archives, persona, silence) et le réglage persiste dans
 le ledger partagé — un redémarrage conserve le réglage.
 """
 
@@ -32,7 +32,7 @@ class LanguageTests(unittest.TestCase):
         self.assertEqual(scenario.settings.get(CHANNEL_ID).lang, "en")
 
 
-class RagAndImageTests(unittest.TestCase):
+class RagTests(unittest.TestCase):
     def test_archives_désactivées_coupent_le_rag(self):
         scenario = make_bot()
         scenario.say("!rag off", author=scenario.creator)
@@ -46,11 +46,6 @@ class RagAndImageTests(unittest.TestCase):
         scenario.say("!rag on", author=scenario.creator)
         scenario.say("Quelle est l'histoire des Orokin ?")
         self.assertTrue(scenario.gateway.last["rag"])
-
-    def test_images_désactivées(self):
-        scenario = make_bot()
-        scenario.say("!images off", author=scenario.creator)
-        self.assertFalse(scenario.settings.get(CHANNEL_ID).images)
 
 
 class PersonaTests(unittest.TestCase):
@@ -80,7 +75,7 @@ class PersonaTests(unittest.TestCase):
 class SwitchUsageTests(unittest.TestCase):
     def test_bascule_invalide_rappelle_l_usage(self):
         scenario = make_bot()
-        for command in ("channel", "rag", "images"):
+        for command in ("channel", "rag"):
             scenario.say(f"!{command} peut-être", author=scenario.creator)
             self.assertIn(f"Usage : !{command} on|off", scenario.channel.texts)
 

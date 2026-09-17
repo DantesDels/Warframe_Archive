@@ -223,7 +223,7 @@ unique constraint violation on the title.
   persona / reset frames), `transport/stream/` (`MessageStreamer` anti-429 edits
   + hard split on the generation-end marker), `ledger/` (`LedgerDB`,
   `MemberActivityStore`, `StrikeLedger`, `FeedbackStore`, `TurnStats`), `cards/`
-  (`MemberCardService`, `WikiImageService`), `settings.py`
+  (`MemberCardService`), `settings.py`
   (`ChannelSettingsStore`).
 
 ### `warframe_lore/ui` — local web interface

@@ -11,7 +11,6 @@ import argparse
 import logging
 import sys
 
-from ..config import load_config
 from .bootstrap import ensure_database, ensure_engram
 from .bot import LoreMasterBot
 from .config import DiscordConfig
@@ -64,11 +63,8 @@ def launch_bot(token: str | None, ws: str | None = None,
     ws_url = ws or config.engram_ws_url
     channels = tuple(channels) or config.allowed_channels
     channel_names = tuple(channel_names) or config.allowed_channel_names
-    # Services composed once, on the shared ledger: the wiki portraits come
-    # from the SAME media index as the web UI (``load_config().output_dir``).
-    services = build_services(db_path=config.activity_db,
-                              output_dir=load_config().output_dir,
-                              images=config.images)
+    # Services composed once, on the shared ledger.
+    services = build_services(db_path=config.activity_db)
     bot = LoreMasterBot(
         gateway_url=ws_url,
         prefix=prefix or config.prefix,

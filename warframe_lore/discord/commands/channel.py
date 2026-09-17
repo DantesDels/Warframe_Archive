@@ -38,11 +38,6 @@ class ChannelCommands:
         """``!rag on|off`` — ground the answers on the lore archives."""
         await self._switch(message, "rag", "rag", argument)
 
-    async def _cmd_images(self, message: discord.Message,
-                          argument: str = "") -> None:
-        """``!images on|off`` — attach the official wiki portraits."""
-        await self._switch(message, "images", "images", argument)
-
     async def _cmd_lang(self, message: discord.Message,
                         argument: str = "") -> None:
         """``!lang fr|en`` — the language the Oracle answers in."""
@@ -89,8 +84,8 @@ class ChannelCommands:
     def _summary(settings: ChannelSettings) -> str:
         """One-line confirmation of the effective channel settings."""
         return (f"Réponses {on_off(settings.enabled)} | archives "
-                f"{on_off(settings.rag)} | images {on_off(settings.images)} | "
-                f"langue {settings.lang} | persona {settings.persona}.")
+                f"{on_off(settings.rag)} | langue {settings.lang} | "
+                f"persona {settings.persona}.")
 
 
 __all__ = ["ChannelCommands"]

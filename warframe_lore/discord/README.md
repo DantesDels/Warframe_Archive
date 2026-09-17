@@ -22,7 +22,7 @@ keeps its own session (conversational memory via the server's sliding window).
 3. **OAuth2 → URL Generator** tab:
    * scope `bot`; permissions `Send Messages`, `Read Message History`,
      `View Channels`, `Manage Messages` (edits), `Embed Links` (matriciel cards),
-     `Attach Files` (wiki portraits), `Add Reactions` (👍 / 👎 verdicts).
+     `Add Reactions` (👍 / 👎 verdicts).
    * Open the generated **invitation URL** to add the bot to the server.
 
 ## 2. Configuration
@@ -35,13 +35,11 @@ automatically, no dependency), or CLI arguments:
 | Token | `DISCORD_TOKEN` | `--token` | — (required) |
 | WS URL ENGRAM | `ENGRAM_WS_URL` | `--ws` | `ws://localhost:8000/v1/roleplay` |
 | Command prefix | `DISCORD_PREFIX` | `--prefix` | `!` |
-| Dedicated channels | `DISCORD_CHANNELS` | `--channels` | — (mention only) |
+| Dedicated channels | `DISCORD_CHANNELS` | `--channels` | — (every channel) |
 | `typing` interval | `DISCORD_TYPING` | — | `5` |
 | Concepteur snowflake | `CREATOR_DISCORD_ID` | — | — (feature off) |
 | Role map | `DISCORD_ROLES_FILE` | — | `config/discord_roles.json` |
 | Shared ledger (SQLite) | `DISCORD_ACTIVITY_DB` | — | `data/member_activity/member_activity.db` |
-| Wiki portraits | `DISCORD_IMAGES` | — | `1` |
-| Media index folder | `WF_OUTPUT_DIR` | — | `out/` |
 
 The Concepteur identity is **native**: the bot compares `message.author.id` with
 `CREATOR_DISCORD_ID` and only ever forwards the derived boolean `creator` — the
@@ -75,7 +73,6 @@ All commands start with the configured prefix; `!help` (or `!aide`) lists them.
 | `!channel on\|off` | The bot answers (or stays silent) on this channel | Creator / Haut Commandement |
 | `!lang fr\|en` | Language of the answers on this channel | Creator / Haut Commandement |
 | `!rag on\|off` | Ground the answers on the lore archives | Creator / Haut Commandement |
-| `!images on\|off` | Attach the official wiki portraits | Creator / Haut Commandement |
 | `!persona oracle\|hostile` | Persona of this channel | Creator / Haut Commandement |
 
 Channel settings are **persisted** in the shared SQLite ledger (`!channel off`
@@ -134,9 +131,6 @@ Analyse comportementale      ← LLM observation, grounded in recorded activity
   verdicts and channel settings share ONE batched SQLite ledger
   (`DISCORD_ACTIVITY_DB`), so the indices survive restarts.  `:memory:`
   disables persistence (tests).
-- **Wiki portraits**: when `images` is on for the channel, the answer gets the
-  official Public Export portrait of the first entity it names (same media index
-  as the web UI, downloaded on demand, best effort).
 - **Feedback**: every streamed answer is opened to 👍 / 👎; verdicts are
   persisted and summarised by `!stats`.
 
@@ -158,8 +152,6 @@ Analyse comportementale      ← LLM observation, grounded in recorded activity
 - **Slow / empty model**: use a non-reasoning model (Llama-3.2-3B) rather than
   Qwen3 (long reasoning before responding); overridable via `ENGRAM_CHAT_MODEL`
   on the ENGRAM server side.
-- **No wiki portrait**: the media index is best effort — check `out/`
-  (`WF_OUTPUT_DIR`) and the Public Export cache under `cache/public_export/media`.
 
 ## Architecture (SOLID)
 
@@ -167,7 +159,7 @@ Grouped by domain; every package exposes a facade in its `__init__.py`:
 
 | Path | Role |
 |---|---|
-| `config.py` | `DiscordConfig` (token, WS, prefix, channels, creator ID, roles file, ledger path, images) |
+| `config.py` | `DiscordConfig` (token, WS, prefix, channels, creator ID, roles file, ledger path) |
 | `bot.py` | `LoreMasterBot` — `discord.Client` composing the mixins; owns `state` + `services`, plus `on_ready`/`close` |
 | `main.py` | Console entry point (`launch_bot`, shared with the CLI `cephalon bot run`) |
 | `text.py` | Shared text helpers: stopwords, content words, mention tokens |
@@ -179,4 +171,4 @@ Grouped by domain; every package exposes a facade in its `__init__.py`:
 | `commands/` | `prefix.py` (dispatch table + help), `ops.py`, `card.py`, `channel.py`, `arguments.py` |
 | `guild/` | `naming.py`, `questions.py`, `lore.py`, `creator.py`, `roles/` (`RoleHierarchy`, `Accreditation`, dump/scan tools) |
 | `moderation/` | Pure defences: `guards.py`, `hostility.py`, `insults.py`, `comebacks.py`, `hostile_link/` |
-| `services/` | `transport/gateway/` (`RoleplayGateway` = `connection` + `reader` + `requests` + `controls`), `transport/stream/` (`MessageStreamer`, hard split), `ledger/` (`LedgerDB`, activity, strikes, feedback, stats), `cards/` (snapshot, indices, embed, wiki images), `settings.py` |
+| `services/` | `transport/gateway/` (`RoleplayGateway` = `connection` + `reader` + `requests` + `controls`), `transport/stream/` (`MessageStreamer`, hard split), `ledger/` (`LedgerDB`, activity, strikes, feedback, stats), `cards/` (snapshot, indices, embed), `settings.py` |

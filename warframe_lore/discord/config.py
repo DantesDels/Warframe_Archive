@@ -21,12 +21,6 @@ def _env(name: str, default: str) -> str:
     return os.getenv(name, default)
 
 
-def _env_flag(name: str, default: bool = True) -> bool:
-    """Boolean environment variable (``0``/``off``/``false``/``non`` = off)."""
-    raw = os.getenv(name, "1" if default else "0").strip().lower()
-    return raw not in ("0", "off", "false", "non", "no", "")
-
-
 def _channels_file() -> Path:
     """Optional channel restriction file (env ``DISCORD_CHANNELS_FILE``,
     default ``config/discord_channels.json``): the target channel, given by
@@ -127,10 +121,6 @@ class DiscordConfig:
         default_factory=lambda: _env(
             "DISCORD_ACTIVITY_DB",
             str(PROJECT_ROOT / "data" / "member_activity" / "member_activity.db")))
-    # Official wiki portraits attached to the lore answers (Public Export media
-    # index — the SAME source as the web UI).  Per-channel override at runtime:
-    # ``!images on|off``.
-    images: bool = field(default_factory=lambda: _env_flag("DISCORD_IMAGES"))
 
     @classmethod
     def load(cls) -> DiscordConfig:

@@ -1,10 +1,10 @@
 """Shared text helpers of the Discord bot (stopwords, words, mentions).
 
-Both the member-name matcher and the wiki-image lookup must ignore the same
+Both the member-name matcher and the RAG entity lookup must ignore the same
 function words: a French/English stopword is never a member abbreviation, and
-never a candidate entity name for an image.  One definition, two consumers.
-The mention helpers live here too: they are the only place that knows how a
-Discord mention token is spelled.
+never a candidate entity name.  One definition, two consumers.  The mention
+helpers live here too: they are the only place that knows how a Discord
+mention token is spelled.
 """
 
 from __future__ import annotations

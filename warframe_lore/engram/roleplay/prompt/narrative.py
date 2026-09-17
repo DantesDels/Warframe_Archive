@@ -114,8 +114,11 @@ LEVERIAN_DIRECTIVE = (
 STORY_RESUME_DIRECTIVE = (
     "[DIRECTIVE DE REPRISE DU RÉCIT (l'histoire est DÉJÀ commencée — voir "
     "l'historique) : n'ouvre pas le récit, ne le résume pas et ne répète pas "
-    "ce qui a déjà été raconté. Enchaîne directement sur de NOUVEAUX faits des "
-    "<archives> fournies, comme le paragraphe suivant de la même histoire.]")
+    "ce qui a déjà été raconté. ZÉRO RÉPÉTITION : interdiction absolue de "
+    "reprendre une phrase, un fait ou une scène déjà écrits dans une partie "
+    "précédente — raconte exclusivement la SUITE. Enchaîne directement sur de "
+    "NOUVEAUX faits des <archives> fournies, comme le paragraphe suivant de "
+    "la même histoire.]")
 
 # Closing line of a part: the invitation while fragments remain, the archivist
 # closing once the dossier is exhausted (the tale is over — asking for "more"

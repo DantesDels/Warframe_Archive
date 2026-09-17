@@ -89,17 +89,29 @@ class RetrievalPipeline:
         if subject:
             page = await self._dossier(subject, vector, offset)
             story_more = page.more
-            if page.hits:
+            if offset > 0:
+                # Continuation: ONLY the next dossier page.  The semantic
+                # neighbours are computed on the SAME query vector every part,
+                # so re-merging them would re-anchor the model on the same
+                # salient facts and echo the previous part (playtest: parts 2
+                # and 3 near-identical).  An empty page = drained dossier.
+                found = page.hits
+            elif page.hits:
                 found = self._merge_dedup(page.hits + found)
         floor = relevance_floor(self.suggestion_min_score,
                                 self.critical_min_score)
-        kept = keep_relevant(found, floor)
+        # The floor and the title suggestion target OFF-TOPIC neighbours of a
+        # fresh question.  A continuation reads the subject's OWN page (story
+        # reading order): the floor would drop late chapters that score low
+        # against the opening request, and a suggestion would derail the part.
+        kept = found if offset > 0 else keep_relevant(found, floor)
         suggestion = None
         if not kept:
             # Search too weak (absent topic, typo…): never ground a response on
             # off-topic neighbours — attempt a disambiguation, else bypass.
-            suggestion = (canon if alias_note
-                          else await self._suggest_title(question))
+            if offset == 0:
+                suggestion = (canon if alias_note
+                              else await self._suggest_title(question))
         entity = missing_entity(question, kept)
         if entity:
             kept, suggestion = [], None

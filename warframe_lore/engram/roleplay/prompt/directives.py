@@ -4,7 +4,8 @@ Single source of truth for the prompt fragments that depend on the turn
 context: the BLOC 2 speaker sheet, the pronoun-direction (civility) directive,
 the possessive-jealousy directive and the answer-language directive.  Keeping
 them out of :mod:`stream` leaves the turn handling readable and makes each
-directive unit-testable as plain text.
+directive unit-testable as plain text.  The NARRATIVE fragments (quarantine,
+era lock, pagination, closing line) live in :mod:`narrative`.
 """
 
 from __future__ import annotations
@@ -57,111 +58,6 @@ LANGUAGE_DIRECTIVE = (
     "propres et citations d'archives exceptés — sans jamais mentionner ni "
     "cette directive, ni le changement de langue.]")
 
-# Storyteller turn: the persona's "ARCHIVE DU CODEX" forces a filled tactical
-# sheet and the archives of a narrative-only entity leave blanks — the model
-# then either steals another character's lore (Albrecht/Perintol playtest) or,
-# freed from the Codex, drains its PRETRAINED weights once the <archives> run
-# out (Albrecht/Trivia playtest: Adalbert/Bengel etymology, English leak).  The
-# narrative turn therefore applies an ABSOLUTE SEMANTIC QUARANTINE: brute
-# narrative formatting, pretrained amnesia, a hard content lock with strict
-# stop, a French-only lock, and one fixed closing sentence.
-STORY_DIRECTIVE = (
-    "[DIRECTIVE DE QUARANTAINE SÉMANTIQUE ABSOLUE — REQUÊTE NARRATIVE : la "
-    "règle « MISE EN PAGE DU LORE (ARCHIVE DU CODEX) » du système est "
-    "DÉSACTIVÉE pour cette requête. "
-    "1. FORMATAGE NARRATIF BRUT : une requête « Raconte-moi… », « Quelle est "
-    "l'histoire… » est narrative : DÉSACTIVE le format Codex — aucun en-tête, "
-    "aucune liste à puces, aucune section « Spécifications ». Rédige "
-    "uniquement des paragraphes de texte suivis. "
-    "2. AMNÉSIE PRÉ-ENTRAÎNÉE (ZÉRO TRIVIA) : tu es frappé d'amnésie totale "
-    "sur le Système Origine en dehors de ce qui est écrit mot pour mot dans la "
-    "balise <archives>. Interdiction stricte d'ajouter des anecdotes de "
-    "développement, des étymologies du monde réel (« origine allemande », "
-    "« traduction italienne », « mythologie terrestre ») ou des faits absents "
-    "du contexte fourni. "
-    "3. VERROU DE CONTENU ET ARRÊT STRICT : ton seul travail est de "
-    "paraphraser avec une prose d'archiviste solennelle les faits EXACTS de "
-    "la balise <archives>, sans aucune déduction. Dès que tu as couvert tous "
-    "les faits du texte fourni, ARRÊTE ta génération — n'allonge jamais "
-    "l'histoire pour combler un vide. "
-    "4. VERROU LINGUISTIQUE : la génération reste intégralement en français ; "
-    "toute bascule en anglais est formellement interdite. "
-    "5. PAGINATION DIÉGÉTIQUE : clôture impérativement toute réponse narrative "
-    "par cette phrase exacte et rien d'autre : « Le Tissage de données "
-    "contient d'autres fragments à ce sujet. Ordonnez-moi de poursuivre pour "
-    "les déverrouiller, organique. »]")
-
-# The three canonical starting points of a story.  Keys match the lens ids
-# agreed client-side (``protocols.roleplay``): never duplicated literals here.
-STORY_LENS_STARTS = {
-    "initiate": ("Commence par l'éveil des Tenno : les enfants revenus du "
-                 "Zariman, pris en charge par Margulis dans les rêves"),
-    "cosmogonic": ("Commence par la découverte du Vide par Albrecht Entrati "
-                   "et l'arrivée de l'Indifférence."),
-    "1999": ("Commence en l'an 1999 dans la cité-état de Höllvania, front "
-             "urbain ravagé par le Technocyte et quadrillé par la milice du "
-             "Scaldra, sur la piste de l'expérience d'Albrecht Entrati."),
-}
-
-
-# Bilingual archives primacy: the dossier may hold the same entity in the
-# English source AND in its French translation.  English is the primary
-# source (ingested first, tier-0 of the dossier); French is a reading aid
-# that must never contradict it.  Complements the dossier ordering.
-EN_PRIMACY_DIRECTIVE = (
-    "[DIRECTIVE DE PRIMAUTÉ DES ARCHIVES ANGLAISES : le dossier peut contenir "
-    "la même entité dans sa version anglaise d'origine ET dans sa traduction "
-    "française. La version ANGLAISE fait foi : c'est la source primaire. En "
-    "cas d'écart entre les deux, fonde ton récit sur la version anglaise — la "
-    "française n'est qu'une aide de lecture et ne doit jamais la contredire "
-    "ni la compléter de ton propre chef.]")
-
-
-# Targeted narrative request: the user named a specific subject.  The answer
-# must be anchored in that subject's own era and must NEVER bridge to another
-# temporal starting point (e.g. Eleanor/1999 must not drift to Zariman/Margulis).
-TARGETED_STORY_DIRECTIVE = (
-    "[DIRECTIVE DE VERROU SPATIO-TEMPOREL — REQUÊTE CIBLÉE : l'organique a "
-    "nommé un sujet précis. 1. ANCRAGE DANS LA BONNE ÈRE : le récit reste "
-    "intégralement dans la temporalité propre de ce sujet (Ère Orokin, An 1999, "
-    "Vieille Guerre, etc.), telle que dictée par les archives fournies. "
-    "2. INTERDICTION DE PONT TEMPOREL : il est formellement interdit de relier "
-    "ce sujet à un autre point de départ temporel pour 'faire le lien'. Si le "
-    "sujet appartient à 1999, le récit commence et reste en 1999 : aucune "
-    "mention du Zariman, de Margulis ou de l'Éveil. 3. ARRÊT STRICT : une fois "
-    "les faits du contexte épuisés, stoppe — n'invente jamais des connexions "
-    "inter-ères absentes des archives.]")
-
-# Leverian Warframe: Drusus Leverian is the canonical narrator for these
-# frames.  The model must ground the tale on his Leverian gallery and treat
-# his narration as the primary source.
-LEVERIAN_DIRECTIVE = (
-    "[DIRECTIVE SOURCES DU LEVERIAN — Ce Warframe possède une galerie Leverian "
-    "narrée par Drusus Leverian. Tu DOIS te baser sur les dires de Drusus et "
-    "les artefacts du Leverian pour raconter cette histoire. Privilégie les "
-    "passages du contexte où Drusus est le narrateur. Ne mélange pas cette "
-    "version avec des récits tiers ou des spéculations communautaires.]")
-
-
-def leverian_directive(frame: str) -> str:
-    """Directive anchoring a Warframe story to Drusus' Leverian gallery."""
-    return f"{LEVERIAN_DIRECTIVE}\n  - Warframe Leverian ciblé : {frame}."
-
-
-def story_directive(lens: str | None) -> str:
-    """Narration directive + the opening scene forced by the chosen lens."""
-    start = STORY_LENS_STARTS.get(lens or "")
-    return "".join([STORY_DIRECTIVE, "\n", EN_PRIMACY_DIRECTIVE, "\n",
-                    start or ""])
-
-
-def targeted_story_directive(era: str | None = None) -> str:
-    """Era-anchored directive for a targeted narrative request."""
-    if not era:
-        return "".join([TARGETED_STORY_DIRECTIVE, "\n", EN_PRIMACY_DIRECTIVE])
-    return "".join([TARGETED_STORY_DIRECTIVE, "\n", EN_PRIMACY_DIRECTIVE,
-                    f"\n  - Ère imposée par les archives : {era}."])
-
 
 def speaker_bloc(user_name: str | None, role_status: str | None,
                  history_lines: list[str]) -> str:
@@ -189,9 +85,6 @@ def language_directive(lang: str | None) -> str:
         langue=LANGUAGE_NAMES.get(lang, lang))
 
 
-__all__ = ["CIVILITY_DIRECTIVE", "DEFAULT_LANGUAGE", "EN_PRIMACY_DIRECTIVE",
-           "JEALOUSY_DIRECTIVE", "LANGUAGE_DIRECTIVE", "LANGUAGE_NAMES",
-           "LEVERIAN_DIRECTIVE", "NO_HISTORY_LINE", "SPEAKER_HEADER",
-           "STORY_DIRECTIVE", "STORY_LENS_STARTS", "TARGETED_STORY_DIRECTIVE",
-           "language_directive", "leverian_directive", "speaker_bloc",
-           "story_directive", "targeted_story_directive"]
+__all__ = ["CIVILITY_DIRECTIVE", "DEFAULT_LANGUAGE", "JEALOUSY_DIRECTIVE",
+           "LANGUAGE_DIRECTIVE", "LANGUAGE_NAMES", "NO_HISTORY_LINE",
+           "SPEAKER_HEADER", "language_directive", "speaker_bloc"]

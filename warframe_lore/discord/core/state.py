@@ -41,7 +41,10 @@ class BotState:
     refusals: dict[int, dict[str, int]] = field(default_factory=dict)
     answers: dict[int, int] = field(default_factory=dict)
     story_asks: dict[int, tuple[int, str]] = field(default_factory=dict)
-    story_modes: dict[int, tuple[int, StoryMode]] = field(default_factory=dict)
+    # ``(author_id, anchoring, cursor)``: the cursor counts the dossier chunks
+    # already narrated, so a continuation reads the NEXT page.
+    story_modes: dict[int, tuple[int, StoryMode, int]] = field(
+        default_factory=dict)
 
     # -- turns: one at a time per channel, interruptible by ``!stop`` ------
     def lock(self, channel_id: int) -> asyncio.Lock:
@@ -115,12 +118,25 @@ class BotState:
     # -- anchored narratives (an explicit "continue" replays the anchoring) --
     def remember_story(self, channel_id: int, author_id: int,
                        mode: StoryMode) -> None:
-        """Remember the anchoring the continuation of this narrative replays."""
-        self.story_modes[channel_id] = (author_id, mode)
+        """Open a narrative: the anchoring its continuations replay.
+
+        The cursor starts at zero: the next part reads the FIRST page of the
+        subject's dossier.
+        """
+        self.story_modes[channel_id] = (author_id, mode, 0)
         _prune(self.story_modes, MAX_STORY_MODES)
 
-    def story_mode(self, channel_id: int, author_id: int) -> StoryMode | None:
-        """Anchoring of the open narrative, for its AUTHOR only (``None``).
+    def advance_story(self, channel_id: int, author_id: int,
+                      cursor: int) -> None:
+        """Move the cursor of the open narrative (a part was just narrated)."""
+        stored = self.story_modes.get(channel_id)
+        if stored is None or stored[0] != author_id:
+            return
+        self.story_modes[channel_id] = (author_id, stored[1], cursor)
+
+    def story_progress(self, channel_id: int,
+                       author_id: int) -> tuple[StoryMode, int] | None:
+        """Anchoring + cursor of the open narrative, for its AUTHOR only.
 
         A stranger cannot continue a story told to someone else: the memory is
         keyed by channel and owned by the author, like the starting-point ask.
@@ -128,7 +144,7 @@ class BotState:
         stored = self.story_modes.get(channel_id)
         if stored is None or stored[0] != author_id:
             return None
-        return stored[1]
+        return stored[1], stored[2]
 
 
 __all__ = ["MAX_ANSWERS", "MAX_LAST_MEMBERS", "MAX_REFUSAL_USERS",

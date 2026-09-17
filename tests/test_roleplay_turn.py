@@ -16,11 +16,14 @@ from engram_fakes import FakeRAG, decide
 
 from warframe_lore.engram.rag import JAILBREAK_REJECT, RAG_ERROR
 from warframe_lore.engram.roleplay import RoleplayService, Session, SlidingWindow
-from warframe_lore.engram.roleplay.prompt.directives import (
+from warframe_lore.engram.roleplay.prompt import (
     STORY_DIRECTIVE,
     STORY_LENS_STARTS,
+    story_directive,
+    targeted_story_directive,
 )
 from warframe_lore.engram.roleplay.stream import RAG_TEMPERATURE_CAP
+from warframe_lore.engram.roleplay.turn import STORY_EXHAUSTED_REPLY
 
 PROBE = "Qui est <@777755> ?"
 
@@ -126,6 +129,27 @@ class RetrievalAnchorTests(unittest.TestCase):
         decide({"rag": True}, "qui est Ballas ?", rag=rag)
         self.assertEqual(rag.calls, ["qui est Ballas ?"])
 
+    def test_le_curseur_du_recit_est_transmis_au_dossier(self):
+        rag = FakeRAG("du contexte", more=True)
+        plan = decide({"story": True, "dossier_offset": 12}, "continue",
+                      rag=rag)
+        self.assertEqual(rag.offsets, [12])
+        self.assertTrue(plan.story_more)
+
+    def test_un_recit_epuise_est_clos_sans_relancer_le_llm(self):
+        # Curseur au-delà du dossier : aucune page, aucune suite possible.
+        plan = decide({"story": True, "targeted_subject": "ballas",
+                       "dossier_offset": 60}, "continue",
+                      rag=FakeRAG(None, more=False))
+        self.assertEqual(plan.reply, STORY_EXHAUSTED_REPLY)
+        self.assertIn("n'a plus de fragments inédits", plan.reply)
+
+    def test_le_premier_tour_sans_page_reste_l_erreur_de_donnees(self):
+        # Sans curseur, un récit sans passage garde l'abstention documentaire.
+        plan = decide({"story": True, "targeted_subject": "ballas"},
+                      "raconte l'histoire de Ballas", rag=FakeRAG(None))
+        self.assertEqual(plan.reply, RAG_ERROR)
+
 
 class StoryDirectiveTests(unittest.TestCase):
     def test_le_recit_debraie_le_format_codex(self):
@@ -153,6 +177,26 @@ class StoryDirectiveTests(unittest.TestCase):
         self.assertIn("Höllvania", start)
         self.assertIn("Scaldra", start)
         self.assertNotIn("écume", start)
+
+    def test_une_reprise_ne_rouvre_pas_le_recit(self):
+        opening = "Commence"
+        self.assertIn(opening, story_directive("1999"))
+        resumed = story_directive("1999", continuation=True)
+        self.assertNotIn("Commence par la découverte", resumed)
+        self.assertIn("REPRISE DU RÉCIT", resumed)
+        self.assertIn("NOUVEAUX faits", resumed)
+
+    def test_un_dossier_epuise_clot_le_recit(self):
+        complete = story_directive("1999", more=False)
+        self.assertIn("CLÔTURE DES ARCHIVES", complete)
+        self.assertIn("pagination diégétique est DÉSACTIVÉE", complete)
+        self.assertIn("n'a plus de fragments inédits", complete)
+
+    def test_un_recit_dirige_invite_ou_clot_selon_la_pagination(self):
+        self.assertIn("Ordonnez-moi de poursuivre",
+                      targeted_story_directive("Ère Orokin"))
+        self.assertIn("n'a plus de fragments inédits",
+                      targeted_story_directive("Ère Orokin", more=False))
 
 
 class _SpyLLM:

@@ -18,6 +18,7 @@ from warframe_lore.protocols.roleplay import (
     FRAME_ERROR,
     FRAME_TOKEN,
     MessageFrame,
+    TurnOutcome,
 )
 
 log = logging.getLogger("warframe_lore.discord.gateway")
@@ -36,13 +37,15 @@ class GatewayRequests:
         await self._conn.send(json.dumps(payload))
 
     async def send(self, frame: MessageFrame, on_token: TokenHandler,
-                   on_end: EndHandler | None = None) -> None:
+                   on_end: EndHandler | None = None) -> TurnOutcome:
         """Stream one turn until ``end`` (or ``error``).
 
         ``_send_lock`` covers the WHOLE reply: a second message waits its turn
         instead of reading the current tokens as its own (fragment
         concatenation).  ``on_token`` may return True to stop early (hard
-        split): the socket is then closed so no residual token arrives.
+        split): the socket is then closed so no residual token arrives.  The
+        returned outcome carries ``story_more``: the subject's dossier still
+        holds fragments the client may narrate next (narrative pagination).
         """
         async with self._send_lock:
             await self._post(frame.payload())
@@ -58,14 +61,14 @@ class GatewayRequests:
                     if await on_token(reply.get("token", "")):
                         log.info("Hard split on stop marker — closing stream")
                         await self.close()
-                        return
+                        return TurnOutcome()
                 elif kind == FRAME_END:
                     if on_end:
                         await on_end(reply.get("text", ""))
-                    return
+                    return TurnOutcome.from_end_frame(reply)
                 elif kind == FRAME_ERROR:
                     log.error("Roleplay error: %s", reply.get("message"))
-                    return
+                    return TurnOutcome()
 
 
 __all__ = ["EndHandler", "GatewayRequests", "TokenHandler"]

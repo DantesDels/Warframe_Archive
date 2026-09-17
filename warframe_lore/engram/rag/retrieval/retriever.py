@@ -22,6 +22,19 @@ class RAGHit:
     score: float  # cosine similarity (1 - distance)
 
 
+@dataclass(frozen=True)
+class DossierPage:
+    """One page of a subject's dossier.
+
+    ``more`` is True when the subject still has passages BEYOND this page: the
+    narrative can be continued with unseen material instead of repeating what
+    was already told.
+    """
+
+    hits: list[RAGHit]
+    more: bool = False
+
+
 @runtime_checkable
 class Retriever(Protocol):
     """Searches for passages closest to a query vector."""
@@ -37,4 +50,4 @@ class Retriever(Protocol):
         """
 
 
-__all__ = ["RAGHit", "Retriever"]
+__all__ = ["DossierPage", "RAGHit", "Retriever"]

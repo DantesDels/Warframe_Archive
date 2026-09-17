@@ -25,6 +25,7 @@ from warframe_lore.engram.rag import (
     RAGService,
 )
 from warframe_lore.engram.rag.retrieval.merged import MergedRetriever
+from warframe_lore.engram.rag.retrieval.retriever import DossierPage
 from warframe_lore.engram.rag.retrieval.search import (
     DOSSIER_LIMIT,
     CosinusSearch,
@@ -51,19 +52,21 @@ class FakeLLM:
 
 
 class FakeRetriever:
-    """Retriever with an optional ``dossier`` channel (records the subject)."""
+    """Retriever with an optional ``dossier`` channel (records subject+cursor)."""
 
-    def __init__(self, hits, dossier=()):
+    def __init__(self, hits, dossier=(), more=False):
         self.hits = list(hits)
         self.dossier_hits = list(dossier)
+        self.dossier_more = more
         self.dossier_calls = []
 
     async def search(self, query_vector):
         return list(self.hits)
 
-    async def dossier(self, subject, query_vector):
-        self.dossier_calls.append(subject)
-        return list(self.dossier_hits)
+    async def dossier(self, subject, query_vector, limit=DOSSIER_LIMIT,
+                      offset=0):
+        self.dossier_calls.append((subject, offset))
+        return DossierPage(hits=list(self.dossier_hits), more=self.dossier_more)
 
 
 class PlainRetriever:
@@ -131,7 +134,7 @@ class PipelineDossierTests(unittest.TestCase):
         service = make_service(retriever)
         used, prompt, bypass = run(service.retrieve(
             "raconte-moi l'histoire d'Eleanor", subject="eleanor"))
-        self.assertEqual(retriever.dossier_calls, ["eleanor"])
+        self.assertEqual(retriever.dossier_calls, [("eleanor", 0)])
         self.assertFalse(bypass)
         # Le dossier (biographie) passe AVANT le voisin sémantique KIM.
         self.assertEqual([h.chunk_id for h in used], [1, 2, 9])
@@ -182,11 +185,34 @@ class PipelineDossierTests(unittest.TestCase):
                     content="Background — her idyllic childhood with Arthur."),
             ])
         service = make_service(retriever)
-        context_text, suggestion = run(service.resolve(
+        context_text, suggestion, more = run(service.resolve(
             "raconte-moi l'histoire d'Eleanor", subject="eleanor"))
         self.assertIsNone(suggestion)
+        self.assertFalse(more)                  # dossier épuisé : pas de suite
         self.assertIn("Background — her idyllic childhood with Arthur",
                       context_text)
+
+    def test_le_curseur_sert_la_page_suivante_et_annonce_la_suite(self):
+        retriever = FakeRetriever(
+            [hit(9, 0.64, page="KIM", content="voisin sémantique")],
+            dossier=[hit(1, 0.60, page="Ballas", content="Der erste Traum")],
+            more=True)
+        service = make_service(retriever)
+        context_text, suggestion, more = run(service.resolve(
+            "raconte-moi l'histoire de Ballas", subject="ballas", offset=12))
+        self.assertEqual(retriever.dossier_calls, [("ballas", 12)])
+        self.assertIsNone(suggestion)
+        self.assertTrue(more)                   # fragments: la suite est possible
+        self.assertIn("Der erste Traum", context_text)
+
+    def test_le_bypass_ne_promet_aucune_suite(self):
+        retriever = FakeRetriever([], dossier=[hit(1, 0.10)])   # hors seuil
+        service = make_service(retriever)
+        context_text, suggestion, more = run(service.resolve(
+            "raconte-moi l'histoire de Ballas", subject="ballas"))
+        self.assertIsNone(context_text)
+        self.assertIsNone(suggestion)
+        self.assertFalse(more)
 
 
 class MergedDossierTests(unittest.TestCase):
@@ -194,14 +220,16 @@ class MergedDossierTests(unittest.TestCase):
 
     def test_dossier_delegue_aux_canaux_qui_le_supportent(self):
         class WithDossier:
-            def __init__(self, chunks):
+            def __init__(self, chunks, more=False):
                 self._chunks = chunks
+                self._more = more
 
             async def search(self, query_vector):
                 return []
 
-            async def dossier(self, subject, query_vector):
-                return list(self._chunks)
+            async def dossier(self, subject, query_vector,
+                              limit=DOSSIER_LIMIT, offset=0):
+                return DossierPage(hits=list(self._chunks), more=self._more)
 
         class WithoutDossier:
             async def search(self, query_vector):
@@ -210,11 +238,13 @@ class MergedDossierTests(unittest.TestCase):
         merged = MergedRetriever(
             WithDossier([hit(1, 0.5, page="Eleanor", content="bio")]),
             WithDossier([hit(1, 0.5, page="Eleanor", content="bio"),
-                         hit(2, 0.5, page="Eleanor", content="quotes")]),
+                         hit(2, 0.5, page="Eleanor", content="quotes")],
+                        more=True),
             WithoutDossier(),
         )
-        dossier = run(merged.dossier("eleanor", [0.1] * 4))
-        self.assertEqual([h.chunk_id for h in dossier], [1, 2])
+        page = run(merged.dossier("eleanor", [0.1] * 4))
+        self.assertEqual([h.chunk_id for h in page.hits], [1, 2])
+        self.assertTrue(page.more)              # un canal a encore de la matière
 
 
 if __name__ == "__main__":

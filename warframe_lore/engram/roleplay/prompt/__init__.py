@@ -1,8 +1,9 @@
 """Everything that shapes the LLM payload of a Roleplay turn.
 
 Facade: the sliding window (BLOC 2 history), the directive texts (civility,
-jealousy, answer language) and the block assembly.  Callers import the public
-names from here, whatever the internal split is.
+jealousy, answer language, narrative quarantine and closing) and the block
+assembly.  Callers import the public names from here, whatever the internal
+split is.
 """
 
 from __future__ import annotations
@@ -11,19 +12,24 @@ from .blocks import ARCHIVES_HEADER, archive_bloc, turn_directives
 from .directives import (
     CIVILITY_DIRECTIVE,
     DEFAULT_LANGUAGE,
-    EN_PRIMACY_DIRECTIVE,
     JEALOUSY_DIRECTIVE,
     LANGUAGE_DIRECTIVE,
     LANGUAGE_NAMES,
-    LEVERIAN_DIRECTIVE,
     NO_HISTORY_LINE,
     SPEAKER_HEADER,
+    language_directive,
+    speaker_bloc,
+)
+from .narrative import (
+    EN_PRIMACY_DIRECTIVE,
+    LEVERIAN_DIRECTIVE,
+    STORY_COMPLETE_SENTENCE,
     STORY_DIRECTIVE,
     STORY_LENS_STARTS,
+    STORY_PAGINATION_SENTENCE,
     TARGETED_STORY_DIRECTIVE,
-    language_directive,
     leverian_directive,
-    speaker_bloc,
+    story_closing,
     story_directive,
     targeted_story_directive,
 )
@@ -33,8 +39,9 @@ __all__ = [
     "ARCHIVES_HEADER", "CIVILITY_DIRECTIVE", "DEFAULT_LANGUAGE",
     "EN_PRIMACY_DIRECTIVE", "JEALOUSY_DIRECTIVE", "LANGUAGE_DIRECTIVE",
     "LANGUAGE_NAMES", "LEVERIAN_DIRECTIVE", "NO_HISTORY_LINE",
-    "SPEAKER_HEADER", "STORY_DIRECTIVE", "STORY_LENS_STARTS",
-    "TARGETED_STORY_DIRECTIVE", "SlidingWindow", "archive_bloc",
-    "language_directive", "leverian_directive", "speaker_bloc",
-    "story_directive", "targeted_story_directive", "turn_directives",
+    "SPEAKER_HEADER", "STORY_COMPLETE_SENTENCE", "STORY_DIRECTIVE",
+    "STORY_LENS_STARTS", "STORY_PAGINATION_SENTENCE", "TARGETED_STORY_DIRECTIVE",
+    "SlidingWindow", "archive_bloc", "language_directive", "leverian_directive",
+    "speaker_bloc", "story_closing", "story_directive",
+    "targeted_story_directive", "turn_directives",
 ]

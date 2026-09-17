@@ -86,7 +86,9 @@ class RoleplayService:
                      story: bool = False,
                      story_lens: str | None = None,
                      targeted_era: str | None = None,
-                     leverian_warframe: str | None = None) -> AsyncIterator[str]:
+                     leverian_warframe: str | None = None,
+                     story_continuation: bool = False,
+                     story_more: bool = True) -> AsyncIterator[str]:
         """Append the input, stream the reply, and record it.
 
         ``rag_context`` (trusted passages) anchors the turn on the archives.
@@ -99,7 +101,11 @@ class RoleplayService:
         ``targeted_era`` overrides the lens menu for a specifically named
         subject and anchors the narrative in that subject's own era.
         ``leverian_warframe`` forces the tale to be grounded on Drusus'
-        Leverian narration for that frame.
+        Leverian narration for that frame.  ``story_continuation`` marks a part
+        that continues a RUNNING tale (the opening scene is dropped and the
+        resume rule applies) and ``story_more`` says whether the subject's
+        dossier still holds unseen fragments: the part closes on the invitation
+        or on the archivist closing line accordingly.
 
         An archive-grounded turn (``rag_context`` set) is buffered and passed
         through the deterministic entity gate (:mod:`...rag.verify`): the full
@@ -121,9 +127,14 @@ class RoleplayService:
                                  creator_mention, lang)
         if story:
             if targeted_era:
-                system = f"{system}\n\n{targeted_story_directive(targeted_era)}"
+                directive = targeted_story_directive(
+                    targeted_era, continuation=story_continuation,
+                    more=story_more)
             else:
-                system = f"{system}\n\n{story_directive(story_lens)}"
+                directive = story_directive(
+                    story_lens, continuation=story_continuation,
+                    more=story_more)
+            system = f"{system}\n\n{directive}"
             if leverian_warframe:
                 system = f"{system}\n\n{leverian_directive(leverian_warframe)}"
         messages = [

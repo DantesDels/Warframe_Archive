@@ -14,6 +14,7 @@ from warframe_lore.lazy_facade import install
 
 _EXPORTS = {
     "CosinusSearch": ".search",
+    "DossierPage": ".retriever",
     "HybridHit": ".model",
     "HybridQuery": ".model",
     "HybridSearch": ".hybrid",

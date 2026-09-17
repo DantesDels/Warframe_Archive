@@ -15,6 +15,7 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from .audit import audit_empty, audit_rejected, audit_retrieval
 from .context import RAGContext
 from .prompt.builder import PromptBuilder, RAGPrompt
 from .query.aliases import AliasResolver
@@ -22,7 +23,7 @@ from .query.probes import detect_probe
 from .query.query_guard import sanitize_query
 from .query.search_query import search_query
 from .retrieval.relevance import keep_relevant, missing_entity, relevance_floor
-from .retrieval.retriever import RAGHit, Retriever
+from .retrieval.retriever import DossierPage, RAGHit, Retriever
 
 if TYPE_CHECKING:
     from ..llm import EmbeddingProvider
@@ -38,6 +39,9 @@ class Retrieval:
     hits: list[RAGHit]
     prompt: RAGPrompt
     bypass: bool
+    # Narrative pagination: True when the subject's dossier still holds
+    # passages beyond the page that was just read (the client may continue).
+    story_more: bool = False
 
 
 class RetrievalPipeline:
@@ -64,8 +68,13 @@ class RetrievalPipeline:
 
     async def run(self, question: str,
                   context: RAGContext | None = None, *,
-                  subject: str | None = None) -> Retrieval:
-        """One retrieval, with its audit line (see the module docstring)."""
+                  subject: str | None = None,
+                  offset: int = 0) -> Retrieval:
+        """One retrieval, with its audit line (see the module docstring).
+
+        ``subject``/``offset`` page a targeted story: the dossier is read as a
+        cursor, so a continuation narrates passages the previous part did not.
+        """
         question = sanitize_query(question)
         if not question:
             return self._abstain(question)          # empty input: no LLM
@@ -76,10 +85,12 @@ class RetrievalPipeline:
                                     self.query_rewriter)
         vector = (await self.embeddings.embed([search]))[0]
         found = await self.retriever.search(vector)
+        story_more = False
         if subject:
-            dossier = await self._dossier(subject, vector)
-            if dossier:
-                found = self._merge_dedup(dossier + found)
+            page = await self._dossier(subject, vector, offset)
+            story_more = page.more
+            if page.hits:
+                found = self._merge_dedup(page.hits + found)
         floor = relevance_floor(self.suggestion_min_score,
                                 self.critical_min_score)
         kept = keep_relevant(found, floor)
@@ -97,9 +108,10 @@ class RetrievalPipeline:
         prompt = self.prompt_builder.build(question, kept, alias_note=alias_note,
                                            suggestion=suggestion)
         bypass = not kept and suggestion is None
-        self._audit(question, search, found, suggestion, bypass, prompt,
-                    subject=subject)
-        return Retrieval(hits=kept, prompt=prompt, bypass=bypass)
+        audit_retrieval(question, search, found, suggestion, bypass, prompt,
+                        subject=subject, offset=offset)
+        return Retrieval(hits=kept, prompt=prompt, bypass=bypass,
+                         story_more=story_more)
 
     def _abstain(self, question: str, rejected: bool = False) -> Retrieval:
         """Empty input or hostile probe: a prompt with no passage, no LLM.
@@ -111,12 +123,9 @@ class RetrievalPipeline:
                                            suggestion=None)
         prompt.rejected = rejected
         if rejected:
-            log.warning("Audit RAG question=%r SONDE_HOSTILE bypass=True "
-                        "rejected=True (aucun appel modèle)", question)
+            audit_rejected(question)
         else:
-            log.info("Audit RAG question=%r hit=0 suggestion=None bypass=True "
-                     "ctx_car=%d ctx=%r...", question, len(prompt.context),
-                     prompt.context[:180].replace("\n", " "))
+            audit_empty(question, prompt)
         return Retrieval(hits=[], prompt=prompt, bypass=True)
 
     async def _suggest_title(self, question: str) -> str | None:
@@ -126,13 +135,13 @@ class RetrievalPipeline:
             return None
         return await suggest(question)
 
-    async def _dossier(self, subject: str,
-                       vector: list[float]) -> list[RAGHit]:
-        """Subject-page passages for a targeted story (``[]`` if unsupported)."""
+    async def _dossier(self, subject: str, vector: list[float],
+                       offset: int = 0) -> DossierPage:
+        """Subject-page passages for a targeted story (empty if unsupported)."""
         method = getattr(self.retriever, "dossier", None)
         if method is None:
-            return []
-        return await method(subject, vector)
+            return DossierPage(hits=[])
+        return await method(subject, vector, offset=offset)
 
     @staticmethod
     def _merge_dedup(hits: list[RAGHit]) -> list[RAGHit]:
@@ -145,21 +154,5 @@ class RetrievalPipeline:
                 seen.add(key)
                 merged.append(hit)
         return merged
-
-    @staticmethod
-    def _audit(question: str, search: str, found: list[RAGHit],
-               suggestion: str | None, bypass: bool,
-               prompt: RAGPrompt, *,
-               subject: str | None = None) -> None:
-        """One INFO line per retrieval: isolates missing data (ETL) from model
-        disobedience."""
-        note = f" search_q={search!r}" if search != question else ""
-        if subject:
-            note += f" dossier={subject!r}"
-        log.info("Audit RAG question=%r%s hit=%d suggestion=%r bypass=%s "
-                 "ctx_car=%d ctx=%r...", question, note, len(found),
-                 suggestion, bypass, len(prompt.context),
-                 prompt.context[:180].replace("\n", " "))
-
 
 __all__ = ["Retrieval", "RetrievalPipeline"]

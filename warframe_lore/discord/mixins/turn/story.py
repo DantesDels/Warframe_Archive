@@ -14,10 +14,14 @@ from dataclasses import replace
 
 import discord
 
+from warframe_lore.protocols.roleplay import STORY_DOSSIER_PAGE
+
 from ...guild import (
     LENS_LABELS,
     LENS_QUESTION,
     MENU_INDEX_ERROR,
+    STORY_AUTO_PARTS,
+    STORY_CONTINUATION_PROMPT,
     detect_story_mode,
     is_out_of_range_index,
     parse_lens_answer,
@@ -89,7 +93,30 @@ class StoryMixin:
         context = self._turn_context(message, request, settings, mention,
                                      mode=mode)
         self._audit(channel_id, context)
-        await self._stream_turn(message, context)
+        await self._stream_story(message, context)
+
+    async def _stream_story(self, message: discord.Message,
+                            context: TurnContext) -> None:
+        """Stream a narrative turn, then chain its automatic continuations.
+
+        One part reads ONE page of the subject's dossier; the terminal frame
+        says whether unseen fragments remain, and the bot then chains at most
+        ``STORY_AUTO_PARTS`` parts before handing the floor back to the human.
+        Every part advances the cursor by one page and replays the request that
+        opened the narrative, so a part never re-narrates the previous one.
+        """
+        channel_id = message.channel.id
+        author_id = message.author.id
+        source = context.retrieval_text or context.text
+        cursor = context.dossier_offset
+        for _ in range(STORY_AUTO_PARTS):
+            outcome = await self._stream_turn(message, context)
+            cursor += STORY_DOSSIER_PAGE
+            self.state.advance_story(channel_id, author_id, cursor)
+            if not outcome.story_more:
+                return
+            context = replace(context, text=STORY_CONTINUATION_PROMPT,
+                              retrieval_text=source, dossier_offset=cursor)
 
     @staticmethod
     async def _reask(message: discord.Message, question: str, text: str,

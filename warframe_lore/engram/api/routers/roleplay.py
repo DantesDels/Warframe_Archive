@@ -93,7 +93,7 @@ async def roleplay(websocket: WebSocket) -> None:
                 continue
             await emit_stream(websocket, model_turn(
                 container, plan, payload, user_text, persona_mode,
-                active_session(user_id)))
+                active_session(user_id)), story_more=plan.story_more)
     except WebSocketDisconnect:
         pass
     except Exception as exc:  # noqa: BLE001 (stream error -> clean close)

@@ -86,15 +86,29 @@ class StoryMemoryTests(unittest.TestCase):
         state = BotState()
         mode = StoryMode(request="raconte l'histoire de Ballas")
         state.remember_story(7, 42, mode)
-        self.assertEqual(state.story_mode(7, 42), mode)
-        self.assertIsNone(state.story_mode(7, 43))      # un autre organique
-        self.assertIsNone(state.story_mode(8, 42))      # un autre salon
+        self.assertEqual(state.story_progress(7, 42), (mode, 0))
+        self.assertIsNone(state.story_progress(7, 43))  # un autre organique
+        self.assertIsNone(state.story_progress(8, 42))  # un autre salon
+
+    def test_le_curseur_avance_avec_les_parties(self):
+        state = BotState()
+        mode = StoryMode(request="raconte l'histoire de Ballas")
+        state.remember_story(7, 42, mode)
+        state.advance_story(7, 42, 12)
+        self.assertEqual(state.story_progress(7, 42), (mode, 12))
+        state.advance_story(7, 99, 24)          # un autre organique : ignoré
+        self.assertEqual(state.story_progress(7, 42), (mode, 12))
+        state.advance_story(8, 42, 24)          # un autre salon : ignoré
+        self.assertEqual(state.story_progress(7, 42), (mode, 12))
 
     def test_un_nouveau_recit_remplace_l_ancien(self):
         state = BotState()
         state.remember_story(7, 42, StoryMode(request="un"))
+        state.advance_story(7, 42, 12)
         state.remember_story(7, 42, StoryMode(request="deux"))
-        self.assertEqual(state.story_mode(7, 42).request, "deux")
+        progress = state.story_progress(7, 42)
+        self.assertEqual(progress[0].request, "deux")
+        self.assertEqual(progress[1], 0)        # récit neuf : curseur neuf
 
     def test_table_bornée(self):
         state = BotState()

@@ -73,31 +73,36 @@ class RAGService:
 
     async def retrieve(self, question: str,
                        context: RAGContext | None = None, *,
-                       subject: str | None = None
+                       subject: str | None = None, offset: int = 0
                        ) -> tuple[list[RAGHit], RAGPrompt, bool]:
         """Kept passages, assembled prompt and short-circuit flag.
 
         ``bypass`` signals the absence of a trusted passage AND of a
         disambiguation clue: the LLM must not be called.
         """
-        outcome = await self.pipeline.run(question, context, subject=subject)
+        outcome = await self.pipeline.run(question, context, subject=subject,
+                                          offset=offset)
         return outcome.hits, outcome.prompt, outcome.bypass
 
     async def resolve(self, question: str,
                       context: RAGContext | None = None, *,
-                      subject: str | None = None
-                      ) -> tuple[str | None, str | None]:
-        """Context/suggestion for a Roleplay turn (WS).
+                      subject: str | None = None, offset: int = 0
+                      ) -> tuple[str | None, str | None, bool]:
+        """Context / suggestion / remaining material of a Roleplay turn (WS).
 
-        ``bypass`` -> ``(None, None)``: the WS client then short-circuits with
-        the exact error string.  Otherwise the context is safe (never an empty
-        marker) and a non-null ``suggestion`` means disambiguation.
+        ``bypass`` -> ``(None, None, False)``: the WS client then short-circuits
+        with the exact error string.  Otherwise the context is safe (never an
+        empty marker) and a non-null ``suggestion`` means disambiguation.
+        ``more`` (narrative pagination) tells the client that the subject's
+        dossier still holds passages beyond the page it just read: the tale can
+        be continued on unseen material.
         """
-        _, prompt, bypass = await self.retrieve(question, context=context,
-                                                subject=subject)
-        if bypass:
-            return None, None
-        return prompt.context, prompt.suggestion
+        outcome = await self.pipeline.run(question, context, subject=subject,
+                                          offset=offset)
+        if outcome.bypass:
+            return None, None, False
+        return (outcome.prompt.context, outcome.prompt.suggestion,
+                outcome.story_more)
 
     async def answer_with_sources(self, question: str,
                                   context: RAGContext | None = None

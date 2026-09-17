@@ -51,6 +51,7 @@ class LoreMasterBot(DispatchMixin, RoutingMixin, StoryMixin, StreamMixin,
     def __init__(self, gateway_url: str, prefix: str,
                  typing_interval: float = 5.0,
                  allowed_channels: tuple[int, ...] = (),
+                 allowed_channel_names: tuple[str, ...] = (),
                  creator_discord_id: str = "",
                  roles: RoleHierarchy | None = None,
                  activity_db_path: str = ":memory:",
@@ -66,6 +67,9 @@ class LoreMasterBot(DispatchMixin, RoutingMixin, StoryMixin, StreamMixin,
         self.prefix = prefix
         self.typing_interval = typing_interval
         self.allowed_channels = set(allowed_channels)
+        # Same restriction by NAME: any channel whose name matches (themed
+        # channels that exist on several servers).
+        self.allowed_channel_names = set(allowed_channel_names)
         # Creator identity (Discord snowflake): authenticated natively through
         # ``message.author.id`` — the bot NEVER asks for it, and the raw value
         # never travels beyond this process (ENGRAM only receives the derived

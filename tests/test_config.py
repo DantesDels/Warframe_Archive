@@ -11,6 +11,10 @@ from __future__ import annotations
 import os
 
 from warframe_lore.config import Config, load_config
+from warframe_lore.discord.config import (
+    DiscordConfig,
+    load_channels_file,
+)
 from warframe_lore.envfile import load_dotenv
 
 
@@ -58,3 +62,49 @@ def test_env_toujours_prioritaire_sur_le_fichier_env(monkeypatch, tmp_path):
     monkeypatch.delenv("WF_TIMEOUT", raising=False)
     load_dotenv(env)
     assert os.environ["WF_TIMEOUT"] == "9"
+
+
+# ------------------------------------------------------------------
+# Fichier de config des canaux (ID et/ou nom)
+# ------------------------------------------------------------------
+
+def test_load_channels_file_id(tmp_path):
+    p = tmp_path / "c.json"
+    p.write_text('{"channel_id": 1550171060295442482}', encoding="utf-8")
+    ids, names = load_channels_file(p)
+    assert ids == {1550171060295442482}
+    assert names == set()
+
+
+def test_load_channels_file_name(tmp_path):
+    p = tmp_path / "c.json"
+    p.write_text('{"channel_name": "〉ᴏʀᴀᴄʟᴇ"}', encoding="utf-8")
+    ids, names = load_channels_file(p)
+    assert ids == set()
+    assert names == {"〉ᴏʀᴀᴄʟᴇ"}
+
+
+def test_load_channels_file_absent(tmp_path):
+    ids, names = load_channels_file(tmp_path / "absent.json")
+    assert ids == set() and names == set()
+
+
+def test_config_fusionne_env_et_fichier_canaux(monkeypatch, tmp_path):
+    p = tmp_path / "c.json"
+    p.write_text('{"channel_id": 1550171060295442482, '
+                 '"channel_name": "〉ᴏʀᴀᴄʟᴇ"}', encoding="utf-8")
+    monkeypatch.setenv("DISCORD_CHANNELS_FILE", str(p))
+    monkeypatch.setenv("DISCORD_CHANNELS", "11")
+    config = DiscordConfig.load()
+    assert 11 in config.allowed_channels
+    assert 1550171060295442482 in config.allowed_channels
+    assert config.allowed_channel_names == ("〉ᴏʀᴀᴄʟᴇ",)
+
+
+def test_config_fichier_absent_retombe_sur_env(monkeypatch):
+    monkeypatch.setenv("DISCORD_CHANNELS", "77")
+    monkeypatch.setenv("DISCORD_CHANNEL_NAMES", "oracle")
+    monkeypatch.setenv("DISCORD_CHANNELS_FILE", "/nonexistent/file.json")
+    config = DiscordConfig.load()
+    assert config.allowed_channels == (77,)
+    assert config.allowed_channel_names == ("oracle",)

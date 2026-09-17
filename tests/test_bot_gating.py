@@ -33,6 +33,28 @@ class GatingTests(unittest.TestCase):
         scenario.say("bonjour tout le monde", channel=other)
         self.assertEqual(len(scenario.gateway.messages), 1)
 
+    def test_salon_nommé_autorisé_sans_mention(self):
+        scenario = make_bot(channel_names=("〉ᴏʀᴀᴄʟᴇ",))
+        oracle = scenario.use_channel(
+            Channel(888, guild=scenario.guild, name="〉ᴏʀᴀᴄʟᴇ"))
+        scenario.say("bonjour", channel=oracle)
+        self.assertEqual(len(scenario.gateway.messages), 1)
+
+    def test_salon_autre_nom_ignoré(self):
+        scenario = make_bot(channel_names=("〉ᴏʀᴀᴄʟᴇ",))
+        other = scenario.use_channel(
+            Channel(555, guild=scenario.guild, name="général"))
+        scenario.say("bonjour", channel=other)
+        self.assertEqual(scenario.gateway.messages, [])
+
+    def test_thread_d_un_salon_nommé_autorisé(self):
+        scenario = make_bot(channel_names=("〉ᴏʀᴀᴄʟᴇ",))
+        thread = scenario.use_channel(Channel(
+            666, guild=scenario.guild,
+            parent=Channel(888, name="〉ᴏʀᴀᴄʟᴇ")))
+        scenario.say("bonjour", channel=thread)
+        self.assertEqual(len(scenario.gateway.messages), 1)
+
     def test_mention_du_bot_hors_salon_dédié(self):
         scenario = make_bot()
         other = scenario.use_channel(Channel(555, guild=scenario.guild))

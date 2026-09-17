@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 
+from ..guild.story_mode import StoryMode
 from ..moderation.guards import BurstGuard
 from ..services import MemberSnapshot
 from .sessions import SessionPool
@@ -19,6 +20,7 @@ MAX_LAST_MEMBERS = 256      # anaphora: last member discussed, per channel
 MAX_REFUSAL_USERS = 2048    # member-info refusal counters, per user
 MAX_ANSWERS = 512           # answers still open to feedback reactions
 MAX_STORY_ASKS = 64         # open storyteller starting-point questions
+MAX_STORY_MODES = 128       # anchored narratives open to a "continue" turn
 
 
 def _prune(table: dict, cap: int) -> None:
@@ -39,6 +41,7 @@ class BotState:
     refusals: dict[int, dict[str, int]] = field(default_factory=dict)
     answers: dict[int, int] = field(default_factory=dict)
     story_asks: dict[int, tuple[int, str]] = field(default_factory=dict)
+    story_modes: dict[int, tuple[int, StoryMode]] = field(default_factory=dict)
 
     # -- turns: one at a time per channel, interruptible by ``!stop`` ------
     def lock(self, channel_id: int) -> asyncio.Lock:
@@ -109,6 +112,24 @@ class BotState:
     def close_story_ask(self, channel_id: int) -> None:
         self.story_asks.pop(channel_id, None)
 
+    # -- anchored narratives (an explicit "continue" replays the anchoring) --
+    def remember_story(self, channel_id: int, author_id: int,
+                       mode: StoryMode) -> None:
+        """Remember the anchoring the continuation of this narrative replays."""
+        self.story_modes[channel_id] = (author_id, mode)
+        _prune(self.story_modes, MAX_STORY_MODES)
+
+    def story_mode(self, channel_id: int, author_id: int) -> StoryMode | None:
+        """Anchoring of the open narrative, for its AUTHOR only (``None``).
+
+        A stranger cannot continue a story told to someone else: the memory is
+        keyed by channel and owned by the author, like the starting-point ask.
+        """
+        stored = self.story_modes.get(channel_id)
+        if stored is None or stored[0] != author_id:
+            return None
+        return stored[1]
+
 
 __all__ = ["MAX_ANSWERS", "MAX_LAST_MEMBERS", "MAX_REFUSAL_USERS",
-           "MAX_STORY_ASKS", "BotState"]
+           "MAX_STORY_ASKS", "MAX_STORY_MODES", "BotState"]

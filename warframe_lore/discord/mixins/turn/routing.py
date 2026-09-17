@@ -3,33 +3,23 @@
 Single responsibility (mixin): turn one message into a :class:`TurnContext` —
 member resolution (anaphora), Concepteur jealousy mention, RAG gating, speaker
 accreditation — log the decision, then hand the streaming over.  The member-info
-privilege gate runs first and may end the turn with a matriciel card.
+privilege gate runs first and may end the turn with a matriciel card, the
+storyteller flow (:mod:`story`) with a starting-point question.
 """
 
 from __future__ import annotations
 
 import logging
-from dataclasses import replace
 
 import discord
 
 from ...guild import (
-    LENS_LABELS,
-    LENS_QUESTION,
-    MENU_INDEX_ERROR,
+    StoryMode,
     creator_mentioned,
-    detect_leverian_warframe,
-    detect_story_lens,
-    detect_targeted_era,
-    is_out_of_range_index,
+    detect_story_mode,
+    is_story_continuation,
     is_story_request,
     normalize_message,
-    parse_lens_answer,
-    parse_subject_answer,
-    story_subject_choices,
-    story_subject_question,
-    substitute_story_subject,
-    targeted_subject_mention,
     wants_lore,
 )
 from ...moderation.insults import detect_insult
@@ -69,90 +59,25 @@ class RoutingMixin:
                 if await self._member_card_answer(message, text, mention):
                     return              # member data: a card ends the turn
                 context = self._turn_context(message, text, settings, mention)
-                if context.story:
-                    choices = story_subject_choices(text)
-                    if choices:
-                        # Subject ambiguity ("l'histoire de Garuda" = Vena or
-                        # the Archimedean): the bot asks WHICH tale, never
-                        # guesses between two distinct stories.
-                        question = story_subject_question(choices)
-                        self.state.open_story_ask(channel_id,
-                                                  message.author.id, text,
-                                                  question, choices)
-                        await message.channel.send(question)
-                        return
-                    if context.story_lens is None and context.targeted_era is None:
-                        # Story request without an obvious starting point and
-                        # without a recognized targeted subject: the bot asks
-                        # the human THEIR opening (never guesses it).
-                        self.state.open_story_ask(channel_id,
-                                                  message.author.id, text,
-                                                  LENS_QUESTION)
-                        await message.channel.send(LENS_QUESTION)
-                        return
+                if context.story and await self._story_question(
+                        message, text, context):
+                    return
                 self._audit(channel_id, context)
                 await self._stream_turn(message, context)
             finally:
                 self.state.end_turn(channel_id)
 
-    async def _story_answer(self, channel_id: int, message: discord.Message,
-                            text: str, pending: tuple) -> None:
-        """Consume the answer to an open storyteller question.
-
-        ``pending`` is ``(author_id, request, question, choices)``.  A subject
-        disambiguation resolves the requested TALE and replays the request on
-        it; a lens question resolves the starting point.  A failed parse keeps
-        the question open.  A resolved answer streams the story of the ORIGINAL
-        request — never of the answer itself.
-        """
-        author_id, request, question, choices = pending
-        if choices:
-            subject = parse_subject_answer(text, choices)
-            if subject is None:
-                # An index OUT of the menu ("3" to a 1..2 question) is pointed
-                # out; anything else keeps the same re-ask.  Either way the
-                # question stays open for the author.
-                if is_out_of_range_index(text, len(choices)):
-                    await message.channel.send(
-                        MENU_INDEX_ERROR.format(len(choices)))
-                else:
-                    await message.channel.send(question)
-                return
-            request = substitute_story_subject(request, subject)
-            lens = detect_story_lens(request)
-            targeted_era = detect_targeted_era(request)
-            leverian_warframe = detect_leverian_warframe(request)
-            targeted_subject = (targeted_subject_mention(request)
-                                if targeted_era is not None else None)
-        else:
-            lens = parse_lens_answer(text)
-            if lens is None:
-                if is_out_of_range_index(text, len(LENS_LABELS)):
-                    await message.channel.send(
-                        MENU_INDEX_ERROR.format(len(LENS_LABELS)))
-                else:
-                    await message.channel.send(question)
-                return
-            targeted_era = None
-            targeted_subject = None
-            leverian_warframe = None
-        self.state.close_story_ask(channel_id)
-        mention = self._resolve_member(message, request)
-        self.state.remember_member(channel_id,
-                                   self._mention_snapshot(mention))
-        settings = self.services.settings.get(channel_id)
-        context = self._turn_context(message, request, settings, mention)
-        context = replace(context, story=True, story_lens=lens,
-                          targeted_era=targeted_era,
-                          targeted_subject=targeted_subject,
-                          leverian_warframe=leverian_warframe)
-        self._audit(channel_id, context)
-        await self._stream_turn(message, context)
-
     def _turn_context(self, message: discord.Message, text: str,
-                      settings: ChannelSettings,
-                      mention: MemberMention) -> TurnContext:
-        """Routing decision: RAG gating, jealousy, accreditation, audit kind."""
+                      settings: ChannelSettings, mention: MemberMention,
+                      mode: StoryMode | None = None) -> TurnContext:
+        """Routing decision: RAG gating, jealousy, accreditation, audit kind.
+
+        ``mode`` is the anchoring RESOLVED by a storyteller answer (lens or
+        disambiguation); otherwise a follow-up that only asks to continue
+        ("continue") replays the anchoring of the open narrative, and a fresh
+        request is parsed.  An inherited continuation keeps the archives in the
+        loop: it is the request that anchored the story that grounds retrieval.
+        """
         accr = self._accredit(message.author)
         user_name, user_role, user_id = self._get_metadata(message)
         creator_mention = None
@@ -160,23 +85,19 @@ class RoutingMixin:
             display = self._creator_display(message)
             creator_mention = (creator_mentioned(text, display)
                                if display else None)
+        channel_id = message.channel.id
+        inherited = (self.state.story_mode(channel_id, message.author.id)
+                     if mode is None and is_story_continuation(text)
+                     else None)
+        mode = mode or inherited or detect_story_mode(text)
         # A message naming a REAL member is never a lore question (the archives
         # must not answer "Données insuffisantes" about a player), and the
         # possessive rage must not be buried under the same short-circuit.
         # A storyteller request STAYS archive-grounded whenever the channel lets
         # RAG in: the story is told from the lore, not invented from nothing.
-        story = is_story_request(text)
-        story_lens = detect_story_lens(text) if story else None
-        targeted_era = detect_targeted_era(text) if story else None
-        leverian_warframe = detect_leverian_warframe(text) if story else None
-        # An explicit temporal lens (e.g. "...en 1999") overrides the default
-        # era inferred from a named subject.
-        if story_lens is not None:
-            targeted_era = None
-        # Page-title anchor of the named subject (None without a targeted era):
-        # the ENGRAM dossier retrieval walks the subject's own wiki pages.
-        targeted_subject = (targeted_subject_mention(text)
-                            if targeted_era is not None else None)
+        story = mode.streamable or is_story_request(text)
+        if mode.streamable:
+            self.state.remember_story(channel_id, message.author.id, mode)
         use_rag = bool(settings.rag and (wants_lore(text) or story)
                        and not mention.found and not creator_mention)
         return TurnContext(
@@ -185,9 +106,10 @@ class RoutingMixin:
             user_roles=tuple(self._role_names(message.author)),
             creator_mention=creator_mention, member_name=mention.name,
             insult=detect_insult(text), use_rag=use_rag, story=story,
-            story_lens=story_lens, targeted_era=targeted_era,
-            targeted_subject=targeted_subject,
-            leverian_warframe=leverian_warframe)
+            story_lens=mode.story_lens, targeted_era=mode.targeted_era,
+            targeted_subject=mode.targeted_subject,
+            leverian_warframe=mode.leverian_warframe,
+            retrieval_text=mode.request if inherited is not None else None)
 
     @staticmethod
     def _audit(channel_id: int, context: TurnContext) -> None:

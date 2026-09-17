@@ -13,8 +13,10 @@ from warframe_lore.discord.core import (
     MAX_ANSWERS,
     MAX_LAST_MEMBERS,
     MAX_REFUSAL_USERS,
+    MAX_STORY_MODES,
     BotState,
 )
+from warframe_lore.discord.guild import StoryMode
 from warframe_lore.discord.services import MemberSnapshot
 
 
@@ -75,6 +77,30 @@ class AnswerTrackingTests(unittest.TestCase):
         self.assertLessEqual(len(state.answers), MAX_ANSWERS)
         self.assertEqual(state.answer_channel(MAX_ANSWERS + 4), 7)
         self.assertIsNone(state.answer_channel(0))
+
+
+class StoryMemoryTests(unittest.TestCase):
+    """Ancrage d'un récit : mémorisé par salon, REPRIS par son seul auteur."""
+
+    def test_ancrage_retenu_pour_son_auteur(self):
+        state = BotState()
+        mode = StoryMode(request="raconte l'histoire de Ballas")
+        state.remember_story(7, 42, mode)
+        self.assertEqual(state.story_mode(7, 42), mode)
+        self.assertIsNone(state.story_mode(7, 43))      # un autre organique
+        self.assertIsNone(state.story_mode(8, 42))      # un autre salon
+
+    def test_un_nouveau_recit_remplace_l_ancien(self):
+        state = BotState()
+        state.remember_story(7, 42, StoryMode(request="un"))
+        state.remember_story(7, 42, StoryMode(request="deux"))
+        self.assertEqual(state.story_mode(7, 42).request, "deux")
+
+    def test_table_bornée(self):
+        state = BotState()
+        for channel_id in range(MAX_STORY_MODES + 5):
+            state.remember_story(channel_id, 42, StoryMode(request="un"))
+        self.assertLessEqual(len(state.story_modes), MAX_STORY_MODES)
 
 
 class TurnTrackingTests(unittest.TestCase):

@@ -5,7 +5,8 @@ depend on model obedience, which fails: the model drains its pre-trained
 weights and invents named entities absent from the ``<archives>`` (playtest
 "Eleanor" -> "Perrin Sequence", "née à Höllvania").  This module is the ONLY
 deterministic protection: every capitalized NAMED ENTITY of the generated
-answer must appear in the retrieved context.  Ordinary vocabulary — a Codex
+answer must appear in the retrieved context, in any accent, number or gender
+spelling (:func:`lexeme_forms`).  Ordinary vocabulary — a Codex
 field label ("Motivations", "Stratégie"), a word the narrative already
 spells lowercase, or a common noun the French article contracts before
 ("l'Empire Orokin") — is a layout artifact, not an entity, and never
@@ -42,10 +43,18 @@ _CAPWORD = re.compile(r"\b([A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-Þà-öø-ÿ]{1,})\b")
 
 # Accent folding: French orthographic variants of the same word
 # ("Indifférence" ↔ "Indifference") must resolve to the archived spelling.
+# Applied to BOTH sides — entity, curated lists and corpus — so the fold never
+# depends on which spelling the model happened to pick.
 _ACCENT_MAP = str.maketrans(
     "àâäáãåçèéêëẽíìîïñòóôõöùúûüýÿ",
     "aaaaaaceeeeeiiiinooooouuuuyy",
 )
+
+
+def _fold(text: str) -> str:
+    """Accent-free form: the model may drop the French diacritics."""
+    return text.translate(_ACCENT_MAP)
+
 
 # Fixed formatting scaffold of the persona (Codex sheet labels + the story
 # pagination closing sentence).  Structural, never factual: these words are
@@ -75,6 +84,13 @@ _FR_COMMON = frozenset({
     "traître", "traîtres",
 })
 
+# Accent-insensitive lookups: the model may write a curated word without its
+# diacritics ("Mnemonique", "Capacites") — BOTH sides are folded, so the
+# canonical spelling of the lists above is never a hidden requirement.
+_TRUSTED_FOLDED = frozenset(_fold(word) for word in TRUSTED_ALLOW)
+_FR_COMMON_FOLDED = frozenset(_fold(word) for word in _FR_COMMON)
+
+
 def extract_entities(text: str) -> set[str]:
     """Lowercased capitalized words of ``text``, sentence-initial excluded."""
     clean = _MD_CLEAN.sub(" ", text)
@@ -89,52 +105,60 @@ def extract_entities(text: str) -> set[str]:
 def _ordinary_word(entity: str, answer: str) -> bool:
     """Ordinary vocabulary, not a proper name (template capital escaped).
 
-    Three independent signals: the exact word recurs in LOWERCASE in the
-    answer — the sheet capitalizes field labels while the narrative spells
-    the same word lowercase, and invented proper names are NEVER lowercase;
-    the word belongs to the curated French narrative list (label-only sheet
-    occurrence, playtest « Ballas »); or it is introduced by a contracted
-    determiner (``l'Empire``, ``d'Alad``) — French elides the article before
-    a COMMON noun, never before a proper name in the model's grammatical
-    French.  The lowercase signal is language-agnostic; the list and the
-    elision are French-only.
+    Three independent signals: the word belongs to the curated French
+    narrative list (label-only sheet occurrence, playtest « Ballas »); it is
+    introduced by a contracted determiner (``l'Empire``, ``d'Alad``) — French
+    elides the article before a COMMON noun, never before a proper name in the
+    model's grammatical French; or the exact word recurs in LOWERCASE in the
+    answer — the sheet capitalizes field labels while the narrative spells the
+    same word lowercase, and invented proper names are NEVER lowercase.  The
+    comparisons run on accent-folded text: dropped diacritics ("Mnemonique")
+    must not turn ordinary vocabulary into a confabulation.
     """
-    if entity in _FR_COMMON:
+    key = _fold(entity)
+    if key in _FR_COMMON_FOLDED:
         return True
-    elided = re.compile(
-        rf"\b(?:l|d|qu)['’]\s*{re.escape(entity)}\b", re.IGNORECASE)
-    if elided.search(answer):
+    folded_answer = _fold(answer)
+    folded = re.escape(key)
+    elided = re.compile(rf"\b(?:l|d|qu)['’]\s*{folded}\b", re.IGNORECASE)
+    if elided.search(folded_answer):
         return True
-    pattern = re.compile(rf"\b{re.escape(entity)}\b", re.IGNORECASE)
-    return any(match.group(0).islower() for match in pattern.finditer(answer))
+    pattern = re.compile(rf"\b{folded}\b", re.IGNORECASE)
+    return any(match.group(0).islower()
+               for match in pattern.finditer(folded_answer))
 
 
-def _candidates(entity: str) -> list[str]:
-    """Grounded forms: the word, its accented folded form, and (for a plural)
-    the singular of each.  French adjectives in ``-ique`` are also folded to
-    their archived ``-ic`` spelling (``britannique`` -> ``britannic``).
-    All must be checked against the verbatim corpus."""
-    forms = [entity, entity.translate(_ACCENT_MAP)]
-    if entity.endswith("s"):
-        singular = entity[:-1]
-        forms.extend((singular, singular.translate(_ACCENT_MAP)))
-    folded = list(forms)
-    for form in folded:
-        if form.endswith("ique"):
-            forms.append(form[:-4] + "ic")
-    return forms
+def lexeme_forms(entity: str) -> list[str]:
+    """Every spelling of the SAME lexeme: accent-folded and inflected.
+
+    French writes one word several ways — the accented spelling
+    ("Indifférence"), the plural ("Protoframes"), the feminine of an archived
+    masculine ("Distante" for an archived "distant") and the "-ique" adjective
+    whose archived form is "-ic" ("britannique" -> "britannic").  Shared with
+    the archive vocabulary (:class:`.vocabulary.ArchiveVocabulary`), which
+    probes the identical variants in the database.  Every form must still be
+    found somewhere, so an invented name ("Perrin", "Zariman") stays
+    ungrounded in every spelling.
+    """
+    stem = entity[:-1] if entity.endswith("s") else entity
+    if stem.endswith("e"):
+        stem = stem[:-1]
+    forms = {entity, stem, stem + "s", stem + "e", stem + "es"}
+    forms |= {form.translate(_ACCENT_MAP) for form in forms}
+    forms |= {form[:-4] + "ic" for form in forms if form.endswith("ique")}
+    return sorted(forms)
 
 
 def _grounded(entity: str, corpus: str) -> bool:
-    """Word is grounded verbatim, or as an orthographic variant of a
-    corpus word: French accented spelling ("Indifférence"), French
-    pluralization ("Protoframes") and French adjectives in "-ique"
-    ("Britannique") of archived terms are the SAME lexeme as the retrieved
-    passages, not confabulations.  Every accepted form must still resolve
-    to a verbatim corpus word, so invented names ("Perrin", "Zariman")
-    stay rejected.
+    """Word is grounded in the (accent-folded) corpus, or as an orthographic
+    or inflectional variant of a corpus word (:func:`lexeme_forms`): French
+    accented spelling ("Indifférence"), pluralization ("Protoframes"), gender
+    ("Distante" / "distant") and the "-ique" adjective of an archived "-ic"
+    ("Britannique") are the SAME lexeme as the retrieved passages, not
+    confabulations.  Every accepted form must still resolve to a corpus word,
+    so invented names ("Perrin", "Zariman") stay rejected.
     """
-    return any(form in corpus for form in _candidates(entity))
+    return any(form in corpus for form in lexeme_forms(entity))
 
 
 def verify_answer(answer: str, context: str,
@@ -151,11 +175,11 @@ def verify_answer(answer: str, context: str,
     """
     entities = extract_entities(answer)
     allowed = f"{context} {extra_allowed}"
-    corpus = allowed.lower()
+    corpus = _fold(allowed.lower())
     unsupported = {
         entity for entity in entities
         if not _grounded(entity, corpus)
-        and entity not in TRUSTED_ALLOW
+        and _fold(entity) not in _TRUSTED_FOLDED
         and not _ordinary_word(entity, answer)
     }
     return (len(unsupported) == 0, unsupported)
@@ -184,6 +208,7 @@ async def verify_answer_with_archive(
 __all__ = [
     "TRUSTED_ALLOW",
     "extract_entities",
+    "lexeme_forms",
     "verify_answer",
     "verify_answer_with_archive",
 ]

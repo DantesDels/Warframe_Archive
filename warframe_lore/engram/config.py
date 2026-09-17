@@ -44,9 +44,13 @@ class EngramConfig:
     # Low temperature → faithful and deterministic responses.
     chat_temperature: float = float(_env("ENGRAM_CHAT_TEMP", "0.3"))
     # Generation cap: high enough for the exhaustive Codex files (long lore
-    # answers must not be truncated mid-sentence), still within the 9B model
-    # context budget on 8 GB VRAM.
-    chat_max_tokens: int = int(_env("ENGRAM_MAX_TOKENS", "4096"))
+    # answers must not be truncated mid-sentence), yet small enough to fit the
+    # model window.  gemma-2 tops out at 8192 tokens and the assembled prompt
+    # already measures ~5900 (the persona alone is ~4600), so the former 4096
+    # asked for ~10000 tokens and the engine answered "Context size has been
+    # exceeded".  2048 leaves ~230 tokens of headroom and still covers 4x the
+    # observed sheet length (~500 tokens).
+    chat_max_tokens: int = int(_env("ENGRAM_MAX_TOKENS", "2048"))
     embedding_model: str = field(
         default_factory=lambda: _env(
             "ENGRAM_EMBED_MODEL", "text-embedding-baai-bge-m3-568m"))

@@ -9,6 +9,7 @@ sheet, BLOC 3 = the new request alone.  The assembly lives in :mod:`prompt`.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
@@ -39,6 +40,8 @@ RAG_TEMPERATURE_CAP = 0.1
 # (0.3 still drifted into invented atmosphere and entity mix-ups — playtest
 # "Albrecht/children of the Zariman").
 STORY_TEMPERATURE = RAG_TEMPERATURE_CAP
+
+log = logging.getLogger("warframe_lore.engram.roleplay.stream")
 
 
 class RoleplayService:
@@ -103,7 +106,9 @@ class RoleplayService:
         response is emitted only once every named entity is present in the
         retrieved passages (or, when an archive vocabulary is wired, anywhere
         in the ingested corpus), otherwise the abstention chain is served
-        instead.
+        instead.  A generation that FAILS before the first token (model
+        unreachable, context overflow) is served the same way: the terminal
+        never stalls and no raw server error reaches the user.
         """
         session.add("user", user_text)
         system = archive_bloc(self._base_prompt(persona, story), rag_context,
@@ -129,10 +134,19 @@ class RoleplayService:
         temperature = (min(self.temperature, STORY_TEMPERATURE) if story else
                        (min(self.temperature, RAG_TEMPERATURE_CAP)
                         if rag_context else self.temperature))
-        async for token in self.llm.chat_stream(messages, temperature):
-            tokens.append(token)
-            if rag_context is None:
-                yield token
+        try:
+            async for token in self.llm.chat_stream(messages, temperature):
+                tokens.append(token)
+                if rag_context is None:
+                    yield token
+        except Exception as exc:  # noqa: BLE001 (LLM down -> abstention)
+            log.error("Roleplay generation failed (%s)", exc)
+            if not tokens:
+                # Nothing reached the client yet: the abstention chain is
+                # served, exactly like an empty generation.
+                session.add("assistant", RAG_ERROR)
+                yield RAG_ERROR
+            return
         response = "".join(tokens)
         if rag_context is not None:
             # Deterministic post-generation gate: buffer the FULL response and

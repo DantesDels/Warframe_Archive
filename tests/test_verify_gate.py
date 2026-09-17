@@ -162,6 +162,42 @@ class VerifyUnitTests(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(bad, set())
 
+    def test_mot_du_contexte_accentue_ecrit_sans_accent_accepte(self):
+        # Sens INVERSE de « Indifférence » : le modèle oublie les diacritiques
+        # alors que le corpus les porte.  La comparaison est désaccentuée des
+        # deux côtés, donc « Indifference » reste le même lexème.
+        ok, bad = verify_answer(
+            "Entrati fut emporté par Indifference.",
+            "Entrati est emporté par l'Indifférence.")
+        self.assertTrue(ok)
+        self.assertEqual(bad, set())
+
+    def test_liste_curee_sans_accent_accepte(self):
+        # Le modèle peut perdre les diacritiques : « Mnemonique » (liste
+        # structurelle) et « Espionnage »/« Domination » (liste curée) restent
+        # du vocabulaire ordinaire, pas des confabulations.
+        ok, bad = verify_answer(
+            "Statut Mnemonique : Dechu, Espionnage. "
+            "Capacites : Strategie, Domination.", CONTEXT)
+        self.assertTrue(ok)
+        self.assertEqual(bad, set())
+
+    def test_feminin_du_mot_archive_accepte(self):
+        # « Distante » (féminin) pour un contexte qui porte « distant » : la
+        # flexion de genre est le même lexème, pas une invention.
+        ok, bad = verify_answer(
+            "Ballas fut une figure Distante du Conseil.",
+            "Ballas fut un conseiller distant du Conseil Orokin.")
+        self.assertTrue(ok)
+        self.assertEqual(bad, set())
+
+    def test_feminin_n_excuse_pas_un_radical_inconnu(self):
+        # La flexion n'excuse pas l'absence : le radical inventé reste rejeté.
+        ok, bad = verify_answer("Le Karnaxis fut Distante.",
+                                "Ballas fut un conseiller distant.")
+        self.assertFalse(ok)
+        self.assertEqual(bad, {"karnaxis"})
+
     def test_nom_commun_elide_capitalise_accepte(self):
         # « l'Empire Orokin » : le français élide l'article devant un nom
         # COMMUN, jamais devant un nom propre dans la grammaire du modèle —
@@ -269,7 +305,7 @@ class _Rows:
 
 
 class _FakeSession:
-    """Rend une ligne si le motif cherche un mot ``present`` dans l'archive."""
+    """Rend une ligne si le motif cherche une variante ``presente``."""
 
     def __init__(self, present):
         self.present = present
@@ -279,8 +315,10 @@ class _FakeSession:
         self.statements.append(statement)
         params = statement.compile(dialect=postgresql.dialect()).params
         pattern = next(v for v in params.values() if isinstance(v, str))
-        word = pattern.removeprefix("\\y").removesuffix("\\y")
-        return _Rows((1,) if word in self.present else None)
+        variants = pattern.removeprefix(r"\y(?:").removesuffix(r")\y").split("|")
+        if any(variant in self.present for variant in variants):
+            return _Rows((1,))
+        return _Rows(None)
 
 
 class _Ctx:
@@ -328,6 +366,14 @@ class ArchiveVocabularyTests(unittest.TestCase):
         self.assertIn("~*", sql)
         self.assertIn("LIMIT", sql)
 
+    def test_inflexion_de_genre_interrogee(self):
+        # L'archive connaît « distant » : le féminin « Distante » de la fiche
+        # est le même lexème, donc présent — une seule requête pour toutes
+        # les variantes.
+        vocabulary, session = self._vocabulary({"distant"})
+        self.assertEqual(run(vocabulary.unknown({"distante"})), set())
+        self.assertEqual(len(session.statements), 1)
+
 
 class _FakeLLM:
     def __init__(self, output):
@@ -353,6 +399,14 @@ class _SilentLLM:
 
     async def chat_stream(self, messages, temperature):
         return
+        yield  # pragma: no cover - kept as an async generator
+
+
+class _FailingLLM:
+    """Generation that aborts mid-stream (model down, context overflow)."""
+
+    async def chat_stream(self, messages, temperature):
+        raise RuntimeError("LLM server error: context size has been exceeded")
         yield  # pragma: no cover - kept as an async generator
 
 
@@ -425,6 +479,20 @@ class StreamGateTests(unittest.TestCase):
             rag_context=CONTEXT, story=True))
         self.assertEqual(tokens, [CONFABULATION_ERROR])
 
+    def test_panne_llm_tour_archive_abstention(self):
+        # Serveur tombé / contexte épuisé : la panne est servie comme
+        # l'abstention, jamais comme une erreur brute.
+        tokens = _run(self._service(_FailingLLM()).stream(
+            Session(session_id="s"), "qui est Eleanor ?",
+            rag_context=CONTEXT))
+        self.assertEqual(tokens, [RAG_ERROR])
+
+    def test_panne_llm_chat_libre_abstention(self):
+        # Aucun token émis avant la panne : le terminal ne reste pas muet.
+        tokens = _run(self._service(_FailingLLM()).stream(
+            Session(session_id="s"), "bonjour"))
+        self.assertEqual(tokens, [RAG_ERROR])
+
 
 class _FakeEmbed:
     async def embed(self, texts):
@@ -464,6 +532,19 @@ class HttpGateTests(unittest.TestCase):
             "Eleanor ?", context=RAGContext(user_key="u")))
         self.assertEqual(
             answer, "Eleanor fut convoquée par le Conclave des Entrati.")
+
+    def test_panne_llm_abstention_http(self):
+        # La route documentaire ne répond jamais 500 : la panne devient
+        # l'abstention, sources conservées.
+        answer, hits = run(self._service(_FailingLLM()).answer_with_sources(
+            "Eleanor ?", context=RAGContext(user_key="u")))
+        self.assertEqual(answer, RAG_ERROR)
+        self.assertTrue(hits)
+
+    def test_panne_llm_abstention_http_stream(self):
+        tokens = _run(self._service(_FailingLLM()).stream_answer(
+            "Eleanor ?", context=RAGContext(user_key="u")))
+        self.assertEqual(tokens, [RAG_ERROR])
 
 
 if __name__ == "__main__":

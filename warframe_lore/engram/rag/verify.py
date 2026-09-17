@@ -12,16 +12,24 @@ spells lowercase, or a common noun the French article contracts before
 triggers the gate.  An answer introducing unsupported entities is replaced
 with the abstention chain.
 
-The corpus is the RAG ``<archives>`` context ONLY — never the persona, which
-carries a game-wide Warframe vocabulary ("Margulis", "Zariman", "Sentient")
-that would let confabulations through.  A small structural allow list
-(Codex field labels, story pagination) covers the fixed formatting scaffold
-imposed by the persona; speaker metadata is passed per call.
+The pure gate grounds on the RAG ``<archives>`` context ONLY; when an archive
+vocabulary is wired (:func:`verify_answer_with_archive`) the ground truth
+widens to every ingested page, so a faithful sheet is not rejected for naming
+an in-universe common noun archived elsewhere — a name absent from EVERY page
+stays a confabulation.  Never the persona, which carries a game-wide Warframe
+vocabulary ("Margulis", "Zariman", "Sentient") that would let confabulations
+through.  A small structural allow list (Codex field labels, story pagination)
+covers the fixed formatting scaffold imposed by the persona; speaker metadata
+is passed per call.
 """
 
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .vocabulary import ArchiveVocabulary
 
 # Markdown artifacts stripped before entity extraction.
 _MD_CLEAN = re.compile(r"[*_>`#\-\[\](){}~]")
@@ -149,4 +157,29 @@ def verify_answer(answer: str, context: str,
     return (len(unsupported) == 0, unsupported)
 
 
-__all__ = ["TRUSTED_ALLOW", "extract_entities", "verify_answer"]
+async def verify_answer_with_archive(
+        answer: str, context: str,
+        vocabulary: ArchiveVocabulary | None = None,
+        extra_allowed: str = "") -> tuple[bool, set[str]]:
+    """``verify_answer``, then excuse words the WHOLE archive contains.
+
+    The retrieved passages are a narrow slice: a faithful sheet legitimately
+    names in-universe common nouns and real entities archived on OTHER pages
+    ("l'Empire", "le Conclave", "Entrati") that the local gate would reject.
+    The archive-wide vocabulary is the wider ground truth; a name absent from
+    every page stays a confabulation.  ``vocabulary=None`` degrades to the
+    pure local gate (DB-less consumers, tests).
+    """
+    ok, unsupported = verify_answer(answer, context, extra_allowed)
+    if ok or vocabulary is None:
+        return ok, unsupported
+    remaining = await vocabulary.unknown(unsupported)
+    return (not remaining, remaining)
+
+
+__all__ = [
+    "TRUSTED_ALLOW",
+    "extract_entities",
+    "verify_answer",
+    "verify_answer_with_archive",
+]

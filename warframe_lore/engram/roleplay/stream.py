@@ -10,11 +10,12 @@ sheet, BLOC 3 = the new request alone.  The assembly lives in :mod:`prompt`.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
 
 from ..llm import LLMProvider
 from ..models import ChatMessage
 from ..persona import HOSTILE_PERSONA, STORY_PERSONA
-from ..rag import CONFABULATION_ERROR, RAG_ERROR, verify_answer
+from ..rag import CONFABULATION_ERROR, RAG_ERROR, verify_answer_with_archive
 from .models import Session
 from .prompt import (
     STORY_LENS_STARTS,
@@ -26,6 +27,9 @@ from .prompt import (
     targeted_story_directive,
     turn_directives,
 )
+
+if TYPE_CHECKING:
+    from ..rag import ArchiveVocabulary
 
 # A document-anchored turn is extractive: the temperature is clamped so the
 # model stays inside the provided passages.
@@ -43,13 +47,15 @@ class RoleplayService:
     def __init__(self, llm: LLMProvider, window: SlidingWindow,
                  system_prompt: str, temperature: float = 0.8,
                  hostile_prompt: str | None = None,
-                 story_prompt: str | None = None) -> None:
+                 story_prompt: str | None = None,
+                 vocabulary: ArchiveVocabulary | None = None) -> None:
         self.llm = llm
         self.window = window
         self.system_prompt = system_prompt
         self.temperature = temperature
         self.hostile_prompt = hostile_prompt or HOSTILE_PERSONA
         self.story_prompt = story_prompt or STORY_PERSONA
+        self.vocabulary = vocabulary
 
     def _base_prompt(self, persona: str, story: bool = False) -> str:
         """Base prompt of the current persona (oracle, hostile or story).
@@ -95,7 +101,9 @@ class RoleplayService:
         An archive-grounded turn (``rag_context`` set) is buffered and passed
         through the deterministic entity gate (:mod:`...rag.verify`): the full
         response is emitted only once every named entity is present in the
-        retrieved passages, otherwise the abstention chain is served instead.
+        retrieved passages (or, when an archive vocabulary is wired, anywhere
+        in the ingested corpus), otherwise the abstention chain is served
+        instead.
         """
         session.add("user", user_text)
         system = archive_bloc(self._base_prompt(persona, story), rag_context,
@@ -142,8 +150,9 @@ class RoleplayService:
                     user_name, user_role, targeted_era, leverian_warframe,
                     lens_open,
                 )))
-                ok, _ = verify_answer(response, rag_context,
-                                      extra_allowed=allowed)
+                ok, _ = await verify_answer_with_archive(
+                    response, rag_context, self.vocabulary,
+                    extra_allowed=allowed)
                 if not ok:
                     response = CONFABULATION_ERROR
             yield response

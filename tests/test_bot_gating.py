@@ -26,6 +26,13 @@ class GatingTests(unittest.TestCase):
         scenario.say("bonjour tout le monde", channel=other)
         self.assertEqual(scenario.gateway.messages, [])
 
+    def test_sans_restriction_le_bot_repond_dans_tous_les_salons(self):
+        scenario = make_bot()
+        scenario.bot.allowed_channels = set()
+        other = scenario.use_channel(Channel(555, guild=scenario.guild))
+        scenario.say("bonjour tout le monde", channel=other)
+        self.assertEqual(len(scenario.gateway.messages), 1)
+
     def test_mention_du_bot_hors_salon_dédié(self):
         scenario = make_bot()
         other = scenario.use_channel(Channel(555, guild=scenario.guild))

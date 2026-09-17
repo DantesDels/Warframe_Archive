@@ -76,10 +76,13 @@ class DispatchMixin:
 
     def _may_answer(self, message: discord.Message) -> bool:
         """Mention, dedicated channel (``--channels``) or one of its threads,
-        or a private message — otherwise the bot never disturbs the players."""
+        or a private message.  With no restriction configured (empty
+        ``allowed_channels``) the bot answers in every accessible channel."""
         channel = message.channel
         if self.user is not None and self.user in message.mentions:
             return True
+        if not self.allowed_channels:
+            return True                  # no restriction: every channel
         if channel.id in self.allowed_channels:
             return True
         parent = getattr(channel, "parent", None)

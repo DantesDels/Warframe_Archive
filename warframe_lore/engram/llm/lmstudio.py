@@ -79,24 +79,32 @@ class LMStudioProvider(LLMProvider, EmbeddingProvider):
         self.chat_model = chat_model
         self.embedding_model = embedding_model
         self.max_tokens = max_tokens
-        auth = {} if not api_key else {"Authorization": f"Bearer {api_key}"}
-        self._client = httpx.AsyncClient(
+        self._api_key = api_key
+        self._timeout = timeout
+        self._client = self._new_client()
+
+    def _new_client(self) -> httpx.AsyncClient:
+        """Shared client; rebuilt (fresh sockets) when the pool goes stale."""
+        auth = ({} if not self._api_key
+                else {"Authorization": f"Bearer {self._api_key}"})
+        return httpx.AsyncClient(
             base_url=self.base_url,
             headers=auth,
-            timeout=timeout,
+            timeout=self._timeout,
         )
+
+    async def _refresh_client(self) -> None:
+        """Drop the pooled connection and open a brand-new client."""
+        await self._client.aclose()
+        self._client = self._new_client()
 
     async def close(self) -> None:
         await self._client.aclose()
 
-    async def chat_stream(
-        self,
-        messages: list[ChatMessage],
-        temperature: float = 0.7,
-    ) -> AsyncIterator[str]:
-        payload = _payload(messages, self.chat_model, True, temperature,
-                           self.max_tokens)
-        async with self._client.stream(
+    async def _stream_once(self, client: httpx.AsyncClient,
+                           payload: dict) -> AsyncIterator[str]:
+        """Stream one completion over the given client (SSE parsing)."""
+        async with client.stream(
             "POST", "/chat/completions", json=payload,
         ) as response:
             response.raise_for_status()
@@ -109,7 +117,7 @@ class LMStudioProvider(LLMProvider, EmbeddingProvider):
                     continue
                 data = line[5:].strip()
                 if data == "[DONE]":
-                    break
+                    return
                 event = _parse_data(data)
                 if event is None:
                     continue
@@ -124,11 +132,37 @@ class LMStudioProvider(LLMProvider, EmbeddingProvider):
                 if token:
                     yield token
 
+    async def chat_stream(
+        self,
+        messages: list[ChatMessage],
+        temperature: float = 0.7,
+    ) -> AsyncIterator[str]:
+        payload = _payload(messages, self.chat_model, True, temperature,
+                           self.max_tokens)
+        emitted = False
+        try:
+            async for token in self._stream_once(self._client, payload):
+                emitted = True
+                yield token
+        except httpx.TransportError:
+            if emitted:
+                raise
+            # LM Studio closes idle keep-alive connections: the shared pool
+            # then holds a half-closed socket whose reuse raises WinError 1225
+            # with no retry (observed repeatedly on live probes).  Replay the
+            # request once over a brand-new socket.
+            await self._refresh_client()
+            async for token in self._stream_once(self._client, payload):
+                yield token
+
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        response = await self._client.post("/embeddings", json={
-            "model": self.embedding_model,
-            "input": texts,
-        })
+        payload = {"model": self.embedding_model, "input": texts}
+        try:
+            response = await self._client.post("/embeddings", json=payload)
+        except httpx.TransportError:
+            # Same half-closed-socket hazard applies to embeddings.
+            await self._refresh_client()
+            response = await self._client.post("/embeddings", json=payload)
         response.raise_for_status()
         payload = response.json()["data"]
         # Order may vary; we align on the original position.

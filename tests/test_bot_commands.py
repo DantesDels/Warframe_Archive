@@ -48,7 +48,7 @@ class HelpTests(unittest.TestCase):
         help_text = scenario.channel.last.content
         self.assertIn("Terminal Oracle", help_text)
         for command in ("!reset", "!stop", "!stats", "!fiche", "!channel",
-                        "!lang", "!rag", "!images", "!persona"):
+                        "!lang", "!rag", "!persona"):
             self.assertIn(command, help_text)
 
     def test_commande_inconnue_répond_l_aide(self):

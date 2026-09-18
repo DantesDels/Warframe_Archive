@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS channel_settings (
     channel_id INTEGER PRIMARY KEY,
     enabled INTEGER NOT NULL DEFAULT 1,
     rag INTEGER NOT NULL DEFAULT 1,
-    images INTEGER NOT NULL DEFAULT 1,
     lang TEXT NOT NULL DEFAULT 'fr',
     persona TEXT NOT NULL DEFAULT 'oracle'
 );
@@ -33,7 +32,6 @@ class ChannelSettings:
 
     enabled: bool = True
     rag: bool = True
-    images: bool = True
     lang: str = "fr"
     persona: str = "oracle"
 
@@ -48,27 +46,25 @@ class ChannelSettingsStore:
     def get(self, channel_id: int) -> ChannelSettings:
         """Settings of a channel (defaults when nothing was stored)."""
         rows = self._db.read(
-            "SELECT enabled, rag, images, lang, persona FROM channel_settings "
+            "SELECT enabled, rag, lang, persona FROM channel_settings "
             "WHERE channel_id = ?", (channel_id,))
         if not rows:
             return ChannelSettings()
-        enabled, rag, images, lang, persona = rows[0]
+        enabled, rag, lang, persona = rows[0]
         return ChannelSettings(enabled=bool(enabled), rag=bool(rag),
-                               images=bool(images), lang=str(lang),
-                               persona=str(persona))
+                               lang=str(lang), persona=str(persona))
 
     def set(self, channel_id: int, **changes) -> ChannelSettings:
         """Apply one or more changes and persist the result."""
         updated = replace(self.get(channel_id), **changes)
         self._db.write(
-            "INSERT INTO channel_settings (channel_id, enabled, rag, images, "
-            "lang, persona) VALUES (?, ?, ?, ?, ?, ?) "
+            "INSERT INTO channel_settings (channel_id, enabled, rag, "
+            "lang, persona) VALUES (?, ?, ?, ?, ?) "
             "ON CONFLICT(channel_id) DO UPDATE SET "
             "enabled = excluded.enabled, rag = excluded.rag, "
-            "images = excluded.images, lang = excluded.lang, "
-            "persona = excluded.persona",
+            "lang = excluded.lang, persona = excluded.persona",
             (channel_id, int(updated.enabled), int(updated.rag),
-             int(updated.images), updated.lang, updated.persona))
+             updated.lang, updated.persona))
         self._db.commit()
         return updated
 

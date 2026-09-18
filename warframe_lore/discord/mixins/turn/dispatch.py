@@ -75,17 +75,26 @@ class DispatchMixin:
         await self._route_to_oracle(message)
 
     def _may_answer(self, message: discord.Message) -> bool:
-        """Mention, dedicated channel (``--channels``) or one of its threads,
-        or a private message — otherwise the bot never disturbs the players."""
+        """Mention, dedicated channel/thread (``--channels`` /
+        ``--channel-names``) or a private message.  With no restriction
+        configured the bot answers in every accessible channel."""
         channel = message.channel
         if self.user is not None and self.user in message.mentions:
             return True
-        if channel.id in self.allowed_channels:
+        if not self.allowed_channels and not self.allowed_channel_names:
+            return True                  # no restriction: every channel
+        if self._is_allowed_channel(channel):
             return True
         parent = getattr(channel, "parent", None)
-        if parent is not None and parent.id in self.allowed_channels:
+        if parent is not None and self._is_allowed_channel(parent):
             return True
         return getattr(channel, "guild", None) is None      # private message
+
+    def _is_allowed_channel(self, channel) -> bool:
+        """A channel is allowed by ID or by name (threads defer to their
+        parent, like the ID rules do)."""
+        return (channel.id in self.allowed_channels
+                or getattr(channel, "name", None) in self.allowed_channel_names)
 
     def _is_interrupt(self, content: str) -> bool:
         """True for the commands that bypass the anti-spam cooldown."""

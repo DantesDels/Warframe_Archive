@@ -12,17 +12,23 @@ import difflib
 import os
 import re
 
-from sqlalchemy import select, text
+from sqlalchemy import case, select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import selectinload
 
 from ....db import LoreChunk, WikiPage
-from .retriever import RAGHit, Retriever
+from ....protocols.roleplay import STORY_DOSSIER_PAGE
+from .retriever import DossierPage, RAGHit, Retriever
 
 # HNSW recall: the index scans ef_search candidates per probe (default 40).
 # On a large corpus (~1000+ pages x ~30 chunks) with top_k=3 the default is
 # too tight — the pool is widened here, per query (session GUC, COST: 40).
 HNSW_EF_SEARCH = int(os.getenv("ENGRAM_HNSW_EF", "200"))
+
+# Dossier retrieval cap: enough narrative chunks to fill ``max_context_chars``
+# (~4500 chars) without dragging in the whole subject page family.  ONE page is
+# also the cursor step of a continuation, shared by both sides of the wire.
+DOSSIER_LIMIT = STORY_DOSSIER_PAGE
 
 # French stopwords deemed non-discriminant for title search.
 _STOPWORDS = {
@@ -118,6 +124,77 @@ class CosinusSearch(Retriever):
                     score=score,
                 ))
         return hits
+
+    def _build_dossier_statement(self, subject: str,
+                                 query_vector: list[float],
+                                 limit: int = DOSSIER_LIMIT,
+                                 offset: int = 0):
+        """SELECT statement: subject-title chunks in narrative reading order.
+
+        Tier 0 = the exact biography page (``Eleanor``), tier 1 = its section
+        pages (``Eleanor/Quotes``), tier 2 = every other title containing the
+        subject.  The French mirror of the exact page (``Eleanor (fr)``) shares
+        tier 0: its namespaced id sorts right after the English bio, so both
+        languages ground the story while English stays first.  Reading order
+        (``chunk_index``) keeps the narrative sequence; the cosine distance is
+        still computed so the relevance floor applies.  ``offset`` pages the
+        deterministic order: the cursor of a continuation skips the chunks the
+        previous part already narrated.
+        """
+        distance = LoreChunk.embedding.cosine_distance(
+            query_vector).label("dist")
+        # NOTE: tier branches keep the retrieval package's single JSON/PG
+        # language boundary; they stay inline to avoid a gratuitous split.
+        tier = case(
+            (WikiPage.page_title.ilike(subject), 0),
+            (WikiPage.page_title.ilike(f"{subject} (fr)"), 0),
+            (WikiPage.page_title.ilike(f"{subject}/%"), 1),
+            else_=2,
+        )
+        return (
+            select(LoreChunk, distance)
+            .options(selectinload(LoreChunk.wiki_page))
+            .join(WikiPage, LoreChunk.wiki_page_id == WikiPage.page_id)
+            .where(
+                LoreChunk.embedding.is_not(None),
+                WikiPage.page_title.ilike(f"%{subject}%"),
+            )
+            .order_by(tier, WikiPage.page_id, LoreChunk.chunk_index)
+            .limit(limit)
+            .offset(offset)
+        )
+
+    async def dossier(self, subject: str, query_vector: list[float],
+                      limit: int = DOSSIER_LIMIT,
+                      offset: int = 0) -> DossierPage:
+        """One page of the subject's dossier, story-first.
+
+        Targeted-story anchoring (playtest "l'histoire d'Eleanor"): the pure
+        semantic search ranks first-person KIM dialogues above the subject's
+        narrative page — the Eleanor Background section landed at rank ~16,
+        far under the top_k=3, so the story corpus carried no actual story.
+        This dossier walks the subject's OWN pages in READING order — the exact
+        biography page (``Eleanor``) first, then its section pages
+        (``Eleanor/Quotes``), then the dialogue pages — so a targeted story is
+        grounded on the narrative itself.  Each chunk keeps its cosine score:
+        the relevance floor still drops off-story sections.  ``offset`` serves
+        the NEXT page of a continuation; one chunk is fetched beyond the window
+        to know whether anything is left (no COUNT query).
+        """
+        statement = self._build_dossier_statement(subject, query_vector,
+                                                  limit + 1, offset)
+        hits: list[RAGHit] = []
+        async with self.sessions() as session:
+            await set_hnsw_ef_search(session, self.ef_search)
+            rows = (await session.execute(statement)).all()
+            for chunk, dist in rows:
+                hits.append(RAGHit(
+                    chunk_id=chunk.id,
+                    page_title=chunk.wiki_page.page_title,
+                    content=chunk.content_markdown,
+                    score=1.0 - float(dist),
+                ))
+        return DossierPage(hits=hits[:limit], more=len(hits) > limit)
 
     async def suggest_title(self, question: str) -> str | None:
         """Page title where a question token is a substring.

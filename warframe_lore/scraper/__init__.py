@@ -19,7 +19,13 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING
 
-from ..api import BucketConfig, CategoryCatalog, MediaWikiSource, SiteHtmlSource
+from ..api import (
+    BucketConfig,
+    CategoryCatalog,
+    FrenchMediaWikiSource,
+    MediaWikiSource,
+    SiteHtmlSource,
+)
 from ..cleaner import CleanerConfig, HtmlCleaner, WikitextCleaner
 from ..config import Config, load_config
 from ..db import SQLDatabaseManager
@@ -55,7 +61,11 @@ class Scraper(CanonSignalsMixin, ScraperDeltaMixin,
         self.buckets = bucket_config or BucketConfig()
         self.sources = {
             "mediawiki-warframe": MediaWikiSource(self.config),
+            "mediawiki-warframe-fr": FrenchMediaWikiSource(self.config),
             "warframe-com-fr": SiteHtmlSource(self.config),
+            "warframe-com-en": SiteHtmlSource(
+                self.config, prefix=self.config.site_prefix_en,
+                id_namespace="en", name="warframe-com-en"),
         }
         # Backward-compatible default alias (the wiki remains the main source).
         self.source = self.sources.get("mediawiki-warframe")
@@ -63,7 +73,10 @@ class Scraper(CanonSignalsMixin, ScraperDeltaMixin,
         self.cleaners = {
             "mediawiki-warframe": WikitextCleaner(
                 cleaner_config=CleanerConfig.load()),
+            "mediawiki-warframe-fr": WikitextCleaner(
+                cleaner_config=CleanerConfig.load()),
             "warframe-com-fr": HtmlCleaner(),
+            "warframe-com-en": HtmlCleaner(),
         }
         self.cleaner = self.cleaners.get("mediawiki-warframe")
         self.output = MegafileManager(self.config.output_dir)

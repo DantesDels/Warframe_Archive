@@ -8,30 +8,38 @@ short-circuit strings, a full answer with its sources, or a token stream.
 
 Short-circuit: without a trusted passage the LLM is NEVER called — the exact
 :const:`RAG_ERROR` is returned (or :const:`JAILBREAK_REJECT` for a hostile
-probe).  Formatting artifacts are stripped from the FINAL text only.
+probe).  Formatting artifacts are stripped from the FINAL text only.  A FAILED
+generation (model unreachable, context overflow) is served as the very same
+abstention string: the document route never answers 500 and the stream never
+breaks mid-flight.
 """
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
 from ..models import ChatMessage
 from .pipeline import RetrievalPipeline
 from .prompt.builder import PromptBuilder, RAGPrompt
-from .prompt.guards import JAILBREAK_REJECT, RAG_ERROR
+from .prompt.guards import CONFABULATION_ERROR, JAILBREAK_REJECT, RAG_ERROR
 from .retrieval.retriever import RAGHit, Retriever
 from .sanitize import strip_trailing_padding
+from .verify import verify_answer_with_archive
 
 if TYPE_CHECKING:
     from ..llm import EmbeddingProvider, LLMProvider
     from .context import RAGContext
     from .query.aliases import AliasResolver
     from .query.rewriter import QueryRewriter
+    from .vocabulary import ArchiveVocabulary
 
 # RAG inference temperature: 0.1 -> analytical/deterministic without blocking
 # the engine (Gemma-2-9b-it Q4_K_M on 8 GB VRAM).
 RAG_TEMPERATURE = 0.1
+
+log = logging.getLogger("warframe_lore.engram.rag.service")
 
 
 class RAGService:
@@ -42,8 +50,10 @@ class RAGService:
                  suggestion_min_score: float = 0.5,
                  critical_min_score: float | None = None,
                  query_rewriter: QueryRewriter | None = None,
-                 alias_resolver: AliasResolver | None = None) -> None:
+                 alias_resolver: AliasResolver | None = None,
+                 vocabulary: ArchiveVocabulary | None = None) -> None:
         self.llm = llm
+        self.vocabulary = vocabulary
         self.pipeline = RetrievalPipeline(
             embeddings, retriever, prompt_builder,
             suggestion_min_score=suggestion_min_score,
@@ -62,56 +72,95 @@ class RAGService:
         return self.pipeline.alias_resolver
 
     async def retrieve(self, question: str,
-                       context: RAGContext | None = None
+                       context: RAGContext | None = None, *,
+                       subject: str | None = None, offset: int = 0
                        ) -> tuple[list[RAGHit], RAGPrompt, bool]:
         """Kept passages, assembled prompt and short-circuit flag.
 
         ``bypass`` signals the absence of a trusted passage AND of a
         disambiguation clue: the LLM must not be called.
         """
-        outcome = await self.pipeline.run(question, context)
+        outcome = await self.pipeline.run(question, context, subject=subject,
+                                          offset=offset)
         return outcome.hits, outcome.prompt, outcome.bypass
 
     async def resolve(self, question: str,
-                      context: RAGContext | None = None
-                      ) -> tuple[str | None, str | None]:
-        """Context/suggestion for a Roleplay turn (WS).
+                      context: RAGContext | None = None, *,
+                      subject: str | None = None, offset: int = 0
+                      ) -> tuple[str | None, str | None, bool]:
+        """Context / suggestion / remaining material of a Roleplay turn (WS).
 
-        ``bypass`` -> ``(None, None)``: the WS client then short-circuits with
-        the exact error string.  Otherwise the context is safe (never an empty
-        marker) and a non-null ``suggestion`` means disambiguation.
+        ``bypass`` -> ``(None, None, False)``: the WS client then short-circuits
+        with the exact error string.  Otherwise the context is safe (never an
+        empty marker) and a non-null ``suggestion`` means disambiguation.
+        ``more`` (narrative pagination) tells the client that the subject's
+        dossier still holds passages beyond the page it just read: the tale can
+        be continued on unseen material.
         """
-        _, prompt, bypass = await self.retrieve(question, context=context)
-        if bypass:
-            return None, None
-        return prompt.context, prompt.suggestion
+        outcome = await self.pipeline.run(question, context, subject=subject,
+                                          offset=offset)
+        if outcome.bypass:
+            return None, None, False
+        return (outcome.prompt.context, outcome.prompt.suggestion,
+                outcome.story_more)
 
     async def answer_with_sources(self, question: str,
                                   context: RAGContext | None = None
                                   ) -> tuple[str, list[RAGHit]]:
-        """Model answer + relevant passages (short-circuit otherwise)."""
+        """Model answer + relevant passages (short-circuit otherwise).
+
+        The generated answer passes the deterministic entity gate
+        (:mod:`.verify`) before being served: named entities absent from the
+        retrieved ``<archives>`` are confabulations and trigger the abstention
+        chain instead.  A failed generation (model down, context overflow)
+        degrades to the same abstention chain: this route never answers 500.
+        """
         hits, prompt, bypass = await self.retrieve(question, context=context)
         short = self._short_circuit(prompt, bypass)
         if short is not None:
             return short, []
         chunks: list[str] = []
-        async for token in self.llm.chat_stream(self._messages(prompt),
-                                                RAG_TEMPERATURE):
-            chunks.append(token)
-        return strip_trailing_padding("".join(chunks)), hits
+        try:
+            async for token in self.llm.chat_stream(self._messages(prompt),
+                                                    RAG_TEMPERATURE):
+                chunks.append(token)
+        except Exception as exc:  # noqa: BLE001 (LLM down -> abstention)
+            log.error("Generation failed (%s) — serving abstention", exc)
+            return RAG_ERROR, hits
+        answer = strip_trailing_padding("".join(chunks))
+        ok, _ = await verify_answer_with_archive(
+            answer, prompt.context, self.vocabulary)
+        return (answer if ok else CONFABULATION_ERROR), hits
 
     async def stream_answer(self, question: str,
                             context: RAGContext | None = None
                             ) -> AsyncIterator[str]:
-        """Iterates over response tokens (exact error if short-circuit)."""
+        """Buffers, verifies and yields the answer (exact error if short-circuit).
+
+        Same entity gate as :meth:`answer_with_sources`: the full response is
+        assembled first, checked against the retrieved ``<archives>``, then
+        emitted — streamed tokens cannot be recalled once sent.  A failed
+        generation yields the exact abstention string instead of breaking the
+        stream.
+        """
         _, prompt, bypass = await self.retrieve(question, context=context)
         short = self._short_circuit(prompt, bypass)
         if short is not None:
             yield short
             return
-        async for token in self.llm.chat_stream(self._messages(prompt),
-                                                RAG_TEMPERATURE):
-            yield token
+        chunks: list[str] = []
+        try:
+            async for token in self.llm.chat_stream(self._messages(prompt),
+                                                    RAG_TEMPERATURE):
+                chunks.append(token)
+        except Exception as exc:  # noqa: BLE001 (LLM down -> abstention)
+            log.error("Generation failed (%s) — serving abstention", exc)
+            yield RAG_ERROR
+            return
+        answer = "".join(chunks)
+        ok, _ = await verify_answer_with_archive(
+            answer, prompt.context, self.vocabulary)
+        yield answer if ok else CONFABULATION_ERROR
 
     @staticmethod
     def _short_circuit(prompt: RAGPrompt, bypass: bool) -> str | None:

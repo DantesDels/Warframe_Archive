@@ -22,10 +22,13 @@ class MediaWikiSource(MediaWikiCategoryMixin, MediaWikiQueryMixin, BaseSource):
 
     name = "mediawiki-warframe"
 
-    def __init__(self, config) -> None:
+    def __init__(self, config, *, api_url: str | None = None,
+                 category_label: str = "Category:", name: str | None = None):
         self.config = config
+        self.name = name or type(self).name
+        self.category_label = category_label
         self.http = RetryableHttp(
-            api_url=config.api_url,
+            api_url=api_url or config.api_url,
             user_agent=config.user_agent,
             timeout=config.request_timeout,
             max_retries=config.max_retries,

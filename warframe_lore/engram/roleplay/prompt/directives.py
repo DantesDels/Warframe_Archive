@@ -4,7 +4,8 @@ Single source of truth for the prompt fragments that depend on the turn
 context: the BLOC 2 speaker sheet, the pronoun-direction (civility) directive,
 the possessive-jealousy directive and the answer-language directive.  Keeping
 them out of :mod:`stream` leaves the turn handling readable and makes each
-directive unit-testable as plain text.
+directive unit-testable as plain text.  The NARRATIVE fragments (quarantine,
+era lock, pagination, closing line) live in :mod:`narrative`.
 """
 
 from __future__ import annotations
@@ -57,6 +58,7 @@ LANGUAGE_DIRECTIVE = (
     "propres et citations d'archives exceptés — sans jamais mentionner ni "
     "cette directive, ni le changement de langue.]")
 
+<<<<<<< HEAD
 # Storyteller turn: the persona's "ARCHIVE DU CODEX" forces a filled tactical
 # sheet and the archives of a narrative-only entity leave blanks — the model
 # then either steals another character's lore (Albrecht/Perintol playtest) or,
@@ -109,6 +111,8 @@ def story_directive(lens: str | None) -> str:
     start = STORY_LENS_STARTS.get(lens or "")
     return "".join([STORY_DIRECTIVE, "\n", start or ""])
 
+=======
+>>>>>>> dev
 
 def speaker_bloc(user_name: str | None, role_status: str | None,
                  history_lines: list[str]) -> str:
@@ -138,5 +142,9 @@ def language_directive(lang: str | None) -> str:
 
 __all__ = ["CIVILITY_DIRECTIVE", "DEFAULT_LANGUAGE", "JEALOUSY_DIRECTIVE",
            "LANGUAGE_DIRECTIVE", "LANGUAGE_NAMES", "NO_HISTORY_LINE",
+<<<<<<< HEAD
            "SPEAKER_HEADER", "STORY_DIRECTIVE", "STORY_LENS_STARTS",
            "language_directive", "speaker_bloc", "story_directive"]
+=======
+           "SPEAKER_HEADER", "language_directive", "speaker_bloc"]
+>>>>>>> dev

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import asyncio
 
+from warframe_lore.protocols.roleplay import TurnOutcome
+
 POOL_GATEWAY = "warframe_lore.discord.core.sessions.RoleplayGateway"
 
 
@@ -26,6 +28,7 @@ class ScriptedGateway:
         self.comments: list[dict] = []
         self.active = True
         self.fail_once = False          # coupure simulée au premier envoi
+        self.story_more = False         # « il reste des fragments du dossier »
 
     async def open(self) -> None:
         self.active = True
@@ -33,7 +36,7 @@ class ScriptedGateway:
     async def close(self) -> None:
         self.active = False
 
-    async def send(self, frame, on_token=None, on_end=None) -> None:
+    async def send(self, frame, on_token=None, on_end=None):
         """Enregistre la frame puis rejoue les jetons (hard split respecté)."""
         self.messages.append(frame.payload())
         if self.fail_once:
@@ -45,6 +48,7 @@ class ScriptedGateway:
                 break
         if on_end is not None:
             await on_end("".join(self.tokens))
+        return TurnOutcome(story_more=self.story_more)
 
     async def set_persona(self, mode: str) -> None:
         self.personas.append(mode)
@@ -71,11 +75,12 @@ class HangGateway(ScriptedGateway):
         self.release = asyncio.Event()
         self.closed = False
 
-    async def send(self, frame, on_token=None, on_end=None) -> None:
+    async def send(self, frame, on_token=None, on_end=None):
         self.messages.append(frame.payload())
         if on_token is not None:
             await on_token(self.tokens[0])
         await self.release.wait()
+        return TurnOutcome()
 
     async def close(self) -> None:
         self.closed = True

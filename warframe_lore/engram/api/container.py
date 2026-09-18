@@ -16,6 +16,7 @@ from ..config import EngramConfig
 from ..llm import LMStudioProvider
 from ..persona import Persona
 from ..rag import (
+    ArchiveVocabulary,
     CosinusSearch,
     HybridSearch,
     MergedRetriever,
@@ -37,6 +38,9 @@ class Container:
             self.config.database_url, echo=False
         )
         self.sessions = async_sessionmaker(self.engine, expire_on_commit=False)
+        # Archive-wide vocabulary: the post-generation gate excuses an entity
+        # archived on ANY page, not only in the retrieved passages.
+        self.vocabulary = ArchiveVocabulary(sessions=self.sessions)
         self.llm = LMStudioProvider(
             base_url=self.config.lmstudio_base_url,
             chat_model=self.config.chat_model,
@@ -63,6 +67,7 @@ class Container:
             suggestion_min_score=self.config.suggestion_min_score,
             critical_min_score=self.config.critical_min_score,
             query_rewriter=QueryRewriter(llm=self.llm),
+            vocabulary=self.vocabulary,
         )
         # Hybrid search (RAG Inspector): same alias middleware as RAGService,
         # so the inspector reflects exactly what the vectorization sees.
@@ -81,7 +86,11 @@ class Container:
             hostile_prompt=Persona(self.config.system_prompt).system_prompt(
                 mode="hostile"
             ),
+            story_prompt=Persona(self.config.system_prompt).system_prompt(
+                mode="story"
+            ),
             temperature=self.config.chat_temperature,
+            vocabulary=self.vocabulary,
         )
         # Per-user short-term memory: sliding pairs, inactivity expiry, LRU.
         self.memory = UserMemoryStore(

@@ -18,14 +18,18 @@ from warframe_lore.protocols.roleplay import PERSONA_ORACLE
 class FakeRAG:
     """RAG factice : rend un contexte fixé et journalise les questions."""
 
-    def __init__(self, context=None, suggestion=None) -> None:
+    def __init__(self, context=None, suggestion=None, more=False) -> None:
         self.context = context
         self.suggestion = suggestion
+        self.more = more
         self.calls: list[str] = []
+        self.offsets: list[int] = []
 
-    async def resolve(self, question: str, context=None):
+    async def resolve(self, question: str, context=None, subject=None,
+                      offset=0):
         self.calls.append(question)
-        return self.context, self.suggestion
+        self.offsets.append(offset)
+        return self.context, self.suggestion, self.more
 
 
 class FakeContainer:

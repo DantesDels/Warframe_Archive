@@ -1,8 +1,9 @@
 """Everything that shapes the LLM payload of a Roleplay turn.
 
 Facade: the sliding window (BLOC 2 history), the directive texts (civility,
-jealousy, answer language) and the block assembly.  Callers import the public
-names from here, whatever the internal split is.
+jealousy, answer language, narrative quarantine and closing) and the block
+assembly.  Callers import the public names from here, whatever the internal
+split is.
 """
 
 from __future__ import annotations
@@ -16,19 +17,43 @@ from .directives import (
     LANGUAGE_NAMES,
     NO_HISTORY_LINE,
     SPEAKER_HEADER,
+<<<<<<< HEAD
     STORY_DIRECTIVE,
     STORY_LENS_STARTS,
+=======
+>>>>>>> dev
     language_directive,
     speaker_bloc,
+)
+from .narrative import (
+    EN_PRIMACY_DIRECTIVE,
+    LEVERIAN_DIRECTIVE,
+    STORY_COMPLETE_SENTENCE,
+    STORY_DIRECTIVE,
+    STORY_LENS_STARTS,
+    STORY_PAGINATION_SENTENCE,
+    TARGETED_STORY_DIRECTIVE,
+    leverian_directive,
+    story_closing,
     story_directive,
 )
 from .window import SlidingWindow
 
 __all__ = [
     "ARCHIVES_HEADER", "CIVILITY_DIRECTIVE", "DEFAULT_LANGUAGE",
+<<<<<<< HEAD
     "JEALOUSY_DIRECTIVE", "LANGUAGE_DIRECTIVE", "LANGUAGE_NAMES",
     "NO_HISTORY_LINE", "SPEAKER_HEADER", "STORY_DIRECTIVE",
     "STORY_LENS_STARTS", "SlidingWindow", "archive_bloc",
     "language_directive", "speaker_bloc", "story_directive",
     "turn_directives",
+=======
+    "EN_PRIMACY_DIRECTIVE", "JEALOUSY_DIRECTIVE", "LANGUAGE_DIRECTIVE",
+    "LANGUAGE_NAMES", "LEVERIAN_DIRECTIVE", "NO_HISTORY_LINE",
+    "SPEAKER_HEADER", "STORY_COMPLETE_SENTENCE", "STORY_DIRECTIVE",
+    "STORY_LENS_STARTS", "STORY_PAGINATION_SENTENCE", "TARGETED_STORY_DIRECTIVE",
+    "SlidingWindow", "archive_bloc", "language_directive", "leverian_directive",
+    "speaker_bloc", "story_closing", "story_directive",
+    "targeted_story_directive", "turn_directives",
+>>>>>>> dev
 ]

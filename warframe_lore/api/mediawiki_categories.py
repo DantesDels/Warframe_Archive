@@ -50,8 +50,10 @@ class MediaWikiCategoryMixin:
     # ------------------------------------------------- internal helpers
     def _category_members(self, category: str) -> list[tuple[int, str]]:
         """All members ``(namespace, title)`` of a category."""
-        cleantitle = (category if category.lower().startswith("category:")
-                      else "Category:" + category)
+        cleantitle = (category
+                      if category.lower().startswith(
+                          self.category_label.lower())
+                      else self.category_label + category)
         members: list[tuple[int, str]] = []
         for data in self.http.paged({
             "action": "query", "format": "json", "formatversion": "2",
@@ -73,7 +75,7 @@ class MediaWikiCategoryMixin:
             if ns == 14:  # sub-category
                 if self.config.follow_subcategories:
                     pages |= self._category_members_recursive(
-                        title.removeprefix("Category:"), _depth + 1)
+                        title.removeprefix(self.category_label), _depth + 1)
             elif ns == 0:
                 pages.add(title)
         return pages

@@ -11,7 +11,6 @@ import argparse
 import logging
 import sys
 
-from ..config import load_config
 from .bootstrap import ensure_database, ensure_engram
 from .bot import LoreMasterBot
 from .config import DiscordConfig
@@ -32,12 +31,16 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Commands prefix (default: !)")
     parser.add_argument("--channels", default=None,
                         help="Allowed channel IDs, comma-separated (default: all)")
+    parser.add_argument("--channel-names", default=None,
+                        help="Allowed channel names, comma-separated "
+                             "(default: all)")
     parser.add_argument("--verbose", action="store_true")
     return parser
 
 
 def launch_bot(token: str | None, ws: str | None = None,
                prefix: str | None = None, channels: tuple[int, ...] = (),
+               channel_names: tuple[str, ...] = (),
                typing_interval: float | None = None,
                verbose: bool = False) -> int:
     """Starts the bot (blocking): shared between ``python -m
@@ -59,16 +62,14 @@ def launch_bot(token: str | None, ws: str | None = None,
 
     ws_url = ws or config.engram_ws_url
     channels = tuple(channels) or config.allowed_channels
-    # Services composed once, on the shared ledger: the wiki portraits come
-    # from the SAME media index as the web UI (``load_config().output_dir``).
-    services = build_services(db_path=config.activity_db,
-                              output_dir=load_config().output_dir,
-                              images=config.images)
+    channel_names = tuple(channel_names) if channel_names else config.allowed_channel_names    # Services composed once, on the shared ledger.
+    services = build_services(db_path=config.activity_db)
     bot = LoreMasterBot(
         gateway_url=ws_url,
         prefix=prefix or config.prefix,
         typing_interval=typing_interval or config.typing_interval,
         allowed_channels=channels,
+        allowed_channel_names=channel_names,
         creator_discord_id=config.creator_discord_id,
         roles=config.build_roles(),
         services=services,
@@ -91,8 +92,11 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     channels = tuple(
         int(x) for x in (args.channels or "").split(",") if x.strip().isdigit())
+    channel_names = tuple(
+        x.strip() for x in (args.channel_names or "").split(",")
+        if x.strip())
     return launch_bot(args.token, args.ws, args.prefix, channels,
-                      None, args.verbose)
+                      channel_names, None, args.verbose)
 
 
 if __name__ == "__main__":

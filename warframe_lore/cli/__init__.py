@@ -11,6 +11,8 @@ Available commands (``cephalon`` prefix):
     * ``cephalon buckets``  : list the buckets (with ``--init`` to materialise
                               them into ``buckets.json``).
     * ``cephalon init-db``  : create the PostgreSQL schema (``init_db.sql``).
+    * ``cephalon update``    : full chain (scraper → structured ETL → export
+                                  → static lists; no UI, no kim-dm).
     * ``cephalon ui``       : launch the local web UI (browser).
     * ``cephalon export-entities`` : synchronise the game entities.
     * ``cephalon kim-dm``      : download the KIM mirror (datamine).

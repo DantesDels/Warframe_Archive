@@ -9,20 +9,28 @@ sheet, BLOC 3 = the new request alone.  The assembly lives in :mod:`prompt`.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
 
 from ..llm import LLMProvider
 from ..models import ChatMessage
-from ..persona import HOSTILE_PERSONA
-from ..rag import RAG_ERROR
+from ..persona import HOSTILE_PERSONA, STORY_PERSONA
+from ..rag import CONFABULATION_ERROR, RAG_ERROR, verify_answer_with_archive
 from .models import Session
 from .prompt import (
+    STORY_LENS_STARTS,
     SlidingWindow,
     archive_bloc,
+    leverian_directive,
     speaker_bloc,
     story_directive,
+    targeted_story_directive,
     turn_directives,
 )
+
+if TYPE_CHECKING:
+    from ..rag import ArchiveVocabulary
 
 # A document-anchored turn is extractive: the temperature is clamped so the
 # model stays inside the provided passages.
@@ -32,6 +40,14 @@ RAG_TEMPERATURE_CAP = 0.1
 # (0.3 still drifted into invented atmosphere and entity mix-ups — playtest
 # "Albrecht/children of the Zariman").
 STORY_TEMPERATURE = RAG_TEMPERATURE_CAP
+# A continuation of a RUNNING tale runs a bit warmer: the previous parts sit
+# in the prompt history and, at the extractive cap, the model re-emits them
+# verbatim whenever the next dossier page is sparse (live probe: Difflib
+# 0.989 / 0.915 between alternate parts).  The looser cap breaks that echo
+# while the archive gate still anchors the part on the retrieved page.
+STORY_CONTINUATION_TEMPERATURE = 0.35
+
+log = logging.getLogger("warframe_lore.engram.roleplay.stream")
 
 
 class RoleplayService:
@@ -39,17 +55,29 @@ class RoleplayService:
 
     def __init__(self, llm: LLMProvider, window: SlidingWindow,
                  system_prompt: str, temperature: float = 0.8,
-                 hostile_prompt: str | None = None) -> None:
+                 hostile_prompt: str | None = None,
+                 story_prompt: str | None = None,
+                 vocabulary: ArchiveVocabulary | None = None) -> None:
         self.llm = llm
         self.window = window
         self.system_prompt = system_prompt
         self.temperature = temperature
         self.hostile_prompt = hostile_prompt or HOSTILE_PERSONA
+        self.story_prompt = story_prompt or STORY_PERSONA
+        self.vocabulary = vocabulary
 
-    def _base_prompt(self, persona: str) -> str:
-        """Base prompt of the current persona (oracle or hostile)."""
+    def _base_prompt(self, persona: str, story: bool = False) -> str:
+        """Base prompt of the current persona (oracle, hostile or story).
+
+        A narrative turn swaps the Oracle root for the storyteller root: the
+        "ARCHIVE DU CODEX" sheet in the base prompt outranks appended
+        directives for Gemma-2-9b, so the narrative persona must replace it at
+        base level instead of overriding it afterwards.
+        """
         if persona == "hostile":
             return self.hostile_prompt
+        if story:
+            return self.story_prompt
         return self.system_prompt
 
     async def stream(self, session: Session, user_text: str,
@@ -62,7 +90,11 @@ class RoleplayService:
                      creator_mention: str | None = None,
                      lang: str | None = None,
                      story: bool = False,
-                     story_lens: str | None = None) -> AsyncIterator[str]:
+                     story_lens: str | None = None,
+                     targeted_era: str | None = None,
+                     leverian_warframe: str | None = None,
+                     story_continuation: bool = False,
+                     story_more: bool = True) -> AsyncIterator[str]:
         """Append the input, stream the reply, and record it.
 
         ``rag_context`` (trusted passages) anchors the turn on the archives.
@@ -72,9 +104,26 @@ class RoleplayService:
         ``story`` switches the turn to a narrating mode: the model receives the
         story directive and a softer temperature, still grounded on the given
         passages; ``story_lens`` selects the opening scene to begin from.
+        ``targeted_era`` overrides the lens menu for a specifically named
+        subject and anchors the narrative in that subject's own era.
+        ``leverian_warframe`` forces the tale to be grounded on Drusus'
+        Leverian narration for that frame.  ``story_continuation`` marks a part
+        that continues a RUNNING tale (the opening scene is dropped and the
+        resume rule applies) and ``story_more`` says whether the subject's
+        dossier still holds unseen fragments: the part closes on the invitation
+        or on the archivist closing line accordingly.
+
+        An archive-grounded turn (``rag_context`` set) is buffered and passed
+        through the deterministic entity gate (:mod:`...rag.verify`): the full
+        response is emitted only once every named entity is present in the
+        retrieved passages (or, when an archive vocabulary is wired, anywhere
+        in the ingested corpus), otherwise the abstention chain is served
+        instead.  A generation that FAILS before the first token (model
+        unreachable, context overflow) is served the same way: the terminal
+        never stalls and no raw server error reaches the user.
         """
         session.add("user", user_text)
-        system = archive_bloc(self._base_prompt(persona), rag_context,
+        system = archive_bloc(self._base_prompt(persona, story), rag_context,
                               user_name, user_role)
         if user_name is not None or role_status is not None or session.turns:
             history = self.window.render_history(session)
@@ -83,20 +132,64 @@ class RoleplayService:
         system = turn_directives(system, creator, role_status,
                                  creator_mention, lang)
         if story:
-            system = f"{system}\n\n{story_directive(story_lens)}"
+            if targeted_era:
+                directive = targeted_story_directive(
+                    targeted_era, continuation=story_continuation,
+                    more=story_more)
+            else:
+                directive = story_directive(
+                    story_lens, continuation=story_continuation,
+                    more=story_more)
+            system = f"{system}\n\n{directive}"
+            if leverian_warframe:
+                system = f"{system}\n\n{leverian_directive(leverian_warframe)}"
         messages = [
             ChatMessage("system", system),
             ChatMessage("user", user_text),
         ]
         tokens: list[str] = []
-        temperature = (min(self.temperature, STORY_TEMPERATURE) if story else
+        story_cap = (STORY_CONTINUATION_TEMPERATURE if story_continuation
+                     else STORY_TEMPERATURE)
+        temperature = (min(self.temperature, story_cap) if story else
                        (min(self.temperature, RAG_TEMPERATURE_CAP)
                         if rag_context else self.temperature))
-        async for token in self.llm.chat_stream(messages, temperature):
-            tokens.append(token)
-            yield token
+        try:
+            async for token in self.llm.chat_stream(messages, temperature):
+                tokens.append(token)
+                if rag_context is None:
+                    yield token
+        except Exception as exc:  # noqa: BLE001 (LLM down -> abstention)
+            log.error("Roleplay generation failed (%s)", exc)
+            if not tokens:
+                # Nothing reached the client yet: the abstention chain is
+                # served, exactly like an empty generation.
+                session.add("assistant", RAG_ERROR)
+                yield RAG_ERROR
+            return
         response = "".join(tokens)
-        if not response:
+        if rag_context is not None:
+            # Deterministic post-generation gate: buffer the FULL response and
+            # verify every named entity against the retrieved <archives> before
+            # a single token reaches the client — streamed tokens cannot be
+            # recalled, and prompt guards cannot stop the model from draining
+            # its pre-trained weights ("Perrin Sequence" for a Höllvania
+            # subject).  Unsupported entities -> the abstention chain.
+            if not response:
+                response = RAG_ERROR
+            else:
+                lens_open = (STORY_LENS_STARTS.get(story_lens or "")
+                             if story and not targeted_era else "")
+                allowed = " ".join(filter(None, (
+                    user_name, user_role, targeted_era, leverian_warframe,
+                    lens_open,
+                )))
+                ok, _ = await verify_answer_with_archive(
+                    response, rag_context, self.vocabulary,
+                    extra_allowed=allowed)
+                if not ok:
+                    response = CONFABULATION_ERROR
+            yield response
+        elif not response:
             # Empty generation (silent/aborted model): serve the abstention
             # chain instead of staying silent — the terminal never stalls and
             # the message never "vanishes" client-side.
@@ -105,4 +198,5 @@ class RoleplayService:
         session.add("assistant", response)
 
 
-__all__ = ["RAG_TEMPERATURE_CAP", "STORY_TEMPERATURE", "RoleplayService"]
+__all__ = ["RAG_TEMPERATURE_CAP", "STORY_CONTINUATION_TEMPERATURE",
+           "STORY_TEMPERATURE", "RoleplayService"]

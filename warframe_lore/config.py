@@ -19,15 +19,19 @@ class Config:
     All values can be overridden via CLI flags or environment variables.
     """
 
-    # --- MediaWiki API ---
+    # --- MediaWiki API (English wiki, truth authority) ---
     api_url: str = "https://wiki.warframe.com/api.php"
     source_url_base: str = "https://wiki.warframe.com/wiki/"
+    # --- MediaWiki API (French wiki, corroborating archive) ---
+    api_url_fr: str = "https://fr.wiki.warframe.com/api.php"
+    source_url_base_fr: str = "https://fr.wiki.warframe.com/w/"
     user_agent: str = "WarframeLoreScraper/1.0 (data engineering; contact: local)"
 
-    # --- www.warframe.com (official marketing site, French routes) ---
+    # --- www.warframe.com (official marketing site, language routes) ---
     site_url: str = "https://www.warframe.com"
     site_prefix: str = "/fr"
     site_seed: str = "/fr"
+    site_prefix_en: str = "/en"
     site_max_pages: int = 3000
     # Transactional segments excluded from the crawl: shop, account and
     # support pages are not archived lore candidates.
@@ -86,7 +90,9 @@ def load_config() -> Config:
     cfg = Config()
 
     cfg.api_url = os.getenv("WF_API_URL", cfg.api_url)
+    cfg.api_url_fr = os.getenv("WF_API_URL_FR", cfg.api_url_fr)
     cfg.site_url = os.getenv("WF_SITE_URL", cfg.site_url)
+    cfg.site_prefix_en = os.getenv("WF_SITE_PREFIX_EN", cfg.site_prefix_en)
     cfg.output_dir = Path(os.getenv("WF_OUTPUT_DIR", str(cfg.output_dir)))
     cfg.database_url = os.getenv("WF_DATABASE_URL", cfg.database_url)
 

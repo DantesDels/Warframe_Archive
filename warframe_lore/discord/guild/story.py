@@ -12,6 +12,12 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+# Canonical era mapping for targeted narrative requests (generated from the
+# archive database: wiki_pages, kim_dialogues, game_dialogues, warframes,
+# game_quests).  Keys are lowercase substrings; values are era labels injected
+# into the targeted-story directive.
+from .story_eras import LEVERIAN_WARFRAMES, TARGETED_SUBJECT_ERAS
+
 # Narrative triggers (FR/EN): "raconte-moi l'histoire de…" and friends.
 # A lore QUESTION ("Quelle est l'histoire des Orokin ?") is NOT a story: the
 # trigger word must carry the REQUEST (verbative "raconte") or a possessive
@@ -105,6 +111,47 @@ def detect_story_lens(text: str) -> str | None:
     return hits[0] if len(hits) == 1 else None
 
 
+def detect_targeted_era(text: str) -> str | None:
+    """Canonical era of a specifically named subject, or ``None``.
+
+    When a story request names one of these subjects, the bot must skip the
+    lens menu and anchor the narrative directly in that subject's era.
+    """
+    low = (text or "").lower()
+    for mention, era in TARGETED_SUBJECT_ERAS.items():
+        if mention in low:
+            return era
+    return None
+
+
+def targeted_subject_mention(text: str) -> str | None:
+    """Matched subject KEY of a targeted story request, or ``None``.
+
+    Same first-match scan as :func:`detect_targeted_era` but returns the
+    mention itself (``"eleanor"``, ``"the hex"``…) instead of the era label:
+    the ENGRAM dossier retrieval anchors the story corpus on the wiki pages
+    whose title contains this very key.
+    """
+    low = (text or "").lower()
+    for mention in TARGETED_SUBJECT_ERAS:
+        if mention in low:
+            return mention
+    return None
+
+
+def detect_leverian_warframe(text: str) -> str | None:
+    """Name of a Warframe whose story is told by Drusus in the Leverian.
+
+    Returns the matched lowercase frame name, or ``None`` if the request does
+    not name one of the Leverian Warframes.
+    """
+    low = (text or "").lower()
+    for frame in LEVERIAN_WARFRAMES:
+        if frame in low:
+            return frame
+    return None
+
+
 def parse_lens_answer(text: str) -> str | None:
     """Interpret the answer to :data:`LENS_QUESTION` (menu number or words)."""
     low = (text or "").strip().lower()
@@ -174,10 +221,11 @@ def substitute_story_subject(request: str, subject: str) -> str:
                   flags=re.IGNORECASE)
 
 
-__all__ = ["LENS_1999", "LENS_COSMOGONIC", "LENS_INITIATE",
-           "LENS_KEYWORDS", "LENS_LABELS", "LENS_QUESTION",
+__all__ = ["LEVERIAN_WARFRAMES", "LENS_1999", "LENS_COSMOGONIC",
+           "LENS_INITIATE", "LENS_KEYWORDS", "LENS_LABELS", "LENS_QUESTION",
            "MENU_INDEX_ERROR", "STORY_SUBJECT_CHOICES", "STORY_TRIGGERS",
-           "StoryAsk", "detect_story_lens", "is_out_of_range_index",
-           "is_story_request", "parse_lens_answer", "parse_subject_answer",
-           "story_subject", "story_subject_choices", "story_subject_question",
-           "substitute_story_subject"]
+           "TARGETED_SUBJECT_ERAS", "StoryAsk", "detect_leverian_warframe",
+           "detect_story_lens", "detect_targeted_era",
+           "is_out_of_range_index", "is_story_request", "parse_lens_answer",
+           "parse_subject_answer", "story_subject", "story_subject_choices",
+           "story_subject_question", "substitute_story_subject"]

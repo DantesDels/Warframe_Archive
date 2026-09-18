@@ -9,7 +9,8 @@ injected :class:`BotServices` — and keeps only the lifecycle here:
   répartie, redemption, anti-spam gate;
 * :class:`MemberContextMixin` / :class:`RosterMixin` / :class:`SnapshotMixin` /
   :class:`MemberGateMixin` — accreditation, member resolution, matriciel cards;
-* :class:`RoutingMixin` / :class:`StreamMixin` — routing decision, streaming;
+* :class:`RoutingMixin` / :class:`StoryMixin` / :class:`StreamMixin` — routing
+  decision, storyteller anchoring, streaming;
 * :class:`FeedbackMixin` — thumbs-up / thumbs-down verdicts;
 * :class:`CommandMixin` — the ``!prefix`` commands.
 """
@@ -34,21 +35,23 @@ from .mixins import (
     RoutingMixin,
     SnapshotMixin,
     SpamMixin,
+    StoryMixin,
     StreamMixin,
 )
 
 log = logging.getLogger("warframe_lore.discord.bot")
 
 
-class LoreMasterBot(DispatchMixin, RoutingMixin, StreamMixin, HostileMixin,
-                    InsultMixin, SpamMixin, FeedbackMixin, MemberContextMixin,
-                    RosterMixin, SnapshotMixin, MemberGateMixin, CommandMixin,
-                    discord.Client):
+class LoreMasterBot(DispatchMixin, RoutingMixin, StoryMixin, StreamMixin,
+                    HostileMixin, InsultMixin, SpamMixin, FeedbackMixin,
+                    MemberContextMixin, RosterMixin, SnapshotMixin,
+                    MemberGateMixin, CommandMixin, discord.Client):
     """Talks to the Oracle through one WebSocket session per channel."""
 
     def __init__(self, gateway_url: str, prefix: str,
                  typing_interval: float = 5.0,
                  allowed_channels: tuple[int, ...] = (),
+                 allowed_channel_names: tuple[str, ...] = (),
                  creator_discord_id: str = "",
                  roles: RoleHierarchy | None = None,
                  activity_db_path: str = ":memory:",
@@ -64,6 +67,9 @@ class LoreMasterBot(DispatchMixin, RoutingMixin, StreamMixin, HostileMixin,
         self.prefix = prefix
         self.typing_interval = typing_interval
         self.allowed_channels = set(allowed_channels)
+        # Same restriction by NAME: any channel whose name matches (themed
+        # channels that exist on several servers).
+        self.allowed_channel_names = set(allowed_channel_names)
         # Creator identity (Discord snowflake): authenticated natively through
         # ``message.author.id`` — the bot NEVER asks for it, and the raw value
         # never travels beyond this process (ENGRAM only receives the derived

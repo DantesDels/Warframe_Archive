@@ -13,8 +13,12 @@ from warframe_lore.discord.guild.story import (
     LENS_INITIATE,
     LENS_LABELS,
     LENS_QUESTION,
+    LEVERIAN_WARFRAMES,
     MENU_INDEX_ERROR,
+    TARGETED_SUBJECT_ERAS,
+    detect_leverian_warframe,
     detect_story_lens,
+    detect_targeted_era,
     is_out_of_range_index,
     is_story_request,
     parse_lens_answer,
@@ -23,7 +27,18 @@ from warframe_lore.discord.guild.story import (
     story_subject_choices,
     story_subject_question,
     substitute_story_subject,
+    targeted_subject_mention,
 )
+<<<<<<< HEAD
+=======
+from warframe_lore.engram.roleplay.prompt import (
+    LEVERIAN_DIRECTIVE,
+    TARGETED_STORY_DIRECTIVE,
+    leverian_directive,
+    story_directive,
+    targeted_story_directive,
+)
+>>>>>>> dev
 
 STORY_REQUESTS = (
     "raconte-moi l'histoire des Orokin",
@@ -61,7 +76,67 @@ class StoryDetectionTests(unittest.TestCase):
             "raconte l'histoire de l'univers et d'Albrecht"))
 
     def test_aucune_lentille_pas_de_point_de_depart(self):
-        self.assertIsNone(detect_story_lens("raconte l'histoire des Orokin"))
+        self.assertIsNone(detect_story_lens("raconte l'histoire de l'Infestation"))
+
+    def test_un_sujet_cible_renvoie_son_ere(self):
+        for text, era in (
+            ("raconte-moi l'histoire d'Eleanor", "1999 (Höllvania)"),
+            ("raconte-moi l'histoire d'Albrecht", "l'Ère Orokin"),
+            ("raconte-moi l'histoire des Tenno", "l'Éveil du Tenno"),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(detect_targeted_era(text), era)
+
+    def test_un_sujet_inconnu_n_a_pas_d_ere_ciblee(self):
+        self.assertIsNone(detect_targeted_era("raconte l'histoire de l'Infestation"))
+
+    def test_un_sujet_cible_renvoie_son_ancre_de_titre(self):
+        """La mention (clé du mapping) ancre la récupération dossier."""
+        self.assertEqual(
+            targeted_subject_mention("raconte-moi l'histoire d'Eleanor"),
+            "eleanor")
+        self.assertEqual(
+            targeted_subject_mention("raconte-moi l'histoire des Tenno"),
+            "tenno")
+        self.assertIsNone(
+            targeted_subject_mention("raconte l'histoire de l'Infestation"))
+
+    def test_la_mention_et_l_ere_restent_en_phase(self):
+        """La mention n'existe QUE quand une ère ciblée est détectée."""
+        for text in ("raconte-moi l'histoire d'Eleanor",
+                     "raconte-moi l'histoire d'Albrecht",
+                     "raconte-moi l'histoire des Tenno",
+                     "raconte l'histoire de l'Infestation"):
+            with self.subTest(text=text):
+                self.assertEqual(bool(detect_targeted_era(text)),
+                                 bool(targeted_subject_mention(text)))
+
+    def test_les_sujets_ambigus_ne_sont_pas_dans_le_mapping(self):
+        # Garuda a deux récits distincts : elle doit rester en dehors du
+        # mapping canonique pour que la question de disambiguation soit posée.
+        self.assertNotIn("garuda", TARGETED_SUBJECT_ERAS)
+
+    def test_une_warframe_leverian_est_detectee(self):
+        for text, frame in (
+            ("raconte-moi l'histoire d'Ash", "ash"),
+            ("raconte l'histoire de Nova", "nova"),
+            ("conte-moi la légende de Voruna", "voruna"),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(detect_leverian_warframe(text), frame)
+
+    def test_une_warframe_sans_leverian_n_est_pas_detectee(self):
+        self.assertIsNone(detect_leverian_warframe(
+            "raconte-moi l'histoire d'Excalibur"))
+        self.assertIsNone(detect_leverian_warframe(
+            "raconte-moi l'histoire d'Eleanor"))
+
+    def test_le_leverian_couvre_les_warframes_du_catalogue(self):
+        # La liste est issue de la page wiki "Leverian" (galeries de Drusus).
+        self.assertEqual(
+            LEVERIAN_WARFRAMES,
+            frozenset(("ash", "atlas", "dante", "gauss", "grendel", "ivara",
+                       "lavos", "nezha", "nova", "styanax", "voruna")))
 
 
 class LensAnswerTests(unittest.TestCase):
@@ -162,5 +237,48 @@ class SubjectDisambiguationTests(unittest.TestCase):
             "raconte-moi l'histoire de l'archimédienne")
 
 
+<<<<<<< HEAD
+=======
+class TargetedStoryDirectiveTests(unittest.TestCase):
+    """Verrou spatio-temporel pour les requêtes ciblées."""
+
+    def test_forbids_temporal_bridge(self):
+        directive = targeted_story_directive("1999")
+        self.assertIn("INTERDICTION DE PONT TEMPOREL", directive)
+        self.assertIn("Zariman", directive)
+        self.assertIn("Margulis", directive)
+
+    def test_anchors_in_named_era(self):
+        directive = targeted_story_directive("Ère Orokin")
+        self.assertIn("Ère imposée par les archives", directive)
+        self.assertIn("Ère Orokin", directive)
+
+    def test_default_directive_without_era(self):
+        self.assertIn("VERROU SPATIO-TEMPOREL", TARGETED_STORY_DIRECTIVE)
+        self.assertIn("ANCRAGE DANS LA BONNE ÈRE", TARGETED_STORY_DIRECTIVE)
+
+    def test_les_archives_anglaises_font_foi(self):
+        # Complément bilingue de l'ordre du dossier (EN avant FR) : en cas
+        # d'écart EN/FR, la version anglaise est la source primaire.
+        self.assertIn("ANGLAISE fait foi", targeted_story_directive("1999"))
+        self.assertIn("ANGLAISE fait foi", story_directive("1999"))
+        self.assertIn("source primaire", targeted_story_directive())
+
+
+class LeverianDirectiveTests(unittest.TestCase):
+    """La narration des Warframes du Leverian s'ancre sur Drusus."""
+
+    def test_naming_drusus_and_the_oracle_source(self):
+        directive = leverian_directive("ash")
+        self.assertIn("Drusus", directive)
+        self.assertIn("Leverian", directive)
+        self.assertIn("ash", directive)
+
+    def test_default_directive_mentions_drusus(self):
+        self.assertIn("Drusus", LEVERIAN_DIRECTIVE)
+        self.assertIn("Leverian", LEVERIAN_DIRECTIVE)
+
+
+>>>>>>> dev
 if __name__ == "__main__":
     unittest.main()

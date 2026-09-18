@@ -26,6 +26,7 @@ EXPECTED = {
     "kim-dm": cmd._cmd_kim_dm,
     "bot": cmd._cmd_bot,
     "version": cmd._cmd_version,
+    "update": cmd._cmd_update,
     "help": None,
 }
 

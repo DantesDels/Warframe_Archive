@@ -9,7 +9,7 @@ Domains (each a subpackage with its own facade):
     * ``mixins``    -> single-responsibility behaviours composed into the bot
                        (``turn`` / ``member`` / ``moderation``) ;
     * ``commands``  -> the ``!prefix`` commands (dispatch table + handlers) ;
-    * ``services``  -> transport, ledgers, matriciel cards, wiki images ;
+    * ``services``  -> transport, ledgers, matriciel cards, channel settings ;
     * ``guild``     -> member naming, question detection, role hierarchy ;
     * ``bot``       -> :class:`LoreMasterBot` (``discord.Client``) ;
     * ``main``      -> console entry point.

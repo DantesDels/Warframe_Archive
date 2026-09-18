@@ -106,6 +106,19 @@ class ScraperSyncMixin:
                 "French news, guides and narrative pages, canonical as published. "
                 "Ready for LLM / NotebookLM ingestion."
             )
+        if source_name == "warframe-com-en":
+            return (
+                "Content cleaned from www.warframe.com/en (official site). "
+                "English news, guides and narrative pages, canonical as published. "
+                "Ready for LLM / NotebookLM ingestion."
+            )
+        if source_name == "mediawiki-warframe-fr":
+            return (
+                "Content cleaned from the French WARFRAME wiki "
+                "(fr.wiki.warframe.com, MediaWiki). Canon/non-canon status "
+                "included. The English archives take precedence on conflicts. "
+                "Ready for LLM / NotebookLM ingestion."
+            )
         return (
             "Content cleaned from the WARFRAME wiki (MediaWiki). "
             "Canon/non-canon status included. "

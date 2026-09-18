@@ -1,7 +1,7 @@
 """Streaming of one Oracle turn into a Discord message.
 
 Placeholder, typing indicator, token streaming (hard split), one reconnect,
-``!stop`` finalisation, then the answer finishing (portrait, reactions, stats).
+``!stop`` finalisation, then the answer finishing (reactions, stats).
 """
 
 from __future__ import annotations
@@ -11,6 +11,8 @@ import logging
 import time
 
 import discord
+
+from warframe_lore.protocols.roleplay import TurnOutcome
 
 from ...services import MessageStreamer
 from .plan import TurnContext
@@ -25,15 +27,20 @@ class StreamMixin:
     """Transport d'un tour : placeholder, jetons, reconnect, finition."""
 
     async def _stream_turn(self, message: discord.Message,
-                           context: TurnContext) -> None:
-        """Stream one Oracle reply into a message edited token by token."""
+                           context: TurnContext) -> TurnOutcome:
+        """Stream one Oracle reply into a message edited token by token.
+
+        Returns the terminal outcome of the turn: a failed or interrupted turn
+        yields the neutral one, so a caller never chains a reply that was not
+        produced.
+        """
         channel_id = message.channel.id
         started = time.monotonic()
         placeholder = await message.channel.send(THINKING)
         streamer = MessageStreamer(placeholder)
         typing = asyncio.create_task(self._keep_typing(message))
         try:
-            await self._send_turn(channel_id, context, streamer)
+            outcome = await self._send_turn(channel_id, context, streamer)
         except asyncio.CancelledError:
             # ``!stop``: cutting the stream also stops the LLM server-side.
             log.info("Oracle turn interrupted channel=%s", channel_id)
@@ -45,16 +52,17 @@ class StreamMixin:
             self.services.stats.record_error()
             log.warning("Oracle unreachable (%s) — turn dropped", exc)
             await placeholder.edit(content=UNREACHABLE)
-            return
+            return TurnOutcome()
         finally:
             typing.cancel()
         await streamer.finish()
         self.services.stats.record_turn(context.kind, time.monotonic() - started,
                                         rag=context.use_rag)
-        await self._finish_answer(placeholder, streamer, context)
+        await self._finish_answer(placeholder, streamer)
+        return outcome
 
     async def _send_turn(self, channel_id: int, context: TurnContext,
-                         streamer: MessageStreamer) -> None:
+                         streamer: MessageStreamer) -> TurnOutcome:
         """Send the frame, reconnecting ONCE on a dead stream (then replay)."""
         sessions = self.state.sessions
         frame = context.frame()
@@ -63,8 +71,7 @@ class StreamMixin:
             await sessions.apply_persona(gateway, channel_id,
                                          context.settings.persona)
             try:
-                await gateway.send(frame, on_token=streamer.add)
-                return
+                return await gateway.send(frame, on_token=streamer.add)
             except ConnectionError as exc:
                 if attempt == 2:
                     raise
@@ -72,11 +79,11 @@ class StreamMixin:
             await sessions.drop_gateway(channel_id)
             # Purge the buffer: never concatenate the failed attempt.
             streamer.reset()
+        raise ConnectionError("reconnection attempts exhausted")
 
     async def _finish_answer(self, placeholder: discord.Message,
-                             streamer: MessageStreamer,
-                             context: TurnContext) -> None:
-        """Empty-reply cleanup, wiki portrait, then the feedback reactions."""
+                             streamer: MessageStreamer) -> None:
+        """Empty-reply cleanup, then the feedback reactions."""
         if streamer.empty and placeholder.content == THINKING:
             gateway = self.state.sessions.gateways.get(placeholder.channel.id)
             if gateway is None or not gateway.active:
@@ -84,10 +91,6 @@ class StreamMixin:
             else:
                 await placeholder.delete()
             return
-        if context.settings.images and await self.services.images.ensure():
-            portrait = await self.services.images.file_for_text(streamer.text)
-            if portrait is not None:
-                await placeholder.edit(attachments=[portrait])
         await self.open_feedback(placeholder, placeholder.channel.id)
 
     async def _keep_typing(self, message: discord.Message) -> None:

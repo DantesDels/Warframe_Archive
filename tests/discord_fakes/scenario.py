@@ -73,9 +73,9 @@ class Scenario:
 
 
 def make_bot(*, gateway: ScriptedGateway | None = None, members=(),
-             channel_id: int = CHANNEL_ID, images: bool = False,
+             channel_id: int = CHANNEL_ID,
              creator_id: int = CREATOR_ID, cooldown: float = 0.0,
-             channel_limit: int = 10000) -> Scenario:
+             channel_limit: int = 10000, channel_names=()) -> Scenario:
     """Bot réel sur services en mémoire (garde anti-spam neutre par défaut ;
     ``cooldown`` / ``channel_limit`` la réarment pour les scénarios d'abus).
     """
@@ -83,9 +83,10 @@ def make_bot(*, gateway: ScriptedGateway | None = None, members=(),
         gateway_url="ws://fake",
         prefix="!",
         allowed_channels=(channel_id,),
+        allowed_channel_names=tuple(channel_names),
         creator_discord_id=str(creator_id),
         roles=RoleHierarchy(ROLE_MAP),
-        services=build_services(":memory:", images=images))
+        services=build_services(":memory:"))
     bot._connection.user = User(BOT_ID, "Oracle", bot=True)
     bot.state.guard = BurstGuard(user_cooldown=cooldown,
                                  channel_limit=channel_limit)

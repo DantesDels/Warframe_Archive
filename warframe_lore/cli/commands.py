@@ -19,6 +19,7 @@ from .commands_aux import (
     _cmd_init_database_impl,
     _cmd_recent_impl,
     _cmd_status_impl,
+    _cmd_update_impl,
 )
 from .support import (
     PROJECT_DEFAULT_BUCKET_CONFIG,
@@ -87,6 +88,11 @@ def _cmd_buckets(args) -> int:
         print(f"Default bucket config written -> {target}")
         return 0
     print_buckets(bucket_config)
+    return 0
+
+
+def _cmd_update(args) -> int:
+    asyncio.run(_cmd_update_impl(args))
     return 0
 
 

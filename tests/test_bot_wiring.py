@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import unittest
 
-from discord_fakes import run
-
 from warframe_lore.discord.core import build_services, close_services
 
 
@@ -46,14 +44,6 @@ class SharedLedgerTests(unittest.TestCase):
         self.assertEqual(services.db.read(
             "SELECT verdict FROM answer_feedback WHERE message_id = 11"),
             [("up",)])
-        close_services(services)
-
-
-class ImageServiceTests(unittest.TestCase):
-    def test_images_désactivées_ne_chargent_aucun_index(self):
-        services = build_services(":memory:", images=False)
-        self.assertFalse(run(services.images.ensure()))
-        self.assertIsNone(run(services.images.file_for_text("Hildryn")))
         close_services(services)
 
     def test_compteurs_démarrés_à_zéro(self):

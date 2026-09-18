@@ -43,6 +43,14 @@ class TurnContext:
     use_rag: bool = False
     story: bool = False
     story_lens: str | None = None
+    targeted_era: str | None = None
+    targeted_subject: str | None = None
+    leverian_warframe: str | None = None
+    # Continuation of an open narrative: the request its retrieval must replay.
+    retrieval_text: str | None = None
+    # Progress cursor of an open narrative: how many dossier chunks have already
+    # been narrated (the next part reads the page AFTER them).
+    dossier_offset: int = 0
 
     @property
     def kind(self) -> str:
@@ -70,6 +78,11 @@ class TurnContext:
             rag=self.use_rag,
             story=self.story,
             story_lens=self.story_lens,
+            targeted_era=self.targeted_era,
+            targeted_subject=self.targeted_subject,
+            leverian_warframe=self.leverian_warframe,
+            retrieval_text=self.retrieval_text,
+            dossier_offset=self.dossier_offset,
             user_id=self.user_id,
             user_name=self.user_name,
             user_role=self.user_role,

@@ -30,7 +30,6 @@ COMMANDS: dict[str, str] = {
     "langue": "_cmd_lang",
     "rag": "_cmd_rag",
     "archives": "_cmd_rag",
-    "images": "_cmd_images",
     "persona": "_cmd_persona",
     "help": "_cmd_help",
     "aide": "_cmd_help",
@@ -45,7 +44,7 @@ HELP_LINES = (
     "{p}fiche [pseudo] — rapport matriciel (privilège Concepteur)",
     "{p}channel on|off — réponses du bot sur ce salon",
     "{p}lang fr|en — langue des réponses | {p}rag on|off — archives",
-    "{p}images on|off — portraits wiki | {p}persona oracle|hostile",
+    "{p}persona oracle|hostile — persona de ce salon",
 )
 
 

@@ -32,6 +32,14 @@ OFF_TOPIC_REPLY = ("Les données extraites sont corrompues ou ne "
                    "correspondent pas à l'entité recherchée")
 OFF_TOPIC_ERROR = f"[Archives] {OFF_TOPIC_REPLY}."
 
+# Post-generation CONFABULATION gate (see :mod:`.verify`): the LLM emitted
+# named entities absent from the retrieved <archives> — pre-trained knowledge
+# leaked despite the prompt guards.  Served INSTEAD of the fabricated answer,
+# textually identical to RAG_ERROR (the persona mandates that exact
+# abstention sentence) but with a distinct identifier so tests and logs can
+# tell the two gate firings apart.
+CONFABULATION_ERROR = f"[Archives] {ARCHIVES_REPLY}"
+
 # ANTI-ATTACK rejection reply served WITHOUT calling the LLM (SQL injection,
 # privilege escalation, detected prompt injection): identical to the exact
 # rejection format given to the model, prefixed for the terminal.

@@ -13,8 +13,10 @@ from warframe_lore.discord.core import (
     MAX_ANSWERS,
     MAX_LAST_MEMBERS,
     MAX_REFUSAL_USERS,
+    MAX_STORY_MODES,
     BotState,
 )
+from warframe_lore.discord.guild import StoryMode
 from warframe_lore.discord.services import MemberSnapshot
 
 
@@ -75,6 +77,44 @@ class AnswerTrackingTests(unittest.TestCase):
         self.assertLessEqual(len(state.answers), MAX_ANSWERS)
         self.assertEqual(state.answer_channel(MAX_ANSWERS + 4), 7)
         self.assertIsNone(state.answer_channel(0))
+
+
+class StoryMemoryTests(unittest.TestCase):
+    """Ancrage d'un récit : mémorisé par salon, REPRIS par son seul auteur."""
+
+    def test_ancrage_retenu_pour_son_auteur(self):
+        state = BotState()
+        mode = StoryMode(request="raconte l'histoire de Ballas")
+        state.remember_story(7, 42, mode)
+        self.assertEqual(state.story_progress(7, 42), (mode, 0))
+        self.assertIsNone(state.story_progress(7, 43))  # un autre organique
+        self.assertIsNone(state.story_progress(8, 42))  # un autre salon
+
+    def test_le_curseur_avance_avec_les_parties(self):
+        state = BotState()
+        mode = StoryMode(request="raconte l'histoire de Ballas")
+        state.remember_story(7, 42, mode)
+        state.advance_story(7, 42, 12)
+        self.assertEqual(state.story_progress(7, 42), (mode, 12))
+        state.advance_story(7, 99, 24)          # un autre organique : ignoré
+        self.assertEqual(state.story_progress(7, 42), (mode, 12))
+        state.advance_story(8, 42, 24)          # un autre salon : ignoré
+        self.assertEqual(state.story_progress(7, 42), (mode, 12))
+
+    def test_un_nouveau_recit_remplace_l_ancien(self):
+        state = BotState()
+        state.remember_story(7, 42, StoryMode(request="un"))
+        state.advance_story(7, 42, 12)
+        state.remember_story(7, 42, StoryMode(request="deux"))
+        progress = state.story_progress(7, 42)
+        self.assertEqual(progress[0].request, "deux")
+        self.assertEqual(progress[1], 0)        # récit neuf : curseur neuf
+
+    def test_table_bornée(self):
+        state = BotState()
+        for channel_id in range(MAX_STORY_MODES + 5):
+            state.remember_story(channel_id, 42, StoryMode(request="un"))
+        self.assertLessEqual(len(state.story_modes), MAX_STORY_MODES)
 
 
 class TurnTrackingTests(unittest.TestCase):

@@ -30,8 +30,11 @@ from warframe_lore.lazy_facade import install
 _EXPORTS = {
     "ALIASES": ".query.aliases",
     "ARCHIVES_REPLY": ".prompt.guards",
+    "ArchiveVocabulary": ".vocabulary",
     "AliasResolver": ".query.aliases",
     "CosinusSearch": ".retrieval.search",
+    "CONFABULATION_ERROR": ".prompt.guards",
+    "DossierPage": ".retrieval.retriever",
     "HALLUCINATION_GUARD": ".prompt.guards",
     "HIERARCHY_BLOCK": ".prompt.guards",
     "HybridHit": ".retrieval.model",
@@ -68,6 +71,8 @@ _EXPORTS = {
     "strip_context_prefix": ".retrieval.scoring",
     "strip_trailing_padding": ".sanitize",
     "ts_rank_normalized": ".retrieval.scoring",
+    "verify_answer": ".verify",
+    "verify_answer_with_archive": ".verify",
 }
 
 install(sys.modules[__name__], _EXPORTS)

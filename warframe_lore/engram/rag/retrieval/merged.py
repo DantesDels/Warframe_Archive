@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import asyncio
 
-from .retriever import RAGHit, Retriever
+from ....protocols.roleplay import STORY_DOSSIER_PAGE
+from .retriever import DossierPage, RAGHit, Retriever
 
 
 class MergedRetriever(Retriever):
@@ -43,3 +44,31 @@ class MergedRetriever(Retriever):
                 if result is not None:
                     return result
         return None
+
+    async def dossier(self, subject: str, query_vector: list[float],
+                      limit: int = STORY_DOSSIER_PAGE,
+                      offset: int = 0) -> DossierPage:
+        """Narrative-first page dossier across sub-retrievers that support it.
+
+        Only the channels owning a ``dossier`` method contribute (CosinusSearch
+        for lore_chunks).  The sub-retriever order preserves the biography
+        page first; the dedup policy matches :meth:`search`.  ``offset`` pages
+        every channel with the same cursor: the page holds unseen material as
+        long as ANY channel still has some (``more``).
+        """
+        gathered: list[RAGHit] = []
+        more = False
+        for retriever in self.retrievers:
+            method = getattr(retriever, "dossier", None)
+            if method is None:
+                continue
+            page = await method(subject, query_vector, limit=limit,
+                                offset=offset)
+            gathered.extend(page.hits)
+            more = more or page.more
+        merged: dict[tuple[str, str], RAGHit] = {}
+        for hit in gathered:
+            key = (hit.page_title, hit.content)
+            if key not in merged:
+                merged[key] = hit
+        return DossierPage(hits=list(merged.values()), more=more)

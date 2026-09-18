@@ -14,7 +14,7 @@ storage or clients — it consumes abstractions injected via the `Container`.
 | `config.py` | `EngramConfig`: DB/LLM URLs, models, top_k, windows (overridable via `ENGRAM_*` env vars) |
 | `persona.py` | `Persona`: system prompt read from `persona/oracle` (editable on the fly) |
 | `llm/` | `base.py` (`LLMProvider` / `EmbeddingProvider` interfaces), `lmstudio.py` (`LMStudioProvider`, OpenAI-compatible) |
-| `rag/` | `retriever.py` (`Retriever` contract + `RAGHit`), `search.py` (`CosinusSearch` pgvector), `structured_search.py` (`StructuredSearch`), `merged.py` (`MergedRetriever`), `prompt.py` (`PromptBuilder`), `service.py` (`RAGService`) |
+| `rag/` | `retriever.py` (`Retriever` contract + `RAGHit`), `search.py` (`CosinusSearch` pgvector), `structured_search.py` (`StructuredSearch`), `merged.py` (`MergedRetriever`), `prompt.py` (`PromptBuilder`), `verify.py` (`verify_answer` — deterministic post-generation entity gate, `lexeme_forms` accent/number/gender variants), `service.py` (`RAGService`), `vocabulary.py` (`ArchiveVocabulary` — whole-corpus vocabulary behind the post-generation gate, probing those same variants) |
 | `roleplay/` | `models.py` (`Session`/`Turn`), `turn.py` (`plan_turn` — deterministic short-circuits BEFORE the LLM: probe, missing archives, guild member, speaker identity), `stream.py` (`RoleplayService` streaming), `prompt/` (`blocks.py` BLOC 1 + directives de fin, `directives.py` fiche interlocuteur / civilité / jalousie / langue, `window.py` `SlidingWindow`), `replies/` (`identity.py` deterministic speaker-identity + member-card replies, `comment.py` one-shot member observation), `memory.py` (`UserMemoryStore`) |
 | `api/` | `main.py` (FastAPI), `container.py` (service composition), `schemas.py` (HTTP), `routers/` (`document_rag.py`, `roleplay.py` WS terminal — transport only, `roleplay_stream.py` frame emission) |
 | `scripts/` | `ingest.py`: ETL from JSON megafiles → vectorized `lore_chunks`; `embed_structured.py`: embed the six element tables → `structured_chunks` |
@@ -67,8 +67,11 @@ visible content filter only (`delta.content`), **low temperature** (0.3 in
 free chat, 0.1 on RAG routes) for faithful responses and near-instant TTFT.
 A **fiction bypass** ("SECURITY CONTEXT" prompt block) lifts Gemma's ethical
 filters: Warframe lore deals with cloning, experiments and rituals that are
-inherently fictional. `max_tokens` default 4096 (exhaustive Codex files are
-not truncated).
+inherently fictional. `max_tokens` default 2048: gemma-2 tops out at 8192
+tokens and the assembled prompt already measures ~5900 (the persona alone is
+~4600 of them), so a bigger cap makes the engine answer "Context size has
+been exceeded"; a generation that fails is served as the abstention string
+(never a 500, never a raw server error).
 
 ## Roleplay Terminal (WebSocket)
 

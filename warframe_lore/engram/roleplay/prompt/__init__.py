@@ -17,11 +17,6 @@ from .directives import (
     LANGUAGE_NAMES,
     NO_HISTORY_LINE,
     SPEAKER_HEADER,
-<<<<<<< HEAD
-    STORY_DIRECTIVE,
-    STORY_LENS_STARTS,
-=======
->>>>>>> dev
     language_directive,
     speaker_bloc,
 )
@@ -36,18 +31,12 @@ from .narrative import (
     leverian_directive,
     story_closing,
     story_directive,
+    targeted_story_directive,
 )
 from .window import SlidingWindow
 
 __all__ = [
     "ARCHIVES_HEADER", "CIVILITY_DIRECTIVE", "DEFAULT_LANGUAGE",
-<<<<<<< HEAD
-    "JEALOUSY_DIRECTIVE", "LANGUAGE_DIRECTIVE", "LANGUAGE_NAMES",
-    "NO_HISTORY_LINE", "SPEAKER_HEADER", "STORY_DIRECTIVE",
-    "STORY_LENS_STARTS", "SlidingWindow", "archive_bloc",
-    "language_directive", "speaker_bloc", "story_directive",
-    "turn_directives",
-=======
     "EN_PRIMACY_DIRECTIVE", "JEALOUSY_DIRECTIVE", "LANGUAGE_DIRECTIVE",
     "LANGUAGE_NAMES", "LEVERIAN_DIRECTIVE", "NO_HISTORY_LINE",
     "SPEAKER_HEADER", "STORY_COMPLETE_SENTENCE", "STORY_DIRECTIVE",
@@ -55,5 +44,4 @@ __all__ = [
     "SlidingWindow", "archive_bloc", "language_directive", "leverian_directive",
     "speaker_bloc", "story_closing", "story_directive",
     "targeted_story_directive", "turn_directives",
->>>>>>> dev
 ]

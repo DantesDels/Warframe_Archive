@@ -29,8 +29,6 @@ from warframe_lore.discord.guild.story import (
     substitute_story_subject,
     targeted_subject_mention,
 )
-<<<<<<< HEAD
-=======
 from warframe_lore.engram.roleplay.prompt import (
     LEVERIAN_DIRECTIVE,
     TARGETED_STORY_DIRECTIVE,
@@ -38,7 +36,6 @@ from warframe_lore.engram.roleplay.prompt import (
     story_directive,
     targeted_story_directive,
 )
->>>>>>> dev
 
 STORY_REQUESTS = (
     "raconte-moi l'histoire des Orokin",
@@ -237,8 +234,6 @@ class SubjectDisambiguationTests(unittest.TestCase):
             "raconte-moi l'histoire de l'archimédienne")
 
 
-<<<<<<< HEAD
-=======
 class TargetedStoryDirectiveTests(unittest.TestCase):
     """Verrou spatio-temporel pour les requêtes ciblées."""
 
@@ -279,6 +274,5 @@ class LeverianDirectiveTests(unittest.TestCase):
         self.assertIn("Leverian", LEVERIAN_DIRECTIVE)
 
 
->>>>>>> dev
 if __name__ == "__main__":
     unittest.main()

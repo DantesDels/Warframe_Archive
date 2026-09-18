@@ -6,8 +6,10 @@ markdown rollovers, or answers with ONLY the closing line — a degenerate
 part carrying no narration at all (playtest: a standalone invitation posted
 as its own part).  This module turns the end of a part into its canonical
 form BEFORE the answer leaves the server: trailing padding stripped, trailing
-repeats merged into ONE occurrence, and a closing-only answer replaced by
-the archivist closing, the "nothing more to say" stop.
+repeats merged into ONE occurrence, a closing-only answer replaced by the
+archivist closing, the "nothing more to say" stop — and the sentence that
+matches the cursor state FORCED to close the part, because
+``story_more`` (the server's pagination truth) decides which one is served.
 """
 
 from __future__ import annotations
@@ -15,7 +17,8 @@ from __future__ import annotations
 from ..rag import strip_trailing_padding
 from .prompt import STORY_COMPLETE_SENTENCE, STORY_PAGINATION_SENTENCE
 
-__all__ = ["collapse_repeated_closing", "purge_story_closing"]
+__all__ = ["canonical_story_closing", "collapse_repeated_closing",
+           "purge_story_closing"]
 
 
 def collapse_repeated_closing(text: str, sentence: str) -> str:
@@ -60,3 +63,30 @@ def purge_story_closing(text: str) -> str:
     if text.strip() in (STORY_PAGINATION_SENTENCE, STORY_COMPLETE_SENTENCE):
         return STORY_COMPLETE_SENTENCE
     return text
+
+
+def canonical_story_closing(text: str, more: bool) -> str:
+    """Force the end-of-part closing that matches the cursor state.
+
+    ``story_more`` is authoritative on the server (the dossier pagination):
+    while unseen fragments remain, the served part must close with the
+    *invitation*; once the dossier is drained, it must close with the
+    *archivist stop*.  A model tail that is missing, wrong or stacked is
+    replaced by that ONE canonical sentence — a live part can never end
+    without the truthful closing, not even a short "nothing left" answer
+    served mid-dossier (playtest: 11-word parts closing with neither
+    sentence while ``story_more`` was still True).
+    """
+    if text.strip() == STORY_COMPLETE_SENTENCE:
+        return text                    # degenerate stop, already canonical
+    expected = (STORY_PAGINATION_SENTENCE if more
+                else STORY_COMPLETE_SENTENCE)
+    text = strip_trailing_padding(text).rstrip()
+    while True:
+        for closing in (STORY_PAGINATION_SENTENCE, STORY_COMPLETE_SENTENCE):
+            if text.endswith(closing):
+                text = text[: -len(closing)].rstrip()
+                break
+        else:
+            break
+    return text + " " + expected if text else expected

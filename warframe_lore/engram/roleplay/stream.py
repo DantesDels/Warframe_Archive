@@ -28,7 +28,7 @@ from .prompt import (
     targeted_story_directive,
     turn_directives,
 )
-from .purge import purge_story_closing
+from .purge import canonical_story_closing, purge_story_closing
 
 if TYPE_CHECKING:
     from ..rag import ArchiveVocabulary
@@ -218,6 +218,13 @@ class RoleplayService:
                     # One trailing closing line, no padded tail: the token
                     # the client renders must hold the canonical end too.
                     response = purge_story_closing(response)
+                    if story:
+                        # ``story_more`` decides WHICH sentence closes the
+                        # part (invitation while fragments remain, archivist
+                        # stop once drained): the model's missing, wrong or
+                        # stacked tail is replaced deterministically.
+                        response = canonical_story_closing(
+                            response, more=story_more)
             # Send the whole block at once after verification
             yield response
         elif not response:

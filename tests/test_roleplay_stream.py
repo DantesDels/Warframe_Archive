@@ -19,6 +19,7 @@ from warframe_lore.engram.roleplay.prompt import (
     STORY_COMPLETE_SENTENCE,
     STORY_PAGINATION_SENTENCE,
 )
+from warframe_lore.engram.roleplay.purge import canonical_story_closing
 
 TOKENS = ("Ballas fut le ", "Conseiller ", "des Orokin.")
 
@@ -106,6 +107,46 @@ class EmitStreamTests(unittest.TestCase):
         self.assertEqual(collapse_repeated_closing(open_text, invite),
                          f"{''.join(TOKENS)} {invite} Les notes d'Albrecht, "
                          f"cinq chapitres. {invite}")
+
+
+class CanonicalClosingTests(unittest.TestCase):
+    def test_partie_sans_cloture_recoit_l_invitation(self):
+        # Playtest épuisement : réponses courtes sans clôture alors que le
+        # dossier garde des fragments (story_more=True) — l'invitation doit
+        # être imposée, sinon le bot s'arrête sans offrir de suite.
+        text = "La Mire évoque la Grande Peste, possible lien avec " \
+               "l'Infestation."
+        out = canonical_story_closing(text, more=True)
+        self.assertTrue(out.endswith(STORY_PAGINATION_SENTENCE))
+        self.assertEqual(out.count(STORY_PAGINATION_SENTENCE), 1)
+
+    def test_partie_epuisee_sans_cloture_recoit_le_stop(self):
+        out = canonical_story_closing("Albrecht s'enfuit vers Tau.",
+                                      more=False)
+        self.assertTrue(out.endswith(STORY_COMPLETE_SENTENCE))
+        self.assertEqual(out.count(STORY_COMPLETE_SENTENCE), 1)
+
+    def test_une_cloture_contradictoire_est_remplacee(self):
+        # Le modèle annonce « plus de fragments » alors que story_more=True :
+        # la vérité du serveur (la pagination) gagne, l'invitation reprend.
+        text = "Roathe poursuit sa quête. " + STORY_COMPLETE_SENTENCE
+        out = canonical_story_closing(text, more=True)
+        self.assertNotIn(STORY_COMPLETE_SENTENCE, out)
+        self.assertTrue(out.endswith(STORY_PAGINATION_SENTENCE))
+
+    def test_une_cloture_empilee_est_reduite_a_une(self):
+        # Clôtures empilées (invitation + stop d'archiviste) : seule reste la
+        # clôture conforme au curseur.
+        text = ("La Lotus use de la Transference. "
+                f"{STORY_PAGINATION_SENTENCE} {STORY_COMPLETE_SENTENCE}")
+        out = canonical_story_closing(text, more=False)
+        self.assertEqual(out.count(STORY_COMPLETE_SENTENCE), 1)
+        self.assertNotIn(STORY_PAGINATION_SENTENCE, out)
+
+    def test_le_stop_degenere_demeure_intact(self):
+        self.assertEqual(
+            canonical_story_closing(STORY_COMPLETE_SENTENCE, more=True),
+            STORY_COMPLETE_SENTENCE)
 
 
 if __name__ == "__main__":

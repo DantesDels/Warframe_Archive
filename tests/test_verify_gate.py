@@ -452,7 +452,40 @@ class StreamGateTests(unittest.TestCase):
         tokens = _run(self._service(llm).stream(
             Session(session_id="s"), "raconte Albrecht",
             rag_context=CONTEXT, story=True))
-        self.assertEqual(tokens, ["Eleanor vit à Höllvania auprès d Arthur."])
+        self.assertEqual(
+            tokens,
+            ["Eleanor vit à Höllvania auprès d Arthur. "
+             f"{STORY_PAGINATION_SENTENCE}"])
+
+    def test_une_partie_sans_cloture_recoit_la_cloture_conforme(self):
+        # Playtest épuisement : des parties courtes (« informations
+        # insatisfaisantes ou inexistantes ») étaient servies SANS clôture
+        # alors que story_more restait True.  story_more est l'autorité : la
+        # clôture conforme est imposée de façon déterministe.
+        llm = _FakeLLM("Callista observa Eleanor depuis Höllvania.")
+        tokens = _run(self._service(llm).stream(
+            Session(session_id="s"), "continue",
+            rag_context=CONTEXT, story=True, story_continuation=True))
+        self.assertEqual(
+            tokens,
+            ["Callista observa Eleanor depuis Höllvania. "
+             f"{STORY_PAGINATION_SENTENCE}"])
+        self.assertEqual(
+            tokens[0].count(STORY_PAGINATION_SENTENCE), 1)
+
+    def test_la_derniere_partie_epuisee_close_par_l_archiviste(self):
+        # Dossier vidé : la dernière partie doit se terminer par le STOP
+        # strict de l'archiviste, même si le modèle a oublié de le poser.
+        llm = _FakeLLM("Eleanor ferma ses notes dans Höllvania.")
+        tokens = _run(self._service(llm).stream(
+            Session(session_id="s"), "continue",
+            rag_context=CONTEXT, story=True, story_continuation=True,
+            story_more=False))
+        self.assertEqual(
+            tokens,
+            ["Eleanor ferma ses notes dans Höllvania. "
+             f"{STORY_COMPLETE_SENTENCE}"])
+        self.assertEqual(tokens[0].count(STORY_COMPLETE_SENTENCE), 1)
 
     def test_les_deux_passes_du_double_pass_imposent_le_francais(self):
         # Playtest « continue » : des chunks anglais ont produit un récit en
@@ -541,7 +574,8 @@ class StreamGateTests(unittest.TestCase):
             Session(session_id="s"), "raconte Albrecht",
             rag_context=CONTEXT, story=True))
         self.assertEqual(
-            tokens, ["Eleanor fut convoquée par le Conclave des Entrati."])
+            tokens, ["Eleanor fut convoquée par le Conclave des Entrati. "
+                     f"{STORY_PAGINATION_SENTENCE}"])
 
     def test_entite_absente_de_l_archive_abstention(self):
         llm = _FakeLLM("Eleanor fut convoquée par le Conclave des Entrati.")

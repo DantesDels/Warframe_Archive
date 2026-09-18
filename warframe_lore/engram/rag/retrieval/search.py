@@ -12,7 +12,7 @@ import difflib
 import os
 import re
 
-from sqlalchemy import case, select, text
+from sqlalchemy import case, or_, select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import selectinload
 
@@ -130,17 +130,18 @@ class CosinusSearch(Retriever):
                                  limit: int = DOSSIER_LIMIT,
                                  offset: int = 0,
                                  exclude_ids: list[int] | None = None):
-        """SELECT statement: subject-title chunks in narrative reading order.
+        """SELECT statement: subject chunks in narrative reading order.
 
         Tier 0 = the exact biography page (``Eleanor``), tier 1 = its section
-        pages (``Eleanor/Quotes``), tier 2 = every other title containing the
-        subject.  The French mirror of the exact page (``Eleanor (fr)``) shares
-        tier 0: its namespaced id sorts right after the English bio, so both
-        languages ground the story while English stays first.  Reading order
-        (``chunk_index``) keeps the narrative sequence; the cosine distance is
-        still computed so the relevance floor applies.  ``exclude_ids`` bans
-        the chunks the session already narrated (the ONLY pagination): the
-        server never trusts a client cursor.
+        pages (``Eleanor/Quotes``), tier 2 = every other page whose TITLE or
+        CONTENT mentions the subject.  The French mirror of the exact page
+        (``Eleanor (fr)``) shares tier 0: its namespaced id sorts right after
+        the English bio, so both languages ground the story while English
+        stays first.  Reading order (``chunk_index``) keeps the narrative
+        sequence; the cosine distance is still computed so the relevance floor
+        applies.  ``exclude_ids`` bans the chunks the session already
+        narrated (the ONLY pagination): the server never trusts a client
+        cursor.
         """
         distance = LoreChunk.embedding.cosine_distance(
             query_vector).label("dist")
@@ -156,7 +157,10 @@ class CosinusSearch(Retriever):
             .join(WikiPage, LoreChunk.wiki_page_id == WikiPage.page_id)
             .where(
                 LoreChunk.embedding.is_not(None),
-                WikiPage.page_title.ilike(f"%{subject}%"),
+                or_(
+                    WikiPage.page_title.ilike(f"%{subject}%"),
+                    LoreChunk.content_markdown.ilike(f"%{subject}%"),
+                ),
             )
         )
 

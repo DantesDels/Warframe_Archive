@@ -10,7 +10,10 @@ absentes) et l'abstention était servie.
 Le correctif : quand un récit nomme un sujet (``subject``), le pipeline ajoute
 le DOSSIER du sujet — les chunks des pages dont le titre contient la clé, la
 biographie exacte en premier, en ordre de lecture — avant les voisins
-sémantiques.  Ces tests couvrent l'orchestration (fausses abstractions, sans
+sémantiques.  Le balayage couvre aussi toutes les pages dont le CONTENU
+mentionne le sujet (allusions ultérieures : Roathe, la 1999, Duviri), servies
+les unes après les autres par la pagination à bannissements jusqu'à
+épuisement.  Ces tests couvrent l'orchestration (fausses abstractions, sans
 base ni réseau) : l'ordre, le dédoublonnage et le court-circuit du retriever.
 """
 
@@ -29,6 +32,9 @@ from warframe_lore.engram.rag.retrieval.retriever import DossierPage
 from warframe_lore.engram.rag.retrieval.search import (
     DOSSIER_LIMIT,
     CosinusSearch,
+)
+from warframe_lore.engram.rag.retrieval.structured_search import (
+    StructuredSearch,
 )
 
 
@@ -90,7 +96,7 @@ def make_service(retriever):
 
 
 class DossierSqlShapeTests(unittest.TestCase):
-    """La forme SQL du dossier : filtre par titre, tiers, ordre de lecture."""
+    """La forme SQL du dossier : filtre titre OU contenu, tiers, ordre."""
 
     def test_dossier_statement_ancre_sur_les_titres_du_sujet(self):
         from sqlalchemy.dialects import postgresql
@@ -105,8 +111,36 @@ class DossierSqlShapeTests(unittest.TestCase):
         self.assertIn("ORDER BY", sql)
         self.assertIn("LIMIT", sql)
 
+    def test_dossier_statement_couvre_les_allusions_hors_du_titre(self):
+        # Le balayage épuise TOUTES les allusions : les pages qui ne font que
+        # MENTIONNER le sujet dans leur contenu (Roathe, la 1999, Duviri) sont
+        # racontées après sa propre page — le filtre est titre OU contenu.
+        from sqlalchemy.dialects import postgresql
+        search = CosinusSearch.__new__(CosinusSearch)
+        search.min_score = 0.5
+        search.top_k = 3
+        sql = str(search._build_dossier_statement("albrecht", [0.0] * 1024)
+                  .compile(dialect=postgresql.dialect()))
+        self.assertIn("content_markdown", sql.lower())
+        self.assertIn(" OR ", sql)
+
     def test_le_dossier_est_borne(self):
         self.assertEqual(DOSSIER_LIMIT, 12)
+
+
+class StructuredDossierSqlShapeTests(unittest.TestCase):
+    """La forme SQL du dossier structuré : titre OU contenu, page d'abord."""
+
+    def test_le_dossier_structure_balaye_titre_et_contenu(self):
+        from sqlalchemy.dialects import postgresql
+        search = StructuredSearch.__new__(StructuredSearch)
+        sql = str(search._build_dossier_statement(
+            "albrecht", [0.0] * 1024).compile(dialect=postgresql.dialect()))
+        self.assertIn("content", sql.lower())       # colonne du chunk
+        self.assertIn(" OR ", sql)                  # titre OU contenu
+        self.assertIn("page_id", sql.lower())       # regroupement par page
+        self.assertIn("message_order", sql.lower())  # séquence de dialogue
+        self.assertIn("LIMIT", sql)
 
 
 class PipelineDossierTests(unittest.TestCase):

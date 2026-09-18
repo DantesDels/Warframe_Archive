@@ -55,7 +55,8 @@ _STORY_BASE = (
     "toute bascule en anglais est formellement interdite. ")
 _STORY_PAGINATION_ITEM = (
     "5. PAGINATION DIÉGÉTIQUE : clôture impérativement toute réponse narrative "
-    "par cette phrase exacte et rien d'autre : « {} »]")
+    "par cette phrase exacte, UNE SEULE fois et en tout dernier — rien ne doit "
+    "la suivre : « {} »]")
 STORY_DIRECTIVE = _STORY_BASE + _STORY_PAGINATION_ITEM.format(
     STORY_PAGINATION_SENTENCE)
 
@@ -125,12 +126,13 @@ STORY_RESUME_DIRECTIVE = (
 # would only make the model repeat itself).
 _STORY_PAGINATION_DIRECTIVE = (
     "[DIRECTIVE DE PAGINATION DIÉGÉTIQUE : clôture impérativement le récit par "
-    "cette phrase exacte et rien d'autre : « {} »]")
+    "cette phrase exacte, UNE SEULE fois et en tout dernier — ni texte ni "
+    "répétition ne doivent la suivre : « {} »]")
 _STORY_EXHAUSTED_DIRECTIVE = (
     "[DIRECTIVE DE CLÔTURE DES ARCHIVES : la pagination diégétique est "
     "DÉSACTIVÉE — le Tissage de données n'a plus de fragments inédits sur ce "
-    "sujet. Clôture impérativement le récit par cette phrase exacte et rien "
-    "d'autre : « {} »]")
+    "sujet. Clôture impérativement le récit par cette phrase exacte, UNE SEULE "
+    "fois et en tout dernier — rien ne doit la suivre : « {} »]")
 
 
 def story_closing(more: bool) -> str:

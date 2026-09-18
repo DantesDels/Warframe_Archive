@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 
-from sqlalchemy import case, select
+from sqlalchemy import case, or_, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from ....db import WikiPage
@@ -59,14 +59,18 @@ class StructuredSearch(Retriever):
                                  limit: int = STORY_DOSSIER_PAGE,
                                  offset: int = 0,
                                  exclude_ids: list[int] | None = None):
-        """SELECT statement: subject-title structured rows, story-first.
+        """SELECT statement: subject chunks, story-first.
 
         Same tier shape as the lore dossier (exact title, French mirror,
         sections, everything else) but the narrative order comes from the
         dialogue tables: after the page join, ``message_order`` restores the
         in-conversation sequence of ``kim_dialogues`` / ``game_dialogues`` rows
         (``id`` breaks the tie for the other kinds).  ``exclude_ids`` bans the
-        already-narrated chunks — the only cursor the server trusts.
+        already-narrated chunks — the only cursor the server trusts.  The
+        sweep covers every page whose TITLE or CONTENT mentions the subject,
+        so later allusions (Roathe hating Albrecht, the Hex, Duviri) are
+        narrated too — the subject's own page first, the other pages grouped
+        in archive ingestion order.
         """
         distance = StructuredChunk.embedding.cosine_distance(
             query_vector).label("dist")
@@ -93,7 +97,10 @@ class StructuredSearch(Retriever):
             )
             .where(
                 StructuredChunk.embedding.is_not(None),
-                WikiPage.page_title.ilike(f"%{subject}%"),
+                or_(
+                    WikiPage.page_title.ilike(f"%{subject}%"),
+                    StructuredChunk.content.ilike(f"%{subject}%"),
+                ),
             )
         )
 
@@ -101,10 +108,12 @@ class StructuredSearch(Retriever):
         if exclude_ids:
             stmt = stmt.where(StructuredChunk.id.notin_(exclude_ids))
 
-        # Reading order: dialogue sequence first, chunk id as tie-breaker.
+        # Reading order: page family first (dossier tiers), then the dialogue
+        # sequence inside each page, chunk id as the last tie-breaker.
         return (
             stmt.order_by(
                 tier,
+                WikiPage.page_id,
                 KimDialogue.message_order.asc().nulls_last(),
                 GameDialogue.message_order.asc().nulls_last(),
                 StructuredChunk.id.asc(),

@@ -34,6 +34,10 @@ from warframe_lore.engram.rag.verify import (
     verify_answer_with_archive,
 )
 from warframe_lore.engram.roleplay import RoleplayService, Session, SlidingWindow
+from warframe_lore.engram.roleplay.prompt import (
+    STORY_COMPLETE_SENTENCE,
+    STORY_PAGINATION_SENTENCE,
+)
 
 # Eleanor's real archives (ground truth from the database).
 CONTEXT = (
@@ -433,6 +437,31 @@ class StreamGateTests(unittest.TestCase):
             Session(session_id="s"), "raconte Albrecht",
             rag_context=CONTEXT, story=True))
         self.assertEqual(tokens, ["Eleanor vit à Höllvania auprès d Arthur."])
+
+    def test_une_cloture_dupliquee_est_fussee_dans_le_token_servi(self):
+        # Le client affiche les JETONS, pas le texte de la trame ``end`` : la
+        # fusion de la clôture doit opérer sur le bloc servi, sinon le doublon
+        # du playtest reste visible à l'écran.
+        llm = _FakeLLM("Eleanor vit à Höllvania auprès d Arthur. "
+                       f"{STORY_PAGINATION_SENTENCE} "
+                       f"{STORY_PAGINATION_SENTENCE}")
+        tokens = _run(self._service(llm).stream(
+            Session(session_id="s"), "raconte Albrecht",
+            rag_context=CONTEXT, story=True))
+        self.assertEqual(
+            tokens,
+            ["Eleanor vit à Höllvania auprès d Arthur. "
+             f"{STORY_PAGINATION_SENTENCE}"])
+        self.assertEqual(tokens[0].count(STORY_PAGINATION_SENTENCE), 1)
+
+    def test_une_reponse_reduite_a_la_cloture_est_l_arret_de_l_archiviste(self):
+        # Partie dégénérée (playtest : l'invitation seule) : le token servi
+        # devient la clôture d'archiviste, plus jamais une invitation vide.
+        llm = _FakeLLM(STORY_PAGINATION_SENTENCE)
+        tokens = _run(self._service(llm).stream(
+            Session(session_id="s"), "raconte Albrecht",
+            rag_context=CONTEXT, story=True))
+        self.assertEqual(tokens, [STORY_COMPLETE_SENTENCE])
 
     def test_chat_libre_streamé_token_par_token(self):
         llm = _MultiLLM(["a", "b"])

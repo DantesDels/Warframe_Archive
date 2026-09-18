@@ -28,6 +28,7 @@ from .prompt import (
     targeted_story_directive,
     turn_directives,
 )
+from .purge import purge_story_closing
 
 if TYPE_CHECKING:
     from ..rag import ArchiveVocabulary
@@ -207,6 +208,10 @@ class RoleplayService:
                     extra_allowed=allowed)
                 if not ok:
                     response = CONFABULATION_ERROR
+                else:
+                    # One trailing closing line, no padded tail: the token
+                    # the client renders must hold the canonical end too.
+                    response = purge_story_closing(response)
             # Send the whole block at once after verification
             yield response
         elif not response:

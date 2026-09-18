@@ -82,7 +82,9 @@ EN_PRIMACY_DIRECTIVE = (
     "française. La version ANGLAISE fait foi : c'est la source primaire. En "
     "cas d'écart entre les deux, fonde ton récit sur la version anglaise — la "
     "française n'est qu'une aide de lecture et ne doit jamais la contredire "
-    "ni la compléter de ton propre chef.]")
+    "ni la compléter de ton propre chef. La langue de SORTIE reste le "
+    "FRANÇAIS : les archives anglaises sont la source, jamais la langue de "
+    "rédaction.]")
 
 # Targeted narrative request: the user named a specific subject.  The answer
 # must be anchored in that subject's own era and must NEVER bridge to another
@@ -97,7 +99,9 @@ TARGETED_STORY_DIRECTIVE = (
     "sujet appartient à 1999, le récit commence et reste en 1999 : aucune "
     "mention du Zariman, de Margulis ou de l'Éveil. 3. ARRÊT STRICT : une fois "
     "les faits du contexte épuisés, stoppe — n'invente jamais des connexions "
-    "inter-ères absentes des archives.]")
+    "inter-ères absentes des archives. 4. VERROU LINGUISTIQUE : la génération "
+    "reste intégralement en français ; toute bascule en anglais est "
+    "formellement interdite.]")
 
 # Leverian Warframe: Drusus Leverian is the canonical narrator for these
 # frames.  The model must ground the tale on his Leverian gallery and treat
@@ -119,7 +123,8 @@ STORY_RESUME_DIRECTIVE = (
     "reprendre une phrase, un fait ou une scène déjà écrits dans une partie "
     "précédente — raconte exclusivement la SUITE. Enchaîne directement sur de "
     "NOUVEAUX faits des <archives> fournies, comme le paragraphe suivant de "
-    "la même histoire.]")
+    "la même histoire. L'ensemble reste RÉDIGÉ EN FRANÇAIS : aucune bascule "
+    "en anglais.]")
 
 # Closing line of a part: the invitation while fragments remain, the archivist
 # closing once the dossier is exhausted (the tale is over — asking for "more"

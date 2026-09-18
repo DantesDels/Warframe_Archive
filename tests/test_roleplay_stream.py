@@ -15,7 +15,10 @@ from warframe_lore.engram.api.routers.roleplay_stream import (
     collapse_repeated_closing,
     emit_stream,
 )
-from warframe_lore.engram.roleplay.prompt import STORY_PAGINATION_SENTENCE
+from warframe_lore.engram.roleplay.prompt import (
+    STORY_COMPLETE_SENTENCE,
+    STORY_PAGINATION_SENTENCE,
+)
 
 TOKENS = ("Ballas fut le ", "Conseiller ", "des Orokin.")
 
@@ -65,6 +68,34 @@ class EmitStreamTests(unittest.TestCase):
         final = socket.frames[-1]["text"]
         self.assertEqual(final.count(STORY_PAGINATION_SENTENCE), 1)
         self.assertTrue(final.endswith(STORY_PAGINATION_SENTENCE))
+
+    def test_un_triple_de_l_invitation_espacé_est_fusionne(self):
+        # Forme exacte du playtest Natah : trois occurrences séparées par des
+        # sauts de ligne, la dernière suivi d'un blanc.  Une seule survit.
+        triple = (f"{''.join(TOKENS)}\n\n\n"
+                  f"{STORY_PAGINATION_SENTENCE}\n"
+                  f"{STORY_PAGINATION_SENTENCE} \n"
+                  f"{STORY_PAGINATION_SENTENCE} \n")
+        async def triple_tokens():
+            yield triple
+        socket = FakeWebSocket()
+        run(emit_stream(socket, triple_tokens(), story_more=True))
+        self.assertEqual(
+            socket.frames[-1]["text"].count(STORY_PAGINATION_SENTENCE), 1)
+        self.assertTrue(
+            socket.frames[-1]["text"].endswith(STORY_PAGINATION_SENTENCE))
+        self.assertTrue(socket.frames[-1]["story_more"])
+
+    def test_une_partie_reduite_a_la_cloture_arrete_la_chaine(self):
+        # Partie dégénérée (playtest : l'invitation seule postée comme sa
+        # propre partie) : la clôture d'archiviste remplace tout et aucune
+        # suite n'est promise — « rien à dire » = stop.
+        async def closing_only():
+            yield STORY_PAGINATION_SENTENCE
+        socket = FakeWebSocket()
+        run(emit_stream(socket, closing_only(), story_more=True))
+        self.assertEqual(socket.frames[-1]["text"], STORY_COMPLETE_SENTENCE)
+        self.assertFalse(socket.frames[-1]["story_more"])
 
     def test_une_invitation_en_plein_recit_est_conservee(self):
         # La fusion ne touche QUE les répétitions TERMINALES : une occurrence

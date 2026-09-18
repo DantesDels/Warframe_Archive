@@ -9,6 +9,7 @@ non-streaming frames live in :mod:`controls`.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from collections.abc import Awaitable, Callable
@@ -25,6 +26,33 @@ log = logging.getLogger("warframe_lore.discord.gateway")
 
 TokenHandler = Callable[[str], Awaitable[bool]]
 EndHandler = Callable[[str], Awaitable[None]]
+# Optional recovery hook: brings the RAG database back up (fast-path ~0 if the
+# stack is already healthy).  Enables the story leg to survive a PostgreSQL
+# drop mid-session with a bounded single replay — symmetric to the retry-once
+# already applied on the httpx/LM Studio transport leg.
+RecoveryHandler = Callable[[], Awaitable[None]]
+
+# Signatures that announce the roleplay error is a PostgreSQL/asyncpg outage
+# (network connection refused), NOT an Oracle or LM Studio failure: replay-once
+# then.  Parsed deliberately broadly: the exact ``internal error:`` text of the
+# ENGRAM router is implementation detail, the transport only needs to tell a
+# DB leg from a normal one.
+_DB_REFUSED_HINTS = (
+    "1225",        # WinError 1225 — connexion réseau refusée (Win32)
+    "refusé la connexion",
+    "refusée la connexion",
+    "ConnectionRefused",
+    "asyncpg",
+    "connexion réseau",
+)
+
+
+def _is_db_refused(message: str) -> bool:
+    """True when ``message`` points to a PostgreSQL/asyncpg outage."""
+    if not message:
+        return False
+    lowered = message.lower()
+    return any(hint in message or hint in lowered for hint in _DB_REFUSED_HINTS)
 
 
 class GatewayRequests:
@@ -47,6 +75,7 @@ class GatewayRequests:
         returned outcome carries ``story_more``: the subject's dossier still
         holds fragments the client may narrate next (narrative pagination).
         """
+        recovered = False
         async with self._send_lock:
             await self._post(frame.payload())
             while True:
@@ -67,7 +96,26 @@ class GatewayRequests:
                         await on_end(reply.get("text", ""))
                     return TurnOutcome.from_end_frame(reply)
                 elif kind == FRAME_ERROR:
-                    log.error("Roleplay error: %s", reply.get("message"))
+                    message = reply.get("message", "")
+                    # Auto-recovery hook: this is the ONE place that sees the
+                    # ENGRAM ``internal error:`` text, so it is where a
+                    # PostgreSQL outage (WinError 1225, asyncpg) can be told
+                    # apart from an Oracle/LM Studio failure.  When it is a
+                    # DB-refused signature, bring the RAG database back up
+                    # (fast-path ~0 when the stack is already healthy) then
+                    # replay the SAME turn once — bounded, symmetric to the
+                    # retry-once already on the httpx LLM leg.
+                    if not recovered and _is_db_refused(message):
+                        recovered = True
+                        log.warning("RAG leg WinError telemetry: %r — "
+                                    "auto-recovery then replay-once", message)
+                        from warframe_lore.discord.bootstrap import (
+                            ensure_database,  # noqa: PLC0415 — lazy, no cycle
+                        )
+                        await asyncio.to_thread(ensure_database)
+                        await self._post(frame.payload())
+                        continue
+                    log.error("Roleplay error: %s", message)
                     return TurnOutcome()
 
 

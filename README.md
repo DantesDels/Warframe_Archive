@@ -1012,6 +1012,37 @@ trials below.
     cards, exhaustive, no devotion interleaved; anti-préambule
     ("Vous êtes X" banned) and anti-copy-paste rules; `max_tokens` raised to
     4096. *Result:* 335 green tests.
+20. **WinError 1225 Auto-Recovery (Replay-Once) + Leg Telemetry.**
+    *Trial:* a story turn crashed mid-reply with
+    `[WinError 1225] La connexion réseau a été refusée`. Before blaming LM
+    Studio/Oracle, an HTTP probe split the two legs: `models` 0.03 s,
+    `embed` 0.06 s, chat SSE 5.24 s — the **LLM/oracle leg was healthy**.
+    The culprit was the **PostgreSQL leg** (`asyncpg` → `engram-db` Docker),
+    down at that moment: the raw WinError text was being relayed verbatim
+    to the Discord user.
+    *Failure n°1 (startup crash):* `cephalon bot run --channels …` died at
+    launch on `channel_names = tuple(channel_names) or
+    config.allowed_channel_names` — with `channel_names = None`,
+    `tuple(None)` raises `TypeError` **before** the `or` fallback ever runs.
+    *Fix:* `tuple(channel_names) if channel_names else
+    config.allowed_channel_names`.
+    *Failure n°2 (latent UnboundLocalError):* in `send()` the FRAME_ERROR
+    branch reads `recovered` before any assignment — `UnboundLocalError` on
+    the very first DB-refused message. *Fix:* `recovered = False`
+    initialized before `async with self._send_lock:`.
+    *Solution:* telemetry telling the two legs apart (`_is_db_refused` on
+    WinError 1225 / "connexion refusée" / "asyncpg" hints) + bounded
+    **auto-recovery**: `ensure_database()` (lazy import,
+    `asyncio.to_thread`, no import cycle) then **replay the same frame
+    once**, symmetric to the existing httpx retry-once.
+    *Lessons:* (i) diagnose by probe, not by guess — leg telemetry keeps
+    the verdict honest; (ii) `tuple(x) or fallback` does **not** guard
+    `x = None` (the call raises before truthiness) — guard explicitly;
+    (iii) any flag read in a branch must be initialized before the
+    lock/session; (iv) the same failure mode on both legs demands a
+    symmetric bounded retry-once, never an unbounded retry loop.
+    *Result:* clean startup + DB-outage turn auto-recovers with a single
+    replay, suite green.
 
 ### Figures and Validations
 

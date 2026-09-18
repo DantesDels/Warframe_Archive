@@ -62,7 +62,9 @@ def launch_bot(token: str | None, ws: str | None = None,
 
     ws_url = ws or config.engram_ws_url
     channels = tuple(channels) or config.allowed_channels
-    channel_names = tuple(channel_names) if channel_names else config.allowed_channel_names    # Services composed once, on the shared ledger.
+    # Services composed once, on the shared ledger.
+    channel_names = (tuple(channel_names) if channel_names
+                     else config.allowed_channel_names)
     services = build_services(db_path=config.activity_db)
     bot = LoreMasterBot(
         gateway_url=ws_url,

@@ -69,11 +69,16 @@ class RetrievalPipeline:
     async def run(self, question: str,
                   context: RAGContext | None = None, *,
                   subject: str | None = None,
-                  offset: int = 0) -> Retrieval:
+                  offset: int = 0,
+                  exclude_ids: list[int] | None = None) -> Retrieval:
         """One retrieval, with its audit line (see the module docstring).
 
-        ``subject``/``offset`` page a targeted story: the dossier is read as a
-        cursor, so a continuation narrates passages the previous part did not.
+        ``subject`` opens a targeted story: the dossier is read story-first.
+        ``exclude_ids`` is the ONLY pagination — the chunk ids the session
+        already narrated, banned server-side (the client cursor is never
+        trusted).  ``offset > 0`` merely marks a CONTINUATION: the semantic
+        neighbours of the opening request are dropped so the part never
+        re-anchors on the same salient facts.
         """
         question = sanitize_query(question)
         if not question:
@@ -87,7 +92,7 @@ class RetrievalPipeline:
         found = await self.retriever.search(vector)
         story_more = False
         if subject:
-            page = await self._dossier(subject, vector, offset)
+            page = await self._dossier(subject, vector, exclude_ids)
             story_more = page.more
             if offset > 0:
                 # Continuation: ONLY the next dossier page.  The semantic
@@ -148,12 +153,15 @@ class RetrievalPipeline:
         return await suggest(question)
 
     async def _dossier(self, subject: str, vector: list[float],
-                       offset: int = 0) -> DossierPage:
-        """Subject-page passages for a targeted story (empty if unsupported)."""
+                       exclude_ids: list[int] | None = None) -> DossierPage:
         method = getattr(self.retriever, "dossier", None)
         if method is None:
             return DossierPage(hits=[])
-        return await method(subject, vector, offset=offset)
+        # The dossier always pages from offset 0: the sub-retriever returns
+        # the FIRST page of the still-unseen fragments — the session ban list
+        # (``exclude_ids``) is the only cursor, so no client offset can force
+        # a skip forward or loop back.
+        return await method(subject, vector, offset=0, exclude_ids=exclude_ids)
 
     @staticmethod
     def _merge_dedup(hits: list[RAGHit]) -> list[RAGHit]:

@@ -21,9 +21,10 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-# Size of ONE narrative part: the number of dossier chunks a story turn reads
-# and the step the client advances its cursor by.  Both sides read this single
-# constant, so a part never re-narrates the passages of the previous one.
+# Size of ONE narrative part: the number of dossier chunks a story turn feeds
+# to the model.  Both sides read this single constant, so a part never
+# re-narrates the passages of the previous one (the server advances the
+# session's ban list by this many chunks per part).
 STORY_DOSSIER_PAGE = 12
 
 # ----------------------------------------------------------------- frame types
@@ -77,10 +78,12 @@ class MessageFrame(BaseModel):
     # instead of on a subject-less message.  Only the SEARCH uses this field:
     # the model still receives ``text``.
     retrieval_text: str | None = None
-    # Progress cursor of an open narrative: how many dossier chunks (in
-    # ``STORY_DOSSIER_PAGE`` steps) have ALREADY been narrated.  Retrieval then
-    # serves the NEXT page of the subject's dossier, so a continuation brings
-    # new material instead of repeating the passages of the previous part.
+    # Continuation marker of an open narrative: ``0`` = opening part, ``> 0`` =
+    # the SEARCH runs in continuation mode (the semantic neighbours of the
+    # opening request are dropped; the story corpus is the subject's own pages).
+    # Real pagination is SERVER-SIDE only: the ENGRAM session remembers every
+    # chunk id the model already saw and bans them, so a continuation always
+    # serves unseen fragments without trusting a client cursor.
     dossier_offset: int = 0
     user_id: str | int | None = None
     user_name: str | None = None

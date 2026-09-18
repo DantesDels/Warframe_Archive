@@ -130,13 +130,14 @@ class PersonaSelectionTests(unittest.TestCase):
     def test_un_tour_recit_remplace_la_base_par_le_persona_story(self):
         # La fiche "ARCHIVE DU CODEX" de la base Oracle outranke les directives
         # appendées pour Gemma : le tour récit doit remplacer la BASE par le
-        # persona narratif (prose, pas de fiche).
+        # persona narratif (prose, pas de fiche).  L'appel 0 est le brouillon
+        # factuel invisible (extraction pure) ; l'appel 1 est la narration.
         llm = _FakeLLM()
         session = Session(session_id="s")
         _run_stream(_service(llm).stream(
             session, "raconte-moi l'histoire d'Eleanor",
             rag_context="Eleanor est une protoframe.", story=True))
-        system = llm.calls[0]["messages"][0].content
+        system = llm.calls[1]["messages"][0].content
         self.assertIn("MISE EN PAGE NARRATIVE", system)
         self.assertNotIn(_NORMAL, system)
 

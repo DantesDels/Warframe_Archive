@@ -18,7 +18,7 @@ The strict guard chains shared with the Roleplay layer live in
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ..retrieval.retriever import RAGHit
 from .guards import (
@@ -91,6 +91,11 @@ class RAGPrompt:
     # (RAGService) must serve the exact anti-jailbreak chain without ever
     # calling the LLM.
     rejected: bool = False
+    # Chunk ids ACTUALLY injected into <archives> (bounded by the character
+    # cap): a session's exclusion memory grows only with what the model really
+    # saw — never with hits the cap dropped, which would starve a story of
+    # unseen fragments.
+    used_ids: list[int] = field(default_factory=list)
 
     def to_messages(self) -> list[dict]:
         """OpenAI-compatible messages: one tagged system + user."""
@@ -112,6 +117,7 @@ class PromptBuilder:
     def build(self, question: str, hits: list[RAGHit],
               alias_note: str = "", suggestion: str | None = None) -> RAGPrompt:
         """Build the final prompt, with alias note / disambiguation."""
+        used_ids: list[int] = []
         if suggestion:
             context = (f"[SUGGESTION] {SUGGESTION_MARKER} : "
                        f"« {suggestion} ».")
@@ -124,6 +130,7 @@ class PromptBuilder:
                     break
                 used += len(block)
                 blocks.append(block)
+                used_ids.append(hit.chunk_id)
             # Context short-circuit: as soon as the <archives> tag has no
             # relevant passage -> sterile fallback rather than invention.
             context = "\n\n".join(blocks) or NO_DATA_MARKER
@@ -143,4 +150,5 @@ class PromptBuilder:
             context=context,
             user_question=question,
             suggestion=suggestion,
+            used_ids=used_ids,
         )

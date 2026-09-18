@@ -59,7 +59,8 @@ class TurnPlan:
 
 
 async def plan_turn(container: Container, payload: dict, user_text: str,
-                    persona_mode: str, rag_context: RAGContext) -> TurnPlan:
+                    persona_mode: str, rag_context: RAGContext,
+                    consumed_chunk_ids: set[int] | None = None) -> TurnPlan:
     """Run the short-circuits in order, else prepare the archives context."""
     # HOSTILE PROBE (SQL injection, privilege escalation, third-party mention):
     # the exact anti-jailbreak chain, without embedding nor LLM call.
@@ -74,18 +75,31 @@ async def plan_turn(container: Container, payload: dict, user_text: str,
         and not is_self_reflection(user_text)
     context_text = suggestion = None
     story_more = False
+
+    # A caller without an exclusion memory starts with an empty ban set.
+    if consumed_chunk_ids is None:
+        consumed_chunk_ids = set()
+
     if want_rag:
         # A CONTINUATION of an open narrative names no subject of its own
         # ("continue"): the bot sends the request that anchored the story and
         # the SEARCH runs on it.  The model still receives the user's wording.
-        # ``dossier_offset`` pages the subject's dossier: a chained part reads
-        # passages the previous one did not narrate.
+        # ``dossier_offset`` marks a continuation; the session's consumed ids
+        # exclude the chunks the previous parts already narrated.
         search_text = sanitize_query(
             str(payload.get("retrieval_text") or user_text))
-        context_text, suggestion, story_more = await container.rag.resolve(
+
+        # Pass the ban list and collect the newly consumed chunk ids.
+        context_text, suggestion, story_more, new_ids = await container.rag.resolve(
             search_text, context=rag_context,
             subject=payload.get("targeted_subject"),
-            offset=int(payload.get("dossier_offset") or 0))
+            offset=int(payload.get("dossier_offset") or 0),
+            exclude_ids=list(consumed_chunk_ids)
+        )
+
+        # Grow the session's exclusion memory with what the model really saw.
+        consumed_chunk_ids.update(new_ids)
+
     if want_rag and suggestion is not None and payload.get("story"):
         # A disambiguation near-match cannot ANCHOR a narration: without a
         # trusted passage the tale would be invented from nothing.  Rather
@@ -94,21 +108,25 @@ async def plan_turn(container: Container, payload: dict, user_text: str,
         # the confirmed subject grounds the next turn (playtest « Eleanor
         # Vance »).
         return TurnPlan(reply=CLARIFY_REPLY.format(suggestion=suggestion))
+
     if want_rag and not context_text and story_more is False \
             and int(payload.get("dossier_offset") or 0) > 0:
         # A chain asked for the NEXT page of a tale whose dossier is exhausted:
         # the archives have nothing left to narrate.  Close the tale instead of
         # answering "Données insuffisantes" (a data bug) or re-narrating.
         return TurnPlan(reply=STORY_EXHAUSTED_REPLY)
+
     if want_rag and not context_text and (suggestion is None
                                           or payload.get("story")):
         # No trusted passage, no plausible title: a story left without
         # passages refuses exactly like any query without a trusted passage.
         return TurnPlan(reply=RAG_ERROR)
+
     reply = (member_reply(payload, persona_mode)
              or identity_reply_for(payload, user_text, persona_mode))
     if reply:
         return TurnPlan(reply=reply)
+
     return TurnPlan(context_text=context_text, story_more=story_more)
 
 

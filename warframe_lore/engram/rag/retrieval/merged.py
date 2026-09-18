@@ -1,7 +1,8 @@
 """Merged retriever: compose two ``Retriever`` channels by score.
 
 Runs both searches in parallel, concatenates hits, deduplicates by
-``chunk_id``, sorts by score and returns the global top-k.
+passage identity (``page_title`` + ``content``), sorts by score and returns
+the global top-k.
 """
 
 from __future__ import annotations
@@ -47,25 +48,24 @@ class MergedRetriever(Retriever):
 
     async def dossier(self, subject: str, query_vector: list[float],
                       limit: int = STORY_DOSSIER_PAGE,
-                      offset: int = 0) -> DossierPage:
-        """Narrative-first page dossier across sub-retrievers that support it.
-
-        Only the channels owning a ``dossier`` method contribute (CosinusSearch
-        for lore_chunks).  The sub-retriever order preserves the biography
-        page first; the dedup policy matches :meth:`search`.  ``offset`` pages
-        every channel with the same cursor: the page holds unseen material as
-        long as ANY channel still has some (``more``).
-        """
+                      offset: int = 0,
+                      exclude_ids: list[int] | None = None) -> DossierPage:
         gathered: list[RAGHit] = []
         more = False
         for retriever in self.retrievers:
             method = getattr(retriever, "dossier", None)
             if method is None:
                 continue
+            # The session ban list is forwarded to EVERY sub-retriever: both
+            # serial tables restart their BIGSERIAL at 1, so a single mixed
+            # ban list can occasionally skip an unseen chunk (lore id 5 vs
+            # structured id 5 collide) but can NEVER re-serve a narrated one —
+            # a skipped chunk cannot loop a story, only shorten it.
             page = await method(subject, query_vector, limit=limit,
-                                offset=offset)
+                                offset=offset, exclude_ids=exclude_ids)
             gathered.extend(page.hits)
             more = more or page.more
+
         merged: dict[tuple[str, str], RAGHit] = {}
         for hit in gathered:
             key = (hit.page_title, hit.content)

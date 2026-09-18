@@ -11,7 +11,6 @@ from __future__ import annotations
 import unittest
 
 from warframe_lore.discord.guild import (
-    LENS_COSMOGONIC,
     detect_story_mode,
     is_story_continuation,
 )
@@ -49,11 +48,15 @@ class StoryModeTests(unittest.TestCase):
         self.assertIsNone(mode.story_lens)
         self.assertTrue(mode.streamable)
 
-    def test_une_lentille_explicite_prime_sur_l_ere(self):
+    def test_un_sujet_nomme_prime_sur_la_lentille(self):
+        # "l'histoire du void" matche la lentille cosmogonique (``void``) MAIS
+        # aussi un sujet ciblé : le dossier du sujet prime — sans lui, la
+        # lentille bruiterait la récupération avec des voisins sémantiques et
+        # Albrecht/1999 perdait son dossier (playtest de la boucle narrative).
         mode = detect_story_mode("raconte moi l'histoire du void")
-        self.assertEqual(mode.story_lens, LENS_COSMOGONIC)
-        self.assertIsNone(mode.targeted_era)
-        self.assertIsNone(mode.targeted_subject)
+        self.assertEqual(mode.story_lens, None)
+        self.assertEqual(mode.targeted_era, "l'Ère Orokin")
+        self.assertEqual(mode.targeted_subject, "void")
         self.assertTrue(mode.streamable)
 
     def test_une_demande_sans_ancrage_ne_lance_pas_le_recit(self):

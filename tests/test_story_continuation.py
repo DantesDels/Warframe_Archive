@@ -19,7 +19,6 @@ from warframe_lore.discord.guild import (
     STORY_AUTO_PARTS,
     STORY_CONTINUATION_PROMPT,
 )
-from warframe_lore.protocols.roleplay import STORY_DOSSIER_PAGE
 
 BALLAS = "Raconte moi l'histoire de ballas"
 
@@ -87,9 +86,10 @@ class AutoChainingTests(unittest.TestCase):
         scenario.say(BALLAS)
         frames = [m for m in gateway.messages if m.get("story")]
         self.assertEqual(len(frames), STORY_AUTO_PARTS)
-        self.assertEqual([f["dossier_offset"] for f in frames],
-                         [i * STORY_DOSSIER_PAGE
-                          for i in range(STORY_AUTO_PARTS)])
+        # Curseur neutralisé côté client : l'ouverture part à 0, chaque partie
+        # enchaînée porte le marqueur de continuation (1) — la pagination est
+        # entièrement serveur (mémoire d'exclusion de la session).
+        self.assertEqual([f["dossier_offset"] for f in frames], [0, 1, 1])
         self.assertEqual(frames[0]["text"], BALLAS)
         self.assertEqual(frames[1]["text"], STORY_CONTINUATION_PROMPT)
         self.assertEqual(frames[1]["retrieval_text"], BALLAS)
@@ -109,8 +109,9 @@ class AutoChainingTests(unittest.TestCase):
         scenario.say("continue")
         frame = gateway.messages[-1]
         self.assertEqual(frame["retrieval_text"], BALLAS)
-        self.assertEqual(frame["dossier_offset"],
-                         STORY_AUTO_PARTS * STORY_DOSSIER_PAGE)
+        # Marqueur de continuation, pas un offset de pages : le serveur exclut
+        # les chunks déjà narrés, le client ne compte pas de fragments.
+        self.assertEqual(frame["dossier_offset"], 1)
 
 
 if __name__ == "__main__":

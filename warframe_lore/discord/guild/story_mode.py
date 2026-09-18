@@ -77,14 +77,16 @@ def is_story_continuation(text: str) -> bool:
 def detect_story_mode(text: str) -> StoryMode:
     """Anchoring a NEW request implies (empty :class:`StoryMode` = free chat).
 
-    An explicit temporal lens wins over the default era of a named subject, and
-    the dossier subject only exists when a targeted era was recognized — the
-    exact rules the storyteller router applies to a story request.
+    A NAMED SUBJECT wins over every lens: "l'histoire d'Albrecht" also matches
+    the ``1999`` keywords, but the story must anchor on Albrecht's own dossier
+    (era + page-title subject), never on a lens whose retrieval broadens back
+    to semantic neighbours.  A bare temporal lens still anchors when no subject
+    was recognized.
     """
     if not is_story_request(text):
         return StoryMode()
-    lens = detect_story_lens(text)
-    era = None if lens is not None else detect_targeted_era(text)
+    era = detect_targeted_era(text)
+    lens = None if era is not None else detect_story_lens(text)
     return StoryMode(
         request=text,
         story_lens=lens,

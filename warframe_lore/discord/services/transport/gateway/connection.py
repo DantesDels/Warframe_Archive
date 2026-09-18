@@ -17,7 +17,12 @@ log = logging.getLogger("warframe_lore.discord.gateway")
 
 # Maximum silent gap between two frames of a stream: if the server stalls
 # longer, the gateway aborts the turn instead of blocking the channel forever.
-DEFAULT_REPLY_TIMEOUT = 120.0
+# The cap must sit ABOVE the slowest legitimate turn: a RAG reply is buffered
+# server-side until the anti-hallucination check (one final frame only), and a
+# story turn adds a first "draft" LLM pass — on a local model several minutes
+# of silence are expected, not a stall.  Dead sockets are caught far sooner by
+# the library-level ping, so this only bounds a hung-but-alive generation.
+DEFAULT_REPLY_TIMEOUT = 600.0
 
 # Timeout for the initial WebSocket handshake (TCP + WS upgrade).  Without it a
 # dead ENGRAM host hangs the very first ``open()`` forever.

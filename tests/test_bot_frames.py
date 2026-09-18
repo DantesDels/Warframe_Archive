@@ -100,13 +100,27 @@ class StoryFrameTests(unittest.TestCase):
     """Storyteller : récit ancré + flux question/réponse du point de départ."""
 
     def test_un_recit_avec_lentille_est_un_tour_story_ancre(self):
+        # "1999" est un sujet nommé (TARGETED_SUBJECT_ERAS) : il prime sur la
+        # lentille homonyme — la story ancre le DOSSIER du sujet, pas le menu.
         scenario = make_bot()
         scenario.say("raconte-moi l'histoire de 1999")
         frame = scenario.gateway.last
         self.assertTrue(frame["story"])
-        self.assertEqual(frame["story_lens"], "1999")
+        self.assertEqual(frame["targeted_era"], "1999 (Höllvania)")
+        self.assertEqual(frame["targeted_subject"], "1999")
+        self.assertIsNone(frame.get("story_lens"))
         self.assertTrue(frame["rag"])
         self.assertEqual(scenario.stats["by_kind"]["story"], 1)
+
+    def test_un_recit_avec_lentille_ouverte_demande_le_menu(self):
+        # Une requête qui ne nomme PAS de sujet mais une lentille (cosmogonique)
+        # reste un récit ancré par lentille : pas de dossier ciblé, pas de menu.
+        scenario = make_bot()
+        scenario.say("raconte-moi l'histoire des débuts de l'univers")
+        frame = scenario.gateway.last
+        self.assertTrue(frame["story"])
+        self.assertEqual(frame["story_lens"], LENS_COSMOGONIC)
+        self.assertTrue(frame["rag"])
 
     def test_un_recit_sans_lentille_demande_le_point_de_depart(self):
         scenario = make_bot()

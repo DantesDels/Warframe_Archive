@@ -139,6 +139,19 @@ class RetrievalAnchorTests(unittest.TestCase):
         self.assertEqual(rag.offsets, [12])
         self.assertTrue(plan.story_more)
 
+    def test_les_chunks_consommes_sont_exclus_et_la_memoire_grandit(self):
+        # La mémoire d'exclusion de la session est transmise à la recherche et
+        # les IDs réellement servis y sont ajoutés : la partie suivante ne peut
+        # pas re-servir les fragments déjà narrés (anti-boucle narrative).
+        ban_list = {1, 2}
+        rag = FakeRAG("du contexte", consumed=[3])
+        plan = decide({"story": True, "targeted_subject": "albrecht"},
+                      "raconte l'histoire d'Albrecht", rag=rag,
+                      consumed=ban_list)
+        self.assertEqual(rag.exclusions, [[1, 2]])
+        self.assertEqual(plan.context_text, "du contexte")
+        self.assertEqual(ban_list, {1, 2, 3})
+
     def test_un_recit_epuise_est_clos_sans_relancer_le_llm(self):
         # Curseur au-delà du dossier : aucune page, aucune suite possible.
         plan = decide({"story": True, "targeted_subject": "ballas",
@@ -239,16 +252,18 @@ async def _collect(agen):
 
 class StoryTemperatureTests(unittest.TestCase):
     def test_un_recit_est_capé_au_plafond_extractif_0_1(self):
+        # Le draft factuel (appel 0) est extractif 0.1 ; la narration finale
+        # (appel 1) est plafonnée au même plafond.
         _, llm = _run_service(rag_context="[Albrecht]", story=True)
-        self.assertEqual(llm.calls[0]["temperature"], RAG_TEMPERATURE_CAP)
-        self.assertEqual(llm.calls[0]["temperature"], 0.1)
+        self.assertEqual(llm.calls[1]["temperature"], RAG_TEMPERATURE_CAP)
+        self.assertEqual(llm.calls[1]["temperature"], 0.1)
 
     def test_une_continuation_releve_le_plafond_pour_casser_l_echo(self):
         _, llm = _run_service(rag_context="[Albrecht]", story=True,
                               story_continuation=True)
-        self.assertEqual(llm.calls[0]["temperature"],
+        self.assertEqual(llm.calls[1]["temperature"],
                          STORY_CONTINUATION_TEMPERATURE)
-        self.assertEqual(llm.calls[0]["temperature"], 0.35)
+        self.assertEqual(llm.calls[1]["temperature"], 0.35)
 
     def test_rag_active_envoie_bien_0_1_a_lm_studio(self):
         _, llm = _run_service(rag_context="[Albrecht]", story=False)

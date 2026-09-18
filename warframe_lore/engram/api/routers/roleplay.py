@@ -86,14 +86,19 @@ async def roleplay(websocket: WebSocket) -> None:
             user_id = payload.get("user_id")
             if user_id is not None and rag_context.user_key != user_id:
                 rag_context = RAGContextFactory.create(user_key=user_id)
+            session = active_session(user_id)
+            # The SESSION carries the exclusion memory (``consumed_chunk_ids``)
+            # that makes a continuation serve unseen fragments instead of
+            # repeating the previous part: the router hands it to the turn.
             plan = await plan_turn(container, payload, user_text, persona_mode,
-                                   rag_context)
+                                   rag_context,
+                                   consumed_chunk_ids=session.consumed_chunk_ids)
             if plan.reply is not None:
                 await emit_reply(websocket, plan.reply)
                 continue
             await emit_stream(websocket, model_turn(
-                container, plan, payload, user_text, persona_mode,
-                active_session(user_id)), story_more=plan.story_more)
+                container, plan, payload, user_text, persona_mode, session),
+                story_more=plan.story_more)
     except WebSocketDisconnect:
         pass
     except Exception as exc:  # noqa: BLE001 (stream error -> clean close)

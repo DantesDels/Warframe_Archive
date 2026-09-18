@@ -155,14 +155,16 @@ def story_directive(lens: str | None, *, continuation: bool = False,
     """Narration directive + the opening scene forced by the chosen lens.
 
     A continuation drops the opening scene (the tale runs: it resumes).  An
-    exhausted dossier supersedes the pagination rule with the closing line.
+    exhausted dossier is composed WITHOUT the page-turning item 5 of
+    :data:`STORY_DIRECTIVE`: the model must end on the archivist closing,
+    never on both an invitation and a closing sentence.
     """
     start = None if continuation else STORY_LENS_STARTS.get(lens or "")
-    extra = resume_directive(continuation)
-    if not more:
-        extra += f"\n{story_closing(more=False)}"
-    return "".join([STORY_DIRECTIVE, extra, "\n", EN_PRIMACY_DIRECTIVE, "\n",
-                    start or ""])
+    pagination = (STORY_DIRECTIVE if more
+                  else _STORY_BASE + _STORY_EXHAUSTED_DIRECTIVE.format(
+                      STORY_COMPLETE_SENTENCE))
+    return "".join([pagination, resume_directive(continuation), "\n",
+                    EN_PRIMACY_DIRECTIVE, "\n", start or ""])
 
 
 def targeted_story_directive(era: str | None = None, *,

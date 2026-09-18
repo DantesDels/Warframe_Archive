@@ -128,7 +128,8 @@ class CosinusSearch(Retriever):
     def _build_dossier_statement(self, subject: str,
                                  query_vector: list[float],
                                  limit: int = DOSSIER_LIMIT,
-                                 offset: int = 0):
+                                 offset: int = 0,
+                                 exclude_ids: list[int] | None = None):
         """SELECT statement: subject-title chunks in narrative reading order.
 
         Tier 0 = the exact biography page (``Eleanor``), tier 1 = its section
@@ -137,21 +138,19 @@ class CosinusSearch(Retriever):
         tier 0: its namespaced id sorts right after the English bio, so both
         languages ground the story while English stays first.  Reading order
         (``chunk_index``) keeps the narrative sequence; the cosine distance is
-        still computed so the relevance floor applies.  ``offset`` pages the
-        deterministic order: the cursor of a continuation skips the chunks the
-        previous part already narrated.
+        still computed so the relevance floor applies.  ``exclude_ids`` bans
+        the chunks the session already narrated (the ONLY pagination): the
+        server never trusts a client cursor.
         """
         distance = LoreChunk.embedding.cosine_distance(
             query_vector).label("dist")
-        # NOTE: tier branches keep the retrieval package's single JSON/PG
-        # language boundary; they stay inline to avoid a gratuitous split.
         tier = case(
             (WikiPage.page_title.ilike(subject), 0),
             (WikiPage.page_title.ilike(f"{subject} (fr)"), 0),
             (WikiPage.page_title.ilike(f"{subject}/%"), 1),
             else_=2,
         )
-        return (
+        stmt = (
             select(LoreChunk, distance)
             .options(selectinload(LoreChunk.wiki_page))
             .join(WikiPage, LoreChunk.wiki_page_id == WikiPage.page_id)
@@ -159,14 +158,22 @@ class CosinusSearch(Retriever):
                 LoreChunk.embedding.is_not(None),
                 WikiPage.page_title.ilike(f"%{subject}%"),
             )
-            .order_by(tier, WikiPage.page_id, LoreChunk.chunk_index)
+        )
+
+        # Exclusion filter: the chunks the session already narrated.
+        if exclude_ids:
+            stmt = stmt.where(LoreChunk.id.notin_(exclude_ids))
+
+        return (
+            stmt.order_by(tier, WikiPage.page_id, LoreChunk.chunk_index)
             .limit(limit)
             .offset(offset)
         )
 
     async def dossier(self, subject: str, query_vector: list[float],
                       limit: int = DOSSIER_LIMIT,
-                      offset: int = 0) -> DossierPage:
+                      offset: int = 0,
+                      exclude_ids: list[int] | None = None) -> DossierPage:
         """One page of the subject's dossier, story-first.
 
         Targeted-story anchoring (playtest "l'histoire d'Eleanor"): the pure
@@ -177,12 +184,15 @@ class CosinusSearch(Retriever):
         biography page (``Eleanor``) first, then its section pages
         (``Eleanor/Quotes``), then the dialogue pages — so a targeted story is
         grounded on the narrative itself.  Each chunk keeps its cosine score:
-        the relevance floor still drops off-story sections.  ``offset`` serves
-        the NEXT page of a continuation; one chunk is fetched beyond the window
-        to know whether anything is left (no COUNT query).
+        the relevance floor still drops off-story sections.  ``offset`` is a
+        continuation marker kept for the wire contract (the pipeline always
+        pages from ``0``); ``exclude_ids`` is the real cursor: the chunks the
+        session already narrated are banned in SQL.  One chunk is fetched
+        beyond the window to know whether anything is left (no COUNT query).
         """
-        statement = self._build_dossier_statement(subject, query_vector,
-                                                  limit + 1, offset)
+        statement = self._build_dossier_statement(
+            subject, query_vector, limit + 1, offset, exclude_ids)
+
         hits: list[RAGHit] = []
         async with self.sessions() as session:
             await set_hnsw_ef_search(session, self.ef_search)

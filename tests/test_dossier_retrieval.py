@@ -52,7 +52,7 @@ class FakeLLM:
 
 
 class FakeRetriever:
-    """Retriever with an optional ``dossier`` channel (records subject+cursor)."""
+    """Retriever with an optional ``dossier`` channel (records calls)."""
 
     def __init__(self, hits, dossier=(), more=False):
         self.hits = list(hits)
@@ -64,8 +64,8 @@ class FakeRetriever:
         return list(self.hits)
 
     async def dossier(self, subject, query_vector, limit=DOSSIER_LIMIT,
-                      offset=0):
-        self.dossier_calls.append((subject, offset))
+                      offset=0, exclude_ids=None):
+        self.dossier_calls.append((subject, offset, list(exclude_ids or ())))
         return DossierPage(hits=list(self.dossier_hits), more=self.dossier_more)
 
 
@@ -134,7 +134,7 @@ class PipelineDossierTests(unittest.TestCase):
         service = make_service(retriever)
         used, prompt, bypass = run(service.retrieve(
             "raconte-moi l'histoire d'Eleanor", subject="eleanor"))
-        self.assertEqual(retriever.dossier_calls, [("eleanor", 0)])
+        self.assertEqual(retriever.dossier_calls, [("eleanor", 0, [])])
         self.assertFalse(bypass)
         # Le dossier (biographie) passe AVANT le voisin sémantique KIM.
         self.assertEqual([h.chunk_id for h in used], [1, 2, 9])
@@ -185,22 +185,30 @@ class PipelineDossierTests(unittest.TestCase):
                     content="Background — her idyllic childhood with Arthur."),
             ])
         service = make_service(retriever)
-        context_text, suggestion, more = run(service.resolve(
+        context_text, suggestion, more, consumed = run(service.resolve(
             "raconte-moi l'histoire d'Eleanor", subject="eleanor"))
         self.assertIsNone(suggestion)
         self.assertFalse(more)                  # dossier épuisé : pas de suite
         self.assertIn("Background — her idyllic childhood with Arthur",
                       context_text)
+        # La mémoire d'exclusion grandit avec ce que le modèle a VU (le
+        # voisin sémantique inclus : il a été servi dans la partie d'ouverture).
+        self.assertEqual(consumed, [1, 9])
 
-    def test_le_curseur_sert_la_page_suivante_et_annonce_la_suite(self):
+    def test_les_bans_sont_la_seule_pagination_transmise_au_dossier(self):
+        # Le serveur ne reçoit AUCUN curseur client : la page suivante est la
+        # PREMIÈRE page des fragments non-bannis (exclude_ids), offset toujours
+        # zéro.  ``dossier_offset`` (> 0) ne fait que marquer la continuation.
         retriever = FakeRetriever(
             [hit(9, 0.64, page="KIM", content="voisin sémantique")],
-            dossier=[hit(1, 0.60, page="Ballas", content="Der erste Traum")],
+            dossier=[hit(1, 0.60, page="Ballas", content="Der erste Traum"),
+                     hit(2, 0.61, page="Ballas", content="Zweiter Akt")],
             more=True)
         service = make_service(retriever)
-        context_text, suggestion, more = run(service.resolve(
-            "raconte-moi l'histoire de Ballas", subject="ballas", offset=12))
-        self.assertEqual(retriever.dossier_calls, [("ballas", 12)])
+        context_text, suggestion, more, consumed = run(service.resolve(
+            "raconte-moi l'histoire de Ballas", subject="ballas", offset=1,
+            exclude_ids=[1, 2]))
+        self.assertEqual(retriever.dossier_calls, [("ballas", 0, [1, 2])])
         self.assertIsNone(suggestion)
         self.assertTrue(more)                   # fragments: la suite est possible
         self.assertIn("Der erste Traum", context_text)
@@ -208,24 +216,25 @@ class PipelineDossierTests(unittest.TestCase):
     def test_le_bypass_ne_promet_aucune_suite(self):
         retriever = FakeRetriever([], dossier=[hit(1, 0.10)])   # hors seuil
         service = make_service(retriever)
-        context_text, suggestion, more = run(service.resolve(
+        context_text, suggestion, more, consumed = run(service.resolve(
             "raconte-moi l'histoire de Ballas", subject="ballas"))
         self.assertIsNone(context_text)
         self.assertIsNone(suggestion)
         self.assertFalse(more)
+        self.assertEqual(consumed, [])
 
     def test_une_continuation_ne_resert_pas_les_voisins_semantiques(self):
         # La recherche sémantique est calculée sur le MÊME vecteur à chaque
         # partie : la re-servir re-ancre le modèle sur les mêmes faits
         # saillants (playtest : parties 2 et 3 quasi identiques).  Une
-        # continuation ne reçoit QUE la page suivante du dossier.
+        # continuation (offset > 0) ne reçoit QUE la page du dossier.
         retriever = FakeRetriever(
             [hit(9, 0.64, page="KIM", content="voisin sémantique invariant")],
             dossier=[hit(1, 0.60, page="Ballas", content="Der erste Traum")],
             more=True)
         service = make_service(retriever)
-        context_text, suggestion, more = run(service.resolve(
-            "raconte-moi l'histoire de Ballas", subject="ballas", offset=12))
+        context_text, suggestion, more, _ = run(service.resolve(
+            "raconte-moi l'histoire de Ballas", subject="ballas", offset=1))
         self.assertTrue(more)
         self.assertIn("Der erste Traum", context_text)
         self.assertNotIn("voisin sémantique invariant", context_text)
@@ -241,21 +250,22 @@ class PipelineDossierTests(unittest.TestCase):
                          content="chapitre tardif du dossier")],
             more=True)
         service = make_service(retriever)
-        context_text, suggestion, more = run(service.resolve(
-            "raconte-moi l'histoire de Ballas", subject="ballas", offset=24))
+        context_text, suggestion, more, _ = run(service.resolve(
+            "raconte-moi l'histoire de Ballas", subject="ballas", offset=1))
         self.assertTrue(more)
         self.assertIn("chapitre tardif du dossier", context_text)
 
     def test_une_continuation_sans_page_clot_la_suite(self):
-        # Curseur au-delà du dernier fragment : aucune page, plus de suite.
+        # Tout le dossier est déjà banni : aucune page, plus de suite.
         retriever = FakeRetriever(
             [hit(9, 0.64, page="KIM", content="voisin")], dossier=[])
         service = make_service(retriever)
-        context_text, suggestion, more = run(service.resolve(
-            "raconte-moi l'histoire de Ballas", subject="ballas", offset=60))
+        context_text, suggestion, more, consumed = run(service.resolve(
+            "raconte-moi l'histoire de Ballas", subject="ballas", offset=1))
         self.assertIsNone(context_text)
         self.assertIsNone(suggestion)
         self.assertFalse(more)
+        self.assertEqual(consumed, [])
 
 
 class MergedDossierTests(unittest.TestCase):
@@ -271,7 +281,8 @@ class MergedDossierTests(unittest.TestCase):
                 return []
 
             async def dossier(self, subject, query_vector,
-                              limit=DOSSIER_LIMIT, offset=0):
+                              limit=DOSSIER_LIMIT, offset=0,
+                              exclude_ids=None):
                 return DossierPage(hits=list(self._chunks), more=self._more)
 
         class WithoutDossier:

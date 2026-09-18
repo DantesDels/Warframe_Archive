@@ -73,36 +73,30 @@ class RAGService:
 
     async def retrieve(self, question: str,
                        context: RAGContext | None = None, *,
-                       subject: str | None = None, offset: int = 0
+                       subject: str | None = None, offset: int = 0,
+                       exclude_ids: list[int] | None = None
                        ) -> tuple[list[RAGHit], RAGPrompt, bool]:
-        """Kept passages, assembled prompt and short-circuit flag.
-
-        ``bypass`` signals the absence of a trusted passage AND of a
-        disambiguation clue: the LLM must not be called.
-        """
+        """Kept passages, assembled prompt and short-circuit flag."""
         outcome = await self.pipeline.run(question, context, subject=subject,
-                                          offset=offset)
+                                          offset=offset, exclude_ids=exclude_ids)
         return outcome.hits, outcome.prompt, outcome.bypass
 
     async def resolve(self, question: str,
                       context: RAGContext | None = None, *,
-                      subject: str | None = None, offset: int = 0
-                      ) -> tuple[str | None, str | None, bool]:
-        """Context / suggestion / remaining material of a Roleplay turn (WS).
-
-        ``bypass`` -> ``(None, None, False)``: the WS client then short-circuits
-        with the exact error string.  Otherwise the context is safe (never an
-        empty marker) and a non-null ``suggestion`` means disambiguation.
-        ``more`` (narrative pagination) tells the client that the subject's
-        dossier still holds passages beyond the page it just read: the tale can
-        be continued on unseen material.
-        """
+                      subject: str | None = None, offset: int = 0,
+                      exclude_ids: list[int] | None = None
+                      ) -> tuple[str | None, str | None, bool, list[int]]:
+        """Context / suggestion / remaining material / consumed chunk IDs."""
         outcome = await self.pipeline.run(question, context, subject=subject,
-                                          offset=offset)
+                                          offset=offset, exclude_ids=exclude_ids)
         if outcome.bypass:
-            return None, None, False
+            return None, None, False, []
+        # Only the ids the model REALLY saw (bounded in the builder by the
+        # character cap) enter the session's exclusion memory: banning every
+        # retrieved hit would silently starve the dossier of unseen fragments.
+        consumed_ids = list(outcome.prompt.used_ids)
         return (outcome.prompt.context, outcome.prompt.suggestion,
-                outcome.story_more)
+                outcome.story_more, consumed_ids)
 
     async def answer_with_sources(self, question: str,
                                   context: RAGContext | None = None

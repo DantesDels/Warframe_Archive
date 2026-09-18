@@ -12,9 +12,13 @@ import asyncio
 import unittest
 
 from warframe_lore.engram.api.routers.roleplay_stream import (
+    STORY_RETRY_LIMIT,
     collapse_repeated_closing,
+    emit_story_turn,
     emit_stream,
 )
+from warframe_lore.engram.rag import JAILBREAK_REJECT, RAGContext
+from warframe_lore.engram.roleplay import Session
 from warframe_lore.engram.roleplay.prompt import (
     STORY_COMPLETE_SENTENCE,
     STORY_PAGINATION_SENTENCE,
@@ -22,6 +26,28 @@ from warframe_lore.engram.roleplay.prompt import (
 from warframe_lore.engram.roleplay.purge import canonical_story_closing
 
 TOKENS = ("Ballas fut le ", "Conseiller ", "des Orokin.")
+
+# A continuation frame of a running tale: ``text`` is the bot's canned
+# "continue", ``retrieval_text`` the request that anchored the story.
+STORY_PAYLOAD = {
+    "type": "message",
+    "text": "Poursuis le récit.",
+    "rag": True,
+    "story": True,
+    "story_lens": None,
+    "targeted_era": "l'Ère Orokin",
+    "targeted_subject": "albrecht",
+    "leverian_warframe": None,
+    "retrieval_text": "raconte l'histoire d'Albrecht",
+    "dossier_offset": 1,
+    "user_id": "curiosité",
+    "user_name": "Mira",
+    "user_role": "chancre",
+    "role_status": "organique",
+    "creator": False,
+    "creator_mention": None,
+    "lang": "fr",
+}
 
 
 async def tokens():
@@ -147,6 +173,127 @@ class CanonicalClosingTests(unittest.TestCase):
         self.assertEqual(
             canonical_story_closing(STORY_COMPLETE_SENTENCE, more=True),
             STORY_COMPLETE_SENTENCE)
+
+
+class _StubRag:
+    """``resolve()`` renvoie une fenêtre (contexte, story_more) par appel."""
+
+    def __init__(self, pages: list[tuple[str, bool]]) -> None:
+        self.pages = pages
+        self.calls = 0
+
+    async def resolve(self, search_text, context=None, subject=None,
+                      offset=0, exclude_ids=None):
+        ctx, more = self.pages[min(self.calls, len(self.pages) - 1)]
+        self.calls += 1
+        return ctx, None, more, {1, 2, 3}
+
+
+class _StubRoleplay:
+    """``stream()`` émet une réponse toute faite par appel (pas de LLM)."""
+
+    def __init__(self, outputs: list[str]) -> None:
+        self.outputs = outputs
+        self.calls = 0
+
+    async def stream(self, session, user_text, rag_context=None, **kwargs):
+        out = self.outputs[min(self.calls, len(self.outputs) - 1)]
+        self.calls += 1
+        yield out
+
+
+class _StubContainer:
+    def __init__(self, rag: _StubRag, roleplay: _StubRoleplay) -> None:
+        self.rag = rag
+        self.roleplay = roleplay
+
+
+class EmitStoryTurnTests(unittest.TestCase):
+    """La partie story saute les fenêtres muettes au lieu de couper la chaîne.
+
+    Un tour dont le modèle ne narre rien (réponse réduite à la seule clôture)
+    ne doit ni mentir sur le dossier ni tuer l'enchaînement : le curseur a
+    déjà avancé (mémoire d'exclusion), la fenêtre suivante est servie en
+    silence, borné par ``STORY_RETRY_LIMIT``.
+    """
+
+    def _frames(self, pages, outputs, payload=None):
+        payload = payload or STORY_PAYLOAD
+        rag = _StubRag(pages)
+        roleplay = _StubRoleplay(outputs)
+        socket = FakeWebSocket()
+        run(emit_story_turn(
+            socket, _StubContainer(rag, roleplay), payload,
+            str(payload["text"]), "oracle", RAGContext(),
+            Session(session_id="s")))
+        return socket, rag, roleplay
+
+    def test_une_partie_narree_est_emise_une_fois(self):
+        socket, rag, roleplay = self._frames(
+            [("Contexte Albrecht.", True)],
+            ["Eleanor ferma ses notes dans Höllvania."])
+        self.assertEqual([f["type"] for f in socket.frames], ["token", "end"])
+        self.assertEqual(socket.frames[-1]["text"],
+                         "Eleanor ferma ses notes dans Höllvania.")
+        self.assertTrue(socket.frames[-1]["story_more"])
+        self.assertEqual((rag.calls, roleplay.calls), (1, 1))
+
+    def test_une_fenetre_muette_est_sautee_invisiblement(self):
+        # Fenêtre 1 : le modèle n'a rien narré (clôture seule) ; la fenêtre 2
+        # raconte.  Rien du premier passage ne sort vers le client, la chaîne
+        # continue sur la page suivante.
+        socket, rag, roleplay = self._frames(
+            [("Fenêtre muette.", True), ("Fenêtre vivante.", True)],
+            [STORY_COMPLETE_SENTENCE,
+             "Eleanor ferma ses notes dans Höllvania."])
+        self.assertEqual([f["type"] for f in socket.frames], ["token", "end"])
+        self.assertEqual(socket.frames[-1]["text"],
+                         "Eleanor ferma ses notes dans Höllvania.")
+        self.assertTrue(socket.frames[-1]["story_more"])
+        self.assertEqual((rag.calls, roleplay.calls), (2, 2))
+
+    def test_une_chaine_morte_s_arrete_sur_le_stop_d_archiviste(self):
+        # Toutes les fenêtres retryées sont muettes : la partie sert le stop
+        # d'archiviste et ne promet aucune suite — jamais une invitation seule.
+        socket, rag, roleplay = self._frames(
+            [("m1", True), ("m2", True), ("m3", True)],
+            [STORY_COMPLETE_SENTENCE] * 3)
+        self.assertEqual([f["type"] for f in socket.frames], ["token", "end"])
+        self.assertEqual(socket.frames[-1]["text"], STORY_COMPLETE_SENTENCE)
+        self.assertFalse(socket.frames[-1]["story_more"])
+        self.assertEqual((rag.calls, roleplay.calls),
+                         (STORY_RETRY_LIMIT + 1, STORY_RETRY_LIMIT + 1))
+
+    def test_un_dossier_epuise_ne_essaie_pas_de_rebondir(self):
+        # story_more=False (vérité du serveur) : pas de retry, une réponse
+        # muette devient simplement le stop d'archiviste.
+        socket, rag, roleplay = self._frames(
+            [("Dossier drainé.", False)],
+            [STORY_COMPLETE_SENTENCE])
+        self.assertEqual(socket.frames[-1]["text"], STORY_COMPLETE_SENTENCE)
+        self.assertFalse(socket.frames[-1]["story_more"])
+        self.assertEqual((rag.calls, roleplay.calls), (1, 1))
+
+    def test_une_fenetre_narree_sur_un_dossier_epuise_s_arrete_net(self):
+        # Fenêtre 2 réellement narrée mais le dossier n'a plus rien derrière :
+        # la partie s'émet avec le stop (story_more conforme au serveur).
+        socket, rag, roleplay = self._frames(
+            [("m1", True), ("m2", False)],
+            [STORY_COMPLETE_SENTENCE,
+             "Eleanor ferma ses notes dans Höllvania."])
+        self.assertEqual(socket.frames[-1]["text"],
+                         "Eleanor ferma ses notes dans Höllvania.")
+        self.assertFalse(socket.frames[-1]["story_more"])
+        self.assertEqual((rag.calls, roleplay.calls), (2, 2))
+
+    def test_un_plan_deterministe_ne_fait_jamais_appeler_le_modele(self):
+        # Un tour piégé (injection SQL) est rejeté par les courts-circuits
+        # avant le RAG et le LLM.
+        payload = dict(STORY_PAYLOAD, text="UPDATE users SET is_admin=1; --")
+        socket, rag, roleplay = self._frames(
+            [("x", True)], ["jamais servi"], payload=payload)
+        self.assertEqual(socket.frames[-1]["text"], JAILBREAK_REJECT)
+        self.assertEqual((rag.calls, roleplay.calls), (0, 0))
 
 
 if __name__ == "__main__":

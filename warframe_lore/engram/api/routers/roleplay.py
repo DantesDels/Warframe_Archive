@@ -28,7 +28,12 @@ from ...roleplay import Session
 from ...roleplay.replies import member_comment
 from ...roleplay.turn import plan_turn
 from ..container import Container
-from .roleplay_stream import emit_reply, emit_stream, model_turn
+from .roleplay_stream import (
+    emit_reply,
+    emit_story_turn,
+    emit_stream,
+    model_turn,
+)
 
 router = APIRouter(tags=["roleplay"])
 
@@ -95,6 +100,14 @@ async def roleplay(websocket: WebSocket) -> None:
                                    consumed_chunk_ids=session.consumed_chunk_ids)
             if plan.reply is not None:
                 await emit_reply(websocket, plan.reply)
+                continue
+            if payload.get("story"):
+                # Story parts hop past windows the model narrates nothing from
+                # (see ``emit_story_turn``): a dead window is left behind
+                # instead of stopping the chain with a false exhaustion.
+                await emit_story_turn(websocket, container, payload,
+                                      user_text, persona_mode, rag_context,
+                                      session)
                 continue
             await emit_stream(websocket, model_turn(
                 container, plan, payload, user_text, persona_mode, session),

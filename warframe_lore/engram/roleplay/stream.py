@@ -104,7 +104,10 @@ class RoleplayService:
                 "événements, détails, et actions présents dans ces archives. "
                 "NE RÉSUME PAS. Conserve absolument toute la richesse, la "
                 "longueur et les nuances des informations. Rédige un brouillon "
-                "brut, chronologique et très détaillé."
+                "brut, chronologique et très détaillé. LE BROUILLON EST "
+                "RÉDIGÉ EN FRANÇAIS : même si les archives sont en anglais, "
+                "traduis les faits en français — jamais de brouillon en "
+                "anglais."
             )
             draft_messages = [
                 ChatMessage(
@@ -141,7 +144,10 @@ class RoleplayService:
                 "déjà racontés dans tes messages précédents (historique de "
                 "conversation). Concentre-toi UNIQUEMENT sur la narration des "
                 "NOUVEAUX éléments présents dans le brouillon. Développe ce "
-                "nouveau passage de manière immersive, théâtrale et détaillée."
+                "nouveau passage de manière immersive, théâtrale et détaillée. "
+                "LA LANGUE DE SORTIE EST LE FRANÇAIS : rédige le récit en "
+                "français même si le brouillon factuel est en anglais — "
+                "traduis-le, ne le recopie jamais."
             )
 
             system = (

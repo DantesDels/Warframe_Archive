@@ -389,6 +389,22 @@ class _FakeLLM:
         yield self.output
 
 
+class _RecordingLLM:
+    """Captures every chat_stream call (messages + temperature).
+
+    The double-pass story turn calls the LLM twice (invisible factual draft,
+    then narration): the recorded messages prove WHERE a directive lives.
+    """
+
+    def __init__(self, output):
+        self.output = output
+        self.calls = []
+
+    async def chat_stream(self, messages, temperature):
+        self.calls.append((messages, temperature))
+        yield self.output
+
+
 class _MultiLLM:
     def __init__(self, tokens):
         self.tokens = tokens
@@ -437,6 +453,33 @@ class StreamGateTests(unittest.TestCase):
             Session(session_id="s"), "raconte Albrecht",
             rag_context=CONTEXT, story=True))
         self.assertEqual(tokens, ["Eleanor vit à Höllvania auprès d Arthur."])
+
+    def test_les_deux_passes_du_double_pass_imposent_le_francais(self):
+        # Playtest « continue » : des chunks anglais ont produit un récit en
+        # anglais.  Les deux passes — brouillon factuel invisible puis
+        # narration — doivent porter un verrou de sortie français, même avec
+        # une source anglaise (le modèle ne doit ni brouillonner ni narrer en
+        # anglais).
+        llm = _RecordingLLM("extrait")
+        _run(self._service(llm).stream(
+            Session(session_id="s"), "raconte Albrecht",
+            rag_context=CONTEXT, story=True,
+            targeted_era="l'Ère Orokin"))
+        draft = llm.calls[0][0][0].content
+        narration = llm.calls[1][0][0].content
+        self.assertIn("RÉDIGÉ EN FRANÇAIS", draft)
+        self.assertIn("LA LANGUE DE SORTIE EST LE FRANÇAIS", narration)
+
+    def test_la_continuation_garde_le_verrou_francais_des_deux_passes(self):
+        llm = _RecordingLLM("extrait")
+        _run(self._service(llm).stream(
+            Session(session_id="s"), "continue",
+            rag_context=CONTEXT, story=True,
+            targeted_era="l'Ère Orokin", story_continuation=True))
+        draft = llm.calls[0][0][0].content
+        narration = llm.calls[1][0][0].content
+        self.assertIn("RÉDIGÉ EN FRANÇAIS", draft)
+        self.assertIn("LA LANGUE DE SORTIE EST LE FRANÇAIS", narration)
 
     def test_une_cloture_dupliquee_est_fussee_dans_le_token_servi(self):
         # Le client affiche les JETONS, pas le texte de la trame ``end`` : la

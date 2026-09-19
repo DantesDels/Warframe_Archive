@@ -113,6 +113,20 @@ LEVERIAN_DIRECTIVE = (
     "passages du contexte où Drusus est le narrateur. Ne mélange pas cette "
     "version avec des récits tiers ou des spéculations communautaires.]")
 
+# KIM excerpts: the structured dossier holds "KIM · …" exchanges of the Hex'
+# messenger application (Kinemantik Instant Messenger).  Without a rule the
+# model reads "KIM" as a PERSON (playtest 00:04: an invented "Kim" answering
+# the Voyageur): the app must stay a TOOL, unnamed lines belong to the
+# Voyageur, a named line to its Hex member.
+KIM_MESSENGER_DIRECTIVE = (
+    "[DIRECTIVE SUR L'APPLICATION KIM : les fragments « KIM · … » des archives "
+    "sont des échanges de l'application de messagerie KIM (Kinemantik Instant "
+    "Messenger) utilisée par les Hex. KIM est un OUTIL, jamais un personnage : "
+    "il n'a ni visage, ni voix, ni répliques propres. Une ligne d'échange SANS "
+    "locuteur nommé est un message du Voyageur (l'organique) ; une ligne "
+    "nommée est du membre des Hex cité. N'invente JAMAIS un interlocuteur "
+    "« Kim » absent des archives pour répondre au Voyageur.]")
+
 # Continuation of a RUNNING narrative: the history already holds the previous
 # parts.  Without this rule the model re-opens the tale and re-narrates the
 # very same passages (observed playtest: an identical "continue" answer).
@@ -170,8 +184,9 @@ def story_directive(lens: str | None, *, continuation: bool = False,
     pagination = (STORY_DIRECTIVE if more
                   else _STORY_BASE + _STORY_EXHAUSTED_DIRECTIVE.format(
                       STORY_COMPLETE_SENTENCE))
+    kim = (f"\n{KIM_MESSENGER_DIRECTIVE}" if lens == "1999" else "")
     return "".join([pagination, resume_directive(continuation), "\n",
-                    EN_PRIMACY_DIRECTIVE, "\n", start or ""])
+                    EN_PRIMACY_DIRECTIVE, "\n", start or "", kim])
 
 
 def targeted_story_directive(era: str | None = None, *,
@@ -183,14 +198,15 @@ def targeted_story_directive(era: str | None = None, *,
     line (invitation or archivist closing) is appended here for both states.
     """
     era_line = f"\n  - Ère imposée par les archives : {era}." if era else ""
+    kim = (f"\n{KIM_MESSENGER_DIRECTIVE}" if "1999" in (era or "") else "")
     return "".join([TARGETED_STORY_DIRECTIVE, resume_directive(continuation),
-                    "\n", EN_PRIMACY_DIRECTIVE, era_line, "\n",
+                    "\n", EN_PRIMACY_DIRECTIVE, era_line, "\n", kim,
                     story_closing(more)])
 
 
-__all__ = ["EN_PRIMACY_DIRECTIVE", "LEVERIAN_DIRECTIVE",
-           "STORY_COMPLETE_SENTENCE", "STORY_DIRECTIVE", "STORY_LENS_STARTS",
-           "STORY_PAGINATION_SENTENCE", "STORY_RESUME_DIRECTIVE",
-           "TARGETED_STORY_DIRECTIVE", "leverian_directive",
-           "resume_directive", "story_closing", "story_directive",
-           "targeted_story_directive"]
+__all__ = ["EN_PRIMACY_DIRECTIVE", "KIM_MESSENGER_DIRECTIVE",
+           "LEVERIAN_DIRECTIVE", "STORY_COMPLETE_SENTENCE", "STORY_DIRECTIVE",
+           "STORY_LENS_STARTS", "STORY_PAGINATION_SENTENCE",
+           "STORY_RESUME_DIRECTIVE", "TARGETED_STORY_DIRECTIVE",
+           "leverian_directive", "resume_directive", "story_closing",
+           "story_directive", "targeted_story_directive"]

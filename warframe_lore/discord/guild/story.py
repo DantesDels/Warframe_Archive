@@ -9,6 +9,7 @@ before opening the story, instead of guessing a wrong starting point.
 
 from __future__ import annotations
 
+import difflib
 import re
 from dataclasses import dataclass
 
@@ -84,6 +85,23 @@ SUBJECT_QUESTION_INTRO = (
     "organique. Lequel veux-tu entendre ? Réponds-moi par un chiffre :\n")
 SUBJECT_QUESTION_OUTRO = "Ou pardonne ma prudence : je t'écoute."
 
+# Fuzzy subject recovery: a MISSPELLED canonical subject ("mettie" for
+# "lettie", ratio 0.83) matches no exact era key and would otherwise open the
+# three generic doors.  Each alnum word (4+ letters) of the request is matched
+# against the ``TARGETED_SUBJECT_ERAS`` keys with difflib; a close match
+# proposes that subject BEFORE the doors — the bot confirms, never guesses.
+# Generic sentences ("raconte moi une histoire", "l'histoire de l'Infestation")
+# stay below the cutoff and keep the doors.
+CLOSE_SUBJECT_CUTOFF = 0.8
+_CLOSE_SUBJECT_MIN_WORD = 4
+
+CLOSE_SUBJECT_QUESTION = (
+    "Un nom des archives se rapproche de ta demande, organique. "
+    "Voulais-tu dire « {subject} » ? Réponds-moi par un chiffre :\n"
+    "  1 — {subject}\n"
+    "Ou pardonne ma prudence : je t'écoute."
+)
+
 
 @dataclass(frozen=True)
 class StoryAsk:
@@ -137,6 +155,49 @@ def targeted_subject_mention(text: str) -> str | None:
         if mention in low:
             return mention
     return None
+
+
+def fuzzy_targeted_subject(text: str) -> str | None:
+    """Targeted subject KEY whose spelling the request nearly matches.
+
+    A MISSPELLED canonical subject ("mettie" for Lettie) matches no exact era
+    and would otherwise open the three generic doors (test_story_ask doors
+    flow).  Each alnum word of 4+ letters, longest first, is matched against
+    the ``TARGETED_SUBJECT_ERAS`` keys; the first word with a close match
+    (``CLOSE_SUBJECT_CUTOFF``) yields that key.  Returns ``None``, and the
+    doors stay, on generic requests ("raconte moi une histoire",
+    "raconte-moi l'histoire de l'Infestation").
+    """
+    low = (text or "").lower()
+    words = sorted({word for word in re.findall(r"[a-z0-9]+", low)
+                    if len(word) >= _CLOSE_SUBJECT_MIN_WORD},
+                   key=len, reverse=True)
+    for word in words:
+        matches = difflib.get_close_matches(
+            word, list(TARGETED_SUBJECT_ERAS), n=1,
+            cutoff=CLOSE_SUBJECT_CUTOFF)
+        if matches:
+            return matches[0]
+    return None
+
+
+def correct_targeted_request(text: str, key: str) -> str:
+    """``text`` with the mis-typed subject respelled canonically.
+
+    Replaces the offending word (the one close to ``key``, see
+    :func:`fuzzy_targeted_subject`) by the canonical title of the recovered
+    key ("mettie" -> "Lettie"), so the confirmed request anchors the era and
+    the exact mention (``targeted_subject_mention``) through its own scan.
+    """
+    low = (text or "").lower()
+    for word in re.findall(r"[a-z0-9]+", low):
+        if len(word) < _CLOSE_SUBJECT_MIN_WORD:
+            continue
+        if difflib.get_close_matches(word, [key], n=1,
+                                     cutoff=CLOSE_SUBJECT_CUTOFF):
+            return re.sub(re.escape(word), key.title(), text, count=1,
+                          flags=re.IGNORECASE)
+    return text
 
 
 def detect_leverian_warframe(text: str) -> str | None:
@@ -221,11 +282,13 @@ def substitute_story_subject(request: str, subject: str) -> str:
                   flags=re.IGNORECASE)
 
 
-__all__ = ["LEVERIAN_WARFRAMES", "LENS_1999", "LENS_COSMOGONIC",
+__all__ = ["CLOSE_SUBJECT_CUTOFF", "CLOSE_SUBJECT_QUESTION",
+           "LEVERIAN_WARFRAMES", "LENS_1999", "LENS_COSMOGONIC",
            "LENS_INITIATE", "LENS_KEYWORDS", "LENS_LABELS", "LENS_QUESTION",
            "MENU_INDEX_ERROR", "STORY_SUBJECT_CHOICES", "STORY_TRIGGERS",
-           "TARGETED_SUBJECT_ERAS", "StoryAsk", "detect_leverian_warframe",
-           "detect_story_lens", "detect_targeted_era",
+           "TARGETED_SUBJECT_ERAS", "StoryAsk", "correct_targeted_request",
+           "detect_leverian_warframe", "detect_story_lens",
+           "detect_targeted_era", "fuzzy_targeted_subject",
            "is_out_of_range_index", "is_story_request", "parse_lens_answer",
            "parse_subject_answer", "story_subject", "story_subject_choices",
            "story_subject_question", "substitute_story_subject"]

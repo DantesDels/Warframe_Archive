@@ -49,6 +49,40 @@ class StoryAskAnswerTests(unittest.TestCase):
         self.assertNotIn(scenario.channel.id, scenario.bot.state.story_asks)
 
 
+class StoryCloseSubjectAskTests(unittest.TestCase):
+    """Un sujet mal épelé est confirmé AVANT les portes génériques."""
+
+    def test_un_sujet_flou_propose_le_nom_canonique(self):
+        scenario = make_bot()
+        scenario.say("raconte-moi l'histoire de mettie")
+        question = scenario.channel.last.content
+        self.assertIn("Lettie", question)
+        self.assertIn("Voulais-tu dire", question)
+        self.assertNotEqual(question, LENS_QUESTION)
+        self.assertIsNone(scenario.gateway.last)   # pas de tour LLM encore
+
+    def test_la_confirmation_ouvre_le_recit_du_sujet_corrige(self):
+        scenario = make_bot()
+        scenario.say("raconte-moi l'histoire de mettie")
+        scenario.say("1")
+        frame = scenario.gateway.last
+        self.assertTrue(frame["story"])
+        # La requête corrigée (Lettie) est celle qui est jouée — le contenu
+        # de l'échange reste fidèle à la demande réelle, ré-orthographiée.
+        self.assertEqual(frame["text"], "raconte-moi l'histoire de Lettie")
+        self.assertEqual(frame["targeted_era"], "1999 (Höllvania)")
+        self.assertEqual(frame["targeted_subject"], "lettie")
+        self.assertIsNone(frame.get("story_lens"))
+        self.assertEqual(scenario.stats["by_kind"]["story"], 1)
+
+    def test_une_reponse_inconnue_garde_la_question_du_sujet_ouverte(self):
+        scenario = make_bot()
+        scenario.say("raconte-moi l'histoire de mettie")
+        scenario.say("n'importe quoi")
+        self.assertIsNone(scenario.gateway.last)
+        self.assertIn("Lettie", scenario.channel.last.content)
+
+
 if __name__ == "__main__":
     unittest.main()
 

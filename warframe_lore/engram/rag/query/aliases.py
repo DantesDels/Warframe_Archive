@@ -63,4 +63,20 @@ def resolve_alias(question: str) -> tuple[str, str, str]:
     return _DEFAULT_RESOLVER.resolve(question)
 
 
-__all__ = ["ALIASES", "AliasResolver", "resolve_alias"]
+def dossier_title_terms(subject: str) -> tuple[str, ...]:
+    """Title terms of a dossier sweep: the key + its canonical spellings.
+
+    The subject arrives as the DISCORD mention key ("lettie") while the wiki
+    titles use the canonical name ("Leticia"): a sweep on the bare key would
+    sink the biography page to the flat content-only tier (Lettie playtest).
+    Returns the key plus the lowercased canonical name of each matching
+    alias, deduplicated, in order.
+    """
+    terms: list[str] = [subject]
+    for alias, (canonical, _note) in ALIASES.items():
+        if alias == subject:
+            terms.append(canonical.lower())
+    return tuple(dict.fromkeys(terms))
+
+
+__all__ = ["ALIASES", "AliasResolver", "dossier_title_terms", "resolve_alias"]

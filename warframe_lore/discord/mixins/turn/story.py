@@ -15,12 +15,15 @@ from dataclasses import replace
 import discord
 
 from ...guild import (
+    CLOSE_SUBJECT_QUESTION,
     LENS_LABELS,
     LENS_QUESTION,
     MENU_INDEX_ERROR,
     STORY_AUTO_PARTS,
     STORY_CONTINUATION_PROMPT,
+    correct_targeted_request,
     detect_story_mode,
+    fuzzy_targeted_subject,
     is_out_of_range_index,
     parse_lens_answer,
     parse_subject_answer,
@@ -42,6 +45,7 @@ class StoryMixin:
         called for a story the bot cannot anchor.
         """
         choices = story_subject_choices(text)
+        request = text
         if choices:
             # Subject ambiguity ("l'histoire de Garuda" = Vena or the
             # Archimedean): the bot asks WHICH tale, never guesses between two
@@ -49,12 +53,21 @@ class StoryMixin:
             question = story_subject_question(choices)
         elif context.story_lens is None and context.targeted_era is None:
             # Story request without an obvious starting point and without a
-            # recognized targeted subject: the bot asks the human THEIR opening
-            # (never guesses it).
-            question = LENS_QUESTION
+            # recognized targeted subject.  A NEARLY canonical subject
+            # ("mettie" for Lettie) is proposed BEFORE the doors — the bot
+            # confirms, never guesses the name itself.
+            subject = fuzzy_targeted_subject(text)
+            if subject is not None:
+                request = correct_targeted_request(text, subject)
+                subject = subject.title()
+                choices = (subject,)
+                question = CLOSE_SUBJECT_QUESTION.format(subject=subject)
+            else:
+                # Otherwise the bot asks the human THEIR opening.
+                question = LENS_QUESTION
         else:
             return False
-        self.state.open_story_ask(message.channel.id, message.author.id, text,
+        self.state.open_story_ask(message.channel.id, message.author.id, request,
                                   question, choices)
         await message.channel.send(question)
         return True

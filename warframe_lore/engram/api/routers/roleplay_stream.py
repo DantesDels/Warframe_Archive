@@ -15,7 +15,7 @@ from collections.abc import AsyncIterator
 from fastapi import WebSocket
 
 from ....protocols.roleplay import EndFrame, TokenFrame
-from ...rag import RAGContext
+from ...rag import RAG_ERROR, RAGContext
 from ...roleplay import Session
 from ...roleplay.prompt import STORY_COMPLETE_SENTENCE
 from ...roleplay.purge import (
@@ -56,9 +56,11 @@ async def emit_stream(websocket: WebSocket, tokens: AsyncIterator[str],
     return text
 
 
-# A part the model answered with ONLY the mandatory closing line (degenerate)
+# A part the model answers with ONLY the mandatory closing line (degenerate)
 # carries no narration — serving it would show a bare archivist stop while the
 # dossier still holds unseen fragments behind the cursor (playtest 00:04).  The
+# same holds for a part reduced to an EMPTY text: an empty ``end`` would lie
+# about ``story_more`` (Lettie playtest: empty part on the wire).  The
 # ``plan_turn`` already grew the session's exclusion memory with the ids of the
 # dead window, so re-planning serves the NEXT page: bounded invisible retries
 # keep the chain flowing to real material instead of lying about exhaustion.
@@ -74,10 +76,13 @@ async def emit_story_turn(websocket: WebSocket, container: Container,
     The turn is re-planned (and the model called again) only while the current
     window degrades AND the dossier still has unseen fragments
     (``story_more``) — each retry hops past the dead window because the
-    exclusion memory advanced at plan time.  The part is emitted — one token
-    plus one ``end`` — as soon as it narrates something, or when the dossier
-    is truly drained; a genuinely barren dossier ends with the archivist stop
-    after ``STORY_RETRY_LIMIT``.
+    exclusion memory advanced at plan time.  A degenerate part narrates
+    NOTHING: the closing sentence alone or an EMPTY text.  The part is emitted
+    — one token plus one ``end`` — as soon as it narrates something, or when
+    the dossier is truly drained.  An EMPTY part never reaches the wire: with
+    fragments remaining the (non-degenerate) abstention keeps ``story_more``
+    honest; a genuinely barren dossier ends with the archivist stop after
+    ``STORY_RETRY_LIMIT``.
     """
     for attempt in range(STORY_RETRY_LIMIT + 1):
         plan = await plan_turn(container, payload, user_text, persona_mode,
@@ -91,9 +96,20 @@ async def emit_story_turn(websocket: WebSocket, container: Container,
                                       persona_mode, session):
             parts.append(token)
         text = purge_story_closing("".join(parts))
-        dead = text.strip() == STORY_COMPLETE_SENTENCE and plan.story_more
+        # Degenerate = the part narrated NOTHING: empty text (the model
+        # aborted, Lettie playtest) or the closing sentence alone.
+        degenerate = (not text.strip()
+                      or text.strip() == STORY_COMPLETE_SENTENCE)
+        dead = degenerate and plan.story_more
         if dead and attempt < STORY_RETRY_LIMIT:
             continue          # nothing narrated: hop past the dead window
+        if not text.strip():
+            # Every invisible retry narrated NOTHING: an EMPTY part must never
+            # reach the wire — it would lie about story_more.  Fragments remain
+            # -> the honest abstention (story_more stays True); the dossier is
+            # drained -> the archivist closing (story_more=False).
+            text = RAG_ERROR if plan.story_more else STORY_COMPLETE_SENTENCE
+            dead = False
         await websocket.send_json(TokenFrame(token=text).model_dump())
         await websocket.send_json(
             EndFrame(text=text, story_more=plan.story_more and not dead)

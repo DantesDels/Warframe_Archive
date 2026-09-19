@@ -430,6 +430,15 @@ class _FailingLLM:
         yield  # pragma: no cover - kept as an async generator
 
 
+class _BurstFailingLLM:
+    """Emits some tokens, then aborts mid-stream (context overflow)."""
+
+    async def chat_stream(self, messages, temperature):
+        yield "Eleanor ferma ses notes "
+        raise RuntimeError("LLM server error: context size has been exceeded")
+        yield  # pragma: no cover - kept as an async generator
+
+
 class StreamGateTests(unittest.TestCase):
     def _service(self, llm, vocabulary=None):
         return RoleplayService(
@@ -598,6 +607,23 @@ class StreamGateTests(unittest.TestCase):
         tokens = _run(self._service(_FailingLLM()).stream(
             Session(session_id="s"), "bonjour"))
         self.assertEqual(tokens, [RAG_ERROR])
+
+    def test_panne_apres_un_bureau_rag_abstention_entier(self):
+        # Playtest Lettie : la panne survient APRÈS des jetons déjà bufferisés
+        # pour la vérification archive.  Le buffer partiel est JETÉ (jamais
+        # vérifié, jamais servi) : l'abstention remplace tout — une réponse
+        # partielle non vérifiée ne franchit jamais la porte.
+        tokens = _run(self._service(_BurstFailingLLM()).stream(
+            Session(session_id="s"), "qui est Eleanor ?",
+            rag_context=CONTEXT))
+        self.assertEqual(tokens, [RAG_ERROR])
+
+    def test_panne_apres_des_jetons_lives_garde_le_tronc(self):
+        # Chat-libre : les jetons déjà streamés restent servis (comportement
+        # tronqué inchangé) — seuls les buffers RAG non vérifiés se taisent.
+        tokens = _run(self._service(_BurstFailingLLM()).stream(
+            Session(session_id="s"), "bonjour"))
+        self.assertEqual(tokens, ["Eleanor ferma ses notes "])
 
 
 class _FakeEmbed:

@@ -9,6 +9,7 @@ from __future__ import annotations
 import unittest
 
 from warframe_lore.discord.guild.story import (
+    CLOSE_SUBJECT_QUESTION,
     LENS_COSMOGONIC,
     LENS_INITIATE,
     LENS_LABELS,
@@ -16,9 +17,11 @@ from warframe_lore.discord.guild.story import (
     LEVERIAN_WARFRAMES,
     MENU_INDEX_ERROR,
     TARGETED_SUBJECT_ERAS,
+    correct_targeted_request,
     detect_leverian_warframe,
     detect_story_lens,
     detect_targeted_era,
+    fuzzy_targeted_subject,
     is_out_of_range_index,
     is_story_request,
     parse_lens_answer,
@@ -31,10 +34,14 @@ from warframe_lore.discord.guild.story import (
 )
 from warframe_lore.engram.roleplay.prompt import (
     LEVERIAN_DIRECTIVE,
+    STORY_PAGINATION_SENTENCE,
     TARGETED_STORY_DIRECTIVE,
     leverian_directive,
     story_directive,
     targeted_story_directive,
+)
+from warframe_lore.engram.roleplay.prompt.narrative import (
+    KIM_MESSENGER_DIRECTIVE,
 )
 
 STORY_REQUESTS = (
@@ -272,6 +279,81 @@ class LeverianDirectiveTests(unittest.TestCase):
     def test_default_directive_mentions_drusus(self):
         self.assertIn("Drusus", LEVERIAN_DIRECTIVE)
         self.assertIn("Leverian", LEVERIAN_DIRECTIVE)
+
+
+class KimMessengerDirectiveTests(unittest.TestCase):
+    """KIM est l'application des Hex, jamais une personne (playtest 00:04)."""
+
+    def _assert_kim_instruit(self, directive):
+        self.assertIn("Kinemantik Instant Messenger", directive)
+        self.assertIn("jamais un personnage", directive)
+        self.assertIn("Voyageur", directive)
+
+    def test_le_recit_1999_porte_la_directive_kim(self):
+        self._assert_kim_instruit(story_directive("1999"))
+
+    def test_le_recit_cible_1999_porte_la_directive_kim(self):
+        self._assert_kim_instruit(
+            targeted_story_directive("1999 (Höllvania)"))
+
+    def test_la_directive_kim_precede_la_cloture(self):
+        # La consigne KIM est INSÉRÉE avant la clôture : elle ne peut pas être
+        # écrasée par la clôture canonique ni postérée après elle.
+        directive = targeted_story_directive("1999 (Höllvania)")
+        self.assertLess(directive.index("Kinemantik"),
+                        directive.index(STORY_PAGINATION_SENTENCE))
+
+    def test_les_autres_lentilles_ne_portent_pas_la_directive_kim(self):
+        self.assertNotIn("Kinemantik", story_directive(None))
+        self.assertNotIn("Kinemantik", story_directive(LENS_INITIATE))
+        self.assertNotIn("Kinemantik", story_directive(LENS_COSMOGONIC))
+
+    def test_les_autres_eres_ciblees_ne_portent_pas_la_directive_kim(self):
+        self.assertNotIn("Kinemantik", targeted_story_directive())
+        self.assertNotIn("Kinemantik",
+                         targeted_story_directive("l'Ère Orokin"))
+        self.assertNotIn("Kinemantik",
+                         targeted_story_directive("l'Éveil du Tenno"))
+
+    def test_la_constante_est_exportee(self):
+        self.assertIn("KIM", KIM_MESSENGER_DIRECTIVE)
+        self.assertIn("OUTIL", KIM_MESSENGER_DIRECTIVE)
+
+
+class CloseSubjectTests(unittest.TestCase):
+    """Un sujet presque canonique est proposé AVANT les portes génériques."""
+
+    def test_un_sujet_mal_epelle_est_reconnu(self):
+        # "mettie" (ratio 0.83 >= 0.8) est renvoyé à sa clé canonique "lettie".
+        self.assertEqual(
+            fuzzy_targeted_subject("raconte-moi l'histoire de mettie"),
+            "lettie")
+
+    def test_une_demande_generique_n_est_pas_un_sujet_flou(self):
+        # "raconte moi une histoire" et "l'histoire de l'Infestation" doivent
+        # rester sous le seuil : les portes génériques restent la seule voie.
+        self.assertIsNone(fuzzy_targeted_subject("raconte moi une histoire"))
+        self.assertIsNone(fuzzy_targeted_subject(
+            "raconte-moi l'histoire de l'Infestation"))
+
+    def test_la_requete_est_reorthographiee_a_la_confirmation(self):
+        request = correct_targeted_request(
+            "raconte-moi l'histoire de mettie", "lettie")
+        self.assertEqual(request, "raconte-moi l'histoire de Lettie")
+
+    def test_la_question_confirme_l_unique_nom_propose(self):
+        question = CLOSE_SUBJECT_QUESTION.format(subject="Lettie")
+        self.assertIn("Voulais-tu dire", question)
+        self.assertIn("Lettie", question)
+
+    def test_le_sujet_flou_resout_vers_l_ere_1999(self):
+        # La requête corrigée passe par la détection canonique : l'ère et la
+        # mention ancrent le dossier (aucun changement d'état du menu).
+        self.assertEqual(
+            detect_targeted_era(
+                correct_targeted_request(
+                    "raconte-moi l'histoire de mettie", "lettie")),
+            "1999 (Höllvania)")
 
 
 if __name__ == "__main__":

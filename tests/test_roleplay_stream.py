@@ -17,7 +17,7 @@ from warframe_lore.engram.api.routers.roleplay_stream import (
     emit_story_turn,
     emit_stream,
 )
-from warframe_lore.engram.rag import JAILBREAK_REJECT, RAGContext
+from warframe_lore.engram.rag import JAILBREAK_REJECT, RAG_ERROR, RAGContext
 from warframe_lore.engram.roleplay import Session
 from warframe_lore.engram.roleplay.prompt import (
     STORY_COMPLETE_SENTENCE,
@@ -270,6 +270,43 @@ class EmitStoryTurnTests(unittest.TestCase):
         socket, rag, roleplay = self._frames(
             [("Dossier drainé.", False)],
             [STORY_COMPLETE_SENTENCE])
+        self.assertEqual(socket.frames[-1]["text"], STORY_COMPLETE_SENTENCE)
+        self.assertFalse(socket.frames[-1]["story_more"])
+        self.assertEqual((rag.calls, roleplay.calls), (1, 1))
+
+    def test_une_fenetre_vraiment_vide_est_sautee_en_silence(self):
+        # Playtest Lettie : la fenêtre 1 ne narre RIEN (même pas la clôture),
+        # la fenêtre 2 raconte.  Aucune partie vide ne sort vers le client, la
+        # chaîne continue sur la page suivante (2 appels RAG + 2 appels LLM).
+        socket, rag, roleplay = self._frames(
+            [("Fenêtre muette.", True), ("Fenêtre vivante.", True)],
+            ["", "Eleanor ferma ses notes dans Höllvania."])
+        self.assertEqual([f["type"] for f in socket.frames], ["token", "end"])
+        self.assertEqual(socket.frames[-1]["text"],
+                         "Eleanor ferma ses notes dans Höllvania.")
+        self.assertTrue(socket.frames[-1]["story_more"])
+        self.assertEqual((rag.calls, roleplay.calls), (2, 2))
+
+    def test_une_chaine_de_fenetres_vides_epuisee_abstention_honnete(self):
+        # Toutes les visions retryées ne narrent RIEN mais le dossier garde
+        # des fragments : jamais une partie vide qui mentirait sur
+        # ``story_more`` — l'abstention désaccordée est servie et la promesse
+        # de suite reste HONNÊTE (True).
+        socket, rag, roleplay = self._frames(
+            [("m1", True), ("m2", True), ("m3", True)],
+            ["", "", ""])
+        self.assertEqual([f["type"] for f in socket.frames], ["token", "end"])
+        self.assertEqual(socket.frames[-1]["text"], RAG_ERROR)
+        self.assertTrue(socket.frames[-1]["story_more"])
+        self.assertEqual((rag.calls, roleplay.calls),
+                         (STORY_RETRY_LIMIT + 1, STORY_RETRY_LIMIT + 1))
+
+    def test_une_fenetre_vide_sur_dossier_draine_est_le_stop(self):
+        # story_more=False (vérité du serveur) : une partie vide devient le
+        # stop d'archiviste, jamais une partie vide ni une invitation.
+        socket, rag, roleplay = self._frames(
+            [("Dossier drainé.", False)], [""])
+        self.assertEqual([f["type"] for f in socket.frames], ["token", "end"])
         self.assertEqual(socket.frames[-1]["text"], STORY_COMPLETE_SENTENCE)
         self.assertFalse(socket.frames[-1]["story_more"])
         self.assertEqual((rag.calls, roleplay.calls), (1, 1))

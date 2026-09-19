@@ -16,7 +16,7 @@ from ....db.models import GameDialogue, KimDialogue
 from ....db.models.structured_chunk import StructuredChunk
 from ....protocols.roleplay import STORY_DOSSIER_PAGE
 from .retriever import DossierPage, RAGHit, Retriever
-from .search import set_hnsw_ef_search
+from .search import dossier_title_terms, set_hnsw_ef_search
 
 HNSW_EF = int(os.getenv("ENGRAM_HNSW_EF", "200"))
 
@@ -61,24 +61,30 @@ class StructuredSearch(Retriever):
                                  exclude_ids: list[int] | None = None):
         """SELECT statement: subject chunks, story-first.
 
-        Same tier shape as the lore dossier (exact title, French mirror,
-        sections, everything else) but the narrative order comes from the
-        dialogue tables: after the page join, ``message_order`` restores the
-        in-conversation sequence of ``kim_dialogues`` / ``game_dialogues`` rows
-        (``id`` breaks the tie for the other kinds).  ``exclude_ids`` bans the
-        already-narrated chunks — the only cursor the server trusts.  The
-        sweep covers every page whose TITLE or CONTENT mentions the subject,
-        so later allusions (Roathe hating Albrecht, the Hex, Duviri) are
-        narrated too — the subject's own page first, the other pages grouped
-        in archive ingestion order.
+        Same tier shape as the lore dossier (exact title — and its canonical
+        alias, e.g. ``Leticia`` when the key is ``lettie`` —, French mirror,
+        sections, title-matching pages, then content-only) but the narrative
+        order comes from the dialogue tables: after the page join,
+        ``message_order`` restores the in-conversation sequence of
+        ``kim_dialogues`` / ``game_dialogues`` rows (``id`` breaks the tie for
+        the other kinds).  ``exclude_ids`` bans the already-narrated chunks —
+        the only cursor the server trusts.  The sweep covers every page whose
+        TITLE or CONTENT mentions a term, so later allusions (Roathe hating
+        Albrecht, the Hex, Duviri) are narrated too — the subject's own page
+        first, the other pages grouped in archive ingestion order.
         """
+        terms = dossier_title_terms(subject)
         distance = StructuredChunk.embedding.cosine_distance(
             query_vector).label("dist")
         tier = case(
-            (StructuredChunk.title.ilike(subject), 0),
-            (StructuredChunk.title.ilike(f"{subject} (fr)"), 0),
-            (StructuredChunk.title.ilike(f"{subject}/%"), 1),
-            else_=2,
+            (or_(*[StructuredChunk.title.ilike(term) for term in terms]), 0),
+            (or_(*[StructuredChunk.title.ilike(f"{term} (fr)")
+                   for term in terms]), 0),
+            (or_(*[StructuredChunk.title.ilike(f"{term}/%")
+                   for term in terms]), 1),
+            (or_(*[StructuredChunk.title.ilike(f"%{term}%")
+                   for term in terms]), 2),
+            else_=3,
         )
         # No ORM relationship on StructuredChunk: explicit joins only, plus
         # outerjoins so non-dialogue kinds keep their ``message_order`` NULL.
@@ -98,8 +104,12 @@ class StructuredSearch(Retriever):
             .where(
                 StructuredChunk.embedding.is_not(None),
                 or_(
-                    WikiPage.page_title.ilike(f"%{subject}%"),
-                    StructuredChunk.content.ilike(f"%{subject}%"),
+                    *[WikiPage.page_title.ilike(f"%{term}%")
+                      for term in terms],
+                    *[StructuredChunk.title.ilike(f"%{term}%")
+                      for term in terms],
+                    *[StructuredChunk.content.ilike(f"%{term}%")
+                      for term in terms],
                 ),
             )
         )

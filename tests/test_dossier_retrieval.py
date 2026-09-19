@@ -27,6 +27,7 @@ from warframe_lore.engram.rag import (
     RAGHit,
     RAGService,
 )
+from warframe_lore.engram.rag.query.aliases import dossier_title_terms
 from warframe_lore.engram.rag.retrieval.merged import MergedRetriever
 from warframe_lore.engram.rag.retrieval.retriever import DossierPage
 from warframe_lore.engram.rag.retrieval.search import (
@@ -127,6 +128,37 @@ class DossierSqlShapeTests(unittest.TestCase):
     def test_le_dossier_est_borne(self):
         self.assertEqual(DOSSIER_LIMIT, 12)
 
+    def test_l_alias_du_sujet_emporte_le_titre_canonique(self):
+        # La mention Discord est la clé ("lettie") mais la page wiki s'appelle
+        # "Leticia" : le balayage doit couvrir les deux, ou la biographie
+        # s'effondrerait au tier contenu-seul (playtest Lettie).
+        self.assertEqual(dossier_title_terms("lettie"),
+                         ("lettie", "leticia"))
+
+    def test_un_sujet_sans_alias_reste_un_seul_terme(self):
+        self.assertEqual(dossier_title_terms("eleanor"), ("eleanor",))
+
+    def test_le_balayage_lettie_atteint_la_page_canonique(self):
+        # La sweep "lettie" étend la recherche au titre canonique "leticia"
+        # (tier 0 / tiers 1-2 / filtre titre), pas seulement à la clé : les
+        # valeurs ILIKE sont liées en paramètres, on les inspecte donc.
+        from sqlalchemy.dialects import postgresql
+        search = CosinusSearch.__new__(CosinusSearch)
+        search.min_score = 0.5
+        search.top_k = 3
+        compiled = search._build_dossier_statement(
+            "lettie", [0.0] * 1024).compile(dialect=postgresql.dialect())
+        values = set(str(v) for v in compiled.params.values())
+        self.assertIn("leticia", values)
+        self.assertIn("leticia/%", values)
+        self.assertIn("leticia (fr)", values)
+        self.assertIn("lettie", values)
+        # Les motifs balayent le titre : tier 0 (exact), tiers 1-2 (fils),
+        # filtre titre de la clause WHERE.
+        sql = str(compiled)
+        self.assertIn("wiki_pages.page_title ilike", sql.lower())
+        self.assertIn("content_markdown", sql.lower())
+
 
 class StructuredDossierSqlShapeTests(unittest.TestCase):
     """La forme SQL du dossier structuré : titre OU contenu, page d'abord."""
@@ -141,6 +173,21 @@ class StructuredDossierSqlShapeTests(unittest.TestCase):
         self.assertIn("page_id", sql.lower())       # regroupement par page
         self.assertIn("message_order", sql.lower())  # séquence de dialogue
         self.assertIn("LIMIT", sql)
+
+    def test_le_balayage_structure_lettie_atteint_le_titre_canonique(self):
+        # Même garantie côté structured : "lettie" balaie aussi "leticia"
+        # (valeurs ILIKE liées en paramètres : titre OU contenu du chunk).
+        from sqlalchemy.dialects import postgresql
+        search = StructuredSearch.__new__(StructuredSearch)
+        compiled = search._build_dossier_statement(
+            "lettie", [0.0] * 1024).compile(dialect=postgresql.dialect())
+        values = set(str(v) for v in compiled.params.values())
+        self.assertIn("leticia", values)
+        self.assertIn("leticia/%", values)
+        self.assertIn("lettie", values)
+        sql = str(compiled)
+        self.assertIn("structured_chunks.title ilike", sql.lower())
+        self.assertIn("structured_chunks.content ilike", sql.lower())
 
 
 class PipelineDossierTests(unittest.TestCase):

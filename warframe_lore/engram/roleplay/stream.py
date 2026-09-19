@@ -5,6 +5,10 @@ service receives the user text, updates the history, then iterates over the
 model response tokens.  The LLM payload is built as THREE strict blocks
 (mission-6): BLOC 1 = persona + guards + ``<archives>``, BLOC 2 = the speaker
 sheet, BLOC 3 = the new request alone.  The assembly lives in :mod:`prompt`.
+
+The orchestrating pieces are single-responsibility modules: the story double
+pass (invisible factual draft + narration system) in :mod:`.story_turn`, the
+post-generation anti-hallucination gate in :mod:`.verify_gate`.
 """
 
 from __future__ import annotations
@@ -16,19 +20,16 @@ from typing import TYPE_CHECKING
 from ..llm import LLMProvider
 from ..models import ChatMessage
 from ..persona import HOSTILE_PERSONA, STORY_PERSONA
-from ..rag import CONFABULATION_ERROR, RAG_ERROR, verify_answer_with_archive
+from ..rag import RAG_ERROR
 from .models import Session
 from .prompt import (
-    STORY_LENS_STARTS,
     SlidingWindow,
     archive_bloc,
-    leverian_directive,
     speaker_bloc,
-    story_directive,
-    targeted_story_directive,
     turn_directives,
 )
-from .purge import canonical_story_closing, purge_story_closing
+from .story_turn import fetch_factual_draft, story_turn_system
+from .verify_gate import verified_response
 
 if TYPE_CHECKING:
     from ..rag import ArchiveVocabulary
@@ -96,79 +97,17 @@ class RoleplayService:
         system = turn_directives(system, creator, role_status,
                                  creator_mention, lang)
 
-        # ---> DOUBLE PASS BLOCK START <---
-        if story and rag_context:
-            # Pass 1 (Invisible Factual Draft)
-            draft_prompt = (
-                "DIRECTIVE DRAFT FACTUEL : Extrais l'intégralité des "
-                "événements, détails, et actions présents dans ces archives. "
-                "NE RÉSUME PAS. Conserve absolument toute la richesse, la "
-                "longueur et les nuances des informations. Rédige un brouillon "
-                "brut, chronologique et très détaillé. LE BROUILLON EST "
-                "RÉDIGÉ EN FRANÇAIS : même si les archives sont en anglais, "
-                "traduis les faits en français — jamais de brouillon en "
-                "anglais."
-            )
-            draft_messages = [
-                ChatMessage(
-                    "system",
-                    draft_prompt + f"\n\n<archives>\n{rag_context}\n</archives>",
-                ),
-                ChatMessage("user", user_text),
-            ]
-
-            draft_tokens = []
-            # The fallback draft is only kept when the extraction call fails.
-            factual_draft = "Erreur de génération du brouillon."
-            try:
-                # Pure extraction LLM call (temp 0.1)
-                async for token in self.llm.chat_stream(draft_messages, 0.1):
-                    draft_tokens.append(token)
-                factual_draft = "".join(draft_tokens)
-            except Exception as exc:  # noqa: BLE001 (LLM down -> fallback)
-                log.error("Roleplay generation failed on Draft Pass (%s)", exc)
-
-            # Pass 2: Build the system prompt of the final narration
-            if targeted_era:
-                directive = targeted_story_directive(
-                    targeted_era, continuation=story_continuation, more=story_more)
-            else:
-                directive = story_directive(
-                    story_lens, continuation=story_continuation, more=story_more)
-
-            # The directive forbids repeating what the history already told
-            expansion_prompt = (
-                "DIRECTIVE DE NARRATION (SUITE) : Utilise le brouillon suivant "
-                "comme base pour le récit. RÈGLE ABSOLUE : NE RÉPÈTE JAMAIS, "
-                "sous aucun prétexte, les événements ou les phrases que tu as "
-                "déjà racontés dans tes messages précédents (historique de "
-                "conversation). Concentre-toi UNIQUEMENT sur la narration des "
-                "NOUVEAUX éléments présents dans le brouillon. Développe ce "
-                "nouveau passage de manière immersive, théâtrale et détaillée. "
-                "LA LANGUE DE SORTIE EST LE FRANÇAIS : rédige le récit en "
-                "français même si le brouillon factuel est en anglais — "
-                "traduis-le, ne le recopie jamais."
-            )
-
-            system = (
-                f"{system}\n\n{directive}\n\n{expansion_prompt}\n\n"
-                f"[BROUILLON FACTUEL À DÉVELOPPER :]\n{factual_draft}"
-            )
-            if leverian_warframe:
-                system = f"{system}\n\n{leverian_directive(leverian_warframe)}"
-
-        elif story:
-             # Fallback story behavior
-             if targeted_era:
-                directive = targeted_story_directive(
-                    targeted_era, continuation=story_continuation, more=story_more)
-             else:
-                directive = story_directive(
-                    story_lens, continuation=story_continuation, more=story_more)
-             system = f"{system}\n\n{directive}"
-             if leverian_warframe:
-                system = f"{system}\n\n{leverian_directive(leverian_warframe)}"
-        # ---> DOUBLE PASS BLOCK END <---
+        if story:
+            # Story double pass: the invisible factual draft (only when
+            # archives ground the turn), then the narration system assembly.
+            factual_draft = (await fetch_factual_draft(
+                self.llm, user_text, rag_context) if rag_context else None)
+            system = story_turn_system(
+                system, factual_draft, story_lens=story_lens,
+                targeted_era=targeted_era,
+                leverian_warframe=leverian_warframe,
+                story_continuation=story_continuation,
+                story_more=story_more)
 
         messages = [
             ChatMessage("system", system),
@@ -192,7 +131,14 @@ class RoleplayService:
 
         except Exception as exc:  # noqa: BLE001 (LLM down -> abstention)
             log.error("Roleplay generation failed (%s)", exc)
-            if not tokens:
+            if rag_context is not None or not tokens:
+                # NEVER leave the buffered channel silent (playtest 00:04): a
+                # RAG turn never live-streams its tokens, so a mid-stream
+                # failure must STILL announce the abstention — a bare return
+                # would emit an EMPTY part and lie about story_more.  The
+                # partial buffer is discarded; a LIVE non-RAG partial stream
+                # keeps its truncated behavior.
+                tokens.clear()
                 session.add("assistant", RAG_ERROR)
                 yield RAG_ERROR
             return
@@ -200,31 +146,13 @@ class RoleplayService:
         response = "".join(tokens)
 
         if rag_context is not None:
-            if not response:
-                response = RAG_ERROR
-            else:
-                lens_open = (STORY_LENS_STARTS.get(story_lens or "")
-                             if story and not targeted_era else "")
-                allowed = " ".join(filter(None, (
-                    user_name, user_role, targeted_era, leverian_warframe,
-                    lens_open,
-                )))
-                ok, _ = await verify_answer_with_archive(
-                    response, rag_context, self.vocabulary,
-                    extra_allowed=allowed)
-                if not ok:
-                    response = CONFABULATION_ERROR
-                else:
-                    # One trailing closing line, no padded tail: the token
-                    # the client renders must hold the canonical end too.
-                    response = purge_story_closing(response)
-                    if story:
-                        # ``story_more`` decides WHICH sentence closes the
-                        # part (invitation while fragments remain, archivist
-                        # stop once drained): the model's missing, wrong or
-                        # stacked tail is replaced deterministically.
-                        response = canonical_story_closing(
-                            response, more=story_more)
+            # Buffered reply: verify against the archives, then close the part.
+            response = await verified_response(
+                response, rag_context, vocabulary=self.vocabulary,
+                user_name=user_name, user_role=user_role,
+                targeted_era=targeted_era,
+                leverian_warframe=leverian_warframe,
+                story_lens=story_lens, story=story, story_more=story_more)
             # Send the whole block at once after verification
             yield response
         elif not response:

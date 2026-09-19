@@ -4,68 +4,28 @@ Implementation of :class:`Retriever` (PostgreSQL/pgvector): uses the
 ``<=>`` operator (cosine distance) via the :class:`LoreChunk` ORM.
 Lowest distance = closest passage; exposed as similarity
 (1 - distance). The retriever owns its own ``async_sessionmaker``.
+
+Facade of the lore-channel retrieval: the cosine search itself (this
+module), the subject dossier (:mod:`.dossier`), the lexical title
+suggestion (:mod:`.suggestion`) and the HNSW session tuning
+(:mod:`.hnsw`).  The helper names shared by the other retrieval channels
+(``set_hnsw_ef_search``, ``dossier_title_terms``, ``DOSSIER_LIMIT``,
+``_token_matches_title``) are re-exported here to keep the public API
+stable.
 """
 
 from __future__ import annotations
 
-import difflib
-import os
-import re
-
-from sqlalchemy import case, or_, select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import selectinload
 
-from ....db import LoreChunk, WikiPage
-from ....protocols.roleplay import STORY_DOSSIER_PAGE
+from ....db import LoreChunk
+from ..query.aliases import dossier_title_terms
+from .dossier import DOSSIER_LIMIT, fetch_dossier_page, lore_dossier_statement
+from .hnsw import HNSW_EF_SEARCH, set_hnsw_ef_search
 from .retriever import DossierPage, RAGHit, Retriever
-
-# HNSW recall: the index scans ef_search candidates per probe (default 40).
-# On a large corpus (~1000+ pages x ~30 chunks) with top_k=3 the default is
-# too tight — the pool is widened here, per query (session GUC, COST: 40).
-HNSW_EF_SEARCH = int(os.getenv("ENGRAM_HNSW_EF", "200"))
-
-# Dossier retrieval cap: enough narrative chunks to fill ``max_context_chars``
-# (~4500 chars) without dragging in the whole subject page family.  ONE page is
-# also the cursor step of a continuation, shared by both sides of the wire.
-DOSSIER_LIMIT = STORY_DOSSIER_PAGE
-
-# French stopwords deemed non-discriminant for title search.
-_STOPWORDS = {
-    "qu'est", "c'est", "comment", "pourquoi", "combien", "histoire",
-    "parle", "dis", "decrit", "decris", "raconte", "connais", "sais",
-    "dans", "avec", "dont", "comme", "mais", "sont", "est", "et",
-    "les", "des", "une", "que", "qui", "pas", "vous",
-}
-
-_ALNUM = re.compile(r"[a-zA-Z0-9'_-]+")
-
-# Minimal title token/word ratio for disambiguation: STRICT (0.93) to
-# only propose real near-matches of proper names. Without it,
-# "une souris verte" → token "verte" validates the title "Aurax Vertec"
-# (misleading substring) and Oracle suggests an unrelated entity.
-_TOKEN_WORD_RATIO = 0.93
-
-
-def _token_matches_title(token: str, title: str) -> bool:
-    """The token is lexically close to a WORD of the title (not just a
-    substring inside a longer word)."""
-    for word in _ALNUM.findall(title.lower()):
-        if word and difflib.SequenceMatcher(
-                None, token, word).ratio() >= _TOKEN_WORD_RATIO:
-            return True
-    return False
-
-
-async def set_hnsw_ef_search(session, ef: int = HNSW_EF_SEARCH) -> None:
-    """Widens the pgvector HNSW scan pool for the CURRENT transaction.
-
-    ``hnsw.ef_search`` is the index parameter that caps how many candidates
-    are scanned per probe (default 40).  Raised here per query so a growing
-    corpus keeps its recall without rebuilding the index.
-    """
-    # Inlined integer (safe: int cast — no interpolation of user input).
-    await session.execute(text(f"SET LOCAL hnsw.ef_search = {int(ef)}"))
+from .suggestion import _token_matches_title, suggest_page_title
 
 
 class CosinusSearch(Retriever):
@@ -132,47 +92,13 @@ class CosinusSearch(Retriever):
                                  exclude_ids: list[int] | None = None):
         """SELECT statement: subject chunks in narrative reading order.
 
-        Tier 0 = the exact biography page (``Eleanor``), tier 1 = its section
-        pages (``Eleanor/Quotes``), tier 2 = every other page whose TITLE or
-        CONTENT mentions the subject.  The French mirror of the exact page
-        (``Eleanor (fr)``) shares tier 0: its namespaced id sorts right after
-        the English bio, so both languages ground the story while English
-        stays first.  Reading order (``chunk_index``) keeps the narrative
-        sequence; the cosine distance is still computed so the relevance floor
-        applies.  ``exclude_ids`` bans the chunks the session already
-        narrated (the ONLY pagination): the server never trusts a client
-        cursor.
+        Story-first dossier tiers (exact biography page, its sections, title
+        matches, content-only mentions).  The SQL lives in
+        :func:`lore_dossier_statement`; this method keeps the public shape of
+        the retriever so the RAG pipeline and the tests call one entry point.
         """
-        distance = LoreChunk.embedding.cosine_distance(
-            query_vector).label("dist")
-        tier = case(
-            (WikiPage.page_title.ilike(subject), 0),
-            (WikiPage.page_title.ilike(f"{subject} (fr)"), 0),
-            (WikiPage.page_title.ilike(f"{subject}/%"), 1),
-            else_=2,
-        )
-        stmt = (
-            select(LoreChunk, distance)
-            .options(selectinload(LoreChunk.wiki_page))
-            .join(WikiPage, LoreChunk.wiki_page_id == WikiPage.page_id)
-            .where(
-                LoreChunk.embedding.is_not(None),
-                or_(
-                    WikiPage.page_title.ilike(f"%{subject}%"),
-                    LoreChunk.content_markdown.ilike(f"%{subject}%"),
-                ),
-            )
-        )
-
-        # Exclusion filter: the chunks the session already narrated.
-        if exclude_ids:
-            stmt = stmt.where(LoreChunk.id.notin_(exclude_ids))
-
-        return (
-            stmt.order_by(tier, WikiPage.page_id, LoreChunk.chunk_index)
-            .limit(limit)
-            .offset(offset)
-        )
+        return lore_dossier_statement(
+            subject, query_vector, limit, offset, exclude_ids)
 
     async def dossier(self, subject: str, query_vector: list[float],
                       limit: int = DOSSIER_LIMIT,
@@ -184,47 +110,33 @@ class CosinusSearch(Retriever):
         semantic search ranks first-person KIM dialogues above the subject's
         narrative page — the Eleanor Background section landed at rank ~16,
         far under the top_k=3, so the story corpus carried no actual story.
-        This dossier walks the subject's OWN pages in READING order — the exact
-        biography page (``Eleanor``) first, then its section pages
-        (``Eleanor/Quotes``), then the dialogue pages — so a targeted story is
-        grounded on the narrative itself.  Each chunk keeps its cosine score:
-        the relevance floor still drops off-story sections.  ``offset`` is a
-        continuation marker kept for the wire contract (the pipeline always
-        pages from ``0``); ``exclude_ids`` is the real cursor: the chunks the
-        session already narrated are banned in SQL.  One chunk is fetched
-        beyond the window to know whether anything is left (no COUNT query).
+        This dossier walks the subject's OWN pages in READING order — the
+        exact biography page (``Eleanor``, or ``Leticia`` when the key is the
+        alias ``lettie``) first, then its section pages (``Eleanor/Quotes``),
+        then TITLE-matching pages, then content-only mentions — so a targeted
+        story is grounded on the narrative itself.  Each chunk keeps its
+        cosine score: the relevance floor still drops off-story sections.
+        ``offset`` is a continuation marker kept for the wire contract (the
+        pipeline always pages from ``0``); ``exclude_ids`` is the real cursor:
+        the chunks the session already narrated are banned in SQL.  One chunk
+        is fetched beyond the window to know whether anything is left (no
+        COUNT query).  Executed by :func:`fetch_dossier_page`.
         """
-        statement = self._build_dossier_statement(
-            subject, query_vector, limit + 1, offset, exclude_ids)
-
-        hits: list[RAGHit] = []
-        async with self.sessions() as session:
-            await set_hnsw_ef_search(session, self.ef_search)
-            rows = (await session.execute(statement)).all()
-            for chunk, dist in rows:
-                hits.append(RAGHit(
-                    chunk_id=chunk.id,
-                    page_title=chunk.wiki_page.page_title,
-                    content=chunk.content_markdown,
-                    score=1.0 - float(dist),
-                ))
-        return DossierPage(hits=hits[:limit], more=len(hits) > limit)
+        return await fetch_dossier_page(
+            self.sessions, self.ef_search, subject, query_vector,
+            limit, offset, exclude_ids)
 
     async def suggest_title(self, question: str) -> str | None:
         """Page title where a question token is a substring.
 
         Lexical fallback: tokens are tested from longest to shortest — the
         most specific word is the most discriminant — and the first title
-        found in ``wiki_pages`` is returned, or None.
+        found in ``wiki_pages`` is returned, or None.  Runs
+        :func:`suggest_page_title` on this retriever's session maker.
         """
-        tokens = {t for t in _ALNUM.findall(question.lower())
-                  if len(t) >= 3 and t not in _STOPWORDS}
-        async with self.sessions() as session:
-            for token in sorted(tokens, key=len, reverse=True):
-                title = (await session.execute(
-                    select(WikiPage.page_title)
-                    .where(WikiPage.page_title.ilike(f"%{token}%"))
-                    .limit(1))).scalar_one_or_none()
-                if title and _token_matches_title(token, title):
-                    return title
-        return None
+        return await suggest_page_title(self.sessions, question)
+
+
+__all__ = ["CosinusSearch", "DOSSIER_LIMIT", "HNSW_EF_SEARCH",
+           "_token_matches_title", "dossier_title_terms",
+           "lore_dossier_statement", "set_hnsw_ef_search"]

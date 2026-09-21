@@ -27,12 +27,14 @@ class FakeRAG:
         self.calls: list[str] = []
         self.offsets: list[int] = []
         self.exclusions: list[list[int]] = []
+        self.stories: list[bool] = []
 
     async def resolve(self, question: str, context=None, subject=None,
-                      offset=0, exclude_ids=None):
+                      offset=0, exclude_ids=None, story=False):
         self.calls.append(question)
         self.offsets.append(offset)
         self.exclusions.append(list(exclude_ids or ()))
+        self.stories.append(story)
         return self.context, self.suggestion, self.more, self.consumed
 
 

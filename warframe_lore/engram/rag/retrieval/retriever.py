@@ -11,6 +11,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
+# Metagame chunks (patch notes, announcements) quote the same entities and
+# eras as the lore: the story corpus must NEVER serve them (playtest Albrecht:
+# Deep Archimedea modifiers, Netracell rewards in the tale).  The kind is read
+# from ``StructuredChunk`` — ``None`` on the lore channel, always kept.
+STORY_EXCLUDED_KINDS = ("game_updates", "game_announcements")
+
 
 @dataclass
 class RAGHit:
@@ -20,6 +26,7 @@ class RAGHit:
     page_title: str
     content: str
     score: float  # cosine similarity (1 - distance)
+    kind: str | None = None  # structured table kind, None on the lore channel
 
 
 @dataclass(frozen=True)
@@ -50,4 +57,4 @@ class Retriever(Protocol):
         """
 
 
-__all__ = ["DossierPage", "RAGHit", "Retriever"]
+__all__ = ["DossierPage", "RAGHit", "Retriever", "STORY_EXCLUDED_KINDS"]

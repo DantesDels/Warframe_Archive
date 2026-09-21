@@ -15,7 +15,12 @@ from ....db import WikiPage
 from ....db.models import GameDialogue, KimDialogue
 from ....db.models.structured_chunk import StructuredChunk
 from ....protocols.roleplay import STORY_DOSSIER_PAGE
-from .retriever import DossierPage, RAGHit, Retriever
+from .retriever import (
+    STORY_EXCLUDED_KINDS,
+    DossierPage,
+    RAGHit,
+    Retriever,
+)
 from .search import dossier_title_terms, set_hnsw_ef_search
 
 HNSW_EF = int(os.getenv("ENGRAM_HNSW_EF", "200"))
@@ -51,6 +56,7 @@ class StructuredSearch(Retriever):
                     page_title=chunk.title,
                     content=chunk.content,
                     score=1.0 - float(dist),
+                    kind=chunk.kind,
                 ))
         return hits
 
@@ -103,6 +109,7 @@ class StructuredSearch(Retriever):
             )
             .where(
                 StructuredChunk.embedding.is_not(None),
+                StructuredChunk.kind.notin_(STORY_EXCLUDED_KINDS),
                 or_(
                     *[WikiPage.page_title.ilike(f"%{term}%")
                       for term in terms],

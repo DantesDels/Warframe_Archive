@@ -113,6 +113,18 @@ LEVERIAN_DIRECTIVE = (
     "passages du contexte où Drusus est le narrateur. Ne mélange pas cette "
     "version avec des récits tiers ou des spéculations communautaires.]")
 
+# Metagame quarantine: the story corpus can hold gameplay tables next to the
+# diegesis (patch notes on Deep Archimedea, Personal Modifiers, Netracell
+# rewards — playtest Albrecht 15:18/15:26: the tale quoted mission modifiers).
+# A narrative NEVER restates game mechanics, whatever the <archives> contain.
+STORY_METAGAME_DIRECTIVE = (
+    "[DIRECTIVE DE QUARANTAINE DU MÉTAJEU : les archives peuvent contenir des "
+    "fragments de gameplay (statistiques, modificateurs de mission, notes de "
+    "mise à jour, récompenses, modes de jeu). Tu n'en racontes JAMAIS un seul "
+    "mot : le récit reste strictement dans la diégèse et l'histoire de "
+    "l'univers, jamais dans les règles du jeu. Écarte entièrement ces "
+    "fragments mécaniques du récit.]")
+
 # KIM excerpts: the structured dossier holds "KIM · …" exchanges of the Hex'
 # messenger application (Kinemantik Instant Messenger).  Without a rule the
 # model reads "KIM" as a PERSON (playtest 00:04: an invented "Kim" answering
@@ -186,7 +198,8 @@ def story_directive(lens: str | None, *, continuation: bool = False,
                       STORY_COMPLETE_SENTENCE))
     kim = (f"\n{KIM_MESSENGER_DIRECTIVE}" if lens == "1999" else "")
     return "".join([pagination, resume_directive(continuation), "\n",
-                    EN_PRIMACY_DIRECTIVE, "\n", start or "", kim])
+                    EN_PRIMACY_DIRECTIVE, "\n",
+                    STORY_METAGAME_DIRECTIVE, "\n", start or "", kim])
 
 
 def targeted_story_directive(era: str | None = None, *,
@@ -201,12 +214,13 @@ def targeted_story_directive(era: str | None = None, *,
     kim = (f"\n{KIM_MESSENGER_DIRECTIVE}" if "1999" in (era or "") else "")
     return "".join([TARGETED_STORY_DIRECTIVE, resume_directive(continuation),
                     "\n", EN_PRIMACY_DIRECTIVE, era_line, "\n", kim,
-                    story_closing(more)])
+                    STORY_METAGAME_DIRECTIVE, "\n", story_closing(more)])
 
 
 __all__ = ["EN_PRIMACY_DIRECTIVE", "KIM_MESSENGER_DIRECTIVE",
            "LEVERIAN_DIRECTIVE", "STORY_COMPLETE_SENTENCE", "STORY_DIRECTIVE",
-           "STORY_LENS_STARTS", "STORY_PAGINATION_SENTENCE",
+           "STORY_LENS_STARTS", "STORY_METAGAME_DIRECTIVE",
+           "STORY_PAGINATION_SENTENCE",
            "STORY_RESUME_DIRECTIVE", "TARGETED_STORY_DIRECTIVE",
            "leverian_directive", "resume_directive", "story_closing",
            "story_directive", "targeted_story_directive"]

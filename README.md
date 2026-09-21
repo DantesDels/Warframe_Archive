@@ -97,7 +97,7 @@ package with its own README (see [Documentation](#documentation)). See
 | FR-7 | Web Interface | Read-only local HTTP server for megafiles: overview, bucket browser, KIM dialogues, recent, full-text search, media. Gzip responses; no network access at runtime (except on-demand images). |
 | FR-8 | Document RAG | `POST /v1/rag {question, stream?}` → anchored response **+ sources** (title, excerpt, score). Name aliases (`lettie → Leticia`), disambiguation "Did you mean …?", **short-circuit** if no passage above the threshold (the LLM is not called: exact error chain, empty sources). |
 | FR-9 | Roleplay Terminal | `WS /v1/roleplay`: token-by-token streaming, session per connection, sliding memory window (turn bounds + characters), editable persona (`persona/oracle`). Flag `rag` to anchor a turn on the archives. |
-| FR-10 | Discord Bot | "Loremaster Oracle" bot: live token broadcast (message edits), lore question detection (lexical triggers) → RAG flag, automatic reconnection on dead stream, channel restriction, **matriciel member cards** (real Discord roles, ID, security level, assiduité/fiabilité, behavioural analysis), creator-gated access, persistent member activity. |
+| FR-10 | Discord Bot | "Loremaster Oracle" bot: live token broadcast (message edits), lore question detection (lexical triggers) → RAG flag, automatic reconnection on dead stream, channel restriction, **matriciel member cards** (real Discord roles, ID, security level, assiduité/fiabilité, behavioural analysis), creator-gated access, persistent member activity, and **narrative tales**: story requests ("raconte-moi l'histoire de …") open a targeted lore dossier (subject's own pages first, alias-resolved) told in French through a double-pass draft+narration, with lens/era doors and fuzzy subject confirmation instead of guessing. |
 
 ### Non-Functional
 
@@ -109,7 +109,7 @@ package with its own README (see [Documentation](#documentation)). See
 | NFR-4 | Robustness | HTTP retries/exponential backoff, atomic JSON publications, replayable delta, Discord reconnection < 1 s (tested), `restart: unless-stopped` for the database. |
 | NFR-5 | Locality & Security | Everything runs **locally** (dummy API key `lm-studio`, servers on `127.0.0.1`); no secrets in the repository (Discord token via environment). |
 | NFR-6 | Maintainability | SOLID + dependency injection (`Retriever` / `LLMProvider` / `EmbeddingProvider` `Protocol` abstractions), environment-based configuration, per-layer documentation. |
-| NFR-7 | Testability | 335 green unit tests (KIM, RAG/threshold, security, hostility, rewriter, hard-split, semantic chunking, rag_extract, RAG context isolation, aliases, output sanitization, creator auth, role hierarchy, identity, members, member card, activity persistence, user memory); data audit tools; documented live validation procedure. |
+| NFR-7 | Testability | 808 green unit tests (KIM, RAG/threshold, security, hostility, rewriter, hard-split, semantic chunking, rag_extract, RAG context isolation, aliases, output sanitization, creator auth, role hierarchy, identity, members, member card, activity persistence, user memory, story rules/ask/mode/continuation, roleplay stream/turn, dossier retrieval, verify gate, hybrid search, gateway timeout); data audit tools; documented live validation procedure. |
 | NFR-8 | Ethics | Lore deals with dark subjects (cloning, experiments…): the model must be able to describe them because they are **explicitly fictional** ("SECURITY CONTEXT" prompt block). |
 
 ## Requirements
@@ -664,6 +664,25 @@ DISCORD_TOKEN=... python -m warframe_lore.discord.main --channels <ID>
 - **`tests/test_rag_extract.py`** — 20 tests on the **decoupled extraction
   pipeline** (Pydantic `LoreChunk` contract, H2/H3 chunking, Tenacity recovery,
   Playwright-style fallback order, semaphore ≤ 3).
+- **`tests/test_story_rules.py`** — triggers, lenses, targeted eras, subject
+  disambiguation, **KIM messenger directive** (KIM = application, never a
+  character) and **close-subject recovery** (a misspelled "mettie" →
+  "Lettie").
+- **`tests/test_story_ask.py`** — the open-story flow: lens/subject menu,
+  out-of-range answers, and the **fuzzy close-subject confirmation BEFORE the
+  generic doors** (the bot asks "Voulais-tu dire « Lettie » ?", never guesses).
+- **`tests/test_story_mode.py` + `tests/test_story_continuation.py`** — the
+  anchoring of an open narrative: `StoryMode` replayed by explicit
+  continuations, chained-parts policy, subject-driven re-anchoring.
+- **`tests/test_roleplay_turn.py` + `tests/test_roleplay_stream.py`** — the
+  **story double pass** (invisible factual draft, then the narration system,
+  French locks) and the frame emission: degenerate/empty parts are never
+  served, `story_more` stays honest.
+- **`tests/test_dossier_retrieval.py`** — the **lore dossier** SQL shape
+  (story-first tiers, alias-to-canonical-title sweep `lettie` → `Leticia`,
+  `DOSSIER_LIMIT`), structured dossier, merged pipeline.
+- **`tests/test_verify_gate.py`** — post-generation gate: archive validation,
+  abstention on broken RAG buffers, mandated closing per `story_more`.
 - **`tests/audit_kim_dm.py`** — standalone structural audit (no expected data:
   reports what is missing/malformed).
 - **Pipeline Audits** — `dump_scraper.py` (volumes/count headers),
@@ -695,7 +714,7 @@ DISCORD_TOKEN=... python -m warframe_lore.discord.main --channels <ID>
 | "…the little mouse in the nursery rhyme a green mouse?" | short-circuit `[Archives] Insufficient data…`, 0 sources (no more false "Aurax Vertec" suggestion) |
 | "…that PS5 story just before?" (anaphora) | reuses the previous question for search: hits 0.63 / 0.60 / 0.58 instead of ~0.51 noise |
 | Multi-user resilience | serialized responses (no more fragment interleaving) + `!stop` interrupts reasoning (live validated) |
-| Unit tests | 335 passed (KIM, RAG/threshold, security, hostility, rewriter, hard-split, semantic chunking, rag_extract, RAG context isolation, aliases, output sanitization, creator auth, role hierarchy, identity, members, member card, activity persistence, user memory) |
+| Unit tests | 808 passed (KIM, RAG/threshold, security, hostility, rewriter, hard-split, semantic chunking, rag_extract, RAG context isolation, aliases, output sanitization, creator auth, role hierarchy, identity, members, member card, activity persistence, user memory, story rules/ask/mode/continuation, roleplay stream/turn, dossier retrieval, verify gate) |
 
 ### Live Validation — 7-Request Benchmark (September 2026)
 
@@ -760,6 +779,16 @@ de queue, directive d'extraction logique dans le system prompt).
   `!stop` (or `!cancel`) — **interrupts the current response** (reasoning
   stopped server-side, message finalized "…response interrupted") ;
   `!help` — help.
+- **Narrative tales** — a story request ("raconte-moi l'histoire de X",
+  "l'histoire de…") opens a **targeted lore dossier** (the subject's own
+  pages first — biography, sections, title matches — with aliases resolved,
+  e.g. `lettie` → `Leticia`) and is told in French through a **double pass**
+  (invisible factual draft at 0.1, then the narration) ; an ambiguous request
+  opens the **lens doors** (initiate / cosmogonic / 1999) ; a misspelled
+  subject ("mettie") is **confirmed** before the doors ("Voulais-tu dire
+  « Lettie » ?"), never guessed ; each part ends with the mandated closing
+  (invitation while fragments remain, archivist stop once drained) and empty
+  parts are never served.
 - **Behaviors**:
   - subject absent from archives → *"[Archives] Insufficient or nonexistent
     data in the Origin System archives."* (no fabrication,
@@ -1043,6 +1072,46 @@ trials below.
     symmetric bounded retry-once, never an unbounded retry loop.
     *Result:* clean startup + DB-outage turn auto-recovers with a single
     replay, suite green.
+21. **Lettie Playtest Correctifs — Narrator, Title-First Dossier, Fuzzy
+    Subject, Empty Part.**
+    *Errors reproduced from the Lettie playtests and corrected in one
+    changeset (commit `cb093f4`, session of Sept. 19, 2026):*
+    (a) **invented narrator** — the model read "KIM" (the Hex' messenger
+    application) as a PERSON and invented a "Kim" answering the Voyageur
+    (playtest 00:04). *Fix:* `KIM_MESSENGER_DIRECTIVE` appended to the
+    `1999` lens stories and to `1999` targeted-era stories — KIM is a
+    TOOL, never a character: an unnamed exchange line is the Voyageur,
+    a named line its Hex member. The directive is inserted BEFORE the
+    canonical closing so no closing can override it.
+    (b) **dossier not title-first** — the subject arrives as the Discord
+    mention key ("lettie") while the wiki page uses the canonical name
+    ("Leticia"): the sweep on the bare key sank the biography to the flat
+    content-only tier (Lettie playtest). *Fix:*
+    `dossier_title_terms()` (key + canonical alias, deduplicated) and the
+    tier/sweep now match key AND canonical title (exact title, French
+    mirror, child pages, title, content) in both `CosinusSearch` and the
+    structured dossier — the biography page keeps its tier-0 slot.
+    (c) **misspelled subject opened the generic doors** — "mettie"
+    (similarity 0.83) matched no exact era key and would have opened the
+    three generic opening doors. *Fix:* `fuzzy_targeted_subject()` /
+    `correct_targeted_request()` with `CLOSE_SUBJECT_CUTOFF = 0.8`
+    propose the canonical name ("Lettie") for confirmation BEFORE the
+    doors — the bot confirms, never guesses — and the confirmed request
+    is respelled so the era and the exact mention anchor the dossier
+    through their own scan.
+    (d) **empty part on the wire** — a part reduced to an EMPTY text (the
+    model aborted) or to the bare closing sentence would lie about
+    `story_more` (Lettie playtest). *Fix:* `emit_story_turn` treats
+    degenerate = empty text OR closing-sentence-alone; an EMPTY part
+    never reaches the wire — with unseen fragments behind the cursor the
+    honest `RAG_ERROR` abstention keeps `story_more = True`, a drained
+    dossier ends with the archivist stop.
+    *Result:* 5 test files extended/added (dossier retrieval, roleplay
+    stream, story ask, story rules, verify gate); full suite green
+    (808 tests + 103 subtests), ruff clean, `compileall` OK. Same session
+    (commit `9de72ae`): `search.py` (110 LOC) and `stream.py` (120 LOC)
+    split into single-responsibility modules with the public API
+    preserved.
 
 ### Figures and Validations
 
@@ -1051,7 +1120,7 @@ trials below.
 | Local corpus (audit) | ~3,175 pages |
 | Vectorized chunks in database | 9,159 (`bge-m3`, 1024d) |
 | KIM chunking verified | 843 chunks, no 2,500-char overflow |
-| Unit tests | 335 passed (KIM, RAG/threshold, security, hostility, rewriter, hard-split, semantic chunking, rag_extract, RAG context isolation, aliases, output sanitization, creator auth, role hierarchy, identity, members, member card, activity persistence, user memory) |
+| Unit tests | 808 passed (KIM, RAG/threshold, security, hostility, rewriter, hard-split, semantic chunking, rag_extract, RAG context isolation, aliases, output sanitization, creator auth, role hierarchy, identity, members, member card, activity persistence, user memory, story rules/ask/mode/continuation, roleplay stream/turn, dossier retrieval, verify gate) |
 | Anti-SQLi (live) | real attacker payloads → deterministic rejection without LLM; 429 beyond quota; `Lettie` intact |
 | "Lettie" retrieval (live) | 0.598 / 0.581 / 0.577 (Leticia) |
 | "Orokin" retrieval (live) | 0.611 / 0.600 / 0.595 |

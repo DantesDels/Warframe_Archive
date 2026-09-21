@@ -183,7 +183,7 @@ class _StubRag:
         self.calls = 0
 
     async def resolve(self, search_text, context=None, subject=None,
-                      offset=0, exclude_ids=None):
+                      offset=0, exclude_ids=None, story=False):
         ctx, more = self.pages[min(self.calls, len(self.pages) - 1)]
         self.calls += 1
         return ctx, None, more, {1, 2, 3}

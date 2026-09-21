@@ -23,7 +23,12 @@ from .query.probes import detect_probe
 from .query.query_guard import sanitize_query
 from .query.search_query import search_query
 from .retrieval.relevance import keep_relevant, missing_entity, relevance_floor
-from .retrieval.retriever import DossierPage, RAGHit, Retriever
+from .retrieval.retriever import (
+    STORY_EXCLUDED_KINDS,
+    DossierPage,
+    RAGHit,
+    Retriever,
+)
 
 if TYPE_CHECKING:
     from ..llm import EmbeddingProvider
@@ -70,7 +75,8 @@ class RetrievalPipeline:
                   context: RAGContext | None = None, *,
                   subject: str | None = None,
                   offset: int = 0,
-                  exclude_ids: list[int] | None = None) -> Retrieval:
+                  exclude_ids: list[int] | None = None,
+                  story: bool = False) -> Retrieval:
         """One retrieval, with its audit line (see the module docstring).
 
         ``subject`` opens a targeted story: the dossier is read story-first.
@@ -78,7 +84,9 @@ class RetrievalPipeline:
         already narrated, banned server-side (the client cursor is never
         trusted).  ``offset > 0`` merely marks a CONTINUATION: the semantic
         neighbours of the opening request are dropped so the part never
-        re-anchors on the same salient facts.
+        re-anchors on the same salient facts.  ``story`` purges the corpus of
+        the metagame kinds (patch notes, announcements): the tale never
+        quotes gameplay, whatever the docs mention.
         """
         question = sanitize_query(question)
         if not question:
@@ -103,6 +111,12 @@ class RetrievalPipeline:
                 found = page.hits
             elif page.hits:
                 found = self._merge_dedup(page.hits + found)
+        if story:
+            # The dossier already excludes the metagame kinds in SQL; this
+            # second purge covers the semantic-neighbour channel, the only one
+            # a story without a targeted subject reads (kind is None on the
+            # lore channel, always kept).
+            found = [h for h in found if h.kind not in STORY_EXCLUDED_KINDS]
         floor = relevance_floor(self.suggestion_min_score,
                                 self.critical_min_score)
         # The floor and the title suggestion target OFF-TOPIC neighbours of a

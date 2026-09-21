@@ -34,6 +34,7 @@ from warframe_lore.discord.guild.story import (
 )
 from warframe_lore.engram.roleplay.prompt import (
     LEVERIAN_DIRECTIVE,
+    STORY_METAGAME_DIRECTIVE,
     STORY_PAGINATION_SENTENCE,
     TARGETED_STORY_DIRECTIVE,
     leverian_directive,
@@ -318,6 +319,39 @@ class KimMessengerDirectiveTests(unittest.TestCase):
     def test_la_constante_est_exportee(self):
         self.assertIn("KIM", KIM_MESSENGER_DIRECTIVE)
         self.assertIn("OUTIL", KIM_MESSENGER_DIRECTIVE)
+
+
+class MetagameDirectiveTests(unittest.TestCase):
+    """Un récit ne raconte JAMAIS la mécanique du jeu (playtest Albrecht).
+
+    Les tables structurées mélangent diégèse et gameplay (notes de patch de
+    la Deep Archimedea, modificateurs personnels, récompenses Netracell) : la
+    Passe 2 doit interdire de les restituer, quelle que soit la voie (lentille
+    ou sujet ciblé).
+    """
+
+    def _assert_quarantine(self, directive):
+        self.assertIn("MÉTAJEU", directive)
+        self.assertIn("diégèse", directive)
+        self.assertIn("modificateurs de mission", directive)
+        self.assertIn("notes de mise à jour", directive)
+
+    def test_le_recit_a_lentille_porte_la_quarantaine_du_metajeu(self):
+        self._assert_quarantine(story_directive("1999"))
+        self._assert_quarantine(story_directive(None))
+
+    def test_le_recit_cible_porte_la_quarantaine_du_metajeu(self):
+        self._assert_quarantine(targeted_story_directive("1999 (Höllvania)"))
+        self._assert_quarantine(targeted_story_directive("l'Ère Orokin"))
+
+    def test_la_quarantaine_s_applique_aux_deux_etats_de_pagination(self):
+        self._assert_quarantine(story_directive("1999", more=False))
+        self._assert_quarantine(
+            targeted_story_directive("1999 (Höllvania)", more=False))
+
+    def test_la_constante_est_exportee(self):
+        self.assertIn("MÉTAJEU", STORY_METAGAME_DIRECTIVE)
+        self.assertIn("statistiques", STORY_METAGAME_DIRECTIVE)
 
 
 class CloseSubjectTests(unittest.TestCase):

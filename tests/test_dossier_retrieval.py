@@ -39,9 +39,9 @@ from warframe_lore.engram.rag.retrieval.structured_search import (
 )
 
 
-def hit(n, score, page="Page", content=None):
+def hit(n, score, page="Page", content=None, kind=None):
     return RAGHit(chunk_id=n, page_title=page,
-                  content=content or f"contenu {n}", score=score)
+                  content=content or f"contenu {n}", score=score, kind=kind)
 
 
 def run(coro):
@@ -188,6 +188,22 @@ class StructuredDossierSqlShapeTests(unittest.TestCase):
         sql = str(compiled)
         self.assertIn("structured_chunks.title ilike", sql.lower())
         self.assertIn("structured_chunks.content ilike", sql.lower())
+
+    def test_le_dossier_exclut_les_chunks_metajeu_du_corpus_story(self):
+        # Les notes de patch et annonces (game_updates / game_announcements)
+        # citent les mêmes entités que le lore : le balayage du dossier les
+        # ramasserait au rang des allusions (playtest Albrecht : modificateurs
+        # de mission de la Deep Archimedea dans le récit).  Le dossier STORY
+        # les exclut par kind — le ``search()`` factuel, lui, les atteint.
+        from sqlalchemy.dialects import postgresql
+        search = StructuredSearch.__new__(StructuredSearch)
+        compiled = search._build_dossier_statement(
+            "albrecht", [0.0] * 1024).compile(dialect=postgresql.dialect())
+        sql = str(compiled)
+        self.assertIn("KIND NOT IN", sql.upper())
+        joined = " | ".join(str(v) for v in compiled.params.values())
+        self.assertIn("game_updates", joined)
+        self.assertIn("game_announcements", joined)
 
 
 class PipelineDossierTests(unittest.TestCase):
@@ -347,6 +363,56 @@ class PipelineDossierTests(unittest.TestCase):
         self.assertIsNone(suggestion)
         self.assertFalse(more)
         self.assertEqual(consumed, [])
+
+
+class StoryKindFilterTests(unittest.TestCase):
+    """Mode story : le corpus servi exclut les kinds métajeu.
+
+    Les notes de patch et annonces (``game_updates`` / ``game_announcements``)
+    citent les mêmes entités que le lore : en mode story elles sont purgées
+    du corpus, dans les deux canaux — le dossier l'exclut en SQL (correctif
+    audit Oracle), le filtre pipeline couvre les voisins sémantiques.  Le
+    canal lore (``kind`` None) n'est jamais filtré ; sans flag ``story``, les
+    questions factuelles trouvent toujours les notes de patch.
+    """
+
+    def test_le_mode_story_exclut_les_chunks_metajeu_du_corpus(self):
+        retriever = FakeRetriever([
+            hit(1, 0.62, kind="game_dialogues"),
+            hit(2, 0.62, kind="game_updates"),
+            hit(3, 0.62, kind="kim_dialogues"),
+            hit(4, 0.62, kind="game_announcements"),
+            hit(5, 0.62, kind=None),            # canal lore : jamais filtré
+        ])
+        service = make_service(retriever)
+        used, prompt, bypass = run(service.retrieve(
+            "raconte-moi l'histoire d'Eleanor", story=True))
+        self.assertFalse(bypass)
+        self.assertEqual([h.chunk_id for h in used], [1, 3, 5])
+
+    def test_sans_flag_story_les_chunks_metajeu_sont_servis(self):
+        # Hors mode story, une question factuelle trouve les notes de patch :
+        # soit questions techniques, soit canal libre — rien n'est purgé.
+        retriever = FakeRetriever([
+            hit(1, 0.62, kind="game_updates"),
+            hit(2, 0.62, kind="game_dialogues"),
+        ])
+        service = make_service(retriever)
+        used, prompt, bypass = run(service.retrieve(
+            "quelles sont les notes de patch récentes ?"))
+        self.assertEqual([h.chunk_id for h in used], [1, 2])
+
+    def test_le_filtre_story_couvre_les_voisins_d_un_recit_cible(self):
+        # À l'ouverture d'un récit ciblé, le pipeline fusionne le dossier et
+        # les voisins sémantiques : le filtre purge aussi ces derniers, après
+        # la purge SQL du dossier.
+        retriever = FakeRetriever(
+            [hit(2, 0.64, kind="game_updates")],
+            dossier=[hit(1, 0.60, page="Eleanor", kind="game_dialogues")])
+        service = make_service(retriever)
+        used, prompt, bypass = run(service.retrieve(
+            "raconte-moi l'histoire d'Eleanor", subject="eleanor", story=True))
+        self.assertEqual([h.chunk_id for h in used], [1])
 
 
 class MergedDossierTests(unittest.TestCase):

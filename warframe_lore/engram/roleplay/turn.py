@@ -94,7 +94,8 @@ async def plan_turn(container: Container, payload: dict, user_text: str,
             search_text, context=rag_context,
             subject=payload.get("targeted_subject"),
             offset=int(payload.get("dossier_offset") or 0),
-            exclude_ids=list(consumed_chunk_ids)
+            exclude_ids=list(consumed_chunk_ids),
+            story=bool(payload.get("story"))
         )
 
         # Grow the session's exclusion memory with what the model really saw.

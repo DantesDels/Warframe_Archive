@@ -74,21 +74,25 @@ class RAGService:
     async def retrieve(self, question: str,
                        context: RAGContext | None = None, *,
                        subject: str | None = None, offset: int = 0,
-                       exclude_ids: list[int] | None = None
+                       exclude_ids: list[int] | None = None,
+                       story: bool = False
                        ) -> tuple[list[RAGHit], RAGPrompt, bool]:
         """Kept passages, assembled prompt and short-circuit flag."""
         outcome = await self.pipeline.run(question, context, subject=subject,
-                                          offset=offset, exclude_ids=exclude_ids)
+                                          offset=offset, exclude_ids=exclude_ids,
+                                          story=story)
         return outcome.hits, outcome.prompt, outcome.bypass
 
     async def resolve(self, question: str,
                       context: RAGContext | None = None, *,
                       subject: str | None = None, offset: int = 0,
-                      exclude_ids: list[int] | None = None
+                      exclude_ids: list[int] | None = None,
+                      story: bool = False
                       ) -> tuple[str | None, str | None, bool, list[int]]:
         """Context / suggestion / remaining material / consumed chunk IDs."""
         outcome = await self.pipeline.run(question, context, subject=subject,
-                                          offset=offset, exclude_ids=exclude_ids)
+                                          offset=offset, exclude_ids=exclude_ids,
+                                          story=story)
         if outcome.bypass:
             return None, None, False, []
         # Only the ids the model REALLY saw (bounded in the builder by the

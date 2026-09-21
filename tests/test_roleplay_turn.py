@@ -110,6 +110,19 @@ class ShortCircuitTests(unittest.TestCase):
         self.assertIsNone(plan.reply)
         self.assertIn("Höllvania", plan.context_text)
 
+    def test_le_mode_story_est_propage_au_service_rag(self):
+        rag = FakeRAG("[Eleanor] Le premier souvenir, Inchon.")
+        plan = decide({"story": True}, "raconte-moi l'histoire d'Eleanor",
+                      rag=rag)
+        self.assertIsNone(plan.reply)
+        self.assertEqual(rag.stories, [True])
+
+    def test_un_rag_ordinaire_ne_propage_pas_le_mode_story(self):
+        rag = FakeRAG("[Hildryn] Elle garde la Terre profonde.")
+        plan = decide({"rag": True}, "que fait Hildryn ?", rag=rag)
+        self.assertIsNone(plan.reply)
+        self.assertEqual(rag.stories, [False])
+
 
 class RetrievalAnchorTests(unittest.TestCase):
     """Suivi d'un récit : la RECHERCHE porte sur la requête qui l'a ancré.

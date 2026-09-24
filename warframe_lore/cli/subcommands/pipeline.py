@@ -82,7 +82,7 @@ def _add_update(sub) -> None:
     parser = sub.add_parser(
         "update",
         help="Full chain: scraper → structured ETL → export "
-             "→ static lists (no UI, no kim-dm).",
+             "→ static lists → RAG embeddings (no UI, no kim-dm).",
     )
     parser.add_argument("--force", action="store_true",
                         help="Re-process everything (ignore the delta).")

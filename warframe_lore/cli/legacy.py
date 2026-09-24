@@ -9,7 +9,8 @@ from __future__ import annotations
 
 # Modern subcommands: when argv starts with one of them, nothing is rewritten.
 KNOWN_COMMANDS = {"run", "diff", "status", "recent", "buckets", "init-db",
-                  "ui", "export-entities", "kim-dm", "bot", "version", "help"}
+                  "ui", "export-entities", "kim-dm", "bot", "version",
+                  "update", "help"}
 
 VERBOSE_FLAGS = ("--verbose", "-v")
 PIPELINE_FLAGS = ("--force", "--skip-sql")

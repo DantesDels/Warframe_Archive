@@ -92,7 +92,14 @@ class LegacyArgvTests(unittest.TestCase):
         self.assertEqual(normalize_legacy_argv([]), [])
 
     def test_commande_moderne_inchangée(self):
-        for argv in (["status"], ["bot", "run"], ["-h"], ["--help"]):
+        # Every declared subcommand must pass through unchanged: forgetting
+        # one here silently rewrites it to ``run`` (e.g. ``update``).
+        for name in sorted(EXPECTED):
+            with self.subTest(command=name):
+                self.assertEqual(normalize_legacy_argv([name]), [name])
+        for argv in (["bot", "run"], ["update", "--force"],
+                     ["update", "--force", "--database-url", "url"],
+                     ["-h"], ["--help"]):
             with self.subTest(argv=argv):
                 self.assertEqual(normalize_legacy_argv(argv), argv)
 

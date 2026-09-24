@@ -168,6 +168,7 @@ TARGETED_SUBJECT_ERAS: dict[str, str] = {
     "mirage": "l'Éveil du Tenno",
     "mother": "l'Éveil du Tenno",
     "nakak": "l'Éveil du Tenno",
+    "narin": "l'Éveil du Tenno",
     "natah": "l'Éveil du Tenno",
     "nekros": "l'Éveil du Tenno",
     "nezha": "l'Éveil du Tenno",

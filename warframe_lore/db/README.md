@@ -144,6 +144,15 @@ How to (re)create or (re)populate the schema and data, in order:
   `INFO … Inserted <table>: N row(s).` lines for the result.
 - To re-derive only the element tables (without a full ENGRAM re-run), run
   step 4 alone — the parser content comes from the already-cached megafiles.
+- The single-command chain `cephalon update` covers every step above
+  automatically (scraper → structured ETL → export → static lists → **RAG
+  embeddings**): it re-ingests the wiki, re-derives the element tables, then
+  backfills the pending `lore_chunks` vectors (`ingest`) and rebuilds
+  `structured_chunks` (`embed_structured`). Its embedding phases need the LM
+  Studio endpoint (see `EngramConfig`); `kim-dm` stays out of the chain by
+  design. Running the scraper or `cephalon run` alone leaves the embeddings of
+  new/changed chunks pending until `ingest` (or `cephalon update`) computes
+  them.
 
 ## Usage
 

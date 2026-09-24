@@ -630,6 +630,12 @@ DISCORD_TOKEN=... python -m warframe_lore.discord.main --channels <ID>
 #    (or: cephalon bot run --channels <ID>)
 ```
 
+The step-by-step path above is the manual reference; the same chain runs in a
+single command: `cephalon update` (scraper → structured ETL → public export →
+static lists → RAG embeddings). Its final phases backfill the pending
+`lore_chunks` vectors and rebuild `structured_chunks`, so the RAG serves the
+newest content — provided the LM Studio endpoint is up (`ENGRAM_*` config).
+
 ## Tests and Validation
 
 ### Unit Suite

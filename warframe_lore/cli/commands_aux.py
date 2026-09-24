@@ -111,7 +111,7 @@ async def _cmd_export_entities_impl(args) -> None:
 
 async def _cmd_update_impl(args) -> None:
     """``cephalon update`` — the single-command chain (scraper → ETL →
-    export → static lists, no UI, no kim-dm).
+    export → static lists → RAG embeddings, no UI, no kim-dm).
     """
     from ..update.run import run_update
 
@@ -127,3 +127,8 @@ async def _cmd_update_impl(args) -> None:
               f"quests, {lists.get('leverian', '?')} leverian).")
     else:
         print("story_eras: no change (zero-diff).")
+    # ---- report for phase 5 (RAG embeddings):
+    lore = results.get("lore_chunks", 0)
+    structured = results.get("structured_chunks", 0)
+    print(f"RAG : {lore} lore_chunk(s) embeddé(s), "
+          f"{structured} structured_chunk(s) embeddé(s).")

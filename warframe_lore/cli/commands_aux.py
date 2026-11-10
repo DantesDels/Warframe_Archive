@@ -11,6 +11,7 @@ import contextlib
 from pathlib import Path
 
 from ..db import SQLDatabaseManager
+from ..infra import ensure_database
 from .support import (
     PROJECT_DEFAULT_DB_INIT_SQL,
     build_config,
@@ -117,6 +118,7 @@ async def _cmd_update_impl(args) -> None:
 
     config, _ = build_config(args)
     database_url = args.database_url or config.database_url
+    ensure_database(database_url)
     results = await run_update(
         database_url, force=getattr(args, "force", False))
     # ---- report for phase 4 (static lists):

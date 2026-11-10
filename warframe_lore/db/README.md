@@ -113,7 +113,7 @@ How to (re)create or (re)populate the schema and data, in order:
 
 | Step | Command | Purpose |
 |---|---|---|
-| 1. Start the database | `docker compose up -d` | PostgreSQL 16 + pgvector (root `docker-compose.yml`) |
+| 1. Start the database | `docker compose up -d` | PostgreSQL 16 + pgvector (root `docker-compose.yml`); `cephalon run` / `cephalon update` do this automatically when the port is closed |
 | 2. Create / update the schema | `cephalon init-db` | applies `warframe_lore/db/init_db.sql` (`CREATE TABLE IF NOT EXISTS`); run once per new table or schema change |
 | 2b. One-shot migration | `psql -U <user> -d warframe_lore -f warframe_lore/db/migrations/dialogue_tree_graph.sql` | additive `parent_message_id` on both dialogue tables, `kim_dialogues` schema upgrade, KIM data transfer out of `game_dialogues` (once per existing database) |
 | 2c. Link dialogue trees | `python -m warframe_lore.db.migrations.link_dialogue_trees` | computes and stores `parent_message_id` (adjacency list) for both dialogue tables (needs 2b first) |

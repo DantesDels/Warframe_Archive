@@ -308,7 +308,7 @@ pipeline navigation and maintenance:
 
 | Command | Role |
 |---|---|
-| `cephalon run` | runs the full pipeline in incremental delta mode (keeps existing data, only inserts new) |
+| `cephalon run` | runs the full pipeline in incremental delta mode (keeps existing data, only inserts new); boots the local Docker/PostgreSQL stack first when needed |
 | `cephalon diff` | previews the delta without writing anything (dry-run) |
 | `cephalon status` | current state: pages, chunks, canon, last synchronization |
 | `cephalon recent` | latest modified / inserted pages |
@@ -324,6 +324,12 @@ pipeline navigation and maintenance:
 Without a subcommand, `cephalon` defaults to `cephalon run`. The legacy
 invocation `python -m warframe_lore` still works (backwards-compatible).
 
+`cephalon run` and `cephalon update` auto-start the local infrastructure when
+the database port is closed: Docker Desktop is launched if the engine is cold,
+then `docker compose up -d` brings PostgreSQL/pgvector up. A remote database is
+never started; `--skip-sql` bypasses the bootstrap entirely. This is the same
+bootstrap used by `cephalon bot run` (`warframe_lore.infra.ensure_database`).
+
 ```bash
 cephalon status                     # where the database stands
 cephalon diff                       # which pages would be updated
@@ -337,12 +343,12 @@ cephalon kim-dm
 
 ### 1. PostgreSQL Database (Optional but Recommended)
 
-Launch PostgreSQL with pgvector (Docker):
+`cephalon run` / `cephalon update` boot the local stack automatically
+(Docker Desktop cold start + `docker compose up -d`) when port 5432 is closed.
+To start it manually instead:
 
 ```bash
-docker run --name warframe-lore-db -p 5432:5432 \
-  -e POSTGRES_USER=warframe -e POSTGRES_PASSWORD=warframe \
-  -e POSTGRES_DB=warframe_lore -d pgvector/pgvector:pg16
+docker compose up -d
 ```
 
 Create the schema (`warframe_lore/db/init_db.sql`):
@@ -616,7 +622,7 @@ ships `config/buckets.json`, `persona/oracle`, `config/cleaner_config.json`).
 ### Minimal Launch (End-to-End Path)
 
 ```bash
-docker compose up -d                  # 1. PostgreSQL 16 + pgvector
+docker compose up -d                  # 1. PostgreSQL 16 + pgvector (or let `cephalon run` boot it)
 pip install -r requirements.txt       # 2. dependencies
 python -m warframe_lore --init-db     # 3. schema (or: cephalon init-db)
 cephalon run                         # 4. delta ingestion (JSON + SQL + embeddings)

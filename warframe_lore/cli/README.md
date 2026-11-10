@@ -17,8 +17,8 @@ Responsibility: the command-line entry point of the pipeline.
 
 | Command | Role |
 |---|---|
-| `run` | Full pipeline, incremental delta (`--force`, `--skip-sql`, `--bucket-config`) |
-| `update` | Full chain incl. RAG embeddings: scraper → structured ETL → export → static lists → `ingest` + `embed_structured` (no UI, no kim-dm) |
+| `run` | Full pipeline, incremental delta (`--force`, `--skip-sql`, `--bucket-config`); auto-starts the local Docker/PostgreSQL stack unless `--skip-sql` |
+| `update` | Full chain incl. RAG embeddings: scraper → structured ETL → export → static lists → `ingest` + `embed_structured` (no UI, no kim-dm); auto-starts the local stack |
 | `diff` | Preview delta (dry-run) via `scraper.delta_plan` |
 | `status` / `recent` | Database state / latest modified pages (`db.db_stats`, `recent_pages`) |
 | `buckets [--init]` | List / materialize `config/buckets.json` |

@@ -3,7 +3,7 @@
 Single responsibility: make sure the Docker engine answers before a compose stack
 is brought up — launching Docker Desktop when it is cold, then waiting for the
 engine, bounded.  Best effort by nature: a missing Docker Desktop raises with an
-explicit message instead of hanging the bot launch.
+explicit message instead of hanging the caller.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .waiting import wait_until
 
-log = logging.getLogger("warframe_lore.discord.docker")
+log = logging.getLogger("warframe_lore.infra.docker")
 
 DOCKER_DESKTOP_EXE = (
     Path(os.environ.get("PROGRAMFILES", r"C:\Program Files"))

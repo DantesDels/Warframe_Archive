@@ -1,10 +1,11 @@
-"""PostgreSQL/pgvector auto-start before the Discord bot (``cephalon bot run``).
+"""PostgreSQL/pgvector auto-start for the local stack.
 
-The bot's RAG database (read by ENGRAM) is booted on demand: if the TCP port of
-``WF_DATABASE_URL`` is not listening, the compose stack is brought up — the Docker
+The RAG database (read by ENGRAM) is booted on demand: if the TCP port of the
+database URL is not listening, the compose stack is brought up — the Docker
 engine itself is started first when it is cold (see :mod:`docker_engine`).  A
 remote database is never auto-started: only a local host is considered bootable.
-ENGRAM auto-start lives in :mod:`engram_bootstrap`.
+Shared by ``cephalon run``, ``cephalon update`` and the Discord bot; the ENGRAM
+auto-start itself lives in :mod:`warframe_lore.discord.bootstrap.engram_bootstrap`.
 """
 
 from __future__ import annotations
@@ -19,15 +20,15 @@ from urllib.parse import urlparse
 from .docker_engine import ensure_engine
 from .waiting import wait_until
 
-log = logging.getLogger("warframe_lore.discord.db_bootstrap")
+log = logging.getLogger("warframe_lore.infra.db_bootstrap")
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 COMPOSE_FILE = "docker-compose.yml"
 DB_WAIT_SECONDS = 90.0
 DEFAULT_DATABASE_URL = ("postgresql+asyncpg://warframe:warframe@localhost:5432"
                         "/warframe_lore")
 
-# Hosts the bot is allowed to boot locally (shared with the ENGRAM auto-start).
+# Hosts the local stack is allowed to boot (shared with the ENGRAM auto-start).
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 
@@ -40,9 +41,9 @@ def _tcp_open(host: str, port: int, timeout: float = 2.0) -> bool:
         return False
 
 
-def _database_url() -> tuple[str, int]:
-    """Host/port of ``WF_DATABASE_URL`` (defaults to local 5432)."""
-    raw = os.getenv("WF_DATABASE_URL", DEFAULT_DATABASE_URL)
+def _endpoint(database_url: str | None) -> tuple[str, int]:
+    """Host/port of ``database_url`` (defaults to local 5432)."""
+    raw = database_url or os.getenv("WF_DATABASE_URL", DEFAULT_DATABASE_URL)
     # Strip the driver suffix (e.g. ``postgresql+asyncpg``) to parse cleanly.
     plain = raw.split("://", 1)
     scheme = plain[0].split("+", 1)[0] if plain else "postgresql"
@@ -62,13 +63,15 @@ def _start_stack() -> None:
         raise RuntimeError(f"docker compose up failed: {proc.stderr.strip()}")
 
 
-def ensure_database() -> None:
+def ensure_database(database_url: str | None = None) -> None:
     """Ensure PostgreSQL/pgvector listens on the configured port.
 
-    Already-open port: nothing happens.  Otherwise the engine is started if
-    needed, the stack is brought up, and the port is polled until reachable.
+    ``database_url`` is the already-resolved connection string (CLI override or
+    config); ``None`` falls back to ``WF_DATABASE_URL``.  Already-open port:
+    nothing happens.  Otherwise the engine is started if needed, the stack is
+    brought up, and the port is polled until reachable.
     """
-    host, port = _database_url()
+    host, port = _endpoint(database_url)
     if host.lower() not in LOCAL_HOSTS:
         log.info("Database host %r is not local — skipping auto-start", host)
         return

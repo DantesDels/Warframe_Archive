@@ -13,6 +13,7 @@ from pathlib import Path
 
 from .. import __version__
 from ..api import BucketConfig
+from ..infra import ensure_database
 from .commands_aux import (
     _cmd_diff_impl,
     _cmd_export_entities_impl,
@@ -39,6 +40,8 @@ def _cmd_init_database(args) -> int:
 
 def _cmd_run(args) -> int:
     config, _ = build_config(args)
+    if not getattr(args, "skip_sql", False):
+        ensure_database(config.database_url)
     scraper = build_scraper(args)
     try:
         scraper.run(force=args.force)

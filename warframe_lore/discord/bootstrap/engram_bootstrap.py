@@ -8,7 +8,8 @@ the bot exits, the spawned server is terminated along with it.
 
 A remote ``ws://`` URL is never auto-started: only a local host
 (``localhost`` / ``127.0.0.1``) is considered bootable.  The PostgreSQL
-auto-start lives in :mod:`db_bootstrap`; this module is the ENGRAM half.
+auto-start lives in :mod:`warframe_lore.infra.db_bootstrap`; this module is the
+ENGRAM half.
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ import time
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
-from .db_bootstrap import LOCAL_HOSTS
+from ...infra.db_bootstrap import LOCAL_HOSTS
 
 log = logging.getLogger("warframe_lore.discord.engram_bootstrap")
 

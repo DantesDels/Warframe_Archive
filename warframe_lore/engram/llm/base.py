@@ -20,7 +20,7 @@ class LLMProvider(ABC):
     async def chat_stream(
         self,
         messages: list[ChatMessage],
-        temperature: float = 0.7,
+        temperature: float = 0.1,
     ) -> AsyncIterator[str]:
         """Iterates over model response tokens (async stream)."""
 

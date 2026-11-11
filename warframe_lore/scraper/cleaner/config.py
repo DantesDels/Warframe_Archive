@@ -8,7 +8,7 @@ from pathlib import Path
 
 # Path to the cleaning config file (project root).
 CLEANER_CONFIG_PATH = (
-    Path(__file__).resolve().parent.parent.parent / "config" / "cleaner_config.json"
+    Path(__file__).resolve().parents[3] / "config" / "cleaner_config.json"
 )
 
 

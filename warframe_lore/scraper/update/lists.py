@@ -24,7 +24,7 @@ from .merge import (
 
 # Temporary marker while lists.py is split for reviewability.
 STORY_ERAS_PATH = (
-    Path(__file__).resolve().parents[1] / "discord" / "guild" / "story_eras.py")
+    Path(__file__).resolve().parents[2] / "discord" / "guild" / "story_eras.py")
 
 
 async def regenerate_story_eras(

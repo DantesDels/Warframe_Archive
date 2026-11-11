@@ -102,7 +102,7 @@ def _cmd_update(args) -> int:
 
 def _cmd_version(args) -> int:
     print(f"cephalon (warframe-archives) \u2014 {__version__}")
-    print(f"package: {Path(__file__).resolve().parent.parent}")
+    print(f"package: {Path(__file__).resolve().parents[2]}")
     return 0
 
 

@@ -19,7 +19,7 @@ from warframe_lore.scraper.api import BucketConfig
 log = logging.getLogger("cephalon")
 
 PROJECT_DEFAULT_DB_INIT_SQL = (
-    Path(__file__).resolve().parents[1] / "db" / "init_db.sql")
+    Path(__file__).resolve().parents[2] / "storage" / "db" / "init_db.sql")
 PROJECT_DEFAULT_BUCKET_CONFIG = PROJECT_ROOT / "config" / "buckets.json"
 DEFAULT_UI_PORT = 49772
 

@@ -22,7 +22,7 @@ from .waiting import wait_until
 
 log = logging.getLogger("warframe_lore.core.infra.db_bootstrap")
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
 COMPOSE_FILE = "docker-compose.yml"
 DB_WAIT_SECONDS = 90.0
 DEFAULT_DATABASE_URL = ("postgresql+asyncpg://warframe:warframe@localhost:5432"

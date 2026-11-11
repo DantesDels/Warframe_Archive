@@ -13,6 +13,7 @@ import unittest
 from warframe_lore.cli import commands as cmd
 from warframe_lore.cli.legacy import normalize_legacy_argv
 from warframe_lore.cli.parser import build_parser
+from warframe_lore.cli.subcommands.rag import _cmd_rag
 
 EXPECTED = {
     "run": cmd._cmd_run,
@@ -27,6 +28,7 @@ EXPECTED = {
     "bot": cmd._cmd_bot,
     "version": cmd._cmd_version,
     "update": cmd._cmd_update,
+    "rag": _cmd_rag,
     "help": None,
 }
 

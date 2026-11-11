@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .story import (
+from warframe_lore.discord.guild.story import (
     detect_leverian_warframe,
     detect_story_lens,
     detect_targeted_era,

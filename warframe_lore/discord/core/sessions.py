@@ -10,10 +10,9 @@ from __future__ import annotations
 
 import logging
 
-from warframe_lore.protocols.roleplay import PERSONA_ORACLE
-
-from ..moderation.hostile_link import HostileLink
-from ..services import RoleplayGateway
+from warframe_lore.core.protocols.roleplay import PERSONA_ORACLE
+from warframe_lore.discord.moderation.hostile_link import HostileLink
+from warframe_lore.discord.services import RoleplayGateway
 
 log = logging.getLogger("warframe_lore.discord.sessions")
 

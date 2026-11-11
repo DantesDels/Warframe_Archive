@@ -13,7 +13,7 @@ from pathlib import Path
 
 import discord
 
-from .persist import fill_map
+from warframe_lore.discord.guild.roles.persist import fill_map
 
 _CONNECT_TIMEOUT_SECONDS = 90.0
 

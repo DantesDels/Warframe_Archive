@@ -7,8 +7,8 @@ structured ``{"titre_page", "section", "contenu"}`` list."""
 
 import unittest
 
-from warframe_lore.db import ChunkManager, sections_from_markdown
-from warframe_lore.db.chunks.split import DEFAULT_CHUNK_MAX_CHARACTERS
+from warframe_lore.storage.db import ChunkManager, sections_from_markdown
+from warframe_lore.storage.db.chunks.split import DEFAULT_CHUNK_MAX_CHARACTERS
 
 
 class SemanticSectionsTests(unittest.TestCase):

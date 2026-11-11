@@ -19,17 +19,18 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING
 
-from ..api import (
+from warframe_lore.config import Config, load_config
+from warframe_lore.scraper.api import (
     BucketConfig,
     CategoryCatalog,
     FrenchMediaWikiSource,
     MediaWikiSource,
     SiteHtmlSource,
 )
-from ..cleaner import CleanerConfig, HtmlCleaner, WikitextCleaner
-from ..config import Config, load_config
-from ..db import SQLDatabaseManager
-from ..output import MegafileManager
+from warframe_lore.scraper.cleaner import CleanerConfig, HtmlCleaner, WikitextCleaner
+from warframe_lore.storage.db import SQLDatabaseManager
+from warframe_lore.storage.output import MegafileManager
+
 from .canon import CanonSignalsMixin
 from .delta import ScraperDeltaMixin
 from .ingest import ScraperIngestMixin

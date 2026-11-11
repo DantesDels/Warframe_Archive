@@ -22,20 +22,24 @@ import logging
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
-from ..models import ChatMessage
-from .pipeline import RetrievalPipeline
-from .prompt.builder import PromptBuilder, RAGPrompt
-from .prompt.guards import CONFABULATION_ERROR, JAILBREAK_REJECT, RAG_ERROR
-from .retrieval.retriever import RAGHit, Retriever
-from .sanitize import strip_trailing_padding
-from .verify import verify_answer_with_archive
+from warframe_lore.engram.models import ChatMessage
+from warframe_lore.engram.rag.pipeline import RetrievalPipeline
+from warframe_lore.engram.rag.prompt.builder import PromptBuilder, RAGPrompt
+from warframe_lore.engram.rag.prompt.guards import (
+    CONFABULATION_ERROR,
+    JAILBREAK_REJECT,
+    RAG_ERROR,
+)
+from warframe_lore.engram.rag.retrieval.retriever import RAGHit, Retriever
+from warframe_lore.engram.rag.sanitize import strip_trailing_padding
+from warframe_lore.engram.rag.verify import verify_answer_with_archive
 
 if TYPE_CHECKING:
-    from ..llm import EmbeddingProvider, LLMProvider
-    from .context import RAGContext
-    from .query.aliases import AliasResolver
-    from .query.rewriter import QueryRewriter
-    from .vocabulary import ArchiveVocabulary
+    from warframe_lore.engram.llm import EmbeddingProvider, LLMProvider
+    from warframe_lore.engram.rag.context import RAGContext
+    from warframe_lore.engram.rag.query.aliases import AliasResolver
+    from warframe_lore.engram.rag.query.rewriter import QueryRewriter
+    from warframe_lore.engram.rag.vocabulary import ArchiveVocabulary
 
 # RAG inference temperature: 0.1 -> analytical/deterministic without blocking
 # the engine (Gemma-2-9b-it Q4_K_M on 8 GB VRAM).

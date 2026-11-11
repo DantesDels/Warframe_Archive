@@ -10,7 +10,7 @@ per connection instead (see ``routers/roleplay.py``).
 
 from __future__ import annotations
 
-from ..rag import RAGContext, RAGContextFactory
+from warframe_lore.engram.rag import RAGContext, RAGContextFactory
 
 
 def get_rag_context() -> RAGContext:

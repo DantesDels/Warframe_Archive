@@ -12,12 +12,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..rag import CONFABULATION_ERROR, RAG_ERROR, verify_answer_with_archive
-from .prompt import STORY_LENS_STARTS
-from .purge import canonical_story_closing, purge_story_closing
+from warframe_lore.engram.rag import (
+    CONFABULATION_ERROR,
+    RAG_ERROR,
+    verify_answer_with_archive,
+)
+from warframe_lore.engram.roleplay.prompt import STORY_LENS_STARTS
+from warframe_lore.engram.roleplay.purge import (
+    canonical_story_closing,
+    purge_story_closing,
+)
 
 if TYPE_CHECKING:
-    from ..rag import ArchiveVocabulary
+    from warframe_lore.engram.rag import ArchiveVocabulary
 
 
 async def verified_response(

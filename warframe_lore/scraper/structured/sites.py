@@ -8,12 +8,13 @@ from collections import Counter
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..db.models import GameAnnouncement, GameUpdate, Warframe
+from warframe_lore.storage.db.models import GameAnnouncement, GameUpdate, Warframe
+
 from .catalog import parse_warframe_page
 from .news import parse_announcement, parse_update
 from .store import store
 
-log = logging.getLogger("warframe_lore.structured.sites")
+log = logging.getLogger("warframe_lore.scraper.structured.sites")
 
 
 async def ingest_site_page(

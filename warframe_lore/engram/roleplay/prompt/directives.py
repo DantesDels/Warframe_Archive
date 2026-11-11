@@ -10,7 +10,7 @@ era lock, pagination, closing line) live in :mod:`narrative`.
 
 from __future__ import annotations
 
-from ...auth import STATUT_ORGANIQUE
+from warframe_lore.engram.auth import STATUT_ORGANIQUE
 
 # BLOC 2 header (exact mission-6/8 format).
 SPEAKER_HEADER = "[INFORMATIONS SUR L'INTERLOCUTEUR ACTUEL]"

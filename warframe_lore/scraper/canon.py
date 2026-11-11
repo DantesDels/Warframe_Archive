@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 
-from ..output import CanonStatus
+from warframe_lore.storage.output import CanonStatus
 
 log = logging.getLogger("warframe_lore.scraper")
 
@@ -53,6 +53,6 @@ class CanonSignalsMixin:
         )
         # merge_canon_status keeps the weakest status (highest priority):
         # a single speculative signal is enough to classify as spec.
-        from ..output import merge_canon_status
+        from warframe_lore.storage.output import merge_canon_status
 
         return merge_canon_status(page_status, body_status)

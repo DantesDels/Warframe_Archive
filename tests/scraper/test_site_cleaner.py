@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from warframe_lore.cleaner import CleanOutput, HtmlCleaner
+from warframe_lore.scraper.cleaner import CleanOutput, HtmlCleaner
 
 
 class HtmlCleanerTests(unittest.TestCase):

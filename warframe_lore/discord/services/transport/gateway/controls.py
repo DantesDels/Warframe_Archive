@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 
-from warframe_lore.protocols.roleplay import (
+from warframe_lore.core.protocols.roleplay import (
     FRAME_COMMENT,
     FRAME_ERROR,
     CommentRequestFrame,

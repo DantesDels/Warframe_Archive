@@ -4,7 +4,7 @@ This module owns the deterministic decisions behind ``cephalon update``:
 which era a Warframe or KIM character belongs to, how the Leverian
 sections are matched against the base Warframe directory, and the exact
 rendering of ``warframe_lore/discord/guild/story_eras.py``.  No I/O and no
-database here — the queries live in :mod:`warframe_lore.update.lists`.
+database here — the queries live in :mod:`warframe_lore.scraper.update.lists`.
 """
 
 from __future__ import annotations

@@ -11,17 +11,20 @@ import os
 from sqlalchemy import case, or_, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from ....db import WikiPage
-from ....db.models import GameDialogue, KimDialogue
-from ....db.models.structured_chunk import StructuredChunk
-from ....protocols.roleplay import STORY_DOSSIER_PAGE
-from .retriever import (
+from warframe_lore.core.protocols.roleplay import STORY_DOSSIER_PAGE
+from warframe_lore.engram.rag.retrieval.retriever import (
     STORY_EXCLUDED_KINDS,
     DossierPage,
     RAGHit,
     Retriever,
 )
-from .search import dossier_title_terms, set_hnsw_ef_search
+from warframe_lore.engram.rag.retrieval.search import (
+    dossier_title_terms,
+    set_hnsw_ef_search,
+)
+from warframe_lore.storage.db import WikiPage
+from warframe_lore.storage.db.models import GameDialogue, KimDialogue
+from warframe_lore.storage.db.models.structured_chunk import StructuredChunk
 
 HNSW_EF = int(os.getenv("ENGRAM_HNSW_EF", "200"))
 

@@ -12,7 +12,7 @@ import logging
 
 from sqlalchemy import select
 
-from ...db import LoreChunk
+from warframe_lore.storage.db import LoreChunk
 
 log = logging.getLogger("warframe_lore.engram.ingest")
 

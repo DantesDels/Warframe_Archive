@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from warframe_lore.timeline import (
+from warframe_lore.storage.timeline import (
     all_edges,
     all_nodes,
     children,

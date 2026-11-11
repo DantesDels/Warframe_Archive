@@ -11,7 +11,7 @@ import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from ....protocols.roleplay import (
+from warframe_lore.core.protocols.roleplay import (
     FRAME_COMMENT,
     FRAME_MESSAGE,
     FRAME_PERSONA,
@@ -22,18 +22,18 @@ from ....protocols.roleplay import (
     ErrorFrame,
     OpenFrame,
 )
-from ...rag import RAGContext, RAGContextFactory
-from ...rag.query.query_guard import sanitize_query
-from ...roleplay import Session
-from ...roleplay.replies import member_comment
-from ...roleplay.turn import plan_turn
-from ..container import Container
-from .roleplay_stream import (
+from warframe_lore.engram.api.container import Container
+from warframe_lore.engram.api.routers.roleplay_stream import (
     emit_reply,
     emit_story_turn,
     emit_stream,
     model_turn,
 )
+from warframe_lore.engram.rag import RAGContext, RAGContextFactory
+from warframe_lore.engram.rag.query.query_guard import sanitize_query
+from warframe_lore.engram.roleplay import Session
+from warframe_lore.engram.roleplay.replies import member_comment
+from warframe_lore.engram.roleplay.turn import plan_turn
 
 router = APIRouter(tags=["roleplay"])
 

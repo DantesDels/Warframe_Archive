@@ -11,12 +11,12 @@ from __future__ import annotations
 import asyncio
 import unittest
 
+from warframe_lore.core.protocols.roleplay import MessageFrame
 from warframe_lore.discord.services.transport import (
     STOP_MARKER,
     MessageStreamer,
     RoleplayGateway,
 )
-from warframe_lore.protocols.roleplay import MessageFrame
 
 
 def _run(coro):

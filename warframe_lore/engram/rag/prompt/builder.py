@@ -20,14 +20,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ..retrieval.retriever import RAGHit
-from .guards import (
+from warframe_lore.engram.rag.prompt.guards import (
     ARCHIVES_REPLY,
     JAILBREAK_BLOCK,
     LOGICAL_INFERENCE_BLOCK,
     OFF_TOPIC_ERROR,
     RELATIONSHIP_ISOLATION_BLOCK,
 )
+from warframe_lore.engram.rag.retrieval.retriever import RAGHit
 
 # Context injected when no relevant passage was retrieved. The model is
 # expected to answer exactly the error sentence from the directives.

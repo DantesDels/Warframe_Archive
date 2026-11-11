@@ -12,10 +12,11 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from ..config import EngramConfig
-from ..llm import LMStudioProvider
-from ..persona import Persona
-from ..rag import (
+from warframe_lore.engram.api.ratelimit import SlidingWindowLimiter
+from warframe_lore.engram.config import EngramConfig
+from warframe_lore.engram.llm import LMStudioProvider
+from warframe_lore.engram.persona import Persona
+from warframe_lore.engram.rag import (
     ArchiveVocabulary,
     CosinusSearch,
     HybridSearch,
@@ -25,8 +26,11 @@ from ..rag import (
     RAGService,
     StructuredSearch,
 )
-from ..roleplay import RoleplayService, SlidingWindow, UserMemoryStore
-from .ratelimit import SlidingWindowLimiter
+from warframe_lore.engram.roleplay import (
+    RoleplayService,
+    SlidingWindow,
+    UserMemoryStore,
+)
 
 
 class Container:

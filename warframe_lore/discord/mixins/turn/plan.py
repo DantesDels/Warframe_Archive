@@ -9,11 +9,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from warframe_lore.core.protocols.roleplay import MessageFrame
+from warframe_lore.discord.guild.roles import Accreditation
+from warframe_lore.discord.services import ChannelSettings
 from warframe_lore.engram.rag import is_self_reflection
-from warframe_lore.protocols.roleplay import MessageFrame
-
-from ...guild.roles import Accreditation
-from ...services import ChannelSettings
 
 # Audit labels: one INFO line and one counter per handled turn.
 KIND_CREATOR_INSULT = "creator_insult(sado-maso)"

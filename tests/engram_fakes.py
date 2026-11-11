@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import asyncio
 
+from warframe_lore.core.protocols.roleplay import PERSONA_ORACLE
 from warframe_lore.engram.rag import RAGContext
 from warframe_lore.engram.roleplay.turn import TurnPlan, plan_turn
-from warframe_lore.protocols.roleplay import PERSONA_ORACLE
 
 
 class FakeRAG:

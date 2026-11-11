@@ -12,8 +12,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from warframe_lore.kim_dm.constants import _ENGINE, _NODE_KINDS
-from warframe_lore.kim_dm.traversal import (
+from warframe_lore.scraper.kim_dm.constants import _ENGINE, _NODE_KINDS
+from warframe_lore.scraper.kim_dm.traversal import (
     build_graph,
     build_messages,
     build_script,

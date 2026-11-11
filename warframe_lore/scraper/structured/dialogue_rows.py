@@ -7,11 +7,12 @@ from collections import Counter
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..db.models import GameDialogue, KimDialogue
-from .dialogues import parse_dialogues
+from warframe_lore.storage.db.models import GameDialogue, KimDialogue
+
+from .parsers.dialogues import parse_dialogues
 from .store import store
 
-log = logging.getLogger("warframe_lore.structured.dialogue_rows")
+log = logging.getLogger("warframe_lore.scraper.structured.dialogue_rows")
 
 _KIM_PREFIX = "Kinemantik Instant Messenger/"
 

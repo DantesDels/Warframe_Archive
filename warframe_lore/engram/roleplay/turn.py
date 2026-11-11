@@ -12,9 +12,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from warframe_lore.protocols.roleplay import PERSONA_ORACLE
-
-from ..rag import (
+from warframe_lore.core.protocols.roleplay import PERSONA_ORACLE
+from warframe_lore.engram.rag import (
     JAILBREAK_REJECT,
     RAG_ERROR,
     RAGContext,
@@ -23,11 +22,15 @@ from ..rag import (
     is_self_reflection,
     sanitize_query,
 )
-from .prompt import STORY_COMPLETE_SENTENCE
-from .replies import external_organic_reply, identity_reply, member_roster_reply
+from warframe_lore.engram.roleplay.prompt import STORY_COMPLETE_SENTENCE
+from warframe_lore.engram.roleplay.replies import (
+    external_organic_reply,
+    identity_reply,
+    member_roster_reply,
+)
 
 if TYPE_CHECKING:
-    from ..api.container import Container
+    from warframe_lore.engram.api.container import Container
 
 
 # Deterministic disambiguation reply for a STORY request: a close page title

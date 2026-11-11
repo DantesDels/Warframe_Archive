@@ -14,7 +14,7 @@ from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-log = logging.getLogger("warframe_lore.structured.store")
+log = logging.getLogger("warframe_lore.scraper.structured.store")
 
 
 async def replace_rows(

@@ -11,13 +11,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from warframe_lore.kim_dm.constants import (
+from warframe_lore.scraper.kim_dm.constants import (
     DIALECT_FILE_PREFIX,
     SUPPORTED_LANGS,
     WIKI_PAGE_MAP,
 )
-from warframe_lore.kim_dm.graph import _anchor_graph, _merge_graphs
-from warframe_lore.kim_dm.parser import parse_dialogue_file
+from warframe_lore.scraper.kim_dm.graph import _anchor_graph, _merge_graphs
+from warframe_lore.scraper.kim_dm.parser import parse_dialogue_file
 
 
 class KimDM:

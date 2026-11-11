@@ -12,7 +12,7 @@ import json
 import unicodedata
 from pathlib import Path
 
-from ....config import PROJECT_ROOT
+from warframe_lore.config import PROJECT_ROOT
 
 
 def normalize_role_name(name: str) -> str:

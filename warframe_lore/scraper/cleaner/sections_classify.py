@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from warframe_lore.cleaner.config import CleanerConfig
+from warframe_lore.scraper.cleaner.config import CleanerConfig
 
 
 def _normalize_for_comparison(value_to_normalize: str) -> str:

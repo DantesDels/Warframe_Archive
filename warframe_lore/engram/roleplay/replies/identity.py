@@ -9,7 +9,7 @@ directive.  Never the archives, never the model, never a raw role snowflake.
 
 from __future__ import annotations
 
-from ...auth import (
+from warframe_lore.engram.auth import (
     STATUT_ALLIE,
     STATUT_CONCEPTEUR,
     STATUT_HAUT_COMMANDEMENT,

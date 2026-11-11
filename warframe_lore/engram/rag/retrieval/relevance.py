@@ -8,8 +8,8 @@ target absent from every passage cannot be answered by the archives).
 
 from __future__ import annotations
 
-from ..query.query_guard import _lookup_entity
-from .retriever import RAGHit
+from warframe_lore.engram.rag.query.query_guard import _lookup_entity
+from warframe_lore.engram.rag.retrieval.retriever import RAGHit
 
 
 def relevance_floor(suggestion_min_score: float,

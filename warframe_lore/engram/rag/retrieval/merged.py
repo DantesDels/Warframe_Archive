@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import asyncio
 
-from ....protocols.roleplay import STORY_DOSSIER_PAGE
-from .retriever import DossierPage, RAGHit, Retriever
+from warframe_lore.core.protocols.roleplay import STORY_DOSSIER_PAGE
+from warframe_lore.engram.rag.retrieval.retriever import DossierPage, RAGHit, Retriever
 
 
 class MergedRetriever(Retriever):

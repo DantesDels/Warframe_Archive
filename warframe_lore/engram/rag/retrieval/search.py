@@ -20,12 +20,19 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import selectinload
 
-from ....db import LoreChunk
-from ..query.aliases import dossier_title_terms
-from .dossier import DOSSIER_LIMIT, fetch_dossier_page, lore_dossier_statement
-from .hnsw import HNSW_EF_SEARCH, set_hnsw_ef_search
-from .retriever import DossierPage, RAGHit, Retriever
-from .suggestion import _token_matches_title, suggest_page_title
+from warframe_lore.engram.rag.query.aliases import dossier_title_terms
+from warframe_lore.engram.rag.retrieval.dossier import (
+    DOSSIER_LIMIT,
+    fetch_dossier_page,
+    lore_dossier_statement,
+)
+from warframe_lore.engram.rag.retrieval.hnsw import HNSW_EF_SEARCH, set_hnsw_ef_search
+from warframe_lore.engram.rag.retrieval.retriever import DossierPage, RAGHit, Retriever
+from warframe_lore.engram.rag.retrieval.suggestion import (
+    _token_matches_title,
+    suggest_page_title,
+)
+from warframe_lore.storage.db import LoreChunk
 
 
 class CosinusSearch(Retriever):

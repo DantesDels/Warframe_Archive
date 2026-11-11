@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import unittest
 
-from warframe_lore.update.merge import (
+from warframe_lore.scraper.update.merge import (
     ERA_1999,
     ERA_EVEIL,
     kim_subjects_from_contexts,

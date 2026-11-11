@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import asyncio
 
+from warframe_lore.core.protocols.roleplay import FRAME_ERROR
 from warframe_lore.discord.services.transport import RoleplayGateway
-from warframe_lore.protocols.roleplay import FRAME_ERROR
 
 
 def _run(coro):

@@ -47,7 +47,7 @@ def load_and_cache_names(cache_dir: Path, force: bool, timeout: int) -> dict:
         return {str(k): str(v) for k, v in data.items()}
     names: dict[str, str] = {}
     try:
-        from ..export import PublicExportClient
+        from warframe_lore.scraper.export import PublicExportClient
     except ImportError:  # boutique: at worst, index without names
         log.warning("PublicExportClient unavailable (names ignored).")
         return names

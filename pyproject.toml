@@ -25,8 +25,8 @@ dependencies = [
 ]
 
 [project.scripts]
-cephalon = "warframe_lore.cli:main"
-cephalon-ui = "warframe_lore.ui.server:main"
+cephalon = "warframe_lore.core.cli:main"
+cephalon-ui = "warframe_lore.web.server:main"
 loremaster = "warframe_lore.discord.main:main"
 
 [project.optional-dependencies]
@@ -52,7 +52,7 @@ python_functions = ["test_*"]
 [tool.ruff]
 line-length = 88
 target-version = "py311"
-exclude = ["warframe_lore/ui/inspector", "warframe_lore/ui/timeline", "build", "dist"]
+exclude = ["warframe_lore/web/inspector", "warframe_lore/web/timeline", "build", "dist"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]

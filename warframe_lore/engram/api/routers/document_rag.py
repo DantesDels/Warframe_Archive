@@ -14,9 +14,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 from starlette.responses import StreamingResponse
 
-from ...rag import RAGContext, RAGService
-from ..deps import get_rag_context
-from ..schemas import RAGRequest, RAGResponse, SourceDocument
+from warframe_lore.engram.api.deps import get_rag_context
+from warframe_lore.engram.api.schemas import RAGRequest, RAGResponse, SourceDocument
+from warframe_lore.engram.rag import RAGContext, RAGService
 
 router = APIRouter(prefix="/v1/rag", tags=["rag"])
 

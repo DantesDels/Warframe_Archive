@@ -1,4 +1,4 @@
-"""CLI entrypoint: ``python -m warframe_lore.rag_extract <url> [...]``.
+"""CLI entrypoint: ``python -m warframe_lore.scraper.rag_extract <url> [...]``.
 
 Outputs the extracted ``LoreChunk`` records as JSON.
 """
@@ -13,7 +13,7 @@ import sys
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-from warframe_lore.rag_extract import (
+from warframe_lore.scraper.rag_extract import (
     BaseExtractor,
     MediaWikiExtractor,
     PlaywrightFallbackExtractor,
@@ -23,7 +23,7 @@ from warframe_lore.rag_extract import (
 
 def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        prog="warframe_lore.rag_extract",
+        prog="warframe_lore.scraper.rag_extract",
         description="Pipeline d'extraction RAG découplé (Wikitext API + "
         "fallback Playwright) pour la base vectorielle.",
     )

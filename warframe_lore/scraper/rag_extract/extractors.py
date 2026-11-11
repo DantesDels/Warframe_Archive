@@ -3,7 +3,7 @@
 ``BaseExtractor`` defines the strategy contract; ``MediaWikiExtractor`` is
 the primary strategy (Wikitext via the Fandom MediaWiki API).  The DOM
 fallback for client-rendered pages lives in
-:mod:`warframe_lore.rag_extract.dom_scraper`
+:mod:`warframe_lore.scraper.rag_extract.dom_scraper`
 (``PlaywrightFallbackExtractor``).
 
 Every network call is wrapped with a Tenacity retry policy (3 attempts,

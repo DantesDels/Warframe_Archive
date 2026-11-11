@@ -6,7 +6,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from warframe_lore.kim_dm.constants import (
+from warframe_lore.scraper.kim_dm.constants import (
     _USER_AGENT,
     DATA_DIRNAME,
     DIALOGUE_FILES,

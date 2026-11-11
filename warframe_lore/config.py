@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .envfile import load_dotenv
+from warframe_lore.envfile import load_dotenv
 
 # Project root is the parent of the package directory.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

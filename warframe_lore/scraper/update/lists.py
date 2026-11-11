@@ -13,7 +13,8 @@ from pathlib import Path
 
 from sqlalchemy import text
 
-from ..db.manager import SQLDatabaseManager
+from warframe_lore.storage.db.manager import SQLDatabaseManager
+
 from .merge import (
     kim_subjects_from_contexts,
     leverian_frames_from_chunks,

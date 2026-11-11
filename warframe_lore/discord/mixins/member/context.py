@@ -10,9 +10,8 @@ import logging
 
 import discord
 
+from warframe_lore.discord.guild.roles import Accreditation
 from warframe_lore.engram.auth import STATUT_CONCEPTEUR, STATUT_ORGANIQUE
-
-from ...guild.roles import Accreditation
 
 log = logging.getLogger("warframe_lore.discord.bot.member")
 

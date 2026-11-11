@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import discord
 
-from .snapshot import MemberSnapshot
+from warframe_lore.discord.services.cards.snapshot import MemberSnapshot
 
 CARD_TITLE = "RAPPORT MATRICIEL"
 CARD_COLOR = 0x7C3AED

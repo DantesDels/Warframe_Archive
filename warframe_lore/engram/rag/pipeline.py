@@ -21,15 +21,19 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from .audit import audit_empty, audit_rejected, audit_retrieval
-from .context import RAGContext
-from .prompt.builder import PromptBuilder, RAGPrompt
-from .query.aliases import AliasResolver
-from .query.probes import detect_probe
-from .query.query_guard import sanitize_query
-from .query.search_query import search_query
-from .retrieval.relevance import keep_relevant, missing_entity, relevance_floor
-from .retrieval.retriever import (
+from warframe_lore.engram.rag.audit import audit_empty, audit_rejected, audit_retrieval
+from warframe_lore.engram.rag.context import RAGContext
+from warframe_lore.engram.rag.prompt.builder import PromptBuilder, RAGPrompt
+from warframe_lore.engram.rag.query.aliases import AliasResolver
+from warframe_lore.engram.rag.query.probes import detect_probe
+from warframe_lore.engram.rag.query.query_guard import sanitize_query
+from warframe_lore.engram.rag.query.search_query import search_query
+from warframe_lore.engram.rag.retrieval.relevance import (
+    keep_relevant,
+    missing_entity,
+    relevance_floor,
+)
+from warframe_lore.engram.rag.retrieval.retriever import (
     STORY_EXCLUDED_KINDS,
     DossierPage,
     RAGHit,
@@ -37,8 +41,8 @@ from .retrieval.retriever import (
 )
 
 if TYPE_CHECKING:
-    from ..llm import EmbeddingProvider
-    from .query.rewriter import QueryRewriter
+    from warframe_lore.engram.llm import EmbeddingProvider
+    from warframe_lore.engram.rag.query.rewriter import QueryRewriter
 
 log = logging.getLogger("warframe_lore.engram.rag")
 

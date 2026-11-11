@@ -13,7 +13,7 @@ import unittest
 import aiohttp
 from pydantic import ValidationError
 
-from warframe_lore.rag_extract import (
+from warframe_lore.scraper.rag_extract import (
     BaseExtractor,
     ExtractedPage,
     ExtractionPipeline,
@@ -21,13 +21,13 @@ from warframe_lore.rag_extract import (
     MediaWikiExtractor,
     chunk_into_lorechunks,
 )
-from warframe_lore.rag_extract.chunking import INTRODUCTION_TITLE
-from warframe_lore.rag_extract.extractors import (
+from warframe_lore.scraper.rag_extract.chunking import INTRODUCTION_TITLE
+from warframe_lore.scraper.rag_extract.extractors import (
     _infobox_metadata,
     _title_from_url,
     _wikitext_to_markdown,
 )
-from warframe_lore.rag_extract.resilience import (
+from warframe_lore.scraper.rag_extract.resilience import (
     DEFAULT_CONCURRENCY,
     MAX_ATTEMPTS,
     retry_network,

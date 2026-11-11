@@ -11,9 +11,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Query, Request
 
-from ...rag import RAGHit
-from ...rag.retrieval.hybrid import HybridSearch
-from ..schemas import SearchDebug, SearchHit, SearchResponse
+from warframe_lore.engram.api.schemas import SearchDebug, SearchHit, SearchResponse
+from warframe_lore.engram.rag import RAGHit
+from warframe_lore.engram.rag.retrieval.hybrid import HybridSearch
 
 router = APIRouter(prefix="/v1/search", tags=["search"])
 

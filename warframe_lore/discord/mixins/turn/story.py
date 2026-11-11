@@ -14,7 +14,7 @@ from dataclasses import replace
 
 import discord
 
-from ...guild import (
+from warframe_lore.discord.guild import (
     CLOSE_SUBJECT_QUESTION,
     LENS_LABELS,
     LENS_QUESTION,
@@ -31,7 +31,7 @@ from ...guild import (
     story_subject_question,
     substitute_story_subject,
 )
-from .plan import TurnContext
+from warframe_lore.discord.mixins.turn.plan import TurnContext
 
 
 class StoryMixin:

@@ -14,8 +14,11 @@ matches the cursor state FORCED to close the part, because
 
 from __future__ import annotations
 
-from ..rag import strip_trailing_padding
-from .prompt import STORY_COMPLETE_SENTENCE, STORY_PAGINATION_SENTENCE
+from warframe_lore.engram.rag import strip_trailing_padding
+from warframe_lore.engram.roleplay.prompt import (
+    STORY_COMPLETE_SENTENCE,
+    STORY_PAGINATION_SENTENCE,
+)
 
 __all__ = ["canonical_story_closing", "collapse_repeated_closing",
            "purge_story_closing"]

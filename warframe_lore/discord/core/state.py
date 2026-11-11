@@ -11,10 +11,10 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 
-from ..guild.story_mode import StoryMode
-from ..moderation.guards import BurstGuard
-from ..services import MemberSnapshot
-from .sessions import SessionPool
+from warframe_lore.discord.core.sessions import SessionPool
+from warframe_lore.discord.guild.story_mode import StoryMode
+from warframe_lore.discord.moderation.guards import BurstGuard
+from warframe_lore.discord.services import MemberSnapshot
 
 MAX_LAST_MEMBERS = 256      # anaphora: last member discussed, per channel
 MAX_REFUSAL_USERS = 2048    # member-info refusal counters, per user

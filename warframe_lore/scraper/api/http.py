@@ -14,7 +14,7 @@ from typing import Any
 
 import requests
 
-log = logging.getLogger("warframe_lore.api.mediawiki")
+log = logging.getLogger("warframe_lore.scraper.api.mediawiki")
 
 
 class MediaWikiSourceError(RuntimeError):

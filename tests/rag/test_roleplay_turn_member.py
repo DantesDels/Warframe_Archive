@@ -12,7 +12,7 @@ import unittest
 
 from engram_fakes import decide
 
-from warframe_lore.protocols.roleplay import PERSONA_HOSTILE
+from warframe_lore.core.protocols.roleplay import PERSONA_HOSTILE
 
 IDENTITY = "qui suis-je ?"
 

@@ -7,7 +7,7 @@ import unittest
 from collections import Counter
 from pathlib import Path
 
-from warframe_lore.kim_dm import KimDM, _anchor_graph, parse_dialogue_file
+from warframe_lore.scraper.kim_dm import KimDM, _anchor_graph, parse_dialogue_file
 
 ENGINE = "/EE/Types/Engine/"
 

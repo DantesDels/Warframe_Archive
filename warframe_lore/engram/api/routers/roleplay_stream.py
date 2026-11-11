@@ -14,16 +14,16 @@ from collections.abc import AsyncIterator
 
 from fastapi import WebSocket
 
-from ....protocols.roleplay import EndFrame, TokenFrame
-from ...rag import RAG_ERROR, RAGContext
-from ...roleplay import Session
-from ...roleplay.prompt import STORY_COMPLETE_SENTENCE
-from ...roleplay.purge import (
+from warframe_lore.core.protocols.roleplay import EndFrame, TokenFrame
+from warframe_lore.engram.api.container import Container
+from warframe_lore.engram.rag import RAG_ERROR, RAGContext
+from warframe_lore.engram.roleplay import Session
+from warframe_lore.engram.roleplay.prompt import STORY_COMPLETE_SENTENCE
+from warframe_lore.engram.roleplay.purge import (
     collapse_repeated_closing,
     purge_story_closing,
 )
-from ...roleplay.turn import TurnPlan, plan_turn
-from ..container import Container
+from warframe_lore.engram.roleplay.turn import TurnPlan, plan_turn
 
 
 async def emit_reply(websocket: WebSocket, text: str) -> None:

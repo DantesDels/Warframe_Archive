@@ -15,7 +15,7 @@ import re
 
 from sqlalchemy import select
 
-from ....db import WikiPage
+from warframe_lore.storage.db import WikiPage
 
 # French stopwords deemed non-discriminant for title search.
 _STOPWORDS = {

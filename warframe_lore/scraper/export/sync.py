@@ -26,7 +26,7 @@ async def sync_entities(
         ``{"entities": N, "assets": M, "skipped": K}`` -- N rows written,
         M assets downloaded/reused, K missing assets (404).
     """
-    from warframe_lore.db.manager import SQLDatabaseManager
+    from warframe_lore.storage.db.manager import SQLDatabaseManager
 
     if not isinstance(manager, SQLDatabaseManager):
         raise TypeError("manager must be a connected SQLDatabaseManager.")

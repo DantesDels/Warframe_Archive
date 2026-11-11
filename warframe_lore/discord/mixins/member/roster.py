@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 import discord
 
-from ...guild import leetspeak, match_member_token
+from warframe_lore.discord.guild import leetspeak, match_member_token
 
 
 @dataclass(frozen=True)

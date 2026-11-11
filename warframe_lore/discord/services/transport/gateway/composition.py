@@ -12,14 +12,21 @@ from __future__ import annotations
 
 import asyncio
 
-from .connection import (
+from warframe_lore.discord.services.transport.gateway.connection import (
     DEFAULT_CONNECT_TIMEOUT,
     DEFAULT_REPLY_TIMEOUT,
     GatewayLifecycle,
 )
-from .controls import GatewayControls
-from .reader import FRAME_QUEUE_SIZE, FrameReaderMixin
-from .requests import EndHandler, GatewayRequests, TokenHandler
+from warframe_lore.discord.services.transport.gateway.controls import GatewayControls
+from warframe_lore.discord.services.transport.gateway.reader import (
+    FRAME_QUEUE_SIZE,
+    FrameReaderMixin,
+)
+from warframe_lore.discord.services.transport.gateway.requests import (
+    EndHandler,
+    GatewayRequests,
+    TokenHandler,
+)
 
 
 class RoleplayGateway(GatewayLifecycle, FrameReaderMixin, GatewayRequests,

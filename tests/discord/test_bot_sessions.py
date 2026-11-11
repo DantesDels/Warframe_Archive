@@ -11,8 +11,8 @@ import unittest
 
 from discord_fakes import run
 
+from warframe_lore.core.protocols.roleplay import PERSONA_HOSTILE, PERSONA_ORACLE
 from warframe_lore.discord.core.sessions import SessionPool
-from warframe_lore.protocols.roleplay import PERSONA_HOSTILE, PERSONA_ORACLE
 
 
 class FakeGateway:

@@ -12,7 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from ...config import PROJECT_ROOT
+from warframe_lore.config import PROJECT_ROOT
 
 # Nickname -> canonical name (wiki title segment / KIM datamine).
 HEX = {"Lettie": "Leticia", "Quincy": "Quincy", "Arthur": "Arthur",

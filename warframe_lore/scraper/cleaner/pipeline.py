@@ -25,47 +25,47 @@ from dataclasses import dataclass
 import mwparserfromhell
 from mwparserfromhell.nodes import Template
 
-from warframe_lore.cleaner.audio import strip_audio_filenames
-from warframe_lore.cleaner.blocks import (
-    strip_file_and_image_references,
-    strip_tables_and_code_blocks,
-)
-from warframe_lore.cleaner.bullets import BULLET_TOKEN, protect_bullets
-from warframe_lore.cleaner.config import CleanerConfig
-from warframe_lore.cleaner.dialogue_lines import (
+from warframe_lore.scraper.cleaner.audio import strip_audio_filenames
+from warframe_lore.scraper.cleaner.bullets import BULLET_TOKEN, protect_bullets
+from warframe_lore.scraper.cleaner.config import CleanerConfig
+from warframe_lore.scraper.cleaner.dialogue_lines import (
     format_lists_and_dialogue,
     normalise_indentation,
 )
-from warframe_lore.cleaner.footers import cut_footer_noise
-from warframe_lore.cleaner.headings import (
+from warframe_lore.scraper.cleaner.footers import cut_footer_noise
+from warframe_lore.scraper.cleaner.headings import (
     normalise_deep_headings,
     reflow_headings_to_markdown,
 )
-from warframe_lore.cleaner.html import (
+from warframe_lore.scraper.cleaner.kim_instructions import strip_kim_dialog_instructions
+from warframe_lore.scraper.cleaner.markup.blocks import (
+    strip_file_and_image_references,
+    strip_tables_and_code_blocks,
+)
+from warframe_lore.scraper.cleaner.markup.emphasis import convert_markup_to_markdown
+from warframe_lore.scraper.cleaner.markup.html import (
     convert_html_tags,
     remove_transclusion_tags,
     strip_wikitext_comments,
 )
-from warframe_lore.cleaner.kim_instructions import strip_kim_dialog_instructions
-from warframe_lore.cleaner.links import normalise_links
-from warframe_lore.cleaner.markup import convert_markup_to_markdown
-from warframe_lore.cleaner.polish import (
+from warframe_lore.scraper.cleaner.markup.links import normalise_links
+from warframe_lore.scraper.cleaner.polish import (
     collapse_empty_galleries,
     strip_excess_blank_lines,
 )
-from warframe_lore.cleaner.sections import drop_gameplay_sections
-from warframe_lore.cleaner.templates.noise import (
+from warframe_lore.scraper.cleaner.sections import drop_gameplay_sections
+from warframe_lore.scraper.cleaner.templates.noise import (
     is_noise_template,
     is_pure_noise,
     strip_templates_to_text,
 )
-from warframe_lore.cleaner.templates.render import (
+from warframe_lore.scraper.cleaner.templates.render import (
     render_canon_template,
     render_non_canon_template,
     render_quote_template,
     render_spoiler_template,
 )
-from warframe_lore.cleaner.templates.signal import (
+from warframe_lore.scraper.cleaner.templates.signal import (
     must_flag_canon,
     must_flag_non_canon,
 )

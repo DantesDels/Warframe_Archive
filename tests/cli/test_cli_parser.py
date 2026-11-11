@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import unittest
 
-from warframe_lore.cli import commands as cmd
-from warframe_lore.cli.legacy import normalize_legacy_argv
-from warframe_lore.cli.parser import build_parser
-from warframe_lore.cli.subcommands.rag import _cmd_rag
+from warframe_lore.core.cli import commands as cmd
+from warframe_lore.core.cli.legacy import normalize_legacy_argv
+from warframe_lore.core.cli.parser import build_parser
+from warframe_lore.core.cli.subcommands.rag import _cmd_rag
 
 EXPECTED = {
     "run": cmd._cmd_run,

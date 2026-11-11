@@ -13,7 +13,7 @@ Speaker identity & authentication banners have been moved to
 
 from __future__ import annotations
 
-from ..config import PROJECT_ROOT
+from warframe_lore.config import PROJECT_ROOT
 
 PERSONA_DIR = PROJECT_ROOT / "persona"
 PERSONA_FILENAME = "oracle"

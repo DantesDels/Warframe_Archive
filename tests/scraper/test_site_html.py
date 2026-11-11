@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import unittest
 
-from warframe_lore.api import CategoryCatalog, CategorySpec, SiteHtmlSource
-from warframe_lore.api.buckets import DEFAULT_BUCKETS
-from warframe_lore.api.buckets.config import BucketConfig
-from warframe_lore.api.models import TouchedInfo
-from warframe_lore.api.site_crawl import crawl_paths, extract_fr_paths
 from warframe_lore.config import Config
+from warframe_lore.scraper.api import CategoryCatalog, CategorySpec, SiteHtmlSource
+from warframe_lore.scraper.api.buckets import DEFAULT_BUCKETS
+from warframe_lore.scraper.api.buckets.config import BucketConfig
+from warframe_lore.scraper.api.models import TouchedInfo
+from warframe_lore.scraper.api.site_crawl import crawl_paths, extract_fr_paths
 
 
 class ExtractFrPathsTests(unittest.TestCase):

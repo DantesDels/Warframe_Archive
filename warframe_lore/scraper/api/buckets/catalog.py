@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 from ..models import CategorySpec
 
-log = logging.getLogger("warframe_lore.api.categories")
+log = logging.getLogger("warframe_lore.scraper.api.categories")
 
 
 @dataclass

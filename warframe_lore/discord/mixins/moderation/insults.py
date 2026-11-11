@@ -14,7 +14,7 @@ import logging
 
 import discord
 
-from ...moderation.insults import comeback_for, detect_insult
+from warframe_lore.discord.moderation.insults import comeback_for, detect_insult
 
 log = logging.getLogger("warframe_lore.discord.bot.insults")
 

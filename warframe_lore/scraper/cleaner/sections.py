@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import re
 
-from warframe_lore.cleaner.config import CleanerConfig
-from warframe_lore.cleaner.sections_classify import (
+from warframe_lore.scraper.cleaner.config import CleanerConfig
+from warframe_lore.scraper.cleaner.sections_classify import (
     is_gameplay_section,
     is_lore_section,
 )

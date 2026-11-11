@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from warframe_lore.kim_dm.parser import _DialogueFile
+    from warframe_lore.scraper.kim_dm.parser import _DialogueFile
 
 
 def build_graph(parser: _DialogueFile, start: dict) -> dict:

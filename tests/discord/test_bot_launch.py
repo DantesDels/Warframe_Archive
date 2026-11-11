@@ -27,7 +27,8 @@ REPO_ROOT = (Path(__file__).resolve().parents[2]
 
 # Ce que le processus du bot ne doit JAMAIS charger (ni lui, ni ses dépendances).
 FORBIDDEN = ("sqlalchemy", "asyncpg", "fastapi", "starlette", "uvicorn",
-             "warframe_lore.db", "warframe_lore.api", "warframe_lore.cleaner")
+             "warframe_lore.storage.db", "warframe_lore.scraper.api",
+             "warframe_lore.scraper.cleaner")
 
 PROBE = """
 import sys
@@ -91,7 +92,7 @@ class LaunchTests(unittest.TestCase):
             self.assertEqual(launch_bot(None), 2)
 
     def test_cephalon_bot_run_expose_ses_options(self):
-        main = importlib.import_module("warframe_lore.cli").main
+        main = importlib.import_module("warframe_lore.core.cli").main
         with self.assertRaises(SystemExit) as caught:
             main(["bot", "run", "--help"])
         self.assertEqual(caught.exception.code, 0)

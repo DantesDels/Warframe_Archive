@@ -8,11 +8,14 @@ Extracted from the monolithic bot so the card logic is unit-testable without
 
 from __future__ import annotations
 
-from ...moderation.hostility import HostilityTracker
-from ..ledger.activity import MemberActivityStore
-from ..ledger.strikes import StrikeLedger
-from .embed import CardEmbedMixin
-from .indices import _SECURITY_LEVELS, CardIndicesMixin
+from warframe_lore.discord.moderation.hostility import HostilityTracker
+from warframe_lore.discord.services.cards.embed import CardEmbedMixin
+from warframe_lore.discord.services.cards.indices import (
+    _SECURITY_LEVELS,
+    CardIndicesMixin,
+)
+from warframe_lore.discord.services.ledger.activity import MemberActivityStore
+from warframe_lore.discord.services.ledger.strikes import StrikeLedger
 
 
 class MemberCardService(CardIndicesMixin, CardEmbedMixin):

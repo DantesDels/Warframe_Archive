@@ -1,7 +1,7 @@
 """Local-stack bootstrap contract: shared by the CLI and the Discord bot.
 
 The auto-start moved from ``warframe_lore.discord.bootstrap`` to the neutral
-``warframe_lore.infra`` package so ``cephalon run`` / ``cephalon update`` use
+``warframe_lore.core.infra`` package so ``cephalon run`` / ``cephalon update`` use
 the exact same Docker + PostgreSQL boot sequence as ``cephalon bot run``.
 """
 
@@ -13,10 +13,10 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from warframe_lore.cli import commands as cmd
-from warframe_lore.cli.commands_aux import _cmd_update_impl
-from warframe_lore.infra import db_bootstrap
-from warframe_lore.infra import ensure_database as facade_ensure_database
+from warframe_lore.core.cli import commands as cmd
+from warframe_lore.core.cli.commands_aux import _cmd_update_impl
+from warframe_lore.core.infra import db_bootstrap
+from warframe_lore.core.infra import ensure_database as facade_ensure_database
 
 DB_URL = "postgresql+asyncpg://warframe:warframe@localhost:5432/warframe_lore"
 
@@ -94,10 +94,10 @@ class RunCommandBootstrapTests(unittest.TestCase):
 
     def test_run_bootstraps_the_database(self):
         with (
-            patch("warframe_lore.cli.commands.build_config",
+            patch("warframe_lore.core.cli.commands.build_config",
                   return_value=(self._config(), None)),
-            patch("warframe_lore.cli.commands.build_scraper") as build_scraper,
-            patch("warframe_lore.cli.commands.ensure_database") as ensure,
+            patch("warframe_lore.core.cli.commands.build_scraper") as build_scraper,
+            patch("warframe_lore.core.cli.commands.ensure_database") as ensure,
         ):
             self.assertEqual(cmd._cmd_run(self._args()), 0)
         ensure.assert_called_once_with(DB_URL)
@@ -105,10 +105,10 @@ class RunCommandBootstrapTests(unittest.TestCase):
 
     def test_skip_sql_never_bootstraps_the_database(self):
         with (
-            patch("warframe_lore.cli.commands.build_config",
+            patch("warframe_lore.core.cli.commands.build_config",
                   return_value=(self._config(), None)),
-            patch("warframe_lore.cli.commands.build_scraper"),
-            patch("warframe_lore.cli.commands.ensure_database") as ensure,
+            patch("warframe_lore.core.cli.commands.build_scraper"),
+            patch("warframe_lore.core.cli.commands.ensure_database") as ensure,
         ):
             self.assertEqual(cmd._cmd_run(self._args(skip_sql=True)), 0)
         ensure.assert_not_called()
@@ -118,10 +118,10 @@ class UpdateCommandBootstrapTests(unittest.TestCase):
     def test_update_bootstraps_the_resolved_database_url(self):
         args = argparse.Namespace(database_url=None, force=False)
         with (
-            patch("warframe_lore.cli.commands_aux.build_config",
+            patch("warframe_lore.core.cli.commands_aux.build_config",
                   return_value=(SimpleNamespace(database_url=DB_URL), None)),
-            patch("warframe_lore.cli.commands_aux.ensure_database") as ensure,
-            patch("warframe_lore.update.run.run_update",
+            patch("warframe_lore.core.cli.commands_aux.ensure_database") as ensure,
+            patch("warframe_lore.scraper.update.run.run_update",
                   new=AsyncMock(return_value={})),
         ):
             asyncio.run(_cmd_update_impl(args))
@@ -131,10 +131,10 @@ class UpdateCommandBootstrapTests(unittest.TestCase):
         override = "postgresql+asyncpg://warframe:warframe@localhost:5432/other"
         args = argparse.Namespace(database_url=override, force=False)
         with (
-            patch("warframe_lore.cli.commands_aux.build_config",
+            patch("warframe_lore.core.cli.commands_aux.build_config",
                   return_value=(SimpleNamespace(database_url=DB_URL), None)),
-            patch("warframe_lore.cli.commands_aux.ensure_database") as ensure,
-            patch("warframe_lore.update.run.run_update",
+            patch("warframe_lore.core.cli.commands_aux.ensure_database") as ensure,
+            patch("warframe_lore.scraper.update.run.run_update",
                   new=AsyncMock(return_value={})),
         ):
             asyncio.run(_cmd_update_impl(args))

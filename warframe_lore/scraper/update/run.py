@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-log = logging.getLogger("warframe_lore.update")
+log = logging.getLogger("warframe_lore.scraper.update")
 
 
 async def run_update(
@@ -38,7 +38,7 @@ async def run_update(
 
     # ---- Phase 1: wiki sync → JSON (scraper manages its own DB conn).
     log.info("Phase 1/5 — scraper (wiki sync → JSON)")
-    from ..scraper import Scraper
+    from warframe_lore.scraper import Scraper
 
     scraper = Scraper(database_url=database_url)
     await scraper.arun(force=force)
@@ -46,22 +46,22 @@ async def run_update(
 
     # ---- Phase 2: structured ETL (JSON → element tables) manages its own DB.
     log.info("Phase 2/5 — structured ETL")
-    from ..engram.config import EngramConfig
-    from ..structured.pipeline import run as structured_run
+    from warframe_lore.engram.config import EngramConfig
+    from warframe_lore.scraper.structured.pipeline import run as structured_run
 
     config = EngramConfig(database_url=database_url)
     counts = await structured_run(config, glob_pattern)
     results["structured"] = dict(counts)
 
     # ---- Phases 3–4 share a single manager for the remaining work.
-    from ..db.manager import SQLDatabaseManager
+    from warframe_lore.storage.db.manager import SQLDatabaseManager
 
     manager = SQLDatabaseManager(database_url)
     await manager.connect()
     try:
         # Phase 3: public export (game entities → game_entities table).
         log.info("Phase 3/5 — public export")
-        from ..export import PublicExportClient
+        from warframe_lore.scraper.export import PublicExportClient
 
         client = PublicExportClient(langs=langs)
         export_stats = await client.sync(manager, langs=langs, force=force)
@@ -81,8 +81,10 @@ async def run_update(
     # into structured_chunks.  Both canonical ETLs are idempotent and
     # advisory-locked; they need the LM Studio endpoint (EngramConfig).
     log.info("Phase 5/5 — RAG embeddings")
-    from ..engram.scripts.embed_structured import run as embed_structured_run
-    from ..engram.scripts.ingest import run as ingest_run
+    from warframe_lore.engram.scripts.embed_structured import (
+        run as embed_structured_run,
+    )
+    from warframe_lore.engram.scripts.ingest import run as ingest_run
 
     results["lore_chunks"] = await ingest_run(config, glob_pattern)
     results["structured_chunks"] = await embed_structured_run(config)

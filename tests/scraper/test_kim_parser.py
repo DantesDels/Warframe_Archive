@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from warframe_lore.db.kim_parser import extract_kim_messages
+from warframe_lore.storage.db.kim_parser import extract_kim_messages
 
 
 def _speakers_and_texts(markdown: str) -> list[tuple[str, str, bool]]:

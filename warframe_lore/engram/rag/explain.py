@@ -7,13 +7,17 @@ relevance floor filtering, entity lookup guard, and prompt assembly.
 
 from __future__ import annotations
 
-from .audit import CONTEXT_PREVIEW
-from .context import RAGContext
-from .query.aliases import AliasResolver
-from .query.probes import detect_probe
-from .query.query_guard import sanitize_query
-from .query.search_query import search_query
-from .retrieval.relevance import keep_relevant, missing_entity, relevance_floor
+from warframe_lore.engram.rag.audit import CONTEXT_PREVIEW
+from warframe_lore.engram.rag.context import RAGContext
+from warframe_lore.engram.rag.query.aliases import AliasResolver
+from warframe_lore.engram.rag.query.probes import detect_probe
+from warframe_lore.engram.rag.query.query_guard import sanitize_query
+from warframe_lore.engram.rag.query.search_query import search_query
+from warframe_lore.engram.rag.retrieval.relevance import (
+    keep_relevant,
+    missing_entity,
+    relevance_floor,
+)
 
 
 async def explain_query(question: str, subject: str | None = None) -> int:
@@ -39,7 +43,7 @@ async def explain_query(question: str, subject: str | None = None) -> int:
     try:
         import asyncio
 
-        from ..api.container import Container
+        from warframe_lore.engram.api.container import Container
         container = Container()
         call = container.llm.embed([standalone])
         vector = (await asyncio.wait_for(call, timeout=1.5))[0]

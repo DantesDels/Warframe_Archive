@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import logging
 
-from .prompt.builder import RAGPrompt
-from .retrieval.retriever import RAGHit
+from warframe_lore.engram.rag.prompt.builder import RAGPrompt
+from warframe_lore.engram.rag.retrieval.retriever import RAGHit
 
 log = logging.getLogger("warframe_lore.engram.rag")
 

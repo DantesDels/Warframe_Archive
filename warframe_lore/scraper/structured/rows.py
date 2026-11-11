@@ -12,14 +12,15 @@ from collections import Counter
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..db.models import GameQuest, LoreItem
+from warframe_lore.storage.db.models import GameQuest, LoreItem
+
 from .catalog import parse_quest
 from .dialogue_rows import cinematic_page, kim_page, page_source_url, quotes_page
-from .fragments import parse_fragments
+from .parsers.fragments import parse_fragments
 from .sites import ingest_site_page
 from .store import store
 
-log = logging.getLogger("warframe_lore.structured.rows")
+log = logging.getLogger("warframe_lore.scraper.structured.rows")
 
 
 async def ingest_bucket(

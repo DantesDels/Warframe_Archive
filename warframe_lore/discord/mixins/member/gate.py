@@ -13,10 +13,14 @@ from dataclasses import replace
 
 import discord
 
-from ...guild import is_member_question, roles_question, self_info_request
-from ...services import MemberSnapshot, unknown_member
-from ..turn.plan import KIND_MEMBER_CARD
-from .roster import MemberMention
+from warframe_lore.discord.guild import (
+    is_member_question,
+    roles_question,
+    self_info_request,
+)
+from warframe_lore.discord.mixins.member.roster import MemberMention
+from warframe_lore.discord.mixins.turn.plan import KIND_MEMBER_CARD
+from warframe_lore.discord.services import MemberSnapshot, unknown_member
 
 log = logging.getLogger("warframe_lore.discord.bot.gate")
 

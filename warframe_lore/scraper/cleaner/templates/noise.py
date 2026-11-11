@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from warframe_lore.cleaner.config import CleanerConfig
+from warframe_lore.scraper.cleaner.config import CleanerConfig
 
 
 def is_noise_template(template_name: str, cleaner_config: CleanerConfig) -> bool:

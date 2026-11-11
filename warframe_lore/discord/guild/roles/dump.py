@@ -17,9 +17,9 @@ import sys
 
 import discord
 
-from ....config import PROJECT_ROOT
-from ...config import DiscordConfig
-from .client import RoleDumpClient
+from warframe_lore.config import PROJECT_ROOT
+from warframe_lore.discord.config import DiscordConfig
+from warframe_lore.discord.guild.roles.client import RoleDumpClient
 
 
 def _line_buffered_console() -> None:

@@ -17,7 +17,10 @@ from dataclasses import dataclass
 # archive database: wiki_pages, kim_dialogues, game_dialogues, warframes,
 # game_quests).  Keys are lowercase substrings; values are era labels injected
 # into the targeted-story directive.
-from .story_eras import LEVERIAN_WARFRAMES, TARGETED_SUBJECT_ERAS
+from warframe_lore.discord.guild.story_eras import (
+    LEVERIAN_WARFRAMES,
+    TARGETED_SUBJECT_ERAS,
+)
 
 # Narrative triggers (FR/EN): "raconte-moi l'histoire de…" and friends.
 # A lore QUESTION ("Quelle est l'histoire des Orokin ?") is NOT a story: the

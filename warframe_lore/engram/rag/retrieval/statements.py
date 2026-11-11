@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from sqlalchemy import func, select
 
-from ....db import LoreChunk, WikiPage
-from .scoring import FTS_CONFIG, FTS_HEADLINE_OPTIONS
+from warframe_lore.engram.rag.retrieval.scoring import FTS_CONFIG, FTS_HEADLINE_OPTIONS
+from warframe_lore.storage.db import LoreChunk, WikiPage
 
 
 def cosine_statement(query_vector: list[float], candidates: int):

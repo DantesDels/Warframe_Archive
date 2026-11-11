@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import time
 
-from .db import LedgerDB
+from warframe_lore.discord.services.ledger.db import LedgerDB
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS member_activity (

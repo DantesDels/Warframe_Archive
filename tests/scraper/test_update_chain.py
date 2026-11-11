@@ -1,4 +1,4 @@
-"""Chain-wiring tests for ``cephalon update`` (``warframe_lore.update.run``).
+"""Chain-wiring tests for ``cephalon update`` (``warframe_lore.scraper.update.run``).
 
 Pure mock-based tests (no database, no network): they assert that the
 single-command chain runs every phase — including the two RAG-embedding
@@ -15,24 +15,24 @@ from unittest.mock import patch
 # Make the patched attributes resolvable regardless of import order.
 import warframe_lore.engram.scripts.embed_structured  # noqa: F401
 import warframe_lore.engram.scripts.ingest  # noqa: F401
-import warframe_lore.export  # noqa: F401
 import warframe_lore.scraper  # noqa: F401
-import warframe_lore.structured.pipeline  # noqa: F401
-from warframe_lore.update.run import run_update
+import warframe_lore.scraper.export  # noqa: F401
+import warframe_lore.scraper.structured.pipeline  # noqa: F401
+from warframe_lore.scraper.update.run import run_update
 
 DB_URL = "postgresql+asyncpg://warframe:warframe@localhost:5432/warframe_lore"
 
 _PATCH_TARGETS = (
     "warframe_lore.scraper.Scraper",
-    "warframe_lore.structured.pipeline.run",
-    "warframe_lore.export.PublicExportClient",
-    "warframe_lore.db.manager.SQLDatabaseManager",
-    "warframe_lore.update.lists.regenerate_story_eras",
+    "warframe_lore.scraper.structured.pipeline.run",
+    "warframe_lore.scraper.export.PublicExportClient",
+    "warframe_lore.storage.db.manager.SQLDatabaseManager",
+    "warframe_lore.scraper.update.lists.regenerate_story_eras",
     "warframe_lore.engram.scripts.ingest.run",
     "warframe_lore.engram.scripts.embed_structured.run",
 )
 
-_ETL_PATCH = "warframe_lore.structured.pipeline.run"
+_ETL_PATCH = "warframe_lore.scraper.structured.pipeline.run"
 _INGEST_PATCH = "warframe_lore.engram.scripts.ingest.run"
 _EMBED_PATCH = "warframe_lore.engram.scripts.embed_structured.run"
 
@@ -51,7 +51,8 @@ class UpdateChainRagTests(unittest.TestCase):
         self._mock(_ETL_PATCH).return_value = {}
         self._mock(_INGEST_PATCH).return_value = 7
         self._mock(_EMBED_PATCH).return_value = 12
-        self._mock("warframe_lore.update.lists.regenerate_story_eras").return_value = {}
+        story_eras = "warframe_lore.scraper.update.lists.regenerate_story_eras"
+        self._mock(story_eras).return_value = {}
 
     def _mock(self, path: str):
         return self._mocks[path]

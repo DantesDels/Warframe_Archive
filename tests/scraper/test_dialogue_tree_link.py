@@ -1,6 +1,6 @@
 """Tests for the dialogue tree linking heuristic (pure, no DB needed)."""
 
-from warframe_lore.db.migrations.tree_link import link_dialogue_parents
+from warframe_lore.storage.db.migrations.tree_link import link_dialogue_parents
 
 
 class TestSequentialLink:

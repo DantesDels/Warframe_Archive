@@ -11,11 +11,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ...models import ChatMessage
-from ...rag import strip_trailing_padding
+from warframe_lore.engram.models import ChatMessage
+from warframe_lore.engram.rag import strip_trailing_padding
 
 if TYPE_CHECKING:
-    from ...api.container import Container
+    from warframe_lore.engram.api.container import Container
 
 # The comment must stay FACTUAL: no affiliation is asserted — the actual roles
 # are listed and speak for themselves.

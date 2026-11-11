@@ -6,7 +6,7 @@ import io
 import unittest
 from contextlib import redirect_stdout
 
-from warframe_lore.cli import main
+from warframe_lore.core.cli import main
 
 
 class CLIRagExplainTests(unittest.TestCase):

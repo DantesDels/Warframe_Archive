@@ -17,22 +17,25 @@ import logging
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
-from ..llm import LLMProvider
-from ..models import ChatMessage
-from ..persona import HOSTILE_PERSONA, STORY_PERSONA
-from ..rag import RAG_ERROR
-from .models import Session
-from .prompt import (
+from warframe_lore.engram.llm import LLMProvider
+from warframe_lore.engram.models import ChatMessage
+from warframe_lore.engram.persona import HOSTILE_PERSONA, STORY_PERSONA
+from warframe_lore.engram.rag import RAG_ERROR
+from warframe_lore.engram.roleplay.models import Session
+from warframe_lore.engram.roleplay.prompt import (
     SlidingWindow,
     archive_bloc,
     speaker_bloc,
     turn_directives,
 )
-from .story_turn import fetch_factual_draft, story_turn_system
-from .verify_gate import verified_response
+from warframe_lore.engram.roleplay.story_turn import (
+    fetch_factual_draft,
+    story_turn_system,
+)
+from warframe_lore.engram.roleplay.verify_gate import verified_response
 
 if TYPE_CHECKING:
-    from ..rag import ArchiveVocabulary
+    from warframe_lore.engram.rag import ArchiveVocabulary
 
 RAG_TEMPERATURE_CAP = 0.1
 STORY_TEMPERATURE = RAG_TEMPERATURE_CAP

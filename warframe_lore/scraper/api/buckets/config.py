@@ -8,7 +8,7 @@ import logging
 from ..models import CategorySpec
 from .defaults import DEFAULT_BUCKETS
 
-log = logging.getLogger("warframe_lore.api.categories")
+log = logging.getLogger("warframe_lore.scraper.api.categories")
 
 
 class BucketConfig:

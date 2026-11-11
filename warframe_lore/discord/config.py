@@ -8,9 +8,9 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..config import PROJECT_ROOT
-from ..envfile import load_dotenv
-from .guild.roles import RoleHierarchy
+from warframe_lore.config import PROJECT_ROOT
+from warframe_lore.discord.guild.roles import RoleHierarchy
+from warframe_lore.envfile import load_dotenv
 
 load_dotenv()
 

@@ -12,7 +12,7 @@ are idempotent and replace the previous derivation, exactly like the
 modules map each megafile bucket to row dicts; ``store`` persists them.
 
 Usage (project root):
-    python -m warframe_lore.structured.pipeline [--glob out/Lore_*.json]
+    python -m warframe_lore.scraper.structured.pipeline [--glob out/Lore_*.json]
 """
 
 from __future__ import annotations
@@ -25,13 +25,14 @@ from collections import Counter
 
 from sqlalchemy import select
 
-from ..config import PROJECT_ROOT
-from ..db import SQLDatabaseManager
-from ..db.models import WikiPage
-from ..engram.config import EngramConfig
+from warframe_lore.config import PROJECT_ROOT
+from warframe_lore.engram.config import EngramConfig
+from warframe_lore.storage.db import SQLDatabaseManager
+from warframe_lore.storage.db.models import WikiPage
+
 from .rows import ingest_bucket
 
-log = logging.getLogger("warframe_lore.structured.pipeline")
+log = logging.getLogger("warframe_lore.scraper.structured.pipeline")
 
 # Independent from the ENGRAM ingest lock: the element tables never
 # contend with the page/chunk/embedding pipeline.

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-from ..api import TouchedInfo, assign_pages
+from warframe_lore.scraper.api import TouchedInfo, assign_pages
 
 if TYPE_CHECKING:
     pass

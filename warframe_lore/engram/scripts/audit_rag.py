@@ -12,8 +12,8 @@ import asyncio
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
-from ...db import LoreChunk, SQLDatabaseManager, WikiPage
-from ..config import EngramConfig
+from warframe_lore.engram.config import EngramConfig
+from warframe_lore.storage.db import LoreChunk, SQLDatabaseManager, WikiPage
 
 
 async def run(cfg: EngramConfig, limit: int, name: str | None) -> None:

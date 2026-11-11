@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from mwparserfromhell.nodes import Template
 
-from warframe_lore.cleaner.config import CleanerConfig
+from warframe_lore.scraper.cleaner.config import CleanerConfig
 
 
 def must_flag_non_canon(template_node: Template, cleaner_config: CleanerConfig) -> bool:

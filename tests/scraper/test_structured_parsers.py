@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import textwrap
 
-from warframe_lore.structured.catalog import parse_quest, parse_warframe_page
-from warframe_lore.structured.dialogues import parse_dialogues
-from warframe_lore.structured.fragments import parse_fragments
-from warframe_lore.structured.news import parse_announcement, parse_update
+from warframe_lore.scraper.structured.catalog import parse_quest, parse_warframe_page
+from warframe_lore.scraper.structured.news import parse_announcement, parse_update
+from warframe_lore.scraper.structured.parsers.dialogues import parse_dialogues
+from warframe_lore.scraper.structured.parsers.fragments import parse_fragments
 
 # ---------------------------------------------------------------------------
 # Dialogues

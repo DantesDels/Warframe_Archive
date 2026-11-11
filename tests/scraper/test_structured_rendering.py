@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import unittest
 
-from warframe_lore.structured.rendering import (
+from warframe_lore.scraper.structured.rendering import (
     RENDERERS,
     render_row,
 )

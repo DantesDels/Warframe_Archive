@@ -21,11 +21,11 @@ from sqlalchemy import case, or_, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import selectinload
 
-from ....db import LoreChunk, WikiPage
-from ....protocols.roleplay import STORY_DOSSIER_PAGE
-from ..query.aliases import dossier_title_terms
-from .hnsw import set_hnsw_ef_search
-from .retriever import DossierPage, RAGHit
+from warframe_lore.core.protocols.roleplay import STORY_DOSSIER_PAGE
+from warframe_lore.engram.rag.query.aliases import dossier_title_terms
+from warframe_lore.engram.rag.retrieval.hnsw import set_hnsw_ef_search
+from warframe_lore.engram.rag.retrieval.retriever import DossierPage, RAGHit
+from warframe_lore.storage.db import LoreChunk, WikiPage
 
 # Dossier retrieval cap: enough narrative chunks to fill ``max_context_chars``
 # (~4500 chars) without dragging in the whole subject page family.  ONE page is

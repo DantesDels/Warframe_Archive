@@ -16,7 +16,7 @@ Sub-modules: ``constants`` (engine/URL mappings), ``mirror``
 
 from __future__ import annotations
 
-from warframe_lore.kim_dm.constants import (
+from warframe_lore.scraper.kim_dm.constants import (
     BRANCH,
     DATA_DIRNAME,
     DIALECT_FILE_PREFIX,
@@ -27,10 +27,10 @@ from warframe_lore.kim_dm.constants import (
     SUPPORTED_LANGS,
     WIKI_PAGE_MAP,
 )
-from warframe_lore.kim_dm.graph import _anchor_graph, _merge_graphs
-from warframe_lore.kim_dm.mirror import mirror_kim_dm
-from warframe_lore.kim_dm.parser import parse_dialogue_file
-from warframe_lore.kim_dm.store import KimDM
+from warframe_lore.scraper.kim_dm.graph import _anchor_graph, _merge_graphs
+from warframe_lore.scraper.kim_dm.mirror import mirror_kim_dm
+from warframe_lore.scraper.kim_dm.parser import parse_dialogue_file
+from warframe_lore.scraper.kim_dm.store import KimDM
 
 __all__ = [
     "BRANCH",

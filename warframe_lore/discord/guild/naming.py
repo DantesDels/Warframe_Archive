@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import re
 
-from ..text import STOPWORDS, mention_mapping, strip_bot_mention
+from warframe_lore.discord.text import STOPWORDS, mention_mapping, strip_bot_mention
 
 _WORD_RE = re.compile(r"[a-zà-ÿ][\wà-ÿ]*", re.IGNORECASE)
 

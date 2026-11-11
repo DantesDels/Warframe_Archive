@@ -16,9 +16,9 @@ from __future__ import annotations
 
 import logging
 
-from ..llm import LLMProvider
-from ..models import ChatMessage
-from .prompt import (
+from warframe_lore.engram.llm import LLMProvider
+from warframe_lore.engram.models import ChatMessage
+from warframe_lore.engram.roleplay.prompt import (
     leverian_directive,
     story_directive,
     targeted_story_directive,

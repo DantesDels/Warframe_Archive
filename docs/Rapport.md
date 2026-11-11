@@ -4,13 +4,17 @@
 
 Audit of commit `28baaab`, local branch `dev`, with no project modifications during the audit. The examples below are proposed corrections, not applied changes.
 
+> **Historical document.** File links and line numbers refer to the layout at
+> audit time (before the mother-folder restructure). Current locations are
+> described in [`architecture.md`](architecture.md).
+
 ## Priority Findings
 
 `P1`: must be fixed before considering the corpus reliable for RAG. `P2`: robustness, security or UX to address before wider distribution. No compromise incident was observed.
 
 ### 1. P1: SQL/JSON Synchronization Can Diverge
 
-References: [scraper.py:173](warframe_lore/scraper.py#L173), [scraper.py:281](warframe_lore/scraper.py#L281), [writer.py:55](warframe_lore/output/writer.py#L55), [manager.py:295](warframe_lore/db/manager.py#L295).
+References: [scraper.py:173](../warframe_lore/scraper/__init__.py), [scraper.py:281](../warframe_lore/scraper/__init__.py), [writer.py:55](../warframe_lore/storage/output/writer.py), [manager.py:295](../warframe_lore/storage/db/manager/).
 
 The current processing follows this order:
 
@@ -49,7 +53,7 @@ For disappearances, explicitly choose between deleting the current corpus and hi
 
 ### 2. P1: Canon Ranking Contradicts Its Contract
 
-References: [output/models.py:34](warframe_lore/output/models.py#L34), [scraper.py:106](warframe_lore/scraper.py#L106), [cleaner/pipeline.py:199](warframe_lore/cleaner/pipeline.py#L199).
+References: [output/models.py:34](../warframe_lore/storage/output/models/), [scraper.py:106](../warframe_lore/scraper/__init__.py), [cleaner/pipeline.py:199](../warframe_lore/scraper/cleaner/pipeline.py).
 
 Three defects are identified:
 
@@ -86,7 +90,7 @@ Long-term, a page can contain multiple reliability levels. Retaining a cautious 
 
 ### 3. P1: KIM Graph Loses Its Semantics
 
-References: [cleaner/pipeline.py:144](warframe_lore/cleaner/pipeline.py#L144), [chunker.py:43](warframe_lore/db/chunker.py#L43), [server.py:747](warframe_lore/ui/server.py#L747), [app.js:775](warframe_lore/ui/static/app.js#L775).
+References: [cleaner/pipeline.py:144](../warframe_lore/scraper/cleaner/pipeline.py), [chunker.py:43](../warframe_lore/storage/db/chunks/), [server.py:747](../warframe_lore/web/server.py), [app.js:775](../warframe_lore/web/static/app.js).
 
 The `{If ...}` conditions, `{P1}` markers and some redirects are deleted **before storage**. What was meant to be hidden in RP mode also disappears from the representation usable by RAG.
 
@@ -140,7 +144,7 @@ This is not enough to reconstruct the lost branches. Pages already cleaned will 
 
 ### 4. P1: Dialogue Chunking Does Not Always Respect Its Bounds
 
-Reference: [chunker.py:218–256](warframe_lore/db/chunker.py#L218).
+Reference: [chunker.py:218–256](../warframe_lore/storage/db/chunks/).
 
 A synthetic line of 6,012 characters produces:
 
@@ -179,7 +183,7 @@ The lasting fix is to split first by conversation/section, then by turns of spee
 
 ### 5. P1: A Regex Has High Polynomial Cost
 
-References: [cleaner/pipeline.py:88](warframe_lore/cleaner/pipeline.py#L88), with variants in `chunker.py`, `server.py` and `app.js`.
+References: [cleaner/pipeline.py:88](../warframe_lore/scraper/cleaner/pipeline.py), with variants in `chunker.py`, `server.py` and `app.js`.
 
 The following prefix allows multiple concurrent distributions of the same spaces:
 
@@ -219,7 +223,7 @@ text = convert_html_tags(text)
 
 ### 6. P1: Public Export Is Not Verified as Claimed
 
-References: [export.py:37](warframe_lore/export.py#L37), [export.py:64](warframe_lore/export.py#L64), [export.py:159](warframe_lore/export.py#L159).
+References: [export.py:37](../warframe_lore/scraper/export/), [export.py:64](../warframe_lore/scraper/export/), [export.py:159](../warframe_lore/scraper/export/).
 
 The separation of responsibilities is correct:
 
@@ -278,7 +282,7 @@ If the absence of EOF is a confirmed provider-specific behavior, provide an expl
 
 ### 7. P1: RAG Persistence Is Incomplete and Destructive
 
-References: [models.py:96](warframe_lore/db/models.py#L96), [manager.py:158](warframe_lore/db/manager.py#L158), [init_db.sql:72](init_db.sql#L72).
+References: [models.py:96](../warframe_lore/storage/db/models/), [manager.py:158](../warframe_lore/storage/db/manager/), [init_db.sql:72](../warframe_lore/storage/db/init_db.sql).
 
 **Functional gap:** `embedding vector(384)` exists, but the audited pipeline neither computes nor inserts vectors. No vector search is wired to the interface.
 
@@ -317,7 +321,7 @@ A versioned migrations procedure must become the reference, with model consisten
 
 ### 8. P2: Frontend Bootstrap Reinstalls Events
 
-References: [app.js:1110](warframe_lore/ui/static/app.js#L1110), [app.js:1178](warframe_lore/ui/static/app.js#L1178), [app.js:554](warframe_lore/ui/static/app.js#L554).
+References: [app.js:1110](../warframe_lore/web/static/app.js), [app.js:1178](../warframe_lore/web/static/app.js), [app.js:554](../warframe_lore/web/static/app.js).
 
 The Reload button calls `init()`, which adds new anonymous listeners to persistent elements. After a reload, the burger can perform two successive invocations and appear to stop working.
 
@@ -354,7 +358,7 @@ Apply the same principle to errors, suggestions and tab changes, with optional c
 
 ### 9. P2: Cache Guarantees Neither Consistency Nor Freshness
 
-References: [server.py:103](warframe_lore/ui/server.py#L103), [app.js:62](warframe_lore/ui/static/app.js#L62).
+References: [server.py:103](../warframe_lore/web/server.py), [app.js:62](../warframe_lore/web/static/app.js).
 
 The server reloads all files at expiry without a lock and publishes `_buckets` then `_pages` separately. Concurrent requests may work on different generations.
 
@@ -393,7 +397,7 @@ apiCache.set(path, {
 
 ### 10. P2: HTTP/HTML Boundaries Need Hardening
 
-References: [server.py:833](warframe_lore/ui/server.py#L833), [server.py:918](warframe_lore/ui/server.py#L918), [app.js:115](warframe_lore/ui/static/app.js#L115).
+References: [server.py:833](../warframe_lore/web/server.py), [server.py:918](../warframe_lore/web/server.py), [app.js:115](../warframe_lore/web/static/app.js).
 
 The server listens only on `127.0.0.1`, which greatly reduces current exposure. Nevertheless:
 
@@ -437,7 +441,7 @@ No XSS execution has been demonstrated. No exploitable traversal has been confir
 
 ### 11. P2: Search, Accessibility and Spoilers Remain Incomplete
 
-References: [app.js:1034](warframe_lore/ui/static/app.js#L1034), [app.js:1230](warframe_lore/ui/static/app.js#L1230), [styles.css:879](warframe_lore/ui/static/styles.css#L879), [app.js:547](warframe_lore/ui/static/app.js#L547).
+References: [app.js:1034](../warframe_lore/web/static/app.js), [app.js:1230](../warframe_lore/web/static/app.js), [styles.css:879](../warframe_lore/web/static/styles.css), [app.js:547](../warframe_lore/web/static/app.js).
 
 **Search:** after suggestions appear, Enter does nothing if no suggestion is selected, because the index is `-1`.
 
@@ -563,7 +567,7 @@ The priority is not simply to increase chunks. It is to retrieve **consistent, t
 | Dialogue | Turns of speech from a compatible branch | Conversation, conditions, preceding choice, relevant neighbors |
 | Statistics | Structured entity data | Official ID, game/export version, units |
 
-Numerical statistics are currently excluded by the i18n extraction, which retains mainly name and description: [export.py:210](warframe_lore/export.py#L210). Do not expect the model to reconstruct missing values.
+Numerical statistics are currently excluded by the i18n extraction, which retains mainly name and description: [export.py:210](../warframe_lore/scraper/export/). Do not expect the model to reconstruct missing values.
 
 A simple extension would preserve technical data separately:
 

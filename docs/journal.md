@@ -286,6 +286,28 @@ trials below.
     *Result:* 5 test files extended/added (dossier retrieval, roleplay
     stream, story ask, story rules, verify gate); full suite green
     (832 tests + 103 subtests), ruff clean, `compileall` OK.
+22. **Mother-Folder Restructure (human readability).**
+    *Problem:* the package root mixed domains (`db`, `output`, `ui`, `cli`,
+    `infra`, `protocols`, `timeline`) with no explicit boundary; a newcomer
+    had to open files to know what belonged to ingestion, storage or tooling.
+    *Decision:* six mother folders, each a single responsibility, with the
+    shared utilities (`config.py`, `envfile.py`, `lazy_facade.py`) kept at the
+    package root. No compatibility shims: every internal import was rewired
+    in the same pass (a stale path must fail loudly, not silently work).
+    *Moves:* `db → storage/db`, `output → storage/output`,
+    `timeline → storage/timeline`, `ui → web`, `cli → core/cli`,
+    `infra → core/infra`, `protocols → core/protocols`; `scraper/`, `engram/`
+    and `discord/` were already domain folders.
+    *Incident:* the first pass left 12 test modules failing at collection
+    because some importers still pointed at the old module paths. The
+    AST/textual rewire fixed every cross-boundary import; the lesson is to
+    rewire and move in the same change, then run the full suite before
+    touching docs.
+    *Documentation:* root `README.md` slimmed to quick start + package map;
+    details moved to `docs/manual.md`, `docs/specifications.md` and
+    `docs/architecture.md`; glossary paths updated.
+    *Result:* 834 tests + 119 subtests green, ruff clean, `compileall` OK,
+    public entry points preserved (`cephalon`, `cephalon-ui`, `loremaster`).
 
 ---
 
@@ -296,7 +318,7 @@ trials below.
 | Local corpus (audit) | ~3,175 pages |
 | Vectorized chunks in database | 9,159 (`bge-m3`, 1024d) |
 | KIM chunking verified | 843 chunks, no 2,500-char overflow |
-| Unit tests | 832 passed |
+| Unit tests | 834 passed (+119 subtests) |
 | Anti-SQLi (live) | real attacker payloads → deterministic rejection without LLM; 429 beyond quota; `Lettie` intact |
 | "Lettie" retrieval (live) | 0.598 / 0.581 / 0.577 (Leticia) |
 | "Orokin" retrieval (live) | 0.611 / 0.600 / 0.595 |

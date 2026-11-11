@@ -190,7 +190,7 @@ Grouped by domain; every package exposes a facade in its `__init__.py`:
 | `main.py` | Console entry point (`launch_bot`, shared with the CLI `cephalon bot run`) |
 | `text.py` | Shared text helpers: stopwords, content words, mention tokens |
 | `core/` | `state.py` (`BotState` — bounded volatile tables), `sessions.py` (`SessionPool` — gateways, personas, hostile links), `wiring.py` (`BotServices`, `build_services`, `close_services`) |
-| `bootstrap/` | `engram_bootstrap.py` (uvicorn child + teardown); the Docker/PostgreSQL bootstrap now lives in `warframe_lore/infra/` (shared with the CLI) |
+| `bootstrap/` | `engram_bootstrap.py` (uvicorn child + teardown); the Docker/PostgreSQL bootstrap now lives in `warframe_lore/core/infra/` (shared with the CLI) |
 | `mixins/turn/` | `dispatch.py` (`on_message` pipeline + gating), `plan.py` (`TurnContext` → audit label + `MessageFrame`), `routing.py` (RAG/jealousy/member decision), **`story.py`** (story request routing: lens/subject doors, close-subject confirmation, story mode anchoring), `streaming.py` (placeholder, tokens, reconnect, `!stop`, finishing) |
 | `mixins/member/` | `context.py` (accreditation + identity), `roster.py` (name resolution), `snapshot.py` (`MemberSnapshot`), `gate.py` (creator privilege + card) |
 | `mixins/moderation/` | `hostile.py` (probes, death sessions, redemption), `insults.py` (répartie), `spam.py` (anti-spam gate), `feedback.py` (👍/👎) |

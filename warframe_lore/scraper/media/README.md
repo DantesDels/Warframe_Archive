@@ -40,7 +40,7 @@ and map a page title / KIM speaker to an image file, with local caching
 ## Usage
 
 ```python
-from warframe_lore.media import MediaIndex
+from warframe_lore.scraper.media import MediaIndex
 
 index = MediaIndex(output_dir="out")
 if index.ensure():

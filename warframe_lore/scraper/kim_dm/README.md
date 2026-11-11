@@ -25,7 +25,7 @@ cephalon kim-dm               # updates the mirror
 Programmatic:
 
 ```python
-from warframe_lore.kim_dm import KimDM, parse_dialogue_file
+from warframe_lore.scraper.kim_dm import KimDM, parse_dialogue_file
 
 dialogue = parse_dialogue_file("§ Amir — Conversation.md")
 dm = KimDM(...)

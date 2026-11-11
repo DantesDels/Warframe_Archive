@@ -16,7 +16,7 @@ or wired into any ingestion sink.
 | `resilience.py` | Tenacity retry policy (3 attempts, exponential backoff), `ConcurrencyGuard` (`asyncio.Semaphore`, default 3), retry predicates. |
 | `chunking.py` | Semantic chunking on H2/H3 headings → list of validated `LoreChunk`. |
 | `pipeline.py` | Orchestration: primary/fallback extraction per URL + bounded concurrency. |
-| `__main__.py` | CLI entrypoint (`python -m warframe_lore.rag_extract`). |
+| `__main__.py` | CLI entrypoint (`python -m warframe_lore.scraper.rag_extract`). |
 
 ## Flow
 
@@ -46,10 +46,10 @@ or wired into any ingestion sink.
 ### CLI
 
 ```bash
-python -m warframe_lore.rag_extract https://warframe.fandom.com/wiki/Ordis \
+python -m warframe_lore.scraper.rag_extract https://warframe.fandom.com/wiki/Ordis \
   --verbose                     # logs INFO on stderr, JSON chunks on stdout
-python -m warframe_lore.rag_extract Ordis KineticSiphonTrasher --strategy wiki
-python -m warframe_lore.rag_extract <url>... --concurrency 3 --output out/chunks.json
+python -m warframe_lore.scraper.rag_extract Ordis KineticSiphonTrasher --strategy wiki
+python -m warframe_lore.scraper.rag_extract <url>... --concurrency 3 --output out/chunks.json
 ```
 
 | Option | Effect |
@@ -63,7 +63,7 @@ python -m warframe_lore.rag_extract <url>... --concurrency 3 --output out/chunks
 
 ```python
 import asyncio
-from warframe_lore.rag_extract import run_pipeline
+from warframe_lore.scraper.rag_extract import run_pipeline
 
 chunks = asyncio.run(run_pipeline(["https://warframe.fandom.com/wiki/Ordis"]))
 print(chunks[0].section_title, chunks[0].metadata)

@@ -34,7 +34,7 @@ sought.
 ## Usage
 
 ```python
-from warframe_lore.output import MegafileManager, build_output_entry, CanonStatus
+from warframe_lore.storage.output import MegafileManager, build_output_entry, CanonStatus
 
 entry = build_output_entry(
     page_title="Excalibur", category="Warframes",

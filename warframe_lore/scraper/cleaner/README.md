@@ -11,9 +11,8 @@ The package is organized by theme (one module = one responsibility):
 |---|---|
 | `config.py` | `CleanerConfig`: loads rules from `config/cleaner_config.json` |
 | `preprocessing.py` | Purge of raw content (comments, tables, code) + `mwparserfromhell` parsing |
-| `html.py`, `blocks.py` | Sanitization: HTML conversion, files/images, transclusion |
+| `markup/` | Raw markup subpackage: `html.py` (HTML conversion, transclusion), `blocks.py` (files/images, tables, code), `links.py` (MediaWiki/URL links), `emphasis.py` (bold/italic), `site_html.py` (`HtmlCleaner` for official-site pages) |
 | `templates/` | MediaWiki templates subpackage: `noise.py` (noise + fallback), `render.py` (quote, spoiler, canon), `signal.py` (inline canon/non-canon detection) |
-| `links.py`, `markup.py` | Link and Markdown normalization (bold/italic…) |
 | `dialogue_lines.py`, `bullets.py`, `headings.py` | Dialogues (`> **Name:** …`), lists, Markdown headings |
 | `footers.py`, `audio.py`, `kim_instructions.py` | Removal of footer noise, audio files, KIM dialogue instructions |
 | `sections.py`, `sections_classify.py`, `polish.py` | Filtering of gameplay vs lore blocks, empty galleries, blank lines |
@@ -49,7 +48,7 @@ the format expected by the `db` layer (dialogue-mode chunking + `kim_parser`).
 ## Usage
 
 ```python
-from warframe_lore.cleaner import WikitextCleaner
+from warframe_lore.scraper.cleaner import WikitextCleaner
 
 cleaner = WikitextCleaner()
 result = cleaner.clean(wikitext_raw)     # CleanOutput(markdown, …)

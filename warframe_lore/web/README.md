@@ -8,7 +8,7 @@ lore navigation interface — launched via `cephalon ui`.
 
 | File | Role |
 |---|---|
-| `server.py` | `LoreStore`, `main`, `serve_forever`: stdlib server, `gzip`-enabled, `python -m warframe_lore.ui.server --port …` |
+| `server.py` | `LoreStore`, `main`, `serve_forever`: stdlib server, `gzip`-enabled, `python -m warframe_lore.web.server --port …` |
 | `patch_notes.py` | Patch notes traversal |
 | **`http/`** | `handlers.py` (`ApiHandler`: routes `/`, `/api/stats`, `/api/kim`, `/api/search`, `/api/media`…), `httpio.py` (Gzip/ETag transport) |
 | **`data/`** | `store.py` (`LoreStore` facade), `megafiles.py` (incremental `out/*.json` loading), `search.py` (full-text index) |
@@ -29,12 +29,12 @@ lore navigation interface — launched via `cephalon ui`.
 ## Usage
 
 ```bash
-python -m warframe_lore.ui.server --port 50888 --no-browser   # direct
+python -m warframe_lore.web.server --port 50888 --no-browser   # direct
 cephalon ui --port 8123                                       # via CLI
 ```
 
 ## Standalone Executable
 
 `dist/cephalon-ui.exe` (PyInstaller, see root README) bundles
-`packaging/launch_ui.py` + `warframe_lore/ui/static/`; it reads the `out/`
+`packaging/launch_ui.py` + `warframe_lore/web/static/`; it reads the `out/`
 folder from the current directory.

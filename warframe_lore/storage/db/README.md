@@ -15,7 +15,7 @@ Stack: SQLAlchemy 2.0 async + asyncpg + pgvector.
 | `chunks/` | `ChunkManager` / `RAGChunk` / `chunk_markdown`: Markdown splitting into RAG chunks (`patterns.py` KIM rules, `splitters.py`, `split.py`) |
 | `kim_parser.py` | `extract_kim_messages`: KIM message extraction from dialogue blocks |
 
-## Schema (`warframe_lore/db/init_db.sql`)
+## Schema (`warframe_lore/storage/db/init_db.sql`)
 
 ```
 wiki_pages     (page_id PK, namespace, page_title UNIQUE, touched → delta,
@@ -114,11 +114,11 @@ How to (re)create or (re)populate the schema and data, in order:
 | Step | Command | Purpose |
 |---|---|---|
 | 1. Start the database | `docker compose up -d` | PostgreSQL 16 + pgvector (root `docker-compose.yml`); `cephalon run` / `cephalon update` do this automatically when the port is closed |
-| 2. Create / update the schema | `cephalon init-db` | applies `warframe_lore/db/init_db.sql` (`CREATE TABLE IF NOT EXISTS`); run once per new table or schema change |
-| 2b. One-shot migration | `psql -U <user> -d warframe_lore -f warframe_lore/db/migrations/dialogue_tree_graph.sql` | additive `parent_message_id` on both dialogue tables, `kim_dialogues` schema upgrade, KIM data transfer out of `game_dialogues` (once per existing database) |
-| 2c. Link dialogue trees | `python -m warframe_lore.db.migrations.link_dialogue_trees` | computes and stores `parent_message_id` (adjacency list) for both dialogue tables (needs 2b first) |
+| 2. Create / update the schema | `cephalon init-db` | applies `warframe_lore/storage/db/init_db.sql` (`CREATE TABLE IF NOT EXISTS`); run once per new table or schema change |
+| 2b. One-shot migration | `psql -U <user> -d warframe_lore -f warframe_lore/storage/db/migrations/dialogue_tree_graph.sql` | additive `parent_message_id` on both dialogue tables, `kim_dialogues` schema upgrade, KIM data transfer out of `game_dialogues` (once per existing database) |
+| 2c. Link dialogue trees | `python -m warframe_lore.storage.db.migrations.link_dialogue_trees` | computes and stores `parent_message_id` (adjacency list) for both dialogue tables (needs 2b first) |
 | 3. Ingest wiki content | `cephalon run` | fills `wiki_pages` / `lore_chunks` and regenerates the `out/Lore_*.json` megafiles |
-| 4. Derive the element tables | `python -m warframe_lore.structured.pipeline` | populates `game_dialogues` (cinematics/quotes), `kim_dialogues` (KIM pages), `lore_items`, `warframes`, `game_quests`, `game_updates`, `game_announcements` |
+| 4. Derive the element tables | `python -m warframe_lore.scraper.structured.pipeline` | populates `game_dialogues` (cinematics/quotes), `kim_dialogues` (KIM pages), `lore_items`, `warframes`, `game_quests`, `game_updates`, `game_announcements` |
 | 5. Embed the element tables | `python -m warframe_lore.engram.scripts.embed_structured` | renders each element-table row to a searchable text and embeds it (bge-m3) into `structured_chunks` for the RAG retriever |
 
 **Notes**
@@ -157,7 +157,7 @@ How to (re)create or (re)populate the schema and data, in order:
 ## Usage
 
 ```python
-from warframe_lore.db import SQLDatabaseManager
+from warframe_lore.storage.db import SQLDatabaseManager
 
 async def main():
     mgr = SQLDatabaseManager("postgresql+asyncpg://...")

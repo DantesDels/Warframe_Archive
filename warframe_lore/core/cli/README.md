@@ -2,7 +2,7 @@
 
 Responsibility: the command-line entry point of the pipeline.
 `pip install -e .` exposes the `cephalon` command (entry point
-`warframe_lore.cli:main`).
+`warframe_lore.core.cli:main`).
 
 ## Contents
 
@@ -22,7 +22,7 @@ Responsibility: the command-line entry point of the pipeline.
 | `diff` | Preview delta (dry-run) via `scraper.delta_plan` |
 | `status` / `recent` | Database state / latest modified pages (`db.db_stats`, `recent_pages`) |
 | `buckets [--init]` | List / materialize `config/buckets.json` |
-| `init-db` | Create the PostgreSQL schema (`warframe_lore/db/init_db.sql`) |
+| `init-db` | Create the PostgreSQL schema (`warframe_lore/storage/db/init_db.sql`) |
 | `export-entities` | Synchronize `game_entities_i18n` (Public Export, `--lang`) |
 | `kim-dm` | Update the KIM mirror (datamine, `--lang`) |
 | `ui` | Launch the local HTTP server (browser) — `--port`, `--no-browser`, `--out` |

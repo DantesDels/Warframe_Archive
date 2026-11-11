@@ -12,7 +12,7 @@ the **scraping scope** (category buckets).
 | `mediawiki.py` | `MediaWikiSource`: composition (categories + queries) |
 | `mediawiki_categories.py` | `MediaWikiCategoryMixin`: `resolve_categories` (recursive), `resolve_prefix` |
 | `mediawiki_queries.py` | `MediaWikiQueryMixin`: `fetch_pages`, `check_updates` (`touched` field) |
-| `buckets/` | `BucketConfig` (`config.py`), `CategoryCatalog`/`ResolvedBucket`/`assign_pages` (`catalog.py`), `defaults.py` (8 default buckets) |
+| `buckets/` | `BucketConfig` (`config.py`), `CategoryCatalog`/`ResolvedBucket`/`assign_pages` (`catalog.py`), `defaults.py` (16 default buckets) |
 | `client.py`, `categories.py` | **Compatibility facades** (re-export public APIs) |
 | `models/` | Transport types, one file per class: `page_data.py`, `touched_info.py`, `category_spec.py` |
 
@@ -35,8 +35,8 @@ and plugs into the same cleaning pipeline.
 ## Usage Example (Bucket Configuration)
 
 ```python
-from warframe_lore.api import BucketConfig
+from warframe_lore.scraper.api import BucketConfig
 
-cfg = BucketConfig()                    # 8 default buckets
+cfg = BucketConfig()                    # 16 default buckets
 cfg = BucketConfig.from_file("config/buckets.json")  # or custom
 ```

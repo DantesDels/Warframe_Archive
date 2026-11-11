@@ -41,8 +41,8 @@ cephalon export-entities --lang en --lang fr   # défaut : en, fr
 Programmatique (async) :
 
 ```python
-from warframe_lore.export import PublicExportClient
-from warframe_lore.db import SQLDatabaseManager
+from warframe_lore.scraper.export import PublicExportClient
+from warframe_lore.storage.db import SQLDatabaseManager
 
 async def main():
     client = PublicExportClient(cache_dir="cache/public_export")

@@ -1,12 +1,18 @@
 """Retrieval pipeline: from the raw question to the decided RAG prompt.
 
-Single responsibility: run ONE retrieval — sanitisation, hostile probe, alias
-expansion, search-query preparation, embedding, vector search, relevance guards,
-prompt assembly — and audit it.  The LLM is never called here: the answer shapes
-live in :mod:`service`.
+Linear Execution Trace:
+  1. Sanitize query           -> :func:`.query.query_guard.sanitize_query`
+  2. Detect hostile probes    -> :func:`.query.probes.detect_probe` (short-circuit)
+  3. Expand aliases           -> :class:`.query.aliases.AliasResolver`
+  4. Build search query       -> :func:`.query.search_query.search_query`
+  5. Compute embeddings       -> :class:`EmbeddingProvider.embed`
+  6. Search vector store      -> :class:`Retriever.search` & optional dossier
+  7. Filter by relevance floor-> :func:`.retrieval.relevance.keep_relevant`
+  8. Missing entity guard     -> :func:`.retrieval.relevance.missing_entity`
+  9. Assemble tagged prompt   -> :class:`.prompt.builder.PromptBuilder`
+  10. Log audit record        -> :func:`.audit.audit_retrieval`
 
-Stateless: the anaphora memory is the caller-owned :class:`RAGContext` (per HTTP
-request or per WebSocket connection), never an attribute of this object.
+See :file:`warframe_lore/engram/rag/README.md` for full sequence diagrams.
 """
 
 from __future__ import annotations

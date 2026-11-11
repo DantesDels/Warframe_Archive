@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import argparse
 
-from . import bot, pipeline, tools
+from . import bot, pipeline, rag, tools
 
 # Group order = declaration order in ``cephalon --help``.
-GROUPS = (pipeline, tools, bot)
+GROUPS = (pipeline, tools, rag, bot)
 
 
 def register_all(sub: argparse._SubParsersAction) -> None:

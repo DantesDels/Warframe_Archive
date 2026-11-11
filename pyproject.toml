@@ -45,6 +45,7 @@ warframe_lore = ["**/*.md", "**/*.json", "**/*.html", "**/*.css", "**/*.js", "**
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = [".", "tests"]
 addopts = "-q"
 python_functions = ["test_*"]
 

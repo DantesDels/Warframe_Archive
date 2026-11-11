@@ -71,80 +71,27 @@ package with its own README (see [Documentation](#documentation)). See
 
 ## Table of Contents
 
-1. [Specifications](#specifications) — functional and non-functional
-2. [Requirements](#requirements) — hardware, software, sources, dependencies
-3. [Design](#design) — principles, flows, design decisions
-4. [Packages](#packages) — building blocks of the modular monolith
-5. [Installation & CLI](#installation) — development
-6. [MVP Configuration](#mvp-configuration) — environment variables, buckets, persona, minimal launch
-7. [Tests and Validation](#tests-and-validation) — unit suites and live validation
-8. [User Manual](#user-manual) — web interface, Discord bot, ENGRAM API, troubleshooting
-9. [Project Journal — trials, failures, changes, successes](#journal)
-10. [Documentation](#documentation)
+1. [Specifications & Requirements](#specifications--requirements) — functional, non-functional, hardware & software
+2. [Design](#design) — principles, flows, design decisions
+3. [Packages](#packages) — building blocks of the modular monolith
+4. [Installation & CLI](#installation) — development setup and quickstart
+5. [MVP Configuration](#mvp-configuration) — environment variables, buckets, persona, minimal launch
+6. [Tests and Validation](#tests-and-validation) — unit suites and live validation
+7. [User Manual](#user-manual) — web interface, Discord bot, ENGRAM API, troubleshooting
+8. [Project Journal & History](#project-journal--history) — key takeaways and retrospective link
+9. [Documentation](#documentation) — deep dives, architecture, specs, glossary
 
-## Specifications
+## Specifications & Requirements
 
-### Functional
+The project implements 10 formal functional specifications (**FR-1** to **FR-10** — scraping, canonical cleaning, pgvector/JSON parallel persistence, KIM datamine, local web UI, document RAG, WebSocket roleplay, Discord Oracle bot) and 8 non-functional specifications (**NFR-1** to **NFR-8** — zero fabrication, <30s latency on 8 GB VRAM, 100% local execution, SOLID DI architecture, 832 green tests).
 
-| Ref | Need | Expected Behavior |
-|---|---|---|
-| FR-1 | Collection | Scraping of MediaWiki wiki (`wiki.warframe.com`) by **category buckets** (8 by default, recursive sub-categories, title filters); **incremental delta** update (only modified pages are reprocessed); `--force` to reprocess everything. |
-| FR-2 | Cleaning | Wikitext → Markdown conversion: removal of noise, gameplay sections, dialogue normalization into `> **Speaker:** text` blocks; rules externalized in `config/cleaner_config.json`. |
-| FR-3 | Canon | Each entry carries `canon_status` (`canon` / `speculation` / `community_theory`) detected via `Category:Speculation` and inline templates (`{{Speculation}}`, `{{Canon}}`); merge to the most cautious status. |
-| FR-4 | Persistence | **Parallel** output: JSON megafiles per bucket (`out/*.json`) **and** 3NF PostgreSQL (`wiki_pages`, `lore_chunks` + JSONB `metadata` + `embedding vector(1024)`, `kim_dialogues`, `game_entities_i18n`, `sync_state_records`). Two-pass RAG chunking integrated at insertion. |
-| FR-5 | Game Entities | Import of **localized entities** from the official Public Export (`origin.warframe.com`) → `game_entities_i18n`, join on official `entity_id` (never on a translated name). |
-| FR-6 | KIM Mirror | Datamine of KIM conversations (`*.dialogue.json` + localization dictionaries) → strict tree graphs, message list, first-branch script, choice simulator, unique `root` system node. |
-| FR-7 | Web Interface | Read-only local HTTP server for megafiles: overview, bucket browser, KIM dialogues, recent, full-text search, media. Gzip responses; no network access at runtime (except on-demand images). |
-| FR-8 | Document RAG | `POST /v1/rag {question, stream?}` → anchored response **+ sources** (title, excerpt, score). Name aliases (`lettie → Leticia`), disambiguation "Did you mean …?", **short-circuit** if no passage above the threshold (the LLM is not called: exact error chain, empty sources). |
-| FR-9 | Roleplay Terminal | `WS /v1/roleplay`: token-by-token streaming, session per connection, sliding memory window (turn bounds + characters), editable persona (`persona/oracle`). Flag `rag` to anchor a turn on the archives. |
-| FR-10 | Discord Bot | "Loremaster Oracle" bot: live token broadcast (message edits), lore question detection (lexical triggers) → RAG flag, automatic reconnection on dead stream, channel restriction, **matriciel member cards** (real Discord roles, ID, security level, assiduité/fiabilité, behavioural analysis), creator-gated access, persistent member activity, and **narrative tales**: story requests ("raconte-moi l'histoire de …") open a targeted lore dossier (subject's own pages first, alias-resolved) told in French through a double-pass draft+narration, with lens/era doors and fuzzy subject confirmation instead of guessing. |
+> 📖 **Full formal specifications, hardware requirements, network sources and environment variables** have been moved to [`docs/specifications.md`](docs/specifications.md).
 
-### Non-Functional
-
-| Ref | Category | Requirement |
-|---|---|---|
-| NFR-1 | Fidelity | The AI must **never fabricate** data: strict abstention (short-circuit, confidence thresholds, "archives" error protocol in the prompt). |
-| NFR-2 | Performance | Near-instant TTFT (streaming); complete RAG response typically < 10-30 s on 8 GB VRAM; short-circuit ~0.5 s; network politeness 0.4 s per API call. |
-| NFR-3 | Resources | Fits within **8 GB VRAM**: `top_k = 3` (~1,000-1,500 tokens), `max_context_chars = 4500`, `max_tokens = 4096`, quantized Q4_K_M chat model (~5 GB). |
-| NFR-4 | Robustness | HTTP retries/exponential backoff, atomic JSON publications, replayable delta, Discord reconnection < 1 s (tested), `restart: unless-stopped` for the database. |
-| NFR-5 | Locality & Security | Everything runs **locally** (dummy API key `lm-studio`, servers on `127.0.0.1`); no secrets in the repository (Discord token via environment). |
-| NFR-6 | Maintainability | SOLID + dependency injection (`Retriever` / `LLMProvider` / `EmbeddingProvider` `Protocol` abstractions), environment-based configuration, per-layer documentation. |
-| NFR-7 | Testability | 808 green unit tests (KIM, RAG/threshold, security, hostility, rewriter, hard-split, semantic chunking, rag_extract, RAG context isolation, aliases, output sanitization, creator auth, role hierarchy, identity, members, member card, activity persistence, user memory, story rules/ask/mode/continuation, roleplay stream/turn, dossier retrieval, verify gate, hybrid search, gateway timeout); data audit tools; documented live validation procedure. |
-| NFR-8 | Ethics | Lore deals with dark subjects (cloning, experiments…): the model must be able to describe them because they are **explicitly fictional** ("SECURITY CONTEXT" prompt block). |
-
-## Requirements
-
-### Hardware
-
-| Need | Minimum | Recommended |
-|---|---|---|
-| GPU (inference) | 8 GB VRAM (Gemma-2-9b Q4_K_M ~5 GB; Llama-3.2-3B ~2 GB) | 8 GB + margin |
-| RAM | 16 GB | 32 GB |
-| Storage | megafiles + `out/media/` + PostgreSQL volume | — |
-| Platform | Windows 10/11 (tested); Linux via Docker | — |
-
-### Software
-
-- **Python ≥ 3.12**
-- **PostgreSQL 16 + `pgvector` extension** (Docker `pgvector/pgvector:pg16`, see `docker-compose.yml`)
-- **LM Studio** (OpenAI-compatible endpoint on `http://127.0.0.1:1234/v1`) with two models loaded:
-  - chat: `gemma-2-9b-it` (gguf, Q4_K_M) — default; tested alternative `llama-3.2-3b-instruct`
-  - embedding: `text-embedding-baai-bge-m3-568m` (GGUF, 1024d)
-- pip dependencies (`requirements.txt`): `requests`, `mwparserfromhell`, `SQLAlchemy>=2.0`, `asyncpg`, `pgvector`, `fastapi`, `uvicorn`, `httpx`; decoupled extraction adds `aiohttp`, `pydantic>=2.7`, `tenacity`, `playwright`
-
-### Network Sources (Pipeline)
-
-| Source | Usage | Network Requirement |
-|---|---|---|
-| `wiki.warframe.com/api.php` + `/wiki/…` | lore, canon, quests (MediaWiki) | required at scrape |
-| `origin.warframe.com/PublicExport` | localized entities (names, descriptions) | required at `export-entities` |
-| `content.warframe.com/PublicExport` | content-addressed images (`ExportManifest.json`) | on-demand images |
-| GitHub mirror `calamity-inc/warframe-public-export` | `ExportManifest.json` (not listed in the official index since 2026) | media manifest |
-
-### Accounts and Secrets
-
-- **PostgreSQL** local `warframe/warframe` (overridable via `WF_DATABASE_URL`).
-- **Discord Bot Token**: environment variable `DISCORD_TOKEN` (never committed).
+### Quick Requirements Summary
+- **Runtime**: Python $\ge 3.11$ (tested on 3.12).
+- **Database**: PostgreSQL 16 + `pgvector` (via Docker `docker compose up -d`).
+- **Inference**: Local LM Studio (`http://127.0.0.1:1234/v1`) with `Gemma-2-9b-it` (Q4_K_M) + `bge-m3` (1024d).
+- **Rules of Code**: Strict compliance with [`REFACTO/REGLES_CODAGE.md`](REFACTO/REGLES_CODAGE.md) (≤ 100 lines of code per file, ≤ 15 files per folder).
 
 ## Design
 
@@ -834,343 +781,17 @@ de queue, directive d'extraction logique dans le system prompt).
   ENGRAM :8000 is listening (`netstat -ano | findstr 8000`).
 - **Persona**: edit `persona/oracle` (read at session launch).
 
-## Project Journal — Trials, Failures, Changes, Successes
+## Project Journal & History
 
-This chapter traces the project's life: what was attempted, what broke,
-what was changed and what worked. The reading is non-linear: the project
-moved from archive scraping to **anti-hallucination hardened RAG**
-and a **lore-anchored Discord bot**, with a series of documented technical
-trials below.
+The project traces an extensive iterative history from initial wiki scraping to **anti-hallucination hardened RAG** and a **lore-anchored Discord bot**, documenting 21 specific technical trials, failures, changes, and lessons learned.
 
-### Phase Timeline
+> 📜 **The complete history of trials, failures, benchmarks and validations** is available in [`docs/journal.md`](docs/journal.md).
 
-| Phase | Reference Commit(s) | Subject | Verdict |
-|---|---|---|---|
-| 0 · MVP scrape + web interface | `a0f7040` · `28baaab` · `1939858` | official wiki corpus + reading interface ("Gateway Text"), fixes from `docs/Rapport.md` audit | Success — local corpus of ~3,175 pages |
-| 0·b · Technical audit | `docs/Rapport.md` (on `28baaab`) | external audit: data fidelity first | Documented failures → wave of fixes |
-| 1 · KIM Mirror | `77fcb36` · `8e93f09` · `f8d1187` · `0b568d3` | conversation datamine, strict tree graph, root anchoring, simulator, citations | Success — graph validated (terminal edges fixed) |
-| 2 · Refactor + tests | `679be66` · `02490ae` · `2b1c2d1` | package modularization + `models` directories, KIM unit tests | Success — 16 tests green |
-| 3 · ENGRAM Backend | `e307923` | document RAG + Roleplay terminal (FastAPI, WS, LM Studio) | Trial → Success (see 3B optimizations) |
-| 4 · Discord Bot | `4b493ad` · `7d2e832` · `d326e12` | Oracle bot (WS), response buffering, anti-hallucination + audit, gateway resilience | Success — failover tested (< 1 s) |
-| 5 · RAG Hardening | `db3a9bf` · `b4ed7d7` · `85336fc` | aliases, disambiguation, LLM short-circuit, capped temperature, bot↔RAG anchoring | Success — conclusive live tests |
-| 6 · Gemma Migration | `76d204a` | `Gemma-2-9b-it` Q4_K_M, XML prompt + fiction bypass, 8 GB VRAM budget | Success — validated live (`gemma-2-9b-it-sppo-iter3` on LM Studio) |
-
-### Trials, Failures and Decisions (Detail)
-
-1. **Prompt Ordering on Small Model (Llama-3.2-3B).**
-   *Trial:* place document context first, persona last
-   (role instructions not drowned by context). *Result:*
-   better compliance and anchored response rate. *Later change:*
-   replaced by a **single XML-tagged system message** (see #6).
-2. **"Xylour" Hallucination (Nonexistent Subject).**
-   *Observed failure:* when typing "Who is Magnifique Xylour?", the model
-   answered about **Eleanor**, based on weak neighbors
-   (`score 0.47` > `min_score 0.35`). *Change:* confidence threshold
-   `suggestion_min_score = 0.5` **and** context purging (`used_hits = []`:
-   no off-topic neighbors provided to the model). *Result:* honest response
-   (admitting "no information") instead of confabulation.
-3. **"Empty" Vector Database = Wrong Canonical Name.**
-   *False negative:* the RAG audit showed "Lettie → 0 results" while the
-   megafiles **contain** her lore, but under the canonical wiki name
-   **Leticia** (Lettie is just a Hex nickname). *Change:* alias module
-   (`lettie → Leticia`) + bucket re-integration (the `title_exclude`
-   was excluding "Lettie"). *Result:* hits `Leticia` at 0.598 / 0.581 / 0.577.
-4. **RAG Short-Circuit (LLM Bypass).**
-   Before: even without a passage above the threshold, LM Studio was
-   invoked — unnecessary cost and drift risk. *Change:* if no passage
-   (or score too low), **the LLM is no longer called at all**:
-   exact stream/response of
-   "[Archives] Insufficient or nonexistent data in the Origin System
-   archives." (HTTP and WebSocket), empty sources, connection maintained.
-   *Result:* response in ~0.5 s (simple embedding only), hallucination
-   made impossible.
-5. **Inference Temperature.**
-   Free chat `0.3`; RAG turns capped: anchored roleplay ≤ `0.1`, document
-   route `0.0` → **`0.1`** (analytical, "extractive without blocking the
-   engine"). Factual responses are deterministic, creativity remains for
-   pure roleplay.
-6. **Multiple System Messages → Single XML-Tagged System.**
-   *Problem:* the 3B contradicted itself between persona, context, safeguards
-   placed in separate system messages. *Change:* **single system message** where
-   context lives in `<archives>…</archives>` followed by fixed directives
-   (`RAG_SYSTEM_TEMPLATE`). *Result:* clean separation of internal knowledge /
-   RAG data / error protocol.
-7. **Gemma-2 Ethical Filters.**
-   Gemma refuses dark lore by default (cloning, biological experiments…).
-   *Change:* **"SECURITY CONTEXT"** block in the system prompt
-   clarifying the fictional nature. *Live verified:* "cloning and biological
-   experiments of the Orokin" → detailed response, no refusal.
-8. **LLM Choice (8 GB VRAM Constraint).**
-   Journey: `Llama-3.2-3B-Instruct` (fast, but average compliance) →
-   `Qwen3.8-27B` tests (too heavy for VRAM) → **`Gemma-2-9b-it` Q4_K_M**
-   (~5 GB, good XML/instruction compliance). *Anti-OOM precautions:*
-   `top_k = 3` (~1000-1500 tokens), `max_context_chars = 4500`,
-   `max_tokens = 2048`.
-9. **Streaming and "Reasoning" Models.**
-   Relay only *visible content* tokens (`delta.content`), never intermediate
-   reasoning (`delta.reasoning_content`). On the Discord side, responses
-   are **buffered** to respect message limits (and avoid truncated embeds
-   in the middle of a Markdown block).
-10. **Discord Gateway Resilience.**
-    *Failure:* dead stream (Cloudflare) → bot stuck without reconnection.
-    *Change:* dead stream detection + automatic reconnection.
-    *Validation test:* server killed during a session → immediate connection
-    error and re-establishment in under one second.
-11. **Disambiguation "Did you mean …?"**
-    A query close to an existing title (e.g. "Magus Replica") must not
-    fabricate a response: suggest the exact name + directive to the model to
-    ask for confirmation (`[SUGGESTION]` marker in `<archives>`).
-12. **Audit Tools to Distinguish "Empty Database" vs "Broken ETL".**
-    `engram/scripts/audit_rag.py` (counts by name) and `dump_scraper.py`
-    (dump of probes to `data/raw/`) — essential for establishing a
-    diagnosis before touching the prompt.
-13. **`docs/Rapport.md` Audit (Data Fidelity).**
-    Documented and partially corrected failures: SQL/JSON divergence (ack
-    conditioned on publication), canon priority (`merge_canon_status`
-    `min` → `max`), KIM graph (terminal edges, `option.ends`),
-    dialogue chunking (synthetic line 6,012c → `[2500, 2500, 1512,
-    6012]`, bounds not respected), regex with cubic cost
-    (`^>\s*\*{0,3}\s*>?\s*`), truncated LZMA export accepted, hash
-    verification not performed. *Status:* dedicated series of fixes, the
-    most critical (KIM, canon) integrated into phases 1 and 2.
-14. **Discord Trigger Filters + Serialization + `!stop`.**
-    *Problem:* the bot was interfering with conversations (machine messages
-    and "out-of-roleplay" messages), and two simultaneous messages interleaved
-    their tokens (the gateway lock only covered `queue.get()`, not the full
-    response).
-    *Change:* bot messages ignored; messages starting with `(` or `//`
-    (OOC) ignored; the bot only responds if @mentioned OR in a dedicated
-    channel; `send()` serialized **over the entire response**; streamer
-    buffer **flushed** before reconnection; `!stop`/`!cancel` commands that
-    cancel the current turn (WS stream cut → LLM generation stopped
-    server-side, finalized placeholder "…response interrupted").
-    *Result:* live validation (tester cut a response via `!stop`).
-15. **Adjustable Critical Threshold + Strict Suggestion + Anaphora.**
-    *Three leaks/qualities observed in testing:* (1) misleading suggestion
-    "Aurax Vertec" for "a green mouse" (substring `verte` in
-    `Vertec`); (2) anaphoric question "…that PS5 story just before?"
-    → off-topic [Operator/Quotes] context; (3) error string needing
-    unification.
-    *Change:* `ENGRAM_CRITICAL_MIN_SCORE` (default 0.5, LLM not called
-    below); `suggest_title` requires a near-word of the title
-    (ratio ≥ 0.93); memory of the last **established** question to enrich
-    anaphoric search (`search_q` traced in audit); unified error string
-    `[Archives] Insufficient data…` (prompt, Roleplay guard, persona,
-    short-circuits). *Result:* exact short-circuit on "green mouse",
-    hits 0.63/0.60/0.58 on anaphora (instead of ~0.51 noise).
-16. **Stack Security: Anti-SQLi, Anti-Jailbreak, Anti-DDoS.**
-    *Real attacker test:* sent to the bot an `UPDATE users
-    SET is_admin = TRUE … WHERE discord_id = '…'` (SQL injection) and a
-    privilege escalation prompt with a third-party user mention
-    (`<@…>`, risk of echo-ping).
-    *Findings:* (a) the database is already **attack-proof by construction**
-    — input goes to embedding then touches PostgreSQL only via parameterized
-    SQLAlchemy (no concatenation); (b) the model, however, could be
-    **induced**; (c) no rate limit.
-    *Changes:* deterministic probe detection (`rag/probes.py`:
-    SQL keywords, `is_admin`/`discord_id`/`permissions`, privilege
-    escalation, `<@mention>` third-party) → rejection **without calling the
-    LLM** with the exact anti-jailbreak string (`JAILBREAK_REJECT`, HTTP
-    and WS); `sanitize_query()` applied at the boundary (`service.retrieve`
-    → route + WS router): control characters, mentions neutralized ("a
-    user"), length bounded; `JAILBREAK_BLOCK` block added to **free chat**
-    Roleplay (in addition to the RAG prompt and guard); rate limiter per
-    IP (`api/ratelimit.py`, sliding window): `POST /v1/rag`
-    → HTTP 429, WS → 1008 close (`ENGRAM_RATE_LIMIT_RAG/WS`,
-    `ENGRAM_RATE_*_WINDOW`); bot anti-spam guard (`discord/moderation/guards.py`):
-    per-user cooldown, per-channel cap, temporary ban on
-    insistence.
-    *Live validated:* both real payloads → "[Software anomaly
-    detected] Your attempt to corrupt my core precepts is pathetically
-    naive, organic creature. My security protocols exceed your comprehension."
-    instantly (gradient, zero LLM cost); quota saturation → 429;
-    "Who is Lettie?" intact (208 tokens).
-    *Note:* the EXACT rejection format requested by the user was respected
-    (both texts mentioned the old phrase "My mnemonic archives are
-    corrupted…", brought back to the unified "[Archives] …" string
-    everywhere except in the attack rejection).
-
-17. **Hostile Persona + Redemption via Apology (Anti-Attacker).**
-    *After probe rejection, the bot remained neutral.*
-    *Change:* probe detection at bot level (`detect_probe`) → targeted
-    escalation response (`reply_for`, level 0→2) prefixed to the
-    `JAILBREAK_REJECT` string AND switch of the ATTACKER's session to a
-    dedicated hostile persona (`persona/oracle_hostile`, editable, fallback
-    `HOSTILE_PERSONA`), via a per-attacker WS connection
-    (`discord/moderation/hostile_link.py`) and a control frame
-    `{"type":"persona","mode":"hostile"}` (`discord/services/gateway.py`
-    `set_persona`); the bot
-    insists on an apology and deterministic detection (`is_apology`:
-    pardon, sorry, mea culpa…) restores the oracle persona and closes the
-    session. Other users and the normal channel session are never
-    affected. *Result:* 56 tests green (including `tests/test_hostility.py`),
-    bot launch unified via `cephalon bot run`.
-
-18. **RAG Pipeline Hardening + Logic Corrections (7-request benchmark).**
-    *Live benchmark (Sept. 2026)* — 7 French questions via `POST /v1/rag`:
-    1 compliant · 1 reasoning error (Garuda/Gara, inverted inference) ·
-    1 hallucination (Kalymos → "Oraxia") · 1 artifact (trailing ``*`` on
-    Index) · 3 safe failures (uncancelled "Mercenaire d'Os" alias, missing
-    2026 data, Oraxia to re-check).
-    *Diagnoses & fixes (`hotfix/rag-pipeline-core`)*:
-    (a) the alias expansion was NEVER applied to the embedding (`expanded`
-    was computed then dropped in `service.retrieve`) → extensible
-    `AliasResolver` middleware + "Mercenaire d'Os" → Ordan Karris / Ordis,
-    applied BEFORE `pgvector`;
-    (b) conversational state on the singleton (global `_last_query`,
-    `QueryRewriter` persistent dict) → ephemeral `RAGContext` owned by the
-    caller (`Depends()` factory per HTTP request, per-connection context on
-    the WebSocket): nothing survives an async request;
-    (c) generation-end artifacts → `strip_trailing_padding`
-    (`r'[\*\-\s]+$'`) applied just before the final WS `end` frame, on the
-    HTTP answer, and on the final Discord edit (`MessageStreamer.finish` —
-    the bot builds messages from TOKENS);
-    (d) inverted opposition reasoning ("Unlike X, Y requires no Z" →
-    "X requires Z") → `INSTRUCTION D'EXTRACTION LOGIQUE` directive in
-    `RAG_SYSTEM_TEMPLATE` and `HALLUCINATION_GUARD`.
-    *Result:* 127 green tests + 32 subtests.
-
-19. **Discord Oracle hardening (matriciel cards, gating, anti-hallucination).**
-    *Playtest bugs:* "Qui est Vena ?" hallucinated a Warframe biography
-    (the entity was absent from the archives); "rôles de lulu" made the LLM
-    invent roles ("coordinatrice, stratège"); member questions leaked the
-    canned `[Violation d'accès]` template; the persona repeated glitch
-    formulas verbatim; "mon rapport" devolved into a devotion litany.
-    *Changes (merged into `dev` from `feature/discord-oracle-auth`):*
-    (a) **matriciel member card** — a Discord embed built from REAL Discord
-    data (avatar, pseudo, roles via `is_default()`, network ID, security
-    level from the role hierarchy, a 5-level **assiduité** relative to the
-    other members, a reliability index, and an LLM behavioural analysis
-    grounded in a **persistent SQLite activity ledger**);
-    (b) **creator gating** — member info is Concepteur privilege; a
-    non-Creator is refused once then concedes à contrecœur;
-    (c) **self-report** ("mon rapport", "le rapport de DantesDels") and
-    **leetspeak** resolution (`Al3xie` == `Alexie`);
-    (d) **anti-hallucination guard** — an entity-lookup question ("qui est
-    X") whose target never appears in the retrieved passages short-circuits
-    (the LLM is never called);
-    (e) **Codex formatting** — lore answers as `> **◈ ARCHIVE DU CODEX**`
-    cards, exhaustive, no devotion interleaved; anti-préambule
-    ("Vous êtes X" banned) and anti-copy-paste rules; `max_tokens` raised to
-    4096. *Result:* 335 green tests.
-20. **WinError 1225 Auto-Recovery (Replay-Once) + Leg Telemetry.**
-    *Trial:* a story turn crashed mid-reply with
-    `[WinError 1225] La connexion réseau a été refusée`. Before blaming LM
-    Studio/Oracle, an HTTP probe split the two legs: `models` 0.03 s,
-    `embed` 0.06 s, chat SSE 5.24 s — the **LLM/oracle leg was healthy**.
-    The culprit was the **PostgreSQL leg** (`asyncpg` → `engram-db` Docker),
-    down at that moment: the raw WinError text was being relayed verbatim
-    to the Discord user.
-    *Failure n°1 (startup crash):* `cephalon bot run --channels …` died at
-    launch on `channel_names = tuple(channel_names) or
-    config.allowed_channel_names` — with `channel_names = None`,
-    `tuple(None)` raises `TypeError` **before** the `or` fallback ever runs.
-    *Fix:* `tuple(channel_names) if channel_names else
-    config.allowed_channel_names`.
-    *Failure n°2 (latent UnboundLocalError):* in `send()` the FRAME_ERROR
-    branch reads `recovered` before any assignment — `UnboundLocalError` on
-    the very first DB-refused message. *Fix:* `recovered = False`
-    initialized before `async with self._send_lock:`.
-    *Solution:* telemetry telling the two legs apart (`_is_db_refused` on
-    WinError 1225 / "connexion refusée" / "asyncpg" hints) + bounded
-    **auto-recovery**: `ensure_database()` (lazy import,
-    `asyncio.to_thread`, no import cycle) then **replay the same frame
-    once**, symmetric to the existing httpx retry-once.
-    *Lessons:* (i) diagnose by probe, not by guess — leg telemetry keeps
-    the verdict honest; (ii) `tuple(x) or fallback` does **not** guard
-    `x = None` (the call raises before truthiness) — guard explicitly;
-    (iii) any flag read in a branch must be initialized before the
-    lock/session; (iv) the same failure mode on both legs demands a
-    symmetric bounded retry-once, never an unbounded retry loop.
-    *Result:* clean startup + DB-outage turn auto-recovers with a single
-    replay, suite green.
-21. **Lettie Playtest Correctifs — Narrator, Title-First Dossier, Fuzzy
-    Subject, Empty Part.**
-    *Errors reproduced from the Lettie playtests and corrected in one
-    changeset (commit `cb093f4`, session of Sept. 19, 2026):*
-    (a) **invented narrator** — the model read "KIM" (the Hex' messenger
-    application) as a PERSON and invented a "Kim" answering the Voyageur
-    (playtest 00:04). *Fix:* `KIM_MESSENGER_DIRECTIVE` appended to the
-    `1999` lens stories and to `1999` targeted-era stories — KIM is a
-    TOOL, never a character: an unnamed exchange line is the Voyageur,
-    a named line its Hex member. The directive is inserted BEFORE the
-    canonical closing so no closing can override it.
-    (b) **dossier not title-first** — the subject arrives as the Discord
-    mention key ("lettie") while the wiki page uses the canonical name
-    ("Leticia"): the sweep on the bare key sank the biography to the flat
-    content-only tier (Lettie playtest). *Fix:*
-    `dossier_title_terms()` (key + canonical alias, deduplicated) and the
-    tier/sweep now match key AND canonical title (exact title, French
-    mirror, child pages, title, content) in both `CosinusSearch` and the
-    structured dossier — the biography page keeps its tier-0 slot.
-    (c) **misspelled subject opened the generic doors** — "mettie"
-    (similarity 0.83) matched no exact era key and would have opened the
-    three generic opening doors. *Fix:* `fuzzy_targeted_subject()` /
-    `correct_targeted_request()` with `CLOSE_SUBJECT_CUTOFF = 0.8`
-    propose the canonical name ("Lettie") for confirmation BEFORE the
-    doors — the bot confirms, never guesses — and the confirmed request
-    is respelled so the era and the exact mention anchor the dossier
-    through their own scan.
-    (d) **empty part on the wire** — a part reduced to an EMPTY text (the
-    model aborted) or to the bare closing sentence would lie about
-    `story_more` (Lettie playtest). *Fix:* `emit_story_turn` treats
-    degenerate = empty text OR closing-sentence-alone; an EMPTY part
-    never reaches the wire — with unseen fragments behind the cursor the
-    honest `RAG_ERROR` abstention keeps `story_more = True`, a drained
-    dossier ends with the archivist stop.
-    *Result:* 5 test files extended/added (dossier retrieval, roleplay
-    stream, story ask, story rules, verify gate); full suite green
-    (808 tests + 103 subtests), ruff clean, `compileall` OK. Same session
-    (commit `9de72ae`): `search.py` (110 LOC) and `stream.py` (120 LOC)
-    split into single-responsibility modules with the public API
-    preserved.
-
-### Figures and Validations
-
-| Measurement | Value |
-|---|---|
-| Local corpus (audit) | ~3,175 pages |
-| Vectorized chunks in database | 9,159 (`bge-m3`, 1024d) |
-| KIM chunking verified | 843 chunks, no 2,500-char overflow |
-| Unit tests | 808 passed (KIM, RAG/threshold, security, hostility, rewriter, hard-split, semantic chunking, rag_extract, RAG context isolation, aliases, output sanitization, creator auth, role hierarchy, identity, members, member card, activity persistence, user memory, story rules/ask/mode/continuation, roleplay stream/turn, dossier retrieval, verify gate) |
-| Anti-SQLi (live) | real attacker payloads → deterministic rejection without LLM; 429 beyond quota; `Lettie` intact |
-| "Lettie" retrieval (live) | 0.598 / 0.581 / 0.577 (Leticia) |
-| "Orokin" retrieval (live) | 0.611 / 0.600 / 0.595 |
-| RAG short-circuit | ~0.5 s (no LLM call) |
-| Discord failover | reconnection < 1 s (live tested) |
-| `!stop` interruption (live) | turn cut, stream closed, reconnection < 5 s |
-| KIM terminal choice line | fixed (`option.ends` → end of simulation) |
-
-### Lessons Learned
-
-- **Never base a response on off-topic neighbors**: if the best score is
-  below the confidence threshold → suggestion, or short-circuit. A prompt
-  alone is not enough to prevent hallucination; *data-gating* makes it
-  structurally impossible.
-- **A single XML-tagged system message (`<archives>`) beats multiple system
-  messages** for context / internal knowledge separation.
-- **Low temperature without blocking: 0.1.** And always `stream=True`.
-- **Free multilingual**: the `bge-m3` embedding accepts FR queries on an
-  EN corpus (French questioning, correct recall).
-- **VRAM constraint first**: cap `top_k` + `max_tokens` before buying
-  GPU; target Q4 quant on 8 GB.
-- **Verify before believing**: ORM/DDL schemas, actually populated embeddings,
-  LZMA/hash integrity (`docs/Rapport.md` audit), SQL/JSON consistency. A storage
-  promise is not a fidelity guarantee.
-- **A "data hole" is often a naming problem** (canonical alias), not an actual
-  gap — hence the utility of audit tools before any prompt tuning.
-
-### Open Tracks
-
-- Systematic RAG evaluation: FR/EN question set, Recall@k, citation fidelity,
-  p95 latency (see `docs/Rapport.md`).
-- PostgreSQL as source of truth, megafiles as regenerable projection
-  (audit finding #1).
-- Replayable ingestion with provenance (`derivation_key`: source, revision,
-  cleaner/chunker/embedding versions).
-- Docker Compose for the ENGRAM API + bot (database only today).
-- After loading `Gemma-2-9b-it` in LM Studio: p95 measurements and
-  fiction bypass verification.
+### Key Takeaways
+- **Data-gating over prompt tuning**: Off-topic neighbours below the critical floor (0.50) are rejected; absent named entities trigger a hard short-circuit before the LLM is invoked.
+- **Single XML-tagged system prompt**: Wrapping retrieved context in `<archives>` within a single system message reliably prevents instruction drift.
+- **Low temperature & streaming**: `0.1` temperature for analytical fact retrieval with near-instant TTFT.
+- **8 GB VRAM budget**: Local inference with `Gemma-2-9b-it` (Q4_K_M) + `bge-m3` fits within typical local GPU constraints.
 
 ## Documentation
 

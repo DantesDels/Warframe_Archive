@@ -21,7 +21,9 @@ from unittest import mock
 
 import warframe_lore.discord
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = (Path(__file__).resolve().parents[2]
+             if (Path(__file__).resolve().parents[2] / "pyproject.toml").exists()
+             else Path(__file__).resolve().parents[1])
 
 # Ce que le processus du bot ne doit JAMAIS charger (ni lui, ni ses dépendances).
 FORBIDDEN = ("sqlalchemy", "asyncpg", "fastapi", "starlette", "uvicorn",

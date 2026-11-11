@@ -12,6 +12,8 @@ probe).  Formatting artifacts are stripped from the FINAL text only.  A FAILED
 generation (model unreachable, context overflow) is served as the very same
 abstention string: the document route never answers 500 and the stream never
 breaks mid-flight.
+
+See :file:`warframe_lore/engram/rag/README.md` for full sequence diagrams and details.
 """
 
 from __future__ import annotations

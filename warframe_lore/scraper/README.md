@@ -1,8 +1,8 @@
 # `scraper` Layer — Orchestration
 
 Responsibility: coordinate the `api` (extraction), `cleaner` (cleaning),
-`output` (JSON megafiles) and `db` (PostgreSQL) layers into a complete
-pipeline, with **incremental delta** mode.
+`storage/output` (JSON megafiles) and `storage/db` (PostgreSQL) layers into a
+complete pipeline, with **incremental delta** mode.
 
 ## Contents
 
@@ -12,7 +12,7 @@ one per concern:
 | File | Role |
 |---|---|
 | `sync.py` | `ScraperSyncMixin._sync_buckets`: resolution → delta → fetch → cleaning → write per bucket |
-| `delta.py` | `ScraperDeltaMixin.delta_plan` / `_page_is_fresh`: delta calculation without writing anything (used by `cephalon diff`) |
+| `delta.py` | `ScraperDeltaMixin.delta_plan`: delta calculation without writing anything (used by `cephalon diff`) |
 | `ingest.py` | `ScraperIngestMixin._clean_and_store`: page cleaning + JSON and SQL publishing |
 | `canon.py` | `CanonSignalsMixin`: `Category:Speculation` resolution + final canon status |
 | `__init__.py` | `Scraper` class: `__init__` (injection), `run` / `arun`, mixin composition |

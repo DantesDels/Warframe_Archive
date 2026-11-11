@@ -16,12 +16,12 @@ without breaking the rest of the system.
   (`BaseSource` interface). If the API changes, only this module is affected.
 - **Cleaning (`cleaner`):** transforms Wikitext into clean Markdown, with
   filtering of noise, gameplay sections, and canon detection.
-- **Synchronization (`sync`):** ensures "Delta" mode (only process new items),
+- **Synchronization (`delta`):** ensures "Delta" mode (only process new items),
   later relayed to the SQL database.
-- **SQL Persistence (`db`):** normalized PostgreSQL (3NF), pgvector embeddings,
-  RAG chunking (`ChunkManager`), database-backed delta.
-- **Export (`output`):** formats the final data (JSON megafiles per bucket,
-  with `canon_status`).
+- **SQL Persistence (`storage/db`):** normalized PostgreSQL (3NF), pgvector
+  embeddings, RAG chunking (`ChunkManager`), database-backed delta.
+- **Export (`storage/output`):** formats the final data (JSON megafiles per
+  bucket, with `canon_status`).
 - **Source Extensibility:** the architecture allows easily adding new "Clients"
   (e.g. `RedditScraper` for r/Warframe, `ForumScraper` for official patch
   notes) that plug into the same pipeline.
@@ -34,9 +34,9 @@ scale, the architecture can evolve toward Cloud and Big Data standards.
 - **Robust HTTP Scraping (done):** `requests` + built-in retries/backoff/
   politeness; async database side (SQLAlchemy 2.0 async + asyncpg). A full
   switch to `aiohttp` would allow further parallelization of extraction.
-- **Vector Database (started):** the `db` layer now stores each chunk with its
-  `vector(384)` embedding (pgvector). The JSON network is no longer alone:
-  semantic searches can be performed directly in SQL.
+- **Vector Database (started):** the `storage/db` layer now stores each chunk
+  with its `vector(1024)` embedding (pgvector). The JSON network is no longer
+  alone: semantic searches can be performed directly in SQL.
 - **CI/CD Pipeline (upcoming):** deployment on GitHub Actions or AWS Lambda
   with a cron trigger; the script runs autonomously (e.g. every Tuesday after
   Warframe updates) and updates the database without human intervention.

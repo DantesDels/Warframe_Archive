@@ -68,7 +68,7 @@ Then, for the AI part: start LM Studio on `:1234` with `gemma-2-9b-it` and
 `bge-m3`, then run the ENGRAM API and (optionally) the bot:
 
 ```bash
-uvicorn warframe_lore.engram.api.app:app --port 8000
+uvicorn warframe_lore.engram.api.main:app --port 8000
 cephalon bot run --channels <DISCORD_CHANNEL_ID>
 ```
 

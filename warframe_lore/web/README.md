@@ -1,4 +1,4 @@
-# `ui` Layer — Local Web Interface
+# `web` Layer — Local Web Interface
 
 Responsibility: read megafiles `out/*.json` (read-only, no network access)
 and serve them via a local **mini HTTP server** (stdlib) for a dark-themed

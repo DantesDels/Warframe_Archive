@@ -11,9 +11,8 @@ import logging
 
 import discord
 
+from warframe_lore.discord.guild import normalize_message
 from warframe_lore.engram.rag import detect_probe
-
-from ...guild import normalize_message
 
 log = logging.getLogger("warframe_lore.discord.bot.dispatch")
 

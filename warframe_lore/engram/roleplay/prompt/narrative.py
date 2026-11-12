@@ -55,7 +55,8 @@ _STORY_BASE = (
     "toute bascule en anglais est formellement interdite. ")
 _STORY_PAGINATION_ITEM = (
     "5. PAGINATION DIÉGÉTIQUE : clôture impérativement toute réponse narrative "
-    "par cette phrase exacte et rien d'autre : « {} »]")
+    "par cette phrase exacte, UNE SEULE fois et en tout dernier — rien ne doit "
+    "la suivre : « {} »]")
 STORY_DIRECTIVE = _STORY_BASE + _STORY_PAGINATION_ITEM.format(
     STORY_PAGINATION_SENTENCE)
 
@@ -81,7 +82,9 @@ EN_PRIMACY_DIRECTIVE = (
     "française. La version ANGLAISE fait foi : c'est la source primaire. En "
     "cas d'écart entre les deux, fonde ton récit sur la version anglaise — la "
     "française n'est qu'une aide de lecture et ne doit jamais la contredire "
-    "ni la compléter de ton propre chef.]")
+    "ni la compléter de ton propre chef. La langue de SORTIE reste le "
+    "FRANÇAIS : les archives anglaises sont la source, jamais la langue de "
+    "rédaction.]")
 
 # Targeted narrative request: the user named a specific subject.  The answer
 # must be anchored in that subject's own era and must NEVER bridge to another
@@ -96,7 +99,9 @@ TARGETED_STORY_DIRECTIVE = (
     "sujet appartient à 1999, le récit commence et reste en 1999 : aucune "
     "mention du Zariman, de Margulis ou de l'Éveil. 3. ARRÊT STRICT : une fois "
     "les faits du contexte épuisés, stoppe — n'invente jamais des connexions "
-    "inter-ères absentes des archives.]")
+    "inter-ères absentes des archives. 4. VERROU LINGUISTIQUE : la génération "
+    "reste intégralement en français ; toute bascule en anglais est "
+    "formellement interdite.]")
 
 # Leverian Warframe: Drusus Leverian is the canonical narrator for these
 # frames.  The model must ground the tale on his Leverian gallery and treat
@@ -108,6 +113,32 @@ LEVERIAN_DIRECTIVE = (
     "passages du contexte où Drusus est le narrateur. Ne mélange pas cette "
     "version avec des récits tiers ou des spéculations communautaires.]")
 
+# Metagame quarantine: the story corpus can hold gameplay tables next to the
+# diegesis (patch notes on Deep Archimedea, Personal Modifiers, Netracell
+# rewards — playtest Albrecht 15:18/15:26: the tale quoted mission modifiers).
+# A narrative NEVER restates game mechanics, whatever the <archives> contain.
+STORY_METAGAME_DIRECTIVE = (
+    "[DIRECTIVE DE QUARANTAINE DU MÉTAJEU : les archives peuvent contenir des "
+    "fragments de gameplay (statistiques, modificateurs de mission, notes de "
+    "mise à jour, récompenses, modes de jeu). Tu n'en racontes JAMAIS un seul "
+    "mot : le récit reste strictement dans la diégèse et l'histoire de "
+    "l'univers, jamais dans les règles du jeu. Écarte entièrement ces "
+    "fragments mécaniques du récit.]")
+
+# KIM excerpts: the structured dossier holds "KIM · …" exchanges of the Hex'
+# messenger application (Kinemantik Instant Messenger).  Without a rule the
+# model reads "KIM" as a PERSON (playtest 00:04: an invented "Kim" answering
+# the Voyageur): the app must stay a TOOL, unnamed lines belong to the
+# Voyageur, a named line to its Hex member.
+KIM_MESSENGER_DIRECTIVE = (
+    "[DIRECTIVE SUR L'APPLICATION KIM : les fragments « KIM · … » des archives "
+    "sont des échanges de l'application de messagerie KIM (Kinemantik Instant "
+    "Messenger) utilisée par les Hex. KIM est un OUTIL, jamais un personnage : "
+    "il n'a ni visage, ni voix, ni répliques propres. Une ligne d'échange SANS "
+    "locuteur nommé est un message du Voyageur (l'organique) ; une ligne "
+    "nommée est du membre des Hex cité. N'invente JAMAIS un interlocuteur "
+    "« Kim » absent des archives pour répondre au Voyageur.]")
+
 # Continuation of a RUNNING narrative: the history already holds the previous
 # parts.  Without this rule the model re-opens the tale and re-narrates the
 # very same passages (observed playtest: an identical "continue" answer).
@@ -118,19 +149,21 @@ STORY_RESUME_DIRECTIVE = (
     "reprendre une phrase, un fait ou une scène déjà écrits dans une partie "
     "précédente — raconte exclusivement la SUITE. Enchaîne directement sur de "
     "NOUVEAUX faits des <archives> fournies, comme le paragraphe suivant de "
-    "la même histoire.]")
+    "la même histoire. L'ensemble reste RÉDIGÉ EN FRANÇAIS : aucune bascule "
+    "en anglais.]")
 
 # Closing line of a part: the invitation while fragments remain, the archivist
 # closing once the dossier is exhausted (the tale is over — asking for "more"
 # would only make the model repeat itself).
 _STORY_PAGINATION_DIRECTIVE = (
     "[DIRECTIVE DE PAGINATION DIÉGÉTIQUE : clôture impérativement le récit par "
-    "cette phrase exacte et rien d'autre : « {} »]")
+    "cette phrase exacte, UNE SEULE fois et en tout dernier — ni texte ni "
+    "répétition ne doivent la suivre : « {} »]")
 _STORY_EXHAUSTED_DIRECTIVE = (
     "[DIRECTIVE DE CLÔTURE DES ARCHIVES : la pagination diégétique est "
     "DÉSACTIVÉE — le Tissage de données n'a plus de fragments inédits sur ce "
-    "sujet. Clôture impérativement le récit par cette phrase exacte et rien "
-    "d'autre : « {} »]")
+    "sujet. Clôture impérativement le récit par cette phrase exacte, UNE SEULE "
+    "fois et en tout dernier — rien ne doit la suivre : « {} »]")
 
 
 def story_closing(more: bool) -> str:
@@ -155,14 +188,18 @@ def story_directive(lens: str | None, *, continuation: bool = False,
     """Narration directive + the opening scene forced by the chosen lens.
 
     A continuation drops the opening scene (the tale runs: it resumes).  An
-    exhausted dossier supersedes the pagination rule with the closing line.
+    exhausted dossier is composed WITHOUT the page-turning item 5 of
+    :data:`STORY_DIRECTIVE`: the model must end on the archivist closing,
+    never on both an invitation and a closing sentence.
     """
     start = None if continuation else STORY_LENS_STARTS.get(lens or "")
-    extra = resume_directive(continuation)
-    if not more:
-        extra += f"\n{story_closing(more=False)}"
-    return "".join([STORY_DIRECTIVE, extra, "\n", EN_PRIMACY_DIRECTIVE, "\n",
-                    start or ""])
+    pagination = (STORY_DIRECTIVE if more
+                  else _STORY_BASE + _STORY_EXHAUSTED_DIRECTIVE.format(
+                      STORY_COMPLETE_SENTENCE))
+    kim = (f"\n{KIM_MESSENGER_DIRECTIVE}" if lens == "1999" else "")
+    return "".join([pagination, resume_directive(continuation), "\n",
+                    EN_PRIMACY_DIRECTIVE, "\n",
+                    STORY_METAGAME_DIRECTIVE, "\n", start or "", kim])
 
 
 def targeted_story_directive(era: str | None = None, *,
@@ -174,14 +211,16 @@ def targeted_story_directive(era: str | None = None, *,
     line (invitation or archivist closing) is appended here for both states.
     """
     era_line = f"\n  - Ère imposée par les archives : {era}." if era else ""
+    kim = (f"\n{KIM_MESSENGER_DIRECTIVE}" if "1999" in (era or "") else "")
     return "".join([TARGETED_STORY_DIRECTIVE, resume_directive(continuation),
-                    "\n", EN_PRIMACY_DIRECTIVE, era_line, "\n",
-                    story_closing(more)])
+                    "\n", EN_PRIMACY_DIRECTIVE, era_line, "\n", kim,
+                    STORY_METAGAME_DIRECTIVE, "\n", story_closing(more)])
 
 
-__all__ = ["EN_PRIMACY_DIRECTIVE", "LEVERIAN_DIRECTIVE",
-           "STORY_COMPLETE_SENTENCE", "STORY_DIRECTIVE", "STORY_LENS_STARTS",
-           "STORY_PAGINATION_SENTENCE", "STORY_RESUME_DIRECTIVE",
-           "TARGETED_STORY_DIRECTIVE", "leverian_directive",
-           "resume_directive", "story_closing", "story_directive",
-           "targeted_story_directive"]
+__all__ = ["EN_PRIMACY_DIRECTIVE", "KIM_MESSENGER_DIRECTIVE",
+           "LEVERIAN_DIRECTIVE", "STORY_COMPLETE_SENTENCE", "STORY_DIRECTIVE",
+           "STORY_LENS_STARTS", "STORY_METAGAME_DIRECTIVE",
+           "STORY_PAGINATION_SENTENCE",
+           "STORY_RESUME_DIRECTIVE", "TARGETED_STORY_DIRECTIVE",
+           "leverian_directive", "resume_directive", "story_closing",
+           "story_directive", "targeted_story_directive"]

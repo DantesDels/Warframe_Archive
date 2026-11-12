@@ -8,7 +8,7 @@ import unittest
 from collections import Counter
 from pathlib import Path
 
-from warframe_lore.kim_dm import WIKI_PAGE_MAP, KimDM, parse_dialogue_file
+from warframe_lore.scraper.kim_dm import WIKI_PAGE_MAP, KimDM, parse_dialogue_file
 
 MIRROR = Path(__file__).resolve().parents[1] / "out" / "kim_dm"
 ENGINE = "/EE/Types/Engine/"

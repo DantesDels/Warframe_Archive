@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..services import (
+from warframe_lore.discord.services import (
     ChannelSettingsStore,
     FeedbackStore,
     LedgerDB,

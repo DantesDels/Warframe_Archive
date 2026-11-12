@@ -11,12 +11,12 @@ from __future__ import annotations
 
 import logging
 
-from ..db.chunks import (
+from warframe_lore.storage.db.chunks import (
     DEFAULT_CHUNK_MAX_CHARACTERS,
     DEFAULT_CHUNK_OVERLAP_CHARACTERS,
     sections_from_markdown,
 )
-from ..output import build_output_entry
+from warframe_lore.storage.output import build_output_entry
 
 log = logging.getLogger("warframe_lore.scraper")
 

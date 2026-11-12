@@ -14,7 +14,7 @@ import json
 import logging
 from collections.abc import Awaitable, Callable
 
-from warframe_lore.protocols.roleplay import (
+from warframe_lore.core.protocols.roleplay import (
     FRAME_END,
     FRAME_ERROR,
     FRAME_TOKEN,

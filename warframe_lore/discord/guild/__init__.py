@@ -19,6 +19,8 @@ from .naming import (
 from .questions import is_member_question, roles_question, self_info_request
 from .roles import Accreditation, RoleHierarchy
 from .story import (
+    CLOSE_SUBJECT_CUTOFF,
+    CLOSE_SUBJECT_QUESTION,
     LENS_1999,
     LENS_COSMOGONIC,
     LENS_INITIATE,
@@ -31,9 +33,11 @@ from .story import (
     STORY_TRIGGERS,
     TARGETED_SUBJECT_ERAS,
     StoryAsk,
+    correct_targeted_request,
     detect_leverian_warframe,
     detect_story_lens,
     detect_targeted_era,
+    fuzzy_targeted_subject,
     is_out_of_range_index,
     is_story_request,
     parse_lens_answer,
@@ -55,6 +59,8 @@ from .story_mode import (
 )
 
 __all__ = [
+    "CLOSE_SUBJECT_CUTOFF",
+    "CLOSE_SUBJECT_QUESTION",
     "LENS_1999",
     "LENS_COSMOGONIC",
     "LENS_INITIATE",
@@ -75,12 +81,14 @@ __all__ = [
     "RoleHierarchy",
     "StoryAsk",
     "StoryMode",
+    "correct_targeted_request",
     "creator_mentioned",
     "creator_pseudo_variants",
     "detect_leverian_warframe",
     "detect_story_lens",
     "detect_story_mode",
     "detect_targeted_era",
+    "fuzzy_targeted_subject",
     "is_member_question",
     "is_out_of_range_index",
     "is_story_continuation",

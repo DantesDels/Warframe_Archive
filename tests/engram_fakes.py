@@ -10,26 +10,32 @@ from __future__ import annotations
 
 import asyncio
 
+from warframe_lore.core.protocols.roleplay import PERSONA_ORACLE
 from warframe_lore.engram.rag import RAGContext
 from warframe_lore.engram.roleplay.turn import TurnPlan, plan_turn
-from warframe_lore.protocols.roleplay import PERSONA_ORACLE
 
 
 class FakeRAG:
     """RAG factice : rend un contexte fixé et journalise les questions."""
 
-    def __init__(self, context=None, suggestion=None, more=False) -> None:
+    def __init__(self, context=None, suggestion=None, more=False,
+                 consumed=()) -> None:
         self.context = context
         self.suggestion = suggestion
         self.more = more
+        self.consumed = list(consumed)
         self.calls: list[str] = []
         self.offsets: list[int] = []
+        self.exclusions: list[list[int]] = []
+        self.stories: list[bool] = []
 
     async def resolve(self, question: str, context=None, subject=None,
-                      offset=0):
+                      offset=0, exclude_ids=None, story=False):
         self.calls.append(question)
         self.offsets.append(offset)
-        return self.context, self.suggestion, self.more
+        self.exclusions.append(list(exclude_ids or ()))
+        self.stories.append(story)
+        return self.context, self.suggestion, self.more, self.consumed
 
 
 class FakeContainer:
@@ -39,12 +45,13 @@ class FakeContainer:
         self.rag = rag if rag is not None else FakeRAG()
 
 
-def decide(payload=None, text="bonjour", persona=PERSONA_ORACLE,
-           rag=None) -> TurnPlan:
+def decide(payload=None, text="bonjour", persona=PERSONA_ORACLE, rag=None,
+           consumed=None) -> TurnPlan:
     """Un ``plan_turn`` exécuté sur conteneur factice (aucun réseau)."""
     container = FakeContainer(rag)
     return asyncio.new_event_loop().run_until_complete(
-        plan_turn(container, payload or {}, text, persona, RAGContext()))
+        plan_turn(container, payload or {}, text, persona, RAGContext(),
+                  consumed_chunk_ids=consumed))
 
 
 __all__ = ["FakeContainer", "FakeRAG", "decide"]

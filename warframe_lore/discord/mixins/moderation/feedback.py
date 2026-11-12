@@ -12,7 +12,7 @@ import logging
 
 import discord
 
-from ...services import VERDICT_DOWN, VERDICT_UP
+from warframe_lore.discord.services import VERDICT_DOWN, VERDICT_UP
 
 log = logging.getLogger("warframe_lore.discord.bot.feedback")
 

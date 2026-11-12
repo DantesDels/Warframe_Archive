@@ -14,8 +14,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 
-from .container import Container
-from .routers import document_rag, roleplay, search
+from warframe_lore.engram.api.container import Container
+from warframe_lore.engram.api.routers import document_rag, roleplay, search
 
 # Access audit visible on stderr (server log): INFO level without root
 # handler, so that "Audit RAG" lines actually show up.

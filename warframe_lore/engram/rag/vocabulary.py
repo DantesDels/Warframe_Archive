@@ -19,8 +19,8 @@ import re
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from ...db import LoreChunk
-from .verify import lexeme_forms
+from warframe_lore.engram.rag.verify import lexeme_forms
+from warframe_lore.storage.db import LoreChunk
 
 # One candidate row is enough to prove presence.
 _ROW_LIMIT = 1

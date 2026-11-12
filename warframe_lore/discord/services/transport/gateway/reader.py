@@ -12,7 +12,7 @@ import asyncio
 import json
 import logging
 
-from warframe_lore.protocols.roleplay import FRAME_ERROR
+from warframe_lore.core.protocols.roleplay import FRAME_ERROR
 
 log = logging.getLogger("warframe_lore.discord.gateway")
 

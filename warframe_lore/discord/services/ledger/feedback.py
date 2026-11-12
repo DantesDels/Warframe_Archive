@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import time
 
-from .db import LedgerDB
+from warframe_lore.discord.services.ledger.db import LedgerDB
 
 VERDICT_UP = "up"
 VERDICT_DOWN = "down"

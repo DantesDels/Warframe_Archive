@@ -2,7 +2,7 @@
 
 Reads every row from the human-readable element tables (including both
 dialogue tables), renders each to a searchable text (via
-:mod:`warframe_lore.structured.rendering`), computes bge-m3 embeddings in
+:mod:`warframe_lore.scraper.structured.rendering`), computes bge-m3 embeddings in
 batches, and upserts into ``structured_chunks`` (idempotent: DELETE per kind
 then INSERT).
 
@@ -20,8 +20,11 @@ import logging
 
 from sqlalchemy import select, text
 
-from ...db import SQLDatabaseManager, StructuredChunk
-from ...db.models import (
+from warframe_lore.engram.config import EngramConfig
+from warframe_lore.engram.llm import LMStudioProvider
+from warframe_lore.scraper.structured.rendering import render_row
+from warframe_lore.storage.db import SQLDatabaseManager, StructuredChunk
+from warframe_lore.storage.db.models import (
     GameAnnouncement,
     GameDialogue,
     GameQuest,
@@ -30,9 +33,6 @@ from ...db.models import (
     LoreItem,
     Warframe,
 )
-from ...structured.rendering import render_row
-from ..config import EngramConfig
-from ..llm import LMStudioProvider
 
 log = logging.getLogger("warframe_lore.engram.embed_structured")
 

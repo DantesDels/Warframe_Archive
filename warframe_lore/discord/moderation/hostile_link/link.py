@@ -15,13 +15,12 @@ import logging
 
 import discord
 
-from warframe_lore.protocols.roleplay import (
+from warframe_lore.core.protocols.roleplay import (
     PERSONA_HOSTILE,
     PERSONA_ORACLE,
     MessageFrame,
 )
-
-from ...services.transport import MessageStreamer, RoleplayGateway
+from warframe_lore.discord.services.transport import MessageStreamer, RoleplayGateway
 
 log = logging.getLogger("warframe_lore.discord.hostile")
 

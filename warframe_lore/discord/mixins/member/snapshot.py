@@ -8,8 +8,8 @@ guessed value.
 
 from __future__ import annotations
 
-from ...services import MemberSnapshot
-from .roster import MemberMention
+from warframe_lore.discord.mixins.member.roster import MemberMention
+from warframe_lore.discord.services import MemberSnapshot
 
 
 class SnapshotMixin:

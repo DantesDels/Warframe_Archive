@@ -10,7 +10,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 
-from ..models import ChatMessage
+from warframe_lore.engram.models import ChatMessage
 
 
 class LLMProvider(ABC):
@@ -20,7 +20,7 @@ class LLMProvider(ABC):
     async def chat_stream(
         self,
         messages: list[ChatMessage],
-        temperature: float = 0.7,
+        temperature: float = 0.1,
     ) -> AsyncIterator[str]:
         """Iterates over model response tokens (async stream)."""
 

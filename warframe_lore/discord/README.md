@@ -134,7 +134,33 @@ Analyse comportementale      ← LLM observation, grounded in recorded activity
 - **Feedback**: every streamed answer is opened to 👍 / 👎; verdicts are
   persisted and summarised by `!stats`.
 
-## 7. Verify
+## 7. Narrative Tales (Targeted Stories)
+
+A story request opens a **targeted lore dossier** on the subject's own pages
+(biography first, then sections, then title matches — aliases resolved,
+`lettie` → `Leticia`) and is told in French via a **double pass** (invisible
+factual draft, then the narration) on the ENGRAM side:
+
+- **Triggers** (`guild/story.py` `STORY_TRIGGERS`): "raconte-moi l'histoire de
+  …", "l'histoire de X", "tell me the story of …", "history of …" — any
+  request naming a **targeted era** (1999, Old War, Orokin…) or a **Levarian
+  Warframe** anchors the dossier directly.
+- **Ambiguity**: a request hitting several lens families (or none) opens the
+  **lens doors** (initiate / cosmogonic / 1999); an ambiguous named subject
+  ("l'histoire de Garuda" = Vena or the Archimedean) asks WHICH tale; a
+  misspelled subject ("mettie") is confirmed BEFORE the doors
+  (`CLOSE_SUBJECT_CUTOFF = 0.8`, "Voulais-tu dire « Lettie » ?") — the bot
+  never guesses a name.
+- **Continuations** (`guild/story_mode.py`): an explicit "continue" replays
+  the story's anchoring (start lens, era, dossier subject) so the chain stays
+  inside the archives and the deterministic entity gate; at most
+  `STORY_AUTO_PARTS = 3` parts chain by themselves before handing the floor
+  back.
+- **Part closing**: each part ends with the mandated sentence — invitation
+  while the dossier still has fragments (`story_more = true`), archivist stop
+  once drained. Empty or closing-only parts are never served.
+
+## 8. Verify
 
 - A message on a dedicated channel (or mentioning the bot) → Oracle replies
   live, the message is edited token by token, then offers the two verdicts.
@@ -164,11 +190,11 @@ Grouped by domain; every package exposes a facade in its `__init__.py`:
 | `main.py` | Console entry point (`launch_bot`, shared with the CLI `cephalon bot run`) |
 | `text.py` | Shared text helpers: stopwords, content words, mention tokens |
 | `core/` | `state.py` (`BotState` — bounded volatile tables), `sessions.py` (`SessionPool` — gateways, personas, hostile links), `wiring.py` (`BotServices`, `build_services`, `close_services`) |
-| `bootstrap/` | `db_bootstrap.py` (PostgreSQL/pgvector auto-start), `docker_engine.py` (Docker Desktop cold start), `waiting.py` (bounded polling), `engram_bootstrap.py` (uvicorn child + teardown) |
-| `mixins/turn/` | `dispatch.py` (`on_message` pipeline + gating), `plan.py` (`TurnContext` → audit label + `MessageFrame`), `routing.py` (RAG/jealousy/member decision), `streaming.py` (placeholder, tokens, reconnect, `!stop`, finishing) |
+| `bootstrap/` | `engram_bootstrap.py` (uvicorn child + teardown); the Docker/PostgreSQL bootstrap now lives in `warframe_lore/core/infra/` (shared with the CLI) |
+| `mixins/turn/` | `dispatch.py` (`on_message` pipeline + gating), `plan.py` (`TurnContext` → audit label + `MessageFrame`), `routing.py` (RAG/jealousy/member decision), **`story.py`** (story request routing: lens/subject doors, close-subject confirmation, story mode anchoring), `streaming.py` (placeholder, tokens, reconnect, `!stop`, finishing) |
 | `mixins/member/` | `context.py` (accreditation + identity), `roster.py` (name resolution), `snapshot.py` (`MemberSnapshot`), `gate.py` (creator privilege + card) |
 | `mixins/moderation/` | `hostile.py` (probes, death sessions, redemption), `insults.py` (répartie), `spam.py` (anti-spam gate), `feedback.py` (👍/👎) |
 | `commands/` | `prefix.py` (dispatch table + help), `ops.py`, `card.py`, `channel.py`, `arguments.py` |
-| `guild/` | `naming.py`, `questions.py`, `lore.py`, `creator.py`, `roles/` (`RoleHierarchy`, `Accreditation`, dump/scan tools) |
+| `guild/` | `naming.py`, `questions.py`, `lore.py`, `creator.py`, **`story.py`** (story triggers, lenses/eras, subject disambiguation, fuzzy close-subject recovery), **`story_eras.py`** (targeted subject eras), **`story_mode.py`** (`StoryMode` anchoring: start lens, targeted era, dossier subject, Leverian frame — replayed by explicit continuations), `roles/` (`RoleHierarchy`, `Accreditation`, dump/scan tools) |
 | `moderation/` | Pure defences: `guards.py`, `hostility.py`, `insults.py`, `comebacks.py`, `hostile_link/` |
 | `services/` | `transport/gateway/` (`RoleplayGateway` = `connection` + `reader` + `requests` + `controls`), `transport/stream/` (`MessageStreamer`, hard split), `ledger/` (`LedgerDB`, activity, strikes, feedback, stats), `cards/` (snapshot, indices, embed), `settings.py` |

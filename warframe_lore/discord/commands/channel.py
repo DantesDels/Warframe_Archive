@@ -12,10 +12,9 @@ import logging
 
 import discord
 
+from warframe_lore.discord.commands.arguments import DENIED, as_switch, on_off, usage
+from warframe_lore.discord.services import LANGUAGES, PERSONAS, ChannelSettings
 from warframe_lore.engram.auth import STATUT_HAUT_COMMANDEMENT
-
-from ..services import LANGUAGES, PERSONAS, ChannelSettings
-from .arguments import DENIED, as_switch, on_off, usage
 
 log = logging.getLogger("warframe_lore.discord.bot.commands")
 

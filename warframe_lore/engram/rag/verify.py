@@ -30,7 +30,7 @@ import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .vocabulary import ArchiveVocabulary
+    from warframe_lore.engram.rag.vocabulary import ArchiveVocabulary
 
 # Markdown artifacts stripped before entity extraction.
 _MD_CLEAN = re.compile(r"[*_>`#\-\[\](){}~]")

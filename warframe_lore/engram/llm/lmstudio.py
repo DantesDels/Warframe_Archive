@@ -19,8 +19,8 @@ from collections.abc import AsyncIterator
 
 import httpx
 
-from ..models import ChatMessage
-from .base import EmbeddingProvider, LLMProvider
+from warframe_lore.engram.llm.base import EmbeddingProvider, LLMProvider
+from warframe_lore.engram.models import ChatMessage
 
 # Generation-end marker emitted by the persona ("*[Indexation terminée]*").
 # Belt-and-suspenders with the Discord hard split: some 'official' variants

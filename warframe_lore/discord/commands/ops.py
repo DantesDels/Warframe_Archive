@@ -13,8 +13,8 @@ import logging
 
 import discord
 
-from ..mixins.moderation.feedback import REACTION_DOWN, REACTION_UP
-from ..services import VERDICT_DOWN, VERDICT_UP
+from warframe_lore.discord.mixins.moderation.feedback import REACTION_DOWN, REACTION_UP
+from warframe_lore.discord.services import VERDICT_DOWN, VERDICT_UP
 
 log = logging.getLogger("warframe_lore.discord.bot.commands")
 

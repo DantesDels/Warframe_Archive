@@ -8,9 +8,16 @@ one place.  The ``<archives>`` block is never altered (RAG integrity).
 
 from __future__ import annotations
 
-from ...auth import banner_for
-from ...rag import HALLUCINATION_GUARD, HIERARCHY_BLOCK, JAILBREAK_BLOCK
-from .directives import JEALOUSY_DIRECTIVE, language_directive
+from warframe_lore.engram.auth import banner_for
+from warframe_lore.engram.rag import (
+    HALLUCINATION_GUARD,
+    HIERARCHY_BLOCK,
+    JAILBREAK_BLOCK,
+)
+from warframe_lore.engram.roleplay.prompt.directives import (
+    JEALOUSY_DIRECTIVE,
+    language_directive,
+)
 
 ARCHIVES_HEADER = "Contexte documentaire restitué ci-dessous :"
 

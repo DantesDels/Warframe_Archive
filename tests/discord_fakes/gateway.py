@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 
-from warframe_lore.protocols.roleplay import TurnOutcome
+from warframe_lore.core.protocols.roleplay import TurnOutcome
 
 POOL_GATEWAY = "warframe_lore.discord.core.sessions.RoleplayGateway"
 

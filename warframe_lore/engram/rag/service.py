@@ -12,6 +12,8 @@ probe).  Formatting artifacts are stripped from the FINAL text only.  A FAILED
 generation (model unreachable, context overflow) is served as the very same
 abstention string: the document route never answers 500 and the stream never
 breaks mid-flight.
+
+See :file:`warframe_lore/engram/rag/README.md` for full sequence diagrams and details.
 """
 
 from __future__ import annotations
@@ -20,20 +22,24 @@ import logging
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
-from ..models import ChatMessage
-from .pipeline import RetrievalPipeline
-from .prompt.builder import PromptBuilder, RAGPrompt
-from .prompt.guards import CONFABULATION_ERROR, JAILBREAK_REJECT, RAG_ERROR
-from .retrieval.retriever import RAGHit, Retriever
-from .sanitize import strip_trailing_padding
-from .verify import verify_answer_with_archive
+from warframe_lore.engram.models import ChatMessage
+from warframe_lore.engram.rag.pipeline import RetrievalPipeline
+from warframe_lore.engram.rag.prompt.builder import PromptBuilder, RAGPrompt
+from warframe_lore.engram.rag.prompt.guards import (
+    CONFABULATION_ERROR,
+    JAILBREAK_REJECT,
+    RAG_ERROR,
+)
+from warframe_lore.engram.rag.retrieval.retriever import RAGHit, Retriever
+from warframe_lore.engram.rag.sanitize import strip_trailing_padding
+from warframe_lore.engram.rag.verify import verify_answer_with_archive
 
 if TYPE_CHECKING:
-    from ..llm import EmbeddingProvider, LLMProvider
-    from .context import RAGContext
-    from .query.aliases import AliasResolver
-    from .query.rewriter import QueryRewriter
-    from .vocabulary import ArchiveVocabulary
+    from warframe_lore.engram.llm import EmbeddingProvider, LLMProvider
+    from warframe_lore.engram.rag.context import RAGContext
+    from warframe_lore.engram.rag.query.aliases import AliasResolver
+    from warframe_lore.engram.rag.query.rewriter import QueryRewriter
+    from warframe_lore.engram.rag.vocabulary import ArchiveVocabulary
 
 # RAG inference temperature: 0.1 -> analytical/deterministic without blocking
 # the engine (Gemma-2-9b-it Q4_K_M on 8 GB VRAM).
@@ -73,36 +79,34 @@ class RAGService:
 
     async def retrieve(self, question: str,
                        context: RAGContext | None = None, *,
-                       subject: str | None = None, offset: int = 0
+                       subject: str | None = None, offset: int = 0,
+                       exclude_ids: list[int] | None = None,
+                       story: bool = False
                        ) -> tuple[list[RAGHit], RAGPrompt, bool]:
-        """Kept passages, assembled prompt and short-circuit flag.
-
-        ``bypass`` signals the absence of a trusted passage AND of a
-        disambiguation clue: the LLM must not be called.
-        """
+        """Kept passages, assembled prompt and short-circuit flag."""
         outcome = await self.pipeline.run(question, context, subject=subject,
-                                          offset=offset)
+                                          offset=offset, exclude_ids=exclude_ids,
+                                          story=story)
         return outcome.hits, outcome.prompt, outcome.bypass
 
     async def resolve(self, question: str,
                       context: RAGContext | None = None, *,
-                      subject: str | None = None, offset: int = 0
-                      ) -> tuple[str | None, str | None, bool]:
-        """Context / suggestion / remaining material of a Roleplay turn (WS).
-
-        ``bypass`` -> ``(None, None, False)``: the WS client then short-circuits
-        with the exact error string.  Otherwise the context is safe (never an
-        empty marker) and a non-null ``suggestion`` means disambiguation.
-        ``more`` (narrative pagination) tells the client that the subject's
-        dossier still holds passages beyond the page it just read: the tale can
-        be continued on unseen material.
-        """
+                      subject: str | None = None, offset: int = 0,
+                      exclude_ids: list[int] | None = None,
+                      story: bool = False
+                      ) -> tuple[str | None, str | None, bool, list[int]]:
+        """Context / suggestion / remaining material / consumed chunk IDs."""
         outcome = await self.pipeline.run(question, context, subject=subject,
-                                          offset=offset)
+                                          offset=offset, exclude_ids=exclude_ids,
+                                          story=story)
         if outcome.bypass:
-            return None, None, False
+            return None, None, False, []
+        # Only the ids the model REALLY saw (bounded in the builder by the
+        # character cap) enter the session's exclusion memory: banning every
+        # retrieved hit would silently starve the dossier of unseen fragments.
+        consumed_ids = list(outcome.prompt.used_ids)
         return (outcome.prompt.context, outcome.prompt.suggestion,
-                outcome.story_more)
+                outcome.story_more, consumed_ids)
 
     async def answer_with_sources(self, question: str,
                                   context: RAGContext | None = None

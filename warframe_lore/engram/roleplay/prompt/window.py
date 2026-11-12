@@ -6,8 +6,8 @@ beyond that, the oldest turns are evicted.
 
 from __future__ import annotations
 
-from ...models import ChatMessage
-from ..models import Session
+from warframe_lore.engram.models import ChatMessage
+from warframe_lore.engram.roleplay.models import Session
 
 
 class SlidingWindow:

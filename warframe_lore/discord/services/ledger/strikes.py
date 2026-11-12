@@ -12,7 +12,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 
-from .db import LedgerDB
+from warframe_lore.discord.services.ledger.db import LedgerDB
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS strikes (

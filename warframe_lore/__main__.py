@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import sys
 
-from .cli import main
+from warframe_lore.core.cli import main
 
 
 def _argv_with_default_run(argv: list[str]) -> list[str]:

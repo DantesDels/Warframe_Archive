@@ -43,8 +43,8 @@ config/discord_roles.json
 node_modules/
 
 # Artefacts de débogage du timeline (dumps ELK / logs locaux)
-warframe_lore/ui/timeline/debug-elk.mjs
-warframe_lore/ui/timeline/preview.log
+warframe_lore/web/timeline/debug-elk.mjs
+warframe_lore/web/timeline/preview.log
 
 # IDE / OS
 .vscode/

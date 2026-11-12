@@ -21,10 +21,15 @@ import logging
 
 import discord
 
-from .commands import CommandMixin
-from .core import BotServices, BotState, build_services, close_services
-from .guild.roles import RoleHierarchy
-from .mixins import (
+from warframe_lore.discord.commands import CommandMixin
+from warframe_lore.discord.core import (
+    BotServices,
+    BotState,
+    build_services,
+    close_services,
+)
+from warframe_lore.discord.guild.roles import RoleHierarchy
+from warframe_lore.discord.mixins import (
     DispatchMixin,
     FeedbackMixin,
     HostileMixin,

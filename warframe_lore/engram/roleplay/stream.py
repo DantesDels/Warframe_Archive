@@ -5,6 +5,10 @@ service receives the user text, updates the history, then iterates over the
 model response tokens.  The LLM payload is built as THREE strict blocks
 (mission-6): BLOC 1 = persona + guards + ``<archives>``, BLOC 2 = the speaker
 sheet, BLOC 3 = the new request alone.  The assembly lives in :mod:`prompt`.
+
+The orchestrating pieces are single-responsibility modules: the story double
+pass (invisible factual draft + narration system) in :mod:`.story_turn`, the
+post-generation anti-hallucination gate in :mod:`.verify_gate`.
 """
 
 from __future__ import annotations
@@ -13,38 +17,28 @@ import logging
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
-from ..llm import LLMProvider
-from ..models import ChatMessage
-from ..persona import HOSTILE_PERSONA, STORY_PERSONA
-from ..rag import CONFABULATION_ERROR, RAG_ERROR, verify_answer_with_archive
-from .models import Session
-from .prompt import (
-    STORY_LENS_STARTS,
+from warframe_lore.engram.llm import LLMProvider
+from warframe_lore.engram.models import ChatMessage
+from warframe_lore.engram.persona import HOSTILE_PERSONA, STORY_PERSONA
+from warframe_lore.engram.rag import RAG_ERROR
+from warframe_lore.engram.roleplay.models import Session
+from warframe_lore.engram.roleplay.prompt import (
     SlidingWindow,
     archive_bloc,
-    leverian_directive,
     speaker_bloc,
-    story_directive,
-    targeted_story_directive,
     turn_directives,
 )
+from warframe_lore.engram.roleplay.story_turn import (
+    fetch_factual_draft,
+    story_turn_system,
+)
+from warframe_lore.engram.roleplay.verify_gate import verified_response
 
 if TYPE_CHECKING:
-    from ..rag import ArchiveVocabulary
+    from warframe_lore.engram.rag import ArchiveVocabulary
 
-# A document-anchored turn is extractive: the temperature is clamped so the
-# model stays inside the provided passages.
 RAG_TEMPERATURE_CAP = 0.1
-# A storyteller turn MUST be as anchored as any RAG turn: "raconte" does not
-# entitle the model to embroider.  The same extractive cap as a document turn
-# (0.3 still drifted into invented atmosphere and entity mix-ups — playtest
-# "Albrecht/children of the Zariman").
 STORY_TEMPERATURE = RAG_TEMPERATURE_CAP
-# A continuation of a RUNNING tale runs a bit warmer: the previous parts sit
-# in the prompt history and, at the extractive cap, the model re-emits them
-# verbatim whenever the next dossier page is sparse (live probe: Difflib
-# 0.989 / 0.915 between alternate parts).  The looser cap breaks that echo
-# while the archive gate still anchors the part on the retrieved page.
 STORY_CONTINUATION_TEMPERATURE = 0.35
 
 log = logging.getLogger("warframe_lore.engram.roleplay.stream")
@@ -67,13 +61,7 @@ class RoleplayService:
         self.vocabulary = vocabulary
 
     def _base_prompt(self, persona: str, story: bool = False) -> str:
-        """Base prompt of the current persona (oracle, hostile or story).
-
-        A narrative turn swaps the Oracle root for the storyteller root: the
-        "ARCHIVE DU CODEX" sheet in the base prompt outranks appended
-        directives for Gemma-2-9b, so the narrative persona must replace it at
-        base level instead of overriding it afterwards.
-        """
+        """Base prompt of the current persona (oracle, hostile or story)."""
         if persona == "hostile":
             return self.hostile_prompt
         if story:
@@ -95,54 +83,35 @@ class RoleplayService:
                      leverian_warframe: str | None = None,
                      story_continuation: bool = False,
                      story_more: bool = True) -> AsyncIterator[str]:
-        """Append the input, stream the reply, and record it.
-
-        ``rag_context`` (trusted passages) anchors the turn on the archives.
-        ``creator`` (trusted boolean) selects the banner appended at the end of
-        the system prompt; ``None`` (non-Discord client) injects no banner.
-        ``lang`` requests an answer language other than the persona default.
-        ``story`` switches the turn to a narrating mode: the model receives the
-        story directive and a softer temperature, still grounded on the given
-        passages; ``story_lens`` selects the opening scene to begin from.
-        ``targeted_era`` overrides the lens menu for a specifically named
-        subject and anchors the narrative in that subject's own era.
-        ``leverian_warframe`` forces the tale to be grounded on Drusus'
-        Leverian narration for that frame.  ``story_continuation`` marks a part
-        that continues a RUNNING tale (the opening scene is dropped and the
-        resume rule applies) and ``story_more`` says whether the subject's
-        dossier still holds unseen fragments: the part closes on the invitation
-        or on the archivist closing line accordingly.
-
-        An archive-grounded turn (``rag_context`` set) is buffered and passed
-        through the deterministic entity gate (:mod:`...rag.verify`): the full
-        response is emitted only once every named entity is present in the
-        retrieved passages (or, when an archive vocabulary is wired, anywhere
-        in the ingested corpus), otherwise the abstention chain is served
-        instead.  A generation that FAILS before the first token (model
-        unreachable, context overflow) is served the same way: the terminal
-        never stalls and no raw server error reaches the user.
-        """
+        """Append the input, stream the reply, and record it."""
         session.add("user", user_text)
         system = archive_bloc(self._base_prompt(persona, story), rag_context,
                               user_name, user_role)
         if user_name is not None or role_status is not None or session.turns:
-            history = self.window.render_history(session)
+            # RELIABLE DETECTION: the flag is True OR the user typed "continue".
+            is_continuing = (story_continuation
+                             or user_text.strip().lower() == "continue")
+
+            # The history is purged on a continuation
+            history = "" if is_continuing else self.window.render_history(session)
+
             system = (f"{system}\n\n"
                       f"{speaker_bloc(user_name, role_status, history)}")
         system = turn_directives(system, creator, role_status,
                                  creator_mention, lang)
+
         if story:
-            if targeted_era:
-                directive = targeted_story_directive(
-                    targeted_era, continuation=story_continuation,
-                    more=story_more)
-            else:
-                directive = story_directive(
-                    story_lens, continuation=story_continuation,
-                    more=story_more)
-            system = f"{system}\n\n{directive}"
-            if leverian_warframe:
-                system = f"{system}\n\n{leverian_directive(leverian_warframe)}"
+            # Story double pass: the invisible factual draft (only when
+            # archives ground the turn), then the narration system assembly.
+            factual_draft = (await fetch_factual_draft(
+                self.llm, user_text, rag_context) if rag_context else None)
+            system = story_turn_system(
+                system, factual_draft, story_lens=story_lens,
+                targeted_era=targeted_era,
+                leverian_warframe=leverian_warframe,
+                story_continuation=story_continuation,
+                story_more=story_more)
+
         messages = [
             ChatMessage("system", system),
             ChatMessage("user", user_text),
@@ -153,48 +122,46 @@ class RoleplayService:
         temperature = (min(self.temperature, story_cap) if story else
                        (min(self.temperature, RAG_TEMPERATURE_CAP)
                         if rag_context else self.temperature))
+
         try:
+            # Final LLM call (Narration)
             async for token in self.llm.chat_stream(messages, temperature):
                 tokens.append(token)
+                # Only live-stream when there is no RAG.
+                # With RAG, the buffer fills up for anti-hallucination checks.
                 if rag_context is None:
                     yield token
+
         except Exception as exc:  # noqa: BLE001 (LLM down -> abstention)
             log.error("Roleplay generation failed (%s)", exc)
-            if not tokens:
-                # Nothing reached the client yet: the abstention chain is
-                # served, exactly like an empty generation.
+            if rag_context is not None or not tokens:
+                # NEVER leave the buffered channel silent (playtest 00:04): a
+                # RAG turn never live-streams its tokens, so a mid-stream
+                # failure must STILL announce the abstention — a bare return
+                # would emit an EMPTY part and lie about story_more.  The
+                # partial buffer is discarded; a LIVE non-RAG partial stream
+                # keeps its truncated behavior.
+                tokens.clear()
                 session.add("assistant", RAG_ERROR)
                 yield RAG_ERROR
             return
+
         response = "".join(tokens)
+
         if rag_context is not None:
-            # Deterministic post-generation gate: buffer the FULL response and
-            # verify every named entity against the retrieved <archives> before
-            # a single token reaches the client — streamed tokens cannot be
-            # recalled, and prompt guards cannot stop the model from draining
-            # its pre-trained weights ("Perrin Sequence" for a Höllvania
-            # subject).  Unsupported entities -> the abstention chain.
-            if not response:
-                response = RAG_ERROR
-            else:
-                lens_open = (STORY_LENS_STARTS.get(story_lens or "")
-                             if story and not targeted_era else "")
-                allowed = " ".join(filter(None, (
-                    user_name, user_role, targeted_era, leverian_warframe,
-                    lens_open,
-                )))
-                ok, _ = await verify_answer_with_archive(
-                    response, rag_context, self.vocabulary,
-                    extra_allowed=allowed)
-                if not ok:
-                    response = CONFABULATION_ERROR
+            # Buffered reply: verify against the archives, then close the part.
+            response = await verified_response(
+                response, rag_context, vocabulary=self.vocabulary,
+                user_name=user_name, user_role=user_role,
+                targeted_era=targeted_era,
+                leverian_warframe=leverian_warframe,
+                story_lens=story_lens, story=story, story_more=story_more)
+            # Send the whole block at once after verification
             yield response
         elif not response:
-            # Empty generation (silent/aborted model): serve the abstention
-            # chain instead of staying silent — the terminal never stalls and
-            # the message never "vanishes" client-side.
             response = RAG_ERROR
             yield response
+
         session.add("assistant", response)
 
 

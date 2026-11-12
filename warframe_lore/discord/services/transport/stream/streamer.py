@@ -15,9 +15,8 @@ import time
 
 import discord
 
+from warframe_lore.discord.services.transport.stream.hard_split import apply_stop_marker
 from warframe_lore.engram.rag import strip_trailing_padding
-
-from .hard_split import apply_stop_marker
 
 log = logging.getLogger("warframe_lore.discord.streamer")
 

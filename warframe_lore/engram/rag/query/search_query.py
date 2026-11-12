@@ -11,11 +11,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..context import RAGContext
-from .query_guard import _is_anaphoric
+from warframe_lore.engram.rag.context import RAGContext
+from warframe_lore.engram.rag.query.query_guard import _is_anaphoric
 
 if TYPE_CHECKING:
-    from .rewriter import QueryRewriter
+    from warframe_lore.engram.rag.query.rewriter import QueryRewriter
 
 
 async def search_query(question: str, context: RAGContext,

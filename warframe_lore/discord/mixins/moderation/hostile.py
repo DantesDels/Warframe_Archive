@@ -12,8 +12,11 @@ import logging
 
 import discord
 
-from ...moderation.hostile_link import HostileLink, is_sincere_apology
-from ...moderation.hostility import reply_for
+from warframe_lore.discord.moderation.hostile_link import (
+    HostileLink,
+    is_sincere_apology,
+)
+from warframe_lore.discord.moderation.hostility import reply_for
 
 log = logging.getLogger("warframe_lore.discord.bot.hostile")
 

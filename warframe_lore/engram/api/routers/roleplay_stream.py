@@ -2,7 +2,9 @@
 
 Single responsibility: turn a reply into frames — one ``token`` plus one ``end``
 for a deterministic answer, token by token for the model turn — and purge the
-trailing formatting artifacts from the FINAL text.  The route keeps the
+trailing formatting artifacts from the FINAL text.  Story parts get their own
+orchestration (:func:`emit_story_turn`) so a window the model narrates nothing
+from never reaches the wire nor stops the chain.  The route keeps the
 connection handling, :mod:`...roleplay.turn` keeps the decision.
 """
 
@@ -12,11 +14,16 @@ from collections.abc import AsyncIterator
 
 from fastapi import WebSocket
 
-from ....protocols.roleplay import EndFrame, TokenFrame
-from ...rag import strip_trailing_padding
-from ...roleplay import Session
-from ...roleplay.turn import TurnPlan
-from ..container import Container
+from warframe_lore.core.protocols.roleplay import EndFrame, TokenFrame
+from warframe_lore.engram.api.container import Container
+from warframe_lore.engram.rag import RAG_ERROR, RAGContext
+from warframe_lore.engram.roleplay import Session
+from warframe_lore.engram.roleplay.prompt import STORY_COMPLETE_SENTENCE
+from warframe_lore.engram.roleplay.purge import (
+    collapse_repeated_closing,
+    purge_story_closing,
+)
+from warframe_lore.engram.roleplay.turn import TurnPlan, plan_turn
 
 
 async def emit_reply(websocket: WebSocket, text: str) -> None:
@@ -26,19 +33,88 @@ async def emit_reply(websocket: WebSocket, text: str) -> None:
 
 
 async def emit_stream(websocket: WebSocket, tokens: AsyncIterator[str],
-                      story_more: bool = False) -> None:
+                      story_more: bool = False) -> str:
     """Token-by-token emission; ``end`` carries the purged assembled text.
 
     ``story_more`` rides on the terminal frame: the client learns whether the
-    subject's dossier still holds unseen fragments behind its cursor.
+    subject's dossier still holds unseen fragments behind its cursor.  The
+    final text is the canonical end-of-part form (:func:`purge_story_closing`):
+    trailing artifacts stripped, trailing closing-line repeats merged into
+    ONE.  A part whose whole text degenerated into the closing phrase says
+    nothing more: the archivist closing is served and the chain stops
+    (``story_more`` forced to False).  Returns the final text.
     """
     parts: list[str] = []
     async for token in tokens:
         parts.append(token)
         await websocket.send_json(TokenFrame(token=token).model_dump())
+    text = purge_story_closing("".join(parts))
+    if text.strip() == STORY_COMPLETE_SENTENCE:
+        story_more = False
     await websocket.send_json(
-        EndFrame(text=strip_trailing_padding("".join(parts)),
-                 story_more=story_more).model_dump())
+        EndFrame(text=text, story_more=story_more).model_dump())
+    return text
+
+
+# A part the model answers with ONLY the mandatory closing line (degenerate)
+# carries no narration — serving it would show a bare archivist stop while the
+# dossier still holds unseen fragments behind the cursor (playtest 00:04).  The
+# same holds for a part reduced to an EMPTY text: an empty ``end`` would lie
+# about ``story_more`` (Lettie playtest: empty part on the wire).  The
+# ``plan_turn`` already grew the session's exclusion memory with the ids of the
+# dead window, so re-planning serves the NEXT page: bounded invisible retries
+# keep the chain flowing to real material instead of lying about exhaustion.
+STORY_RETRY_LIMIT = 2
+
+
+async def emit_story_turn(websocket: WebSocket, container: Container,
+                          payload: dict, user_text: str, persona_mode: str,
+                          rag_context: RAGContext,
+                          session: Session) -> None:
+    """Stream ONE story part, silently skipping windows that narrate nothing.
+
+    The turn is re-planned (and the model called again) only while the current
+    window degrades AND the dossier still has unseen fragments
+    (``story_more``) — each retry hops past the dead window because the
+    exclusion memory advanced at plan time.  A degenerate part narrates
+    NOTHING: the closing sentence alone or an EMPTY text.  The part is emitted
+    — one token plus one ``end`` — as soon as it narrates something, or when
+    the dossier is truly drained.  An EMPTY part never reaches the wire: with
+    fragments remaining the (non-degenerate) abstention keeps ``story_more``
+    honest; a genuinely barren dossier ends with the archivist stop after
+    ``STORY_RETRY_LIMIT``.
+    """
+    for attempt in range(STORY_RETRY_LIMIT + 1):
+        plan = await plan_turn(container, payload, user_text, persona_mode,
+                               rag_context,
+                               consumed_chunk_ids=session.consumed_chunk_ids)
+        if plan.reply is not None:
+            await emit_reply(websocket, plan.reply)
+            return
+        parts: list[str] = []
+        async for token in model_turn(container, plan, payload, user_text,
+                                      persona_mode, session):
+            parts.append(token)
+        text = purge_story_closing("".join(parts))
+        # Degenerate = the part narrated NOTHING: empty text (the model
+        # aborted, Lettie playtest) or the closing sentence alone.
+        degenerate = (not text.strip()
+                      or text.strip() == STORY_COMPLETE_SENTENCE)
+        dead = degenerate and plan.story_more
+        if dead and attempt < STORY_RETRY_LIMIT:
+            continue          # nothing narrated: hop past the dead window
+        if not text.strip():
+            # Every invisible retry narrated NOTHING: an EMPTY part must never
+            # reach the wire — it would lie about story_more.  Fragments remain
+            # -> the honest abstention (story_more stays True); the dossier is
+            # drained -> the archivist closing (story_more=False).
+            text = RAG_ERROR if plan.story_more else STORY_COMPLETE_SENTENCE
+            dead = False
+        await websocket.send_json(TokenFrame(token=text).model_dump())
+        await websocket.send_json(
+            EndFrame(text=text, story_more=plan.story_more and not dead)
+            .model_dump())
+        return
 
 
 def model_turn(container: Container, plan: TurnPlan, payload: dict,
@@ -68,4 +144,5 @@ def model_turn(container: Container, plan: TurnPlan, payload: dict,
         story_more=plan.story_more)
 
 
-__all__ = ["emit_reply", "emit_stream", "model_turn"]
+__all__ = ["collapse_repeated_closing", "emit_reply", "emit_story_turn",
+           "emit_stream", "model_turn"]

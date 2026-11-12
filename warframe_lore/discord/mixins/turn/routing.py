@@ -13,7 +13,7 @@ import logging
 
 import discord
 
-from ...guild import (
+from warframe_lore.discord.guild import (
     StoryMode,
     creator_mentioned,
     detect_story_mode,
@@ -22,10 +22,10 @@ from ...guild import (
     normalize_message,
     wants_lore,
 )
-from ...moderation.insults import detect_insult
-from ...services import ChannelSettings
-from ..member.roster import MemberMention
-from .plan import TurnContext
+from warframe_lore.discord.mixins.member.roster import MemberMention
+from warframe_lore.discord.mixins.turn.plan import TurnContext
+from warframe_lore.discord.moderation.insults import detect_insult
+from warframe_lore.discord.services import ChannelSettings
 
 log = logging.getLogger("warframe_lore.discord.bot.routing")
 

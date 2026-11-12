@@ -11,10 +11,10 @@ import argparse
 import logging
 import sys
 
-from .bootstrap import ensure_database, ensure_engram
-from .bot import LoreMasterBot
-from .config import DiscordConfig
-from .core import build_services
+from warframe_lore.discord.bootstrap import ensure_database, ensure_engram
+from warframe_lore.discord.bot import LoreMasterBot
+from warframe_lore.discord.config import DiscordConfig
+from warframe_lore.discord.core import build_services
 
 
 def build_parser() -> argparse.ArgumentParser:

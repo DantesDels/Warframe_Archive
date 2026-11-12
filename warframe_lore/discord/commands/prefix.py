@@ -12,7 +12,7 @@ import logging
 
 import discord
 
-from ..mixins.turn.dispatch import INTERRUPT_COMMANDS
+from warframe_lore.discord.mixins.turn.dispatch import INTERRUPT_COMMANDS
 
 log = logging.getLogger("warframe_lore.discord.bot.commands")
 

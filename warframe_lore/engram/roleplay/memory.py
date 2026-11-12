@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import time
 
-from .models import Session
+from warframe_lore.engram.roleplay.models import Session
 
 
 class _MemoryCell:

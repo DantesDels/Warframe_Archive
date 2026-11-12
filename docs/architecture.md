@@ -1,127 +1,213 @@
 # Architecture — "Cephalon Archive"
 
-Knowledge base for the Warframe universe, built by scraping the official
-wiki, made usable by LLMs / RAG applications.
+Knowledge base for the Warframe universe: the official wiki (and complementary
+sources) is scraped, cleaned into canon-tagged Markdown, stored as JSON
+megafiles and PostgreSQL rows, chunked/vectorized for RAG, then served by a
+local FastAPI engine, a Discord bot and a read-only web UI.
 
-The project follows a **single-responsibility layer** decomposition (SOLID):
-each module evolves independently without breaking the rest.
+The project is a **modular monolith**: six mother folders, each with a single
+responsibility. Dependencies point inward — domains depend on `core/`
+contracts, never the reverse.
 
 ```
-┌────────────────────────────────────────────────────────────────────┐
-│              CLI ``cephalon`` (cli.py, entry point console)        │
-│     run / diff / status / recent / buckets / init-db / ui          │
-└───────────────┬────────────────────────────────────────────────────┘
-                │
-┌───────────────▼───────────────────┐   ┌──────────────────────────────┐
-│ api       extraction (MediaWiki)  │   │ cleaner  Wikitext → Markdown  │
-│           HTTP + resolution       │──▶│   noise/canon/sections filters│
-│           buckets/categories      │   └──────────────┬───────────────┘
-└───────────────────────────────────┘                  │
-                                        ┌──────────────▼───────────────┐
-                                        │ output   models + megafiles  │
-                                        │          JSON canon-status    │
-                                        └──────────────┬───────────────┘
-                                             ┌─────────┴─────────┐
-                                             ▼                   ▼
-                                     ┌───────────────┐   ┌──────────────────┐
-                                     │ sync          │   │ db               │
-                                     │ delta (state) │   │ PostgreSQL 3NF   │
-                                     │               │   │ pgvector + JSONB  │
-                                     │               │   │ RAG chunking      │
-                                     └───────────────┘   └────────┬─────────┘
-                                                                  │ (reads megafiles)
-                                                     ┌────────────▼──────────┐
-                                                     │ ui   local web server │
-                                                     │      + static frontend│
-                                                     └───────────────────────┘
-
-  Decoupled pipeline (standalone, on-demand):
-     ┌──────────────────────────────────────────────────────────────────┐
-     │ rag_extract   warframe.fandom.com → LoreChunk (Pydantic)         │
-     │   aiohttp + mwparserfromhell (MediaWiki) ─► Playwright fallback  │
-     │   Tenacity retries · asyncio.Semaphore(3) · H2/H3 semantic split │
-     └──────────────────────────────────────────────────────────────────┘
+warframe_lore/
+├── scraper/        # Ingestion: sources -> clean Markdown / structured rows
+│   ├── api/        #   MediaWiki + site HTML sources, buckets, categories
+│   ├── cleaner/    #   Wikitext -> Markdown (noise, canon, dialogues)
+│   ├── export/     #   Public Export (localized game entities)
+│   ├── kim_dm/     #   KIM datamine (conversations, dialogue trees)
+│   ├── media/      #   media index + on-demand images
+│   ├── rag_extract/#   standalone aiohttp/Playwright extraction
+│   ├── structured/ #   six element tables (dialogues, quests, warframes…)
+│   └── update/     #   update chain orchestration
+├── storage/        # Data & persistence
+│   ├── db/         #   PostgreSQL 3NF + pgvector + RAG chunking
+│   ├── output/     #   JSON megafiles (out/*.json)
+│   └── timeline/   #   curated lore chronology served by the web UI
+├── engram/         # RAG engine: FastAPI + document RAG + roleplay
+│   ├── api/        #   HTTP /v1/rag, WS /v1/roleplay, DI container
+│   ├── rag/        #   query -> retrieval -> prompt -> LLM -> verify
+│   ├── roleplay/   #   turn planning, streaming, deterministic replies
+│   ├── llm/        #   LM Studio chat + embedding clients
+│   ├── models/     #   shared AI domain models
+│   └── scripts/    #   ingestion, embedding and audit ETL
+├── discord/        # Loremaster Oracle bot (guild, commands, mixins, services)
+├── web/            # Local read-only UI (stdlib HTTP server + static frontends)
+└── core/           # Technical foundation
+    ├── cli/        #   the unified `cephalon` command
+    ├── infra/      #   Docker / PostgreSQL bootstrap
+    └── protocols/  #   abstract contracts (SOLID / D)
 ```
 
-## Main Flow (One Run)
+`config.py`, `envfile.py` and `lazy_facade.py` stay at the package root: they
+are shared package-level utilities (configuration, `.env` loading, lazy
+facades), not a domain.
 
-1. **Scope**: `BucketConfig` (8 default buckets) + `CategoryCatalog` resolve
-   wiki categories into page lists (`assign_pages`).
-2. **Extraction**: `MediaWikiSource` (requests + `api.php` API) fetches raw
-   wikitext with built-in retries/backoff/politeness.
-3. **Delta**: `SyncState` retains only modified pages in incremental mode
-   (unless `--force`).
-4. **Cleaning**: `WikitextCleaner` transforms wikitext into clean Markdown
-   (noise, templates, gameplay sections, normalization, dialogues, canon).
-5. **JSON Export**: each page → `OutputEntry` (with `canon_status`) →
-   megafile per bucket (`output` layer).
-6. **SQL Export (optional, default)**: transactional upsert to PostgreSQL:
-   `wiki_pages`, `lore_chunks` (+ `metadata` JSONB), `kim_dialogues`,
-   `sync_state_records`. RAG chunking (`db/chunker.py`) is applied at
-   insertion.
+## Main Flow (One Ingestion Run)
 
-## Layers
+1. **Scope** — `BucketConfig` (16 default buckets) + `CategoryCatalog` resolve
+   wiki categories into page lists (`assign_pages`). Each bucket names its
+   source and its cleaner.
+2. **Extraction** — `MediaWikiSource` (requests + `api.php`) fetches raw
+   wikitext; `FrenchMediaWikiSource` and `SiteHtmlSource` cover the French
+   wiki and `warframe.com` pages. Built-in retries, backoff and politeness.
+3. **Delta** — `SyncState` keeps only modified pages in incremental mode
+   (unless `--force`); the SQL database is the source of truth.
+4. **Cleaning** — `WikitextCleaner` or `HtmlCleaner` turns the raw page into
+   clean Markdown (noise, templates, sections, dialogues, canon signals).
+5. **JSON export** — each page becomes an `OutputEntry` (with `canon_status`
+   and optional `sections`) written to its bucket megafile in `out/`.
+6. **SQL export** — a transactional upsert fills `wiki_pages`, `lore_chunks`
+   (+ `metadata` JSONB), `kim_dialogues` and `sync_state`. RAG chunking is
+   applied at insertion.
+7. **Structured ETL (optional)** — `cephalon update` parses the six
+   human-readable element tables into their dedicated tables and embeds them.
 
-### `warframe_lore/api` — extraction
-- `BaseSource`: abstract interface for any source (extensibility: a future
-  `RedditScraper`/`ForumScraper` plugs in here).
-- `MediaWikiSource`: Warframe wiki implementation.
-- `BucketConfig` / `CategoryCatalog` / `assign_pages`: bucket resolution
-  (categories, recursive sub-categories, title filters).
+```
+sources ──▶ scraper/api ──▶ scraper/cleaner ──▶ storage/output (out/*.json)
+                                                   │
+                                                   └──▶ storage/db (pgvector)
+                                                              │
+                     scraper/structured ──▶ storage/db ◀──────┘
+                                                              │
+                                              engram/rag ◀────┘
+                                                 │
+                             ┌───────────────────┴───────────────────┐
+                             ▼                                       ▼
+                     engram/api (HTTP/WS)                    web (megafiles)
+                             │
+                      discord (WS client)
+```
 
-### `warframe_lore/cleaner` — cleaning
-- One file = one responsibility: `preprocessing`, `templates`, `sections`,
-  `formatting`, orchestrated by `WikitextCleaner` (`pipeline.py`).
-- Rules are **externalized** in `config/cleaner_config.json`
-  (Dependency Injection).
-- **Canon**: `Category:Speculation` detection + inline markers
-  `[NON-CANON / PLAYER SPECULATION]` → `canon_status`;
-  `merge_canon_status()` retains the most cautious status.
-- **Dialogues** normalized into `> **Name:** speech` blockquotes.
+## Domains
 
-### `warframe_lore/output` — export
-- `OutputEntry` / `MegafileMetadata` / `build_output_entry`: output model;
-  fields: `title`, `canon_status`, `content_markdown`, `source_url`, …
-- `MegafileManager`: writes one JSON per bucket in `out/`.
-- `merge_canon_status`: RAG usage (filter official vs theories).
+### `scraper/` — ingestion
 
-### `warframe_lore/sync` — delta state
-- `SyncState`: logs pages to process (incremental mode).
-- Long-term: state will live in the SQL database via `sync_state_records`.
+- **`api/`** — `BaseSource` is the extensibility point (a future
+  `RedditScraper`/`ForumScraper` plugs in here). `MediaWikiSource` implements
+  the Warframe wiki; `buckets/` holds `BucketConfig`, `CategoryCatalog` and
+  `assign_pages` (categories, recursive sub-categories, title filters).
+- **`cleaner/`** — one file = one responsibility (`preprocessing`,
+  `templates/`, `markup/` (HTML, blocks, links, emphasis, site HTML),
+  `sections`, `formatting`, `dialogue_lines`, …),
+  orchestrated by `WikitextCleaner` in `pipeline.py`. Rules are externalized
+  in `config/cleaner_config.json` (dependency injection). Dialogues are
+  normalized into `> **Name:** speech` blockquotes.
+- **`canon.py`** — canon signals: `Category:Speculation` membership and inline
+  markers produce a `CanonStatus`; `merge_canon_status()` keeps the most
+  cautious status.
+- **`delta.py` / `sync.py` / `ingest.py`** — the `Scraper` class is composed of
+  four mixins: delta plan, per-bucket orchestration, page cleaning + dual
+  write, and canon resolution.
+- **`export/`** — Public Export (`origin.warframe.com`): LZMA index, hashed
+  assets, incremental cache, localized `GameEntity` rows.
+- **`kim_dm/`** — KIM Terminal datamine: mirror download, conversation
+  reconstruction, dialogue graphs and wiki-page mapping.
+- **`media/`** — `ExportManifest.json` lookup, localized names, on-demand
+  image download into `<output_dir>/media/`.
+- **`structured/`** — pure parsers in `parsers/` for the six element tables
+  (dialogues, fragments, warframes, quests, updates, announcements), `catalog`
+  and `news` facades, plus row mapping, rendering, persistence and the
+  advisory-locked ETL pipeline.
+- **`rag_extract/`** — standalone, on-demand extraction from
+  `warframe.fandom.com`: `LoreChunk` (Pydantic), aiohttp + `mwparserfromhell`
+  with Playwright fallback, Tenacity retries, bounded concurrency and
+  semantic H2/H3 chunking.
+- **`update/`** — the single-command chain: scraper → structured ETL →
+  Public Export → static lists → RAG embeddings.
 
-### `warframe_lore/db` — SQL persistence + RAG (PostgreSQL / pgvector)
-- `models.py`: SQLAlchemy 2.0 model (async) — `WikiPage`, `LoreChunk`,
-  `KimDialogue`, `SyncStateRecord`, `Base`.
-- `manager.py`: `SQLDatabaseManager` — transactional upsert, database-backed
-  delta, `run_ddl_script` (`warframe_lore/db/init_db.sql` execution,
-  statement splitting).
-- `chunker.py`: `ChunkManager` — two-pass RAG chunking + dialogue mode.
-- `kim_parser.py`: KIM message extraction from dialogue blocks.
+### `storage/` — persistence and produced datasets
 
-### `warframe_lore/rag_extract` — decoupled RAG extraction pipeline
-- **Design**: standalone, on-demand alternative to the maintenance scraper.
-  Target: `warframe.fandom.com` (content mirror of the official wiki).
-- **`models.py`**: `LoreChunk` (Pydantic) — `source_url` (`HttpUrl`),
-  `page_title`, `section_title`, `content` (min 50 chars), `metadata`
-  (infobox properties). `to_payload()` for JSON serialization.
-- **`extractors.py`**: strategy pattern — abstract `BaseExtractor.extract(url)`;
-  `MediaWikiExtractor` (aiohttp, `prop=revisions&rvprop=content`,
-  `mwparserfromhell`, H2/H3 headings preserved via marker tokens);
-  `PlaywrightFallbackExtractor` (headless Chromium, `.spoiler` /
-  `.expand-button` clicks, DOM → sectioned Markdown).
-- **`resilience.py`**: Tenacity policies (`stop_after_attempt(3)`,
-  `wait_exponential`), `ConcurrencyGuard` (`asyncio.Semaphore`, default 3),
-  retry predicates covering aiohttp/timeout/Playwright errors.
-- **`chunking.py`**: semantic split on `##`/`###` headings, lead →
-  "Introduction", undersized blocks merged → validated `LoreChunk` list.
-- **`pipeline.py` / `__main__.py`**: orchestration with automatic primary →
-  fallback, bounded concurrency, per-URL INFO/ERROR logging; CLI
-  `python -m warframe_lore.rag_extract <url>...`.
+- **`db/`** — SQLAlchemy 2.0 async models (`WikiPage`, `LoreChunk`,
+  `KimDialogue`, `SyncStateRecord`, game tables), the transactional
+  `SQLDatabaseManager` (split into `manager/` mixins), and the `chunks/`
+  package implementing two-pass RAG chunking. `init_db.sql` owns the schema.
+- **`output/`** — `OutputEntry`, `MegafileMetadata`, `CanonStatus`,
+  `build_output_entry`, `merge_canon_status` and `MegafileManager`, which
+  writes one JSON file per bucket in `out/`.
+- **`timeline/`** — curated lore chronology (`NODES` / `EDGES`) exposed as
+  lazy roots/children payloads for the web timeline app.
+
+### `engram/` — RAG engine and roleplay backend
+
+- **`config.py`** — `EngramConfig` (DB/LLM URLs, models, `top_k`, windows,
+  thresholds; `ENGRAM_*` variables).
+- **`llm/`** — provider contracts (`LLMProvider`, `EmbeddingProvider`) and the
+  LM Studio implementation (chat streaming, `bge-m3` embeddings).
+- **`rag/`** — `service.py` (orchestration), `pipeline.py` (end-to-end
+  retrieval), `query/` (sanitization, hostile probes, aliases, anaphora,
+  search query), `retrieval/` (pgvector cosine, hybrid search, dossier,
+  relevance floors, suggestion, entity guard), `prompt/` (XML `<archives>`
+  template + guards), `verify.py`, `sanitize.py`, `explain.py`.
+- **`roleplay/`** — `turn.py` (`plan_turn`: deterministic short-circuits
+  before the LLM), `stream.py` (streamed turn runner), `prompt/` (payload
+  blocks, directives, narrative, sliding window), `replies/` (identity,
+  member card, observation), `memory.py`, `story_turn.py`, `verify_gate.py`.
+- **`api/`** — FastAPI app: `POST /v1/rag`, `WS /v1/roleplay`,
+  `GET /v1/search`, `GET /health`; routers are transport-only and delegate to
+  the `Container` (`app.state.engram`). Rate limiting is upstream of the LLM.
+- **`scripts/`** — ingestion (`ingest.py`), structured embedding, RAG audit
+  and scraper dump tools.
+
+The detailed execution trace (sequence diagram, phases, guards) lives in
+[`warframe_lore/engram/rag/README.md`](../warframe_lore/engram/rag/README.md).
+
+### `discord/` — Loremaster Oracle bot
+
+- **`bot.py`** — `LoreMasterBot`, a `discord.Client` composed of
+  single-responsibility mixins; it owns only `state` (`BotState`) and
+  `services` (`BotServices`).
+- **`core/`** — bounded volatile tables, `SessionPool` (one WS gateway per
+  channel, per-attacker hostile links), `build_services` (every store on one
+  batched SQLite ledger).
+- **`mixins/turn/`** — `dispatch` (the `on_message` pipeline and gating),
+  `plan` (`TurnContext` → audit label + `MessageFrame`), `routing`
+  (RAG/jealousy/member decision), `streaming` (placeholder, tokens,
+  reconnection, `!stop`), `story` (narrative mode).
+- **`mixins/member/`** — role accreditation, name resolution
+  (exact/prefix/leetspeak), real-data `MemberSnapshot`, matriciel card and
+  creator gating.
+- **`mixins/moderation/`** — hostile probes/death sessions, insults, spam
+  `BurstGuard`, 👍/👎 feedback.
+- **`commands/`** — prefix dispatch and `!reset` / `!ping` / `!stop` /
+  `!stats` / `!fiche` / channel settings.
+- **`guild/`** — naming, question detection, lore triggers, creator
+  variants, role hierarchy/accreditation, story modes.
+- **`services/`** — gateway transport (handshake, reader, requests,
+  controls), anti-429 `MessageStreamer`, SQLite ledgers, member cards,
+  channel settings.
+
+### `web/` — local read-only interface
+
+- **`data/`** — `LoreStore`, an incremental in-memory cache of
+  `out/*.json` (mtime/size fingerprint), full-text search and derived
+  counters, protected by a lock for the threaded server.
+- **`dialogue/`** — KIM projections: conversations, graphs, scripts,
+  sections, references.
+- **`http/`** — stdlib `http.server` handler, gzip-compressed JSON, one small
+  function per endpoint: `/api/stats`, `/api/buckets`, `/api/pages`,
+  `/api/page`, `/api/kim`, `/api/graph`, `/api/recent`, `/api/search`,
+  `/api/suggest`, `/api/media`, `/api/timeline`, `/api/timeline/roots`.
+- **`static/`** — dark, dependency-free frontends (Overview, bucket browser,
+  KIM chat, search, RAG inspector, timeline). Read-only megafile access, no
+  network at runtime.
+- **Entry points** — `cephalon ui` and the standalone `cephalon-ui`.
+
+### `core/` — technical foundation
+
+- **`cli/`** — the `cephalon` command: `parser` (argparse + legacy
+  normalization), `subcommands/` (pipeline, tools, bot, rag), `commands`
+  (implementations), `support` (logging, config, UI launch).
+- **`infra/`** — Docker engine detection, PostgreSQL bootstrap and waiting
+  helpers used before a pipeline run.
+- **`protocols/`** — abstract contracts (`Retriever`, `LLMProvider`,
+  `EmbeddingProvider`, roleplay frame dataclasses) so high-level services
+  depend on interfaces instead of concrete databases or clients.
 
 ## RAG Chunking (Phase 2.5)
 
-The splitting is performed without dependencies (a robust native equivalent
-of *langchain-text-splitters*) by `ChunkManager`.
+Splitting is dependency-free (a native equivalent of
+*langchain-text-splitters*) and implemented by `storage/db/chunks/`.
 
 | Parameter | Default | Role |
 |---|---|---|
@@ -130,24 +216,22 @@ of *langchain-text-splitters*) by `ChunkManager`.
 | `dialogue_chunk_max_characters` | 2500 | target size of a dialogue chunk |
 | `dialogue_chunk_overlap_characters` | 250 | overlap between dialogue chunks |
 
-**Pass 1 — structural**: splits at `#`/`##`/`###` headings; hierarchy is
+**Pass 1 — structural**: splits at `#`/`##`/`###` headings; the hierarchy is
 captured in `metadata = {"Header 1": …, "Header 2": …}`.
 
 **Pass 2 — recursive**: merge + prioritized separators (`\n\n` then `. ` then
-space) to stay under the target size without cutting a sentence; bounded
-and non-destructive overlap mid-word.
+space) to stay under the target size without cutting a sentence; bounded,
+non-destructive overlap.
 
-**Dialogue mode** (`is_dialogue=True`): `> **Name:**` blockquotes grouped into
-large chunks; `metadata["speakers"]` = list of speakers in the chunk.
-Speaker is extracted via the expression
-`^>\s*\*\*(?P<speaker>[^*:]+?):\*\*\s*`
-(`:` is inside the bold), with strict filtering (proper name, excludes
-brackets and punctuation).
+**Dialogue mode** (`is_dialogue=True`): `> **Name:**` blockquotes are grouped
+into large chunks; `metadata["speakers"]` lists the speakers. The speaker
+expression is `^>\s*\*\*(?P<speaker>[^*:]+?):\*\*\s*`, with strict filtering
+(proper name, no brackets or punctuation).
 
-Each chunk inserted into the database carries `chunk_index`, `content_markdown`
-and `metadata` (JSONB, GIN index for `@>` filtering).
+Each inserted chunk carries `chunk_index`, `content_markdown` and `metadata`
+(JSONB, GIN index for `@>` filtering).
 
-## Canon (Rules)
+## Canon Rules
 
 | Source | Status |
 |---|---|
@@ -159,145 +243,85 @@ and `metadata` (JSONB, GIN index for `@>` filtering).
 
 Statuses: `canon`, `speculation`, `community_theory`.
 
-## SQL Schema (`warframe_lore/db/init_db.sql`)
+## SQL Schema (`warframe_lore/storage/db/init_db.sql`)
 
-- `wiki_pages`: page identity (unique id per page, url, delta-permitted).
-- `lore_chunks`: `wiki_page_id`, `chunk_index`, `content_markdown`,
-  `embedding vector(1024)` (pgvector, bge-m3), `metadata JSONB` (+ GIN index),
-  unique constraint `(wiki_page_id, chunk_index)`.
-- `kim_dialogues`: extracted KIM dialogues (speakers, content, links).
-- `sync_state_records`: page state log (delta).
+Extensions: `vector` (pgvector) and `pg_trgm`.
 
-Robustness: a page recreated on the wiki (new id, same title) is
-properly re-assigned (cleanup of old chunks/dialogues/page) to avoid
-unique constraint violation on the title.
+- `wiki_pages` — page identity (unique id per page, URL, bucket, canon
+  status, delta fields). Trigram index on the title.
+- `lore_chunks` — `wiki_page_id`, `chunk_index`, `content_markdown`,
+  `embedding vector(1024)` (bge-m3), `metadata JSONB` (+ GIN index),
+  unique `(wiki_page_id, chunk_index)`, full-text index.
+- `kim_dialogues` — extracted KIM messages (speakers, content, links,
+  parent message).
+- `game_entities_i18n` — localized Public Export entities.
+- `sync_state` — page state log used by the delta.
+- `game_dialogues`, `lore_items`, `warframes`, `game_quests`,
+  `game_updates`, `game_announcements` — the six structured element tables.
+- `structured_chunks` — embedded representations of those structured rows.
 
-### `warframe_lore/engram` — AI backend (FastAPI + RAG + Roleplay)
-- `config.py` `EngramConfig` (DB/LLM URLs, models, `top_k`, windows — `ENGRAM_*`).
-- `persona.py`: editable system prompt `persona/oracle` + status banners
-  (creator/commandement/membre/allié/inconnu) + status labels (mission-8).
-- `rag/`: `service.py` (RAGService — retrieval + **entity-lookup guard**
-  short-circuit), `prompt.py` (XML `<archives>` template + guards), `search.py`
-  (pgvector cosine), `aliases.py` (nickname → canonical pre-vectorization),
-  `probes.py` (SQLi/elevation detection), `sanitize.py` (trailing padding).
-- `roleplay/`: `stream.py` (turn runner: history + streaming), `turn.py`
-  (`plan_turn` — the deterministic short-circuits BEFORE the LLM: hostile probe,
-  missing archives, guild member, speaker identity), `prompt/` (payload assembly
-  — `blocks.py` BLOC 1 + trailing directives, `directives.py` speaker sheet /
-  civility / jealousy / answer-language texts, `window.py` sliding history),
-  `replies/` (`identity.py` deterministic identity and member answers,
-  `comment.py` one-shot member-card observation), `memory.py` (per-user window).
-- `api/`: `routers/roleplay.py` (WS terminal — transport only: per-IP quota,
-  frame dispatch, per-user session/anaphora), `routers/roleplay_stream.py`
-  (frame emission: deterministic reply, token stream + purged `end`),
-  `document_rag.py`, `container.py` (DI).
+Robustness: a page recreated on the wiki (new id, same title) is re-assigned
+cleanly (old chunks/dialogues/page removed) to avoid a unique-constraint
+violation on the title.
 
-### `warframe_lore/discord` — Loremaster bot (Oracle terminal)
-- `bot.py` `LoreMasterBot`: a `discord.Client` composed of single-responsibility
-  mixins; it owns only `state` (`BotState`) and `services` (`BotServices`).
-- `core/`: `state.py` (bounded volatile tables — turns, anaphora, refusals,
-  tracked answers), `sessions.py` (`SessionPool` — one WS gateway per channel +
-  per-attacker hostile links + persona cache), `wiring.py` (`build_services` —
-  every store on ONE batched SQLite ledger).
-- `mixins/turn/`: `dispatch.py` (the `on_message` pipeline and its gating),
-  `plan.py` (`TurnContext` → audit label + wire `MessageFrame`), `routing.py`
-  (RAG/jealousy/member decision), `streaming.py` (placeholder, tokens,
-  reconnect, `!stop`, wiki portrait, reactions).
-- `mixins/member/`: `context.py` (role accreditation → derived status/creator),
-  `roster.py` (name resolution: exact/prefix/leetspeak), `snapshot.py`
-  (`MemberSnapshot` from real Discord data), `gate.py` (**matriciel cards**,
-  creator gating: refuse once → concede à contrecœur).
-- `mixins/moderation/`: `hostile.py` (probes + death sessions + redemption),
-  `insults.py` (répartie), `spam.py` (`BurstGuard` gate), `feedback.py`
-  (👍/👎 verdicts).
-- `commands/`: `prefix.py` (dispatch table + help), `ops.py` (`!reset`/`!ping`/
-  `!stop`/`!stats`), `card.py` (`!fiche`), `channel.py` (per-channel runtime
-  settings), `arguments.py` (switch/vocabulary parsing).
-- `guild/`: `naming.py` (mention normalisation, member-token matching),
-  `questions.py` (`is_member_question`, `roles_question`, `self_info_request`),
-  `lore.py` (RAG-trigger detection), `creator.py` (pseudo variants/jealousy),
-  `roles/` (`RoleHierarchy`/`Accreditation`).
-- `services/`: `transport/gateway/` (`RoleplayGateway`, composed of
-  `connection` — handshake/keepalive/close, `reader` — bounded frame queue with
-  per-frame timeout, `requests` — one streamed turn, `controls` — comment /
-  persona / reset frames), `transport/stream/` (`MessageStreamer` anti-429 edits
-  + hard split on the generation-end marker), `ledger/` (`LedgerDB`,
-  `MemberActivityStore`, `StrikeLedger`, `FeedbackStore`, `TurnStats`), `cards/`
-  (`MemberCardService`), `settings.py`
-  (`ChannelSettingsStore`).
+## Interfaces
 
-### `warframe_lore/ui` — local web interface
-- `LoreStore`: in-memory cache of megafiles `out/*.json` (meta on read,
-  reloaded per request) + full-text search + structured KIM dialogues.
-- `ApiHandler`: mini `http.server` stdlib server, **gzip**-compressed JSON
-  responses (large KIM documents), endpoints `/api/buckets`, `/api/pages`,
-  `/api/page`, `/api/kim`, `/api/recent`, `/api/search`, `/api/stats`.
-- `static/`: modern dark frontend (no CDN, no build) — Overview,
-  bucket browser, KIM chat, recent, search.
-- Commands: `cephalon ui` (in the package) and `cephalon-ui` (standalone
-  entry point, PyInstaller exe via `packaging/launch_ui.py`). Read-only
-  megafile access, no network access at runtime.
+### CLI (`cephalon`)
 
-## CLI
-
-The `cephalon` command (entry point installed via `pip install -e .`) exposes
-a set of subcommands. The legacy invocation `python -m warframe_lore`
-still works and defaults to `cephalon run` without arguments.
-
-```
-cephalon run        # full pipeline, incremental delta by default
-                    #   --force            reprocess everything (upsert, no duplicates)
-                    #   --skip-sql         JSON only
-                    #   --bucket-config    custom buckets
+```text
+cephalon run        # full pipeline, incremental delta (opens the UI; --no-ui)
+                    #   --force / --skip-sql / --bucket-config / --database-url
 cephalon diff       # preview delta without writing (dry-run)
 cephalon status     # database state (pages, chunks, canon, last sync)
 cephalon recent     # latest modified / inserted pages
-cephalon buckets    # list buckets (--init materializes config/buckets.json)
-cephalon init-db    # create schema (warframe_lore/db/init_db.sql)
-cephalon ui         # local web interface (server + browser)
-                    #   --port            fixed port (0 = free)
-                    #   --no-browser      no auto-open
-                    #   --out             megafiles folder
-cephalon-ui         # standalone entry point (exe dist/cephalon-ui.exe)
+cephalon buckets    # list buckets (--init materializes buckets.json)
+cephalon init-db    # create the schema (storage/db/init_db.sql)
+cephalon update     # scraper -> structured ETL -> export -> lists -> embeddings
+cephalon ui         # local web interface (--port, --no-browser, --out)
+cephalon export-entities  # Public Export -> database (--lang, --categories)
+cephalon kim-dm     # download/cache the KIM mirror
+cephalon rag explain <question>  # trace a query through the RAG pipeline
+cephalon bot run    # Oracle Discord bot (--token, --ws, --prefix, --channels)
 cephalon version    # package version
 ```
 
-The delta is computed by `Scraper.delta_plan()` (bucket resolution +
-`touched` comparison in the database) and reused by `run` and `diff` (DRY).
+`python -m warframe_lore` still works and defaults to `cephalon run`. The
+delta is computed by `Scraper.delta_plan()` and reused by `run` and `diff`
+(DRY).
 
-## Sources
+### ENGRAM API
 
-The pipeline connected to the `api` layer (via `BaseSource`) is currently the
-official wiki; `browse.wf` is identified as a supplementary source for the
-game data domain (see `README.md` → "Data Sources").
+| Endpoint | Purpose |
+|---|---|
+| `POST /v1/rag` | document RAG (`{"question", "stream"}`) |
+| `WS /v1/roleplay` | streamed roleplay turn (frames: open/token/end/error) |
+| `GET /v1/search` | hybrid search for the RAG inspector (`debug=true` dumps the prompt) |
+| `GET /health` | liveness |
 
-| Source | Domain | Status |
-|---|---|---|
-| `wiki.warframe.com` (MediaWiki API) | narrative lore, dialogues, canon | **scraped** (`MediaWikiSource`) |
-| `browse.wf` (warframe-public-export-plus, calamity-inc) | raw game data, images, localizations | identified (future enrichment) |
+Launch: `uvicorn warframe_lore.engram.api.main:app --port 8000`.
 
-## ENGRAM Live Validation — 7-Request Benchmark (September 2026)
+### Web API
 
-A live grid of 7 French RAG questions was executed against a running
-ENGRAM (`POST http://127.0.0.1:8000/v1/rag`, body `{"question", "stream":
-false}`, UTF-8 via Python/httpx, timeout 180 s per request), 9 159 chunks in
-pgvector (`bge-m3`, 1024d), chat `Gemma-2-9b-it` (Q4_K_M). Verdicts:
+All endpoints are read-only and gzip-compressed JSON, served by the stdlib
+handler from the megafile cache.
 
-| # | Question | Expected / Reality | Verdict |
-|---|---|---|---|
-| 1 | **Oraxia** (nouveau frame) | corpus: `Oraxia/Main`, score 0.651 (« 61st unique Warframe », Mercy's Kiss / Webbed Embrace / Widow's Brood / Silken Stride) → réponse ancrée | Non conforme — réflexion à vérifier, mais aucun rejet court-circuit, aucun inventaire |
-| 2 | Eleanor et Arthur | reframing fraternel clinique (« son frère Arthur »), aucune extrapolation romantique ; sources KIM (0.659 / 0.646 / 0.634) | Conforme |
-| 3 | « Mercenaire d'Os » | court-circuit « Données insuffisantes », 0 sources ; l'alias FR n'atteint **pas** Ordan Karris/Ordis (alors que « Qui est Ordan Karris » répond) | Échec sûr (alias non résolu avant vectorisation) |
-| 4 | Garuda vs Gara | « **deux** Toroides Calda » ✓, mais conclusion contradictoire « Gara ne nécessite pas de composants de Cetus » malgré la source « *Unlike Gara, Garuda does not require … Fishing* » | Partiel — inférence inversée |
-| 5 | La Moelle (édition 2026) | « données corrompues » + sources hors-sujet (Protoframe, Ryoku 0.529-0.510) ; contenu 2026 absent de la base | Échec sûr (contenu absent du corpus) |
-| 6 | Kalymos | répond « une **Oraxia** comme animal de compagnie » au lieu de **Kalymos le Kavat** ; sources pertinentes (`Cavia Aftermath`, `Albrecht Entrati`) non exploitées | Hallucination grave |
-| 7 | Index Neptune | réponse correcte (**Nef Anyo**, Cephalon Sark 0.540) mais `*` résiduel en queue | Partiel — artefact de sortie |
+## Design Decisions
 
-**Bilan :** 1 conforme · 1 erreur de raisonnement (Q4) · 1 hallucination (Q6) ·
-1 artefact de sortie (Q7) · 3 échecs sûrs (Q3 alias, Q5 données absentes, Q1 à
-re-vérifier). Les correctifs associés (isolation d'état, middleware d'alias,
-sanitation de sortie, directive d'extraction logique) vivent sur la branche
-`hotfix/rag-pipeline-core`.
+- **Single responsibility at file scale** — one file = one job, ≤ 100 lines of
+  code; large domains are split into sub-packages (see `manager/`, `chunks/`,
+  `retrieval/`).
+- **Dependency inversion** — `core/protocols/` defines the contracts;
+  `engram` and `discord` depend on them, which keeps the transport, the
+  storage and the LLM swappable.
+- **Dual write** — JSON megafiles for human/NotebookLM consumption, SQL rows
+  for RAG. Both derive from the same cleaned Markdown, so they cannot drift.
+- **Data gating over prompt hope** — anti-hallucination is structural:
+  relevance floors, entity guard, dossier ordering, deterministic
+  short-circuits, then output verification.
+- **No build step for the UI** — plain HTML/CSS/JS served by `http.server`;
+  the Vue apps (`inspector/`, `timeline/`) are pre-built into `static/`.
+- **Local-first AI** — LM Studio (`gemma-2-9b-it` Q4_K_M + `bge-m3`) fits an
+  8 GB VRAM budget; no cloud dependency at runtime.
 
 ## Environment Variables
 
@@ -308,12 +332,47 @@ sanitation de sortie, directive d'extraction logique) vivent sur la branche
 | `WF_STATE_FILE` | delta state file |
 | `WF_DATABASE_URL` | async PostgreSQL URL |
 | `WF_MAX_RETRIES` / `WF_TIMEOUT` / `WF_SLEEP` | HTTP robustness |
+| `ENGRAM_LLM_BASE` | LM Studio OpenAI endpoint |
+| `ENGRAM_CHAT_MODEL` / `ENGRAM_EMBED_MODEL` | model names |
+| `ENGRAM_TOP_K` / `ENGRAM_CRITICAL_MIN_SCORE` | retrieval budget / floor |
+| `ENGRAM_RATE_LIMIT_RAG` / `ENGRAM_RATE_LIMIT_WS` | per-IP quotas |
+| `DISCORD_TOKEN` / `CREATOR_DISCORD_ID` | bot credentials / creator |
+
+The full list lives in [`docs/specifications.md`](specifications.md).
+
+## ENGRAM Live Validation — 7-Request Benchmark (September 2026)
+
+A live grid of 7 French RAG questions was executed against a running ENGRAM
+(`POST http://127.0.0.1:8000/v1/rag`, body `{"question", "stream": false}`,
+UTF-8 via Python/httpx, timeout 180 s per request), 9 159 chunks in pgvector
+(`bge-m3`, 1024d), chat `Gemma-2-9b-it` (Q4_K_M). Verdicts:
+
+| # | Question | Expected / Reality | Verdict |
+|---|---|---|---|
+| 1 | **Oraxia** (new frame) | corpus: `Oraxia/Main`, score 0.651 ("61st unique Warframe", Mercy's Kiss / Webbed Embrace / Widow's Brood / Silken Stride) → anchored answer | Non-compliant — reasoning to re-check, but no short-circuit rejection, no inventory |
+| 2 | Eleanor and Arthur | clinical fraternal reframing ("her brother Arthur"), no romantic extrapolation; KIM sources (0.659 / 0.646 / 0.634) | Compliant |
+| 3 | "Mercenaire d'Os" | "Insufficient data" short-circuit, 0 sources; the FR alias does **not** reach Ordan Karris/Ordis (while "Who is Ordan Karris" answers) | Safe failure (alias not resolved before vectorization) |
+| 4 | Garuda vs Gara | "**two** Calda Toroids" ✓, but contradictory conclusion "Gara does not require Cetus components" despite the source "*Unlike Gara, Garuda does not require … Fishing*" | Partial — inverted inference |
+| 5 | La Moelle (2026 edition) | "corrupted data" + off-topic sources (Protoframe, Ryoku 0.529-0.510); 2026 content absent from the base | Safe failure (content missing from the corpus) |
+| 6 | Kalymos | answers "an **Oraxia** as a pet" instead of **Kalymos the Kavat**; relevant sources (`Cavia Aftermath`, `Albrecht Entrati`) not used | Serious hallucination |
+| 7 | Index Neptune | correct answer (**Nef Anyo**, Cephalon Sark 0.540) but a residual trailing `*` | Partial — output artifact |
+
+**Assessment:** 1 compliant · 1 reasoning error (Q4) · 1 hallucination (Q6) ·
+1 output artifact (Q7) · 3 safe failures (Q3 alias, Q5 missing data, Q1 to
+re-check). The associated fixes (state isolation, alias middleware, output
+sanitization, logical-extraction directive) live on the
+`hotfix/rag-pipeline-core` branch.
 
 ## See Also
-- `docs/idea.md` — vision and use cases (MVP → future).
-- Root README — quick start, installation, Docker PostgreSQL, sources.
-- `warframe_lore/cli.py` — full set of `cephalon` commands.
-- `warframe_lore/ui/server.py` — interface server and endpoints.
-- `warframe_lore/rag_extract/README.md` — decoupled RAG extraction pipeline.
-- `pyproject.toml` — package definition, `cephalon` and `cephalon-ui` entry
-  points.
+
+- [`README.md`](../README.md) — quick start, installation, package map.
+- [`docs/specifications.md`](specifications.md) — requirements, sources,
+  environment variables, validation.
+- [`docs/manual.md`](manual.md) — web UI, Discord bot, ENGRAM API usage.
+- [`docs/glossary.md`](glossary.md) — lore and architecture vocabulary.
+- [`docs/journal.md`](journal.md) — trials, failures and lessons learned.
+- [`warframe_lore/engram/rag/README.md`](../warframe_lore/engram/rag/README.md)
+  — RAG execution trace.
+- [`warframe_lore/scraper/rag_extract/README.md`](../warframe_lore/scraper/rag_extract/README.md)
+  — decoupled extraction pipeline.
+- [`pyproject.toml`](../pyproject.toml) — package definition, entry points.

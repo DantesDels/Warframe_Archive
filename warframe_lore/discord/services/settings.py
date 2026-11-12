@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from .ledger.db import LedgerDB
+from warframe_lore.discord.services.ledger.db import LedgerDB
 
 LANGUAGES = ("fr", "en")
 PERSONAS = ("oracle", "hostile")

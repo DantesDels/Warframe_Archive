@@ -9,7 +9,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .scan import blank_mapping, console_safe, load_mapping, role_index, scan_roles
+from warframe_lore.discord.guild.roles.scan import (
+    blank_mapping,
+    console_safe,
+    load_mapping,
+    role_index,
+    scan_roles,
+)
 
 
 def fill_map(guilds, path: Path, write: bool) -> None:

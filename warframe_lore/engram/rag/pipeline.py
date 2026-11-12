@@ -1,12 +1,18 @@
 """Retrieval pipeline: from the raw question to the decided RAG prompt.
 
-Single responsibility: run ONE retrieval — sanitisation, hostile probe, alias
-expansion, search-query preparation, embedding, vector search, relevance guards,
-prompt assembly — and audit it.  The LLM is never called here: the answer shapes
-live in :mod:`service`.
+Linear Execution Trace:
+  1. Sanitize query           -> :func:`.query.query_guard.sanitize_query`
+  2. Detect hostile probes    -> :func:`.query.probes.detect_probe` (short-circuit)
+  3. Expand aliases           -> :class:`.query.aliases.AliasResolver`
+  4. Build search query       -> :func:`.query.search_query.search_query`
+  5. Compute embeddings       -> :class:`EmbeddingProvider.embed`
+  6. Search vector store      -> :class:`Retriever.search` & optional dossier
+  7. Filter by relevance floor-> :func:`.retrieval.relevance.keep_relevant`
+  8. Missing entity guard     -> :func:`.retrieval.relevance.missing_entity`
+  9. Assemble tagged prompt   -> :class:`.prompt.builder.PromptBuilder`
+  10. Log audit record        -> :func:`.audit.audit_retrieval`
 
-Stateless: the anaphora memory is the caller-owned :class:`RAGContext` (per HTTP
-request or per WebSocket connection), never an attribute of this object.
+See :file:`warframe_lore/engram/rag/README.md` for full sequence diagrams.
 """
 
 from __future__ import annotations
@@ -15,19 +21,28 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from .audit import audit_empty, audit_rejected, audit_retrieval
-from .context import RAGContext
-from .prompt.builder import PromptBuilder, RAGPrompt
-from .query.aliases import AliasResolver
-from .query.probes import detect_probe
-from .query.query_guard import sanitize_query
-from .query.search_query import search_query
-from .retrieval.relevance import keep_relevant, missing_entity, relevance_floor
-from .retrieval.retriever import DossierPage, RAGHit, Retriever
+from warframe_lore.engram.rag.audit import audit_empty, audit_rejected, audit_retrieval
+from warframe_lore.engram.rag.context import RAGContext
+from warframe_lore.engram.rag.prompt.builder import PromptBuilder, RAGPrompt
+from warframe_lore.engram.rag.query.aliases import AliasResolver
+from warframe_lore.engram.rag.query.probes import detect_probe
+from warframe_lore.engram.rag.query.query_guard import sanitize_query
+from warframe_lore.engram.rag.query.search_query import search_query
+from warframe_lore.engram.rag.retrieval.relevance import (
+    keep_relevant,
+    missing_entity,
+    relevance_floor,
+)
+from warframe_lore.engram.rag.retrieval.retriever import (
+    STORY_EXCLUDED_KINDS,
+    DossierPage,
+    RAGHit,
+    Retriever,
+)
 
 if TYPE_CHECKING:
-    from ..llm import EmbeddingProvider
-    from .query.rewriter import QueryRewriter
+    from warframe_lore.engram.llm import EmbeddingProvider
+    from warframe_lore.engram.rag.query.rewriter import QueryRewriter
 
 log = logging.getLogger("warframe_lore.engram.rag")
 
@@ -69,11 +84,19 @@ class RetrievalPipeline:
     async def run(self, question: str,
                   context: RAGContext | None = None, *,
                   subject: str | None = None,
-                  offset: int = 0) -> Retrieval:
+                  offset: int = 0,
+                  exclude_ids: list[int] | None = None,
+                  story: bool = False) -> Retrieval:
         """One retrieval, with its audit line (see the module docstring).
 
-        ``subject``/``offset`` page a targeted story: the dossier is read as a
-        cursor, so a continuation narrates passages the previous part did not.
+        ``subject`` opens a targeted story: the dossier is read story-first.
+        ``exclude_ids`` is the ONLY pagination — the chunk ids the session
+        already narrated, banned server-side (the client cursor is never
+        trusted).  ``offset > 0`` merely marks a CONTINUATION: the semantic
+        neighbours of the opening request are dropped so the part never
+        re-anchors on the same salient facts.  ``story`` purges the corpus of
+        the metagame kinds (patch notes, announcements): the tale never
+        quotes gameplay, whatever the docs mention.
         """
         question = sanitize_query(question)
         if not question:
@@ -87,7 +110,7 @@ class RetrievalPipeline:
         found = await self.retriever.search(vector)
         story_more = False
         if subject:
-            page = await self._dossier(subject, vector, offset)
+            page = await self._dossier(subject, vector, exclude_ids)
             story_more = page.more
             if offset > 0:
                 # Continuation: ONLY the next dossier page.  The semantic
@@ -98,6 +121,12 @@ class RetrievalPipeline:
                 found = page.hits
             elif page.hits:
                 found = self._merge_dedup(page.hits + found)
+        if story:
+            # The dossier already excludes the metagame kinds in SQL; this
+            # second purge covers the semantic-neighbour channel, the only one
+            # a story without a targeted subject reads (kind is None on the
+            # lore channel, always kept).
+            found = [h for h in found if h.kind not in STORY_EXCLUDED_KINDS]
         floor = relevance_floor(self.suggestion_min_score,
                                 self.critical_min_score)
         # The floor and the title suggestion target OFF-TOPIC neighbours of a
@@ -148,12 +177,15 @@ class RetrievalPipeline:
         return await suggest(question)
 
     async def _dossier(self, subject: str, vector: list[float],
-                       offset: int = 0) -> DossierPage:
-        """Subject-page passages for a targeted story (empty if unsupported)."""
+                       exclude_ids: list[int] | None = None) -> DossierPage:
         method = getattr(self.retriever, "dossier", None)
         if method is None:
             return DossierPage(hits=[])
-        return await method(subject, vector, offset=offset)
+        # The dossier always pages from offset 0: the sub-retriever returns
+        # the FIRST page of the still-unseen fragments — the session ban list
+        # (``exclude_ids``) is the only cursor, so no client offset can force
+        # a skip forward or loop back.
+        return await method(subject, vector, offset=0, exclude_ids=exclude_ids)
 
     @staticmethod
     def _merge_dedup(hits: list[RAGHit]) -> list[RAGHit]:

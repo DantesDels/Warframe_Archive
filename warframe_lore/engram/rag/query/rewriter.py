@@ -25,9 +25,9 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 
-from ...llm import LLMProvider
-from ...models import ChatMessage
-from ..context import RAGContext
+from warframe_lore.engram.llm import LLMProvider
+from warframe_lore.engram.models import ChatMessage
+from warframe_lore.engram.rag.context import RAGContext
 
 log = logging.getLogger("warframe_lore.engram.rag.rewriter")
 

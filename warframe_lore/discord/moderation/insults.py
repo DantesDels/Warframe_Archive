@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 
-from .comebacks import COMEBACKS, comeback_for
+from warframe_lore.discord.moderation.comebacks import COMEBACKS, comeback_for
 
 # One compiled pattern per family, scanned with a short-circuiting ``any`` —
 # deliberately NOT merged into a single alternation: ``re`` gives each small

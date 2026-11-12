@@ -27,14 +27,11 @@ import asyncio
 import json
 import logging
 
-from ...config import PROJECT_ROOT
-from ...db import (
-    SQLDatabaseManager,
-    sections_from_markdown,
-)
-from ..config import EngramConfig
-from ..llm import LMStudioProvider
-from .embedding import embed_pending
+from warframe_lore.config import PROJECT_ROOT
+from warframe_lore.engram.config import EngramConfig
+from warframe_lore.engram.llm import LMStudioProvider
+from warframe_lore.engram.scripts.embedding import embed_pending
+from warframe_lore.storage.db import SQLDatabaseManager, sections_from_markdown
 
 log = logging.getLogger("warframe_lore.engram.ingest")
 

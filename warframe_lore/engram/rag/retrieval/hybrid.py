@@ -12,18 +12,21 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from ...llm import EmbeddingProvider
-from ..query.aliases import AliasResolver
-from .model import HybridHit, HybridQuery
-from .scoring import (
+from warframe_lore.engram.llm import EmbeddingProvider
+from warframe_lore.engram.rag.query.aliases import AliasResolver
+from warframe_lore.engram.rag.retrieval.model import HybridHit, HybridQuery
+from warframe_lore.engram.rag.retrieval.scoring import (
     fuse,
     query_terms,
     section_label,
     strip_context_prefix,
     ts_rank_normalized,
 )
-from .search import set_hnsw_ef_search
-from .statements import cosine_statement, fts_statement
+from warframe_lore.engram.rag.retrieval.search import set_hnsw_ef_search
+from warframe_lore.engram.rag.retrieval.statements import (
+    cosine_statement,
+    fts_statement,
+)
 
 
 class HybridSearch:

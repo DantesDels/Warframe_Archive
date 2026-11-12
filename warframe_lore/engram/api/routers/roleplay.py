@@ -11,7 +11,7 @@ import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from ....protocols.roleplay import (
+from warframe_lore.core.protocols.roleplay import (
     FRAME_COMMENT,
     FRAME_MESSAGE,
     FRAME_PERSONA,
@@ -22,13 +22,18 @@ from ....protocols.roleplay import (
     ErrorFrame,
     OpenFrame,
 )
-from ...rag import RAGContext, RAGContextFactory
-from ...rag.query.query_guard import sanitize_query
-from ...roleplay import Session
-from ...roleplay.replies import member_comment
-from ...roleplay.turn import plan_turn
-from ..container import Container
-from .roleplay_stream import emit_reply, emit_stream, model_turn
+from warframe_lore.engram.api.container import Container
+from warframe_lore.engram.api.routers.roleplay_stream import (
+    emit_reply,
+    emit_story_turn,
+    emit_stream,
+    model_turn,
+)
+from warframe_lore.engram.rag import RAGContext, RAGContextFactory
+from warframe_lore.engram.rag.query.query_guard import sanitize_query
+from warframe_lore.engram.roleplay import Session
+from warframe_lore.engram.roleplay.replies import member_comment
+from warframe_lore.engram.roleplay.turn import plan_turn
 
 router = APIRouter(tags=["roleplay"])
 
@@ -86,14 +91,27 @@ async def roleplay(websocket: WebSocket) -> None:
             user_id = payload.get("user_id")
             if user_id is not None and rag_context.user_key != user_id:
                 rag_context = RAGContextFactory.create(user_key=user_id)
+            session = active_session(user_id)
+            # The SESSION carries the exclusion memory (``consumed_chunk_ids``)
+            # that makes a continuation serve unseen fragments instead of
+            # repeating the previous part: the router hands it to the turn.
             plan = await plan_turn(container, payload, user_text, persona_mode,
-                                   rag_context)
+                                   rag_context,
+                                   consumed_chunk_ids=session.consumed_chunk_ids)
             if plan.reply is not None:
                 await emit_reply(websocket, plan.reply)
                 continue
+            if payload.get("story"):
+                # Story parts hop past windows the model narrates nothing from
+                # (see ``emit_story_turn``): a dead window is left behind
+                # instead of stopping the chain with a false exhaustion.
+                await emit_story_turn(websocket, container, payload,
+                                      user_text, persona_mode, rag_context,
+                                      session)
+                continue
             await emit_stream(websocket, model_turn(
-                container, plan, payload, user_text, persona_mode,
-                active_session(user_id)), story_more=plan.story_more)
+                container, plan, payload, user_text, persona_mode, session),
+                story_more=plan.story_more)
     except WebSocketDisconnect:
         pass
     except Exception as exc:  # noqa: BLE001 (stream error -> clean close)

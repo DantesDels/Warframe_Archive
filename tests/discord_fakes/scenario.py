@@ -8,11 +8,11 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 
+from warframe_lore.core.protocols.roleplay import PERSONA_ORACLE
 from warframe_lore.discord.bot import LoreMasterBot
 from warframe_lore.discord.core import build_services
 from warframe_lore.discord.guild.roles import RoleHierarchy
 from warframe_lore.discord.moderation.guards import BurstGuard
-from warframe_lore.protocols.roleplay import PERSONA_ORACLE
 
 from .gateway import ScriptedGateway
 from .guild import (

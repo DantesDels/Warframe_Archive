@@ -14,8 +14,8 @@ storage or clients — it consumes abstractions injected via the `Container`.
 | `config.py` | `EngramConfig`: DB/LLM URLs, models, top_k, windows (overridable via `ENGRAM_*` env vars) |
 | `persona.py` | `Persona`: system prompt read from `persona/oracle` (editable on the fly) |
 | `llm/` | `base.py` (`LLMProvider` / `EmbeddingProvider` interfaces), `lmstudio.py` (`LMStudioProvider`, OpenAI-compatible) |
-| `rag/` | `retriever.py` (`Retriever` contract + `RAGHit`), `search.py` (`CosinusSearch` pgvector), `structured_search.py` (`StructuredSearch`), `merged.py` (`MergedRetriever`), `prompt.py` (`PromptBuilder`), `verify.py` (`verify_answer` — deterministic post-generation entity gate, `lexeme_forms` accent/number/gender variants), `service.py` (`RAGService`), `vocabulary.py` (`ArchiveVocabulary` — whole-corpus vocabulary behind the post-generation gate, probing those same variants) |
-| `roleplay/` | `models.py` (`Session`/`Turn`), `turn.py` (`plan_turn` — deterministic short-circuits BEFORE the LLM: probe, missing archives, guild member, speaker identity), `stream.py` (`RoleplayService` streaming), `prompt/` (`blocks.py` BLOC 1 + directives de fin, `directives.py` fiche interlocuteur / civilité / jalousie / langue, `window.py` `SlidingWindow`), `replies/` (`identity.py` deterministic speaker-identity + member-card replies, `comment.py` one-shot member observation), `memory.py` (`UserMemoryStore`) |
+| `rag/` | `retriever.py` (`Retriever` contract + `RAGHit`), `search.py` (facade `CosinusSearch` pgvector — `_build_statement`/`suggest_title`/dossier delegations, re-exports `DOSSIER_LIMIT`, `set_hnsw_ef_search`, `dossier_title_terms`), `dossier.py` (`lore_dossier_statement` story-first tiers + `DOSSIER_LIMIT`), `suggestion.py` (lexical title suggestion), `hnsw.py` (session `ef_search` tuning), `structured_search.py` (`StructuredSearch` on the six element tables), `hybrid.py` (`HybridSearch` vector + FTS), `merged.py` (`MergedRetriever`), `prompt.py` (`PromptBuilder`), `verify.py` (`verify_answer` — deterministic post-generation entity gate, `lexeme_forms` accent/number/gender variants), `service.py` (`RAGService`), `scoring.py` (`query_terms`, `ts_rank_normalized`), `model.py` (hit dataclasses), `vocabulary.py` (`ArchiveVocabulary` — whole-corpus vocabulary behind the post-generation gate, probing those same variants) |
+| `roleplay/` | `models.py` (`Session`/`Turn`), `turn.py` (`plan_turn` — deterministic short-circuits BEFORE the LLM: probe, missing archives, guild member, speaker identity), `stream.py` (orchestrator `RoleplayService` streaming), `story_turn.py` (story double pass: invisible factual draft then narration system, KIM messenger directive), `verify_gate.py` (post-generation gate: archive verification + mandated part closing), `purge.py` (canonical story closings), `prompt/` (`blocks.py` BLOC 1 + directives de fin, `directives.py` fiche interlocuteur / civilité / jalousie / langue, `narrative.py` story/lens/targeted-era directives, `window.py` `SlidingWindow`), `replies/` (`identity.py` deterministic speaker-identity + member-card replies, `comment.py` one-shot member observation), `memory.py` (`UserMemoryStore`) |
 | `api/` | `main.py` (FastAPI), `container.py` (service composition), `schemas.py` (HTTP), `routers/` (`document_rag.py`, `roleplay.py` WS terminal — transport only, `roleplay_stream.py` frame emission) |
 | `scripts/` | `ingest.py`: ETL from JSON megafiles → vectorized `lore_chunks`; `embed_structured.py`: embed the six element tables → `structured_chunks` |
 
@@ -89,6 +89,33 @@ freely editable, then restart the server. It carries the roleplay rules:
 Directive Zéro (creator devotion), the anti-préambule / anti-répétition
 rules, the **Codex formatting** (`> **◈ ARCHIVE DU CODEX**` lore cards) and
 the external-organics / jealousy protocols.
+
+## Targeted Stories (Lore Dossier)
+
+A story request ("raconte-moi l'histoire de X") grounds the narrative on the
+subject's OWN pages instead of the nearest semantic neighbors — the pure
+`top_k` search ranks first-person KIM dialogues above the biography
+(playtest "l'histoire d'Eleanor": Background landed at rank ~16).
+
+- **Dossier SQL** (`retrieval/dossier.py`, `DOSSIER_LIMIT = 12`): the exact
+  biography page first (tier 0), its French mirror, then child pages
+  (`Eleanor/Quotes`, tier 1), then title-matching pages and finally
+  content-only mentions — in narrative reading order. `exclude_ids` is the
+  only cursor the server trusts (chunks already narrated are banned in SQL);
+  one chunk is fetched beyond the window to know whether anything is left.
+- **Alias sweep** (`query/aliases.py::dossier_title_terms`): the subject key
+  (`lettie`) expands to its canonical title (`Leticia`) so the biography page
+  keeps its tier-0 slot (Lettie playtest).
+- **Story double pass** (`roleplay/story_turn.py`): two LLM calls — an
+  invisible French-only factual draft (cold, 0.1), then the narration system
+  (lens/targeted-era directive + draft, French locks). The **KIM messenger
+  directive** teaches the model that `KIM · …` excerpts are Hex messages, KIM
+  is a TOOL and never a character.
+- **Emission gate** (`api/routers/roleplay_stream.py`): a degenerate part
+  (empty text or closing sentence alone) is never served — the turn is
+  re-planned past the dead window; with unseen fragments the honest `RAG_ERROR`
+  abstention keeps `story_more = True`, a drained dossier ends with the
+  archivist stop.
 
 ## Installation / Launch
 

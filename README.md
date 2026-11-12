@@ -118,6 +118,25 @@ python -m pytest -q             # full suite
 # or: .\scripts\check.ps1  (Windows) / make check (Linux, macOS, WSL)
 ```
 
+## Exporting the corpus (single file / NotebookLM)
+
+After `cephalon run`, the lore lives in per-bucket megafiles under `out/`.
+`scripts/merge_lore.py` turns them into portable Markdown for online LLMs
+or NotebookLM:
+
+```bash
+# One merged file (large-context models)
+python scripts/merge_lore.py --out out/Warframe_Lore_Complete.md
+
+# NotebookLM-friendly: one file per bucket, auto-split to stay under the
+# ~500 k-word per-source cap, plus an INDEX.md
+python scripts/merge_lore.py --per-bucket
+```
+
+Filters: `--lang en|fr|all`, `--canon-only`, `--buckets ID1,ID2`,
+`--max-pages N`. The `out/` and `out/notebooklm/` directories are gitignored,
+so regenerate after each `cephalon run`. See `scripts/merge_lore.py --help`.
+
 ## License
 
 Proprietary — see [`LICENSE`](LICENSE).

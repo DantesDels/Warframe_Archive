@@ -51,3 +51,11 @@ warframe_lore/web/timeline/preview.log
 .idea/
 .DS_Store
 Thumbs.db
+
+
+# Build bundles generes par Vite (ne pas versionner)
+warframe_lore/web/static/*/assets/
+warframe_lore/web/static/vendor/
+
+# Knowledge graph (graphify)
+graphify-out/

@@ -1,7 +1,9 @@
 # `engram` Layer — AI Backend & RAG
 
 Responsibility: expose the vectorized knowledge base and a real-time
-Roleplay terminal, backed by a **local LM Studio** (chat + embedding).
+Roleplay terminal. Embeddings run on a **local LM Studio** (`bge-m3`); the
+chat backend is any adapter behind the hexagonal `LLMProviderPort` (local
+LM Studio by default, NVIDIA NIM or Gemini on demand).
 
 Designed in strict compliance with SOLID (one role per module, interfaces
 injected via dependency inversion): the `API` never depends on concrete
@@ -13,8 +15,8 @@ storage or clients — it consumes abstractions injected via the `Container`.
 |---|---|
 | `config.py` | `EngramConfig`: DB/LLM URLs, models, top_k, windows (overridable via `ENGRAM_*` env vars) |
 | `persona.py` | `Persona`: system prompt read from `persona/oracle` (editable on the fly) |
-| `llm/` | `base.py` (`LLMProvider` / `EmbeddingProvider` interfaces), `lmstudio.py` (`LMStudioProvider`, OpenAI-compatible) |
-| `rag/` | `retriever.py` (`Retriever` contract + `RAGHit`), `search.py` (facade `CosinusSearch` pgvector — `_build_statement`/`suggest_title`/dossier delegations, re-exports `DOSSIER_LIMIT`, `set_hnsw_ef_search`, `dossier_title_terms`), `dossier.py` (`lore_dossier_statement` story-first tiers + `DOSSIER_LIMIT`), `suggestion.py` (lexical title suggestion), `hnsw.py` (session `ef_search` tuning), `structured_search.py` (`StructuredSearch` on the six element tables), `hybrid.py` (`HybridSearch` vector + FTS), `merged.py` (`MergedRetriever`), `prompt.py` (`PromptBuilder`), `verify.py` (`verify_answer` — deterministic post-generation entity gate, `lexeme_forms` accent/number/gender variants), `service.py` (`RAGService`), `scoring.py` (`query_terms`, `ts_rank_normalized`), `model.py` (hit dataclasses), `vocabulary.py` (`ArchiveVocabulary` — whole-corpus vocabulary behind the post-generation gate, probing those same variants) |
+| `llm/` | `port.py` (`LLMProviderPort`: `stream` primitive, derived `generate`/`chat_stream`/`close`), `base.py` (historical `LLMProvider` alias + `EmbeddingProvider`), `openai_compat.py` (shared OpenAI SSE transport, replay on a stale socket), `lmstudio.py` (`LMStudioProvider`, chat + embeddings), `nvidia_nim.py` (`NvidiaNimAdapter`), `gemini.py` (`GeminiAdapter`, REST SSE mapping), `factory.py` (`build_llm_provider`: `ENGRAM_LLM_PROVIDER` → adapter) |
+| `rag/` | `retriever.py` (`Retriever` contract + `RAGHit`), `search.py` (facade `CosinusSearch` pgvector — `_build_statement`/`suggest_title`/dossier delegations, re-exports `DOSSIER_LIMIT`, `set_hnsw_ef_search`, `dossier_title_terms`), `dossier.py` (`lore_dossier_statement` story-first tiers + `DOSSIER_LIMIT`), `suggestion.py` (lexical title suggestion), `hnsw.py` (session `ef_search` tuning), `structured_search.py` (`StructuredSearch` on the six element tables), `hybrid.py` (`HybridSearch` vector + FTS, plus the FTS-only `lexical_hits` channel), `merged.py` (`MergedRetriever`), `retrieval/routes/` (`intent.py` Codex/Story classification, `codex.py` hybrid + rerank, `story.py` chronological SQL targeting, `rerank.py` `Reranker` port + simulated cross-encoder, `router.py` `RetrievalRouter`), `prompt.py` (`PromptBuilder`), `verify.py` (`verify_answer` — deterministic post-generation entity gate, `lexeme_forms` accent/number/gender variants), `service.py` (`RAGService`), `scoring.py` (`query_terms`, `ts_rank_normalized`), `model.py` (hit dataclasses), `vocabulary.py` (`ArchiveVocabulary` — whole-corpus vocabulary behind the post-generation gate, probing those same variants) |
 | `roleplay/` | `models.py` (`Session`/`Turn`), `turn.py` (`plan_turn` — deterministic short-circuits BEFORE the LLM: probe, missing archives, guild member, speaker identity), `stream.py` (orchestrator `RoleplayService` streaming), `story_turn.py` (story double pass: invisible factual draft then narration system, KIM messenger directive), `verify_gate.py` (post-generation gate: archive verification + mandated part closing), `purge.py` (canonical story closings), `prompt/` (`blocks.py` BLOC 1 + directives de fin, `directives.py` fiche interlocuteur / civilité / jalousie / langue, `narrative.py` story/lens/targeted-era directives, `window.py` `SlidingWindow`), `replies/` (`identity.py` deterministic speaker-identity + member-card replies, `comment.py` one-shot member observation), `memory.py` (`UserMemoryStore`) |
 | `api/` | `main.py` (FastAPI), `container.py` (service composition), `schemas.py` (HTTP), `routers/` (`document_rag.py`, `roleplay.py` WS terminal — transport only, `roleplay_stream.py` frame emission) |
 | `scripts/` | `ingest.py`: ETL from JSON megafiles → vectorized `lore_chunks`; `embed_structured.py`: embed the six element tables → `structured_chunks` |
@@ -22,33 +24,55 @@ storage or clients — it consumes abstractions injected via the `Container`.
 ## Architecture
 
 ```
-EngramConfig ──► Container (DI) ──┬─► LMStudioProvider (chat + embed)
-                                  ├─► MergedRetriever ─┬─► CosinusSearch (lore_chunks pgvector)
-                                  │                    └─► StructuredSearch (structured_chunks pgvector)
+EngramConfig ──► Container (DI) ──┬─► build_llm_provider ─► LMStudio / NVIDIA NIM / Gemini
+                                  ├─► LMStudioProvider (local bge-m3 embeddings)
+                                  ├─► HybridSearch ─┬─► CosinusSearch (lore_chunks pgvector)
+                                  │                 └─► FTS (lexical_hits)
+                                  ├─► RetrievalRouter ─┬─► CodexRoute (hybrid + rerank, top 10)
+                                  │                    └─► StoryRoute (vector targeting + SQL order)
                                   ├─► RAGService  → POST /v1/rag
                                   └─► RoleplayService → WS /v1/roleplay
 ```
 
-The engine (`RAGService`) depends only on `EmbeddingProvider`, `Retriever`
-and `LLMProvider` abstractions (dependency inversion) — you can plug in
-another vector store (FAISS, Qdrant…) or another LLM without touching the
-core.
+The engine (`RAGService`) depends only on `EmbeddingProvider`, `Retriever`,
+`RetrievalRouter` and `LLMProviderPort` abstractions (dependency inversion) —
+you can plug in another vector store (FAISS, Qdrant…), another reranker or
+another chat backend without touching the core. `build_llm_provider` is the
+only place that maps `ENGRAM_LLM_PROVIDER` to a concrete adapter.
+
+## Swapping the LLM backend
+
+The domain never imports a concrete client: `RAGService` and
+`RoleplayService` receive an `LLMProviderPort`. `Container` is the composition
+root and calls `build_llm_provider(config)`, which maps
+`ENGRAM_LLM_PROVIDER` to `LMStudioProvider`, `NvidiaNimAdapter` or
+`GeminiAdapter`. Embeddings are separate: they always use a local
+`LMStudioProvider` (`bge-m3`), even when the chat backend is remote. Any
+object that implements `stream` (the derived `generate`, `chat_stream` and
+`close` come for free) can be injected instead.
 
 ## Document RAG
 
-1. The question is vectorized (`bge-m3`, 1024d) via LM Studio;
-2. `MergedRetriever` runs BOTH channels in parallel — `CosinusSearch`
-   queries `lore_chunks.embedding` by cosine similarity pgvector (operator
-   `<=>`, HNSW index) and `StructuredSearch` queries `structured_chunks`
-   (the embedded six element tables: warframes, quests, updates,
-   announcements, lore items, dialogues) — merged by score, capped at
-   `top_k`;
-3. `PromptBuilder` assembles **a single XML-strict system message**: persona,
+1. The question is vectorized (`bge-m3`, 1024d) by the local embedding provider;
+2. `RetrievalRouter` classifies the intent: a factual lookup takes the
+   **Codex** route, a narration ("raconte…", explicit `story` flag) takes the
+   **Story** route;
+3. **Codex** — `CodexRoute` unions the semantic `MergedRetriever` (both
+   pgvector corpora, `lore_chunks` + `structured_chunks`) with the FTS channel
+   (`HybridSearch.lexical_hits`, PostgreSQL `websearch_to_tsquery`), then
+   `SimulatedCrossEncoderReranker` re-scores the pool against the question and
+   keeps the ten most relevant passages;
+4. **Story** — `StoryRoute` uses pure vector targeting (no lexical channel, no
+   reranker) and lets SQL impose the final chronology: `message_order ASC NULLS
+   LAST`, page then chunk id. Non-narrative kinds (`game_updates`,
+   `game_announcements`, `patch_notes`) are excluded in SQL, before any row
+   reaches the prompt;
+5. `PromptBuilder` assembles **a single XML-strict system message**: persona,
    `<archives>{context}</archives>` tags and fixed fallback directives
    (Gemma-2 better delimits internal knowledge / context / instructions
    when everything is in a single block). Capped at `top_k=3` passages and
    ~4500 characters (≤1500 tokens);
-4. The LLM generates the response, streamed or in one shot, with sources.
+6. The LLM generates the response, streamed or in one shot, with sources.
    **Temperature 0.1** (analytical). No passage above the threshold →
    **short-circuit**: the LLM is not called, the exact mnemonic error string
    is returned.
@@ -133,8 +157,12 @@ python -m warframe_lore.engram.scripts.embed_structured   # optional --kinds
 uvicorn warframe_lore.engram.api.main:app --port 8000
 ```
 
-Requires LM Studio on `http://localhost:1234` (chat + embedding), models
-overridable via `ENGRAM_CHAT_MODEL`, `ENGRAM_EMBED_MODEL`, `ENGRAM_LLM_BASE`.
+Requires LM Studio on `http://localhost:1234` for the local `bge-m3`
+embeddings; models are overridable via `ENGRAM_CHAT_MODEL`,
+`ENGRAM_EMBED_MODEL`, `ENGRAM_LLM_BASE`. The chat backend is selected by
+`ENGRAM_LLM_PROVIDER` (`lmstudio` default, `nvidia`, `gemini`), with the
+remote keys in `ENGRAM_NVIDIA_KEY` / `ENGRAM_GEMINI_KEY` (see
+`.env.example`).
 
 ## Endpoints
 

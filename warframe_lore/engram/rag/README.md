@@ -40,9 +40,14 @@ sequenceDiagram
     end
 
     rect rgb(255, 250, 240)
-        note over Pipe,DB: Phase 2: Embedding & Retrieval
+        note over Pipe,DB: Phase 2: Embedding & Dual-Route Retrieval
         Pipe->>Embed: embed([search_query]) -> vector(1024d) [bge-m3]
-        Pipe->>DB: retriever.search(vector) -> Top-K chunks [search.py]
+        Pipe->>DB: router.retrieve(question, vector, story) [routes/router.py]
+        alt Factual (Codex)
+            DB->>DB: semantic + FTS union, reranked top 10 [routes/codex.py]
+        else Narration (Story)
+            DB->>DB: pure vector targeting, SQL message_order ASC [routes/story.py]
+        end
         opt Targeted Story (subject specified)
             Pipe->>DB: retriever.dossier(subject, vector, exclude_ids) [dossier.py]
         end
@@ -88,7 +93,7 @@ sequenceDiagram
 | Phase | Responsibility | Key Module / Function | Invariant / Business Rule |
 |---|---|---|---|
 | **1. Query Sanitization & Expansion** | Normalizes user input, screens out attacks and expands nicknames. | `query/query_guard.py`<br>`query/probes.py`<br>`query/aliases.py`<br>`query/search_query.py` | • Strips non-printable ASCII/control chars.<br>• Hostile probes (SQLi, roleplay overrides) are flagged immediately.<br>• `AliasResolver` maps colloquial names (*"Mercenaire d'Os"*) to canonical names (*"Ordan Karris Ordis"*) **before** embedding.<br>• Resolves anaphoric references using session `RAGContext`. |
-| **2. Embedding & Vector Search** | Converts text to dense vectors and queries `pgvector`. | `llm/lmstudio.py`<br>`retrieval/search.py`<br>`retrieval/dossier.py`<br>`retrieval/hybrid.py` | • 1024-dimensional embeddings via local `bge-m3`.<br>• Cosine distance (`<=>`) backed by HNSW index (`ef_search = 64`).<br>• In story mode (`subject`), queries biographical pages first (`dossier.py`, order preserved). |
+| **2. Embedding & Dual-Route Retrieval** | Converts text to dense vectors and dispatches to the Codex or Story strategy. | `llm/lmstudio.py`<br>`retrieval/routes/`<br>`retrieval/hybrid.py`<br>`retrieval/dossier.py` | • 1024-dimensional embeddings via local `bge-m3`.<br>• **Codex**: semantic (`MergedRetriever`) + full-text (`HybridSearch.lexical_hits`) union, reranked to the 10 most relevant passages.<br>• **Story**: pure vector targeting, NO lexical channel and NO reranker; SQL imposes `message_order ASC NULLS LAST` and excludes `game_updates` / `game_announcements` / `patch_notes`.<br>• Cosine distance (`<=>`) backed by HNSW index (`ef_search = 200`).<br>• In story mode (`subject`), queries biographical pages first (`dossier.py`, order preserved). |
 | **3. Relevance & Anti-Hallucination** | Filters noise and prevents hallucinations on absent entities. | `retrieval/relevance.py`<br>`retrieval/suggestion.py` | • **Relevance floor**: passages with cosine score < `0.50` are dropped.<br>• **Entity guard**: for *"Qui est X ?"*, if "X" is absent from all retained chunks, short-circuit immediately.<br>• If weak match: suggests close canon title (*"Voulez-vous dire « Y » ?"*). |
 | **4. Strict Prompt Assembly** | Delimits context inside XML tags with amnesia directives. | `prompt/builder.py`<br>`prompt/guards.py`<br>`audit.py` | • Single system message with `<archives>{context}</archives>`.<br>• Real-world amnesia directive (prevents leaking pre-trained world knowledge).<br>• Context capped at `max_context_chars` (default ~4500-6000 chars / ~1500 tokens).<br>• Audit line logged via `audit_retrieval()`. |
 | **5. Inference & Verification** | Generates response and verifies groundedness. | `service.py`<br>`verify.py`<br>`sanitize.py` | • **Low temperature (`0.1`)** for deterministic factual generation.<br>• Post-generation check (`verify_answer_with_archive`): checks if key entities in the answer exist in the context.<br>• Strips trailing padding/formatting noise. |
@@ -114,6 +119,8 @@ The model is intentionally **never called** when any of the following conditions
 ## 4. Narrative Mode (Pagination & Continuation)
 
 Targeted stories (*"Raconte-moi l'histoire de Lettie"*) use a dedicated continuation protocol:
+- **Route selection**: `RetrievalRouter` sends narration wording (or the explicit `story` flag) to `StoryRoute`; factual lookups go to `CodexRoute`.
+- **Chronology**: `StoryRoute` only picks the semantic neighbourhood — the final order is SQL's (`coalesce(kim_dialogue.message_order, game_dialogue.message_order) ASC NULLS LAST`, then page and chunk id), never the vector's.
 - **`subject`**: Reads the subject's own wiki page chunks in narrative order first (tier SQL).
 - **`exclude_ids`**: The **only** cursor mechanism. Chunks already shown are recorded and excluded in subsequent turns (`NOT (lore_chunks.id = ANY(:exclude_ids))`).
 - **`offset > 0`**: Continuation turns omit semantic neighbours to prevent re-anchoring on the same introductory facts.

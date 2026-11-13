@@ -42,11 +42,20 @@ class ShortCircuitTests(unittest.TestCase):
         self.assertEqual(decide({"rag": True}, "qui est Hildryn ?").reply,
                          RAG_ERROR)
 
-    def test_suggestion_de_désambiguïsation_passe_au_llm(self):
+    def test_suggestion_de_désambiguïsation_demande_une_précision(self):
         plan = decide({"rag": True}, "qui est Hildry ?",
                       rag=FakeRAG(None, "Hildryn"))
-        self.assertIsNone(plan.reply)
         self.assertIsNone(plan.context_text)
+        self.assertIn("Voulez-vous dire « Hildryn » ?", plan.reply or "")
+
+    def test_une_entité_inconnue_ne_rejoint_jamais_le_llm(self):
+        # Cas d'école « Zikhaio Nuri » : l'entité est absente des archives et
+        # seule une correspondance partielle existe.  Sans passage de confiance
+        # le LLM ne reçoit RIEN : aucune fiche Codex ne peut être inventée.
+        plan = decide({"rag": True}, "Qui est Zikhaio Nuri ?",
+                      rag=FakeRAG(None, "Zikhaio Nuri"))
+        self.assertIsNone(plan.context_text)
+        self.assertIn("Voulez-vous dire « Zikhaio Nuri » ?", plan.reply or "")
 
     def test_introspection_ne_touche_pas_aux_archives(self):
         rag = FakeRAG()
@@ -87,15 +96,16 @@ class ShortCircuitTests(unittest.TestCase):
         self.assertIsNone(plan.context_text)
         self.assertIn("Voulez-vous dire « Orokin » ?", plan.reply or "")
 
-    def test_suggestion_non_recit_passe_le_marqueur_au_llm(self):
-        # Hors récit, la désambiguïsation garde le chemin LLM : le marqueur
-        # traverse tel quel (comportement historique inchangé).
+    def test_suggestion_non_recit_ne_fabrique_pas_de_fiche(self):
+        # Même si un appelant transmettait le marqueur [SUGGESTION] comme
+        # contexte, la suggestion PRIME : sans passage de confiance, le LLM
+        # n'est jamais appelé et aucune fiche Codex n'est inventée.
         marker = ("[SUGGESTION] Correspondance partielle dans les archives : "
                   "« Hildryn ».")
         plan = decide({"rag": True}, "qui est Hildry ?",
                       rag=FakeRAG(marker, "Hildryn"))
-        self.assertIsNone(plan.reply)
-        self.assertEqual(plan.context_text, marker)
+        self.assertIsNone(plan.context_text)
+        self.assertIn("Voulez-vous dire « Hildryn » ?", plan.reply or "")
 
     def test_un_recit_sans_aucune_piste_refuse(self):
         # Aucun passage, aucune suggestion : le tour story refuse exactement

@@ -23,8 +23,8 @@ from warframe_lore.discord.guild.story_eras import (
 )
 
 # Narrative triggers (FR/EN): "raconte-moi l'histoire de…" and friends.
-# A lore QUESTION ("Quelle est l'histoire des Orokin ?") is NOT a story: the
-# trigger word must carry the REQUEST (verbative "raconte") or a possessive
+# A lore QUESTION ("Qui est…", "Quelle est l'histoire des Orokin ?") is NOT a
+# story: the trigger word must carry the REQUEST ("raconte") or a possessive
 # "de" ("l'histoire de l'univers"), never a standalone "l'histoire".
 STORY_TRIGGERS = (
     "raconte",
@@ -35,6 +35,10 @@ STORY_TRIGGERS = (
     "tell me the story", "a story about", "the story of", "story of",
     "story about", "history of", "recount",
 )
+
+# "Parle-moi de…" opens a narrative only when it NAMES an archived subject:
+# "parle-moi de Nuri" tells a tale, "parle-moi de ta journée" stays small talk.
+NARRATIVE_REQUEST_TRIGGERS = ("parle-moi d", "parle moi d")
 
 LENS_INITIATE = "initiate"
 LENS_COSMOGONIC = "cosmogonic"
@@ -117,7 +121,10 @@ class StoryAsk:
 def is_story_request(text: str) -> bool:
     """True when the request opens a narrative (a story is expected)."""
     low = (text or "").lower()
-    return any(trigger in low for trigger in STORY_TRIGGERS)
+    if any(trigger in low for trigger in STORY_TRIGGERS):
+        return True
+    return (any(trigger in low for trigger in NARRATIVE_REQUEST_TRIGGERS)
+            and targeted_subject_mention(low) is not None)
 
 
 def detect_story_lens(text: str) -> str | None:

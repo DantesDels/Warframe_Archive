@@ -98,17 +98,25 @@ class RAGService:
                       exclude_ids: list[int] | None = None,
                       story: bool = False
                       ) -> tuple[str | None, str | None, bool, list[int]]:
-        """Context / suggestion / remaining material / consumed chunk IDs."""
+        """Trusted context / suggestion / remaining material / consumed ids.
+
+        ``context`` is ``None`` whenever no passage anchors the turn: a
+        suggestion alone is a disambiguation hint, not a trusted passage.
+        """
         outcome = await self.pipeline.run(question, context, subject=subject,
                                           offset=offset, exclude_ids=exclude_ids,
                                           story=story)
         if outcome.bypass:
             return None, None, False, []
+        # The [SUGGESTION] marker is a disambiguation hint for the document
+        # prompt, NEVER a passage: the roleplay turn must see "no context" and
+        # answer deterministically (a Codex sheet is never filled blind).
+        context = None if outcome.prompt.suggestion else outcome.prompt.context
         # Only the ids the model REALLY saw (bounded in the builder by the
         # character cap) enter the session's exclusion memory: banning every
         # retrieved hit would silently starve the dossier of unseen fragments.
         consumed_ids = list(outcome.prompt.used_ids)
-        return (outcome.prompt.context, outcome.prompt.suggestion,
+        return (context, outcome.prompt.suggestion,
                 outcome.story_more, consumed_ids)
 
     async def answer_with_sources(self, question: str,

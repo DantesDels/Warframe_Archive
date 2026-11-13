@@ -35,6 +35,29 @@ class EngramConfig:
     lmstudio_api_key: str = field(
         default_factory=lambda: _env("ENGRAM_LLM_KEY", "lm-studio"))
 
+    # Chat backend selected by the LLM port factory: ``lmstudio`` (local,
+    # default), ``nvidia`` (NVIDIA NIM) or ``gemini``.  Embeddings always stay
+    # local (BGE-M3), whatever the chat backend.
+    llm_provider: str = field(
+        default_factory=lambda: _env("ENGRAM_LLM_PROVIDER", "lmstudio"))
+    nvidia_base_url: str = field(
+        default_factory=lambda: _env(
+            "ENGRAM_NVIDIA_BASE", "https://integrate.api.nvidia.com/v1"))
+    nvidia_api_key: str = field(
+        default_factory=lambda: _env("ENGRAM_NVIDIA_KEY", ""))
+    nvidia_model: str = field(
+        default_factory=lambda: _env(
+            "ENGRAM_NVIDIA_MODEL", "meta/llama-3.1-70b-instruct"))
+    gemini_base_url: str = field(
+        default_factory=lambda: _env(
+            "ENGRAM_GEMINI_BASE",
+            "https://generativelanguage.googleapis.com/v1beta"))
+    gemini_api_key: str = field(
+        default_factory=lambda: _env("ENGRAM_GEMINI_KEY", ""))
+    gemini_model: str = field(
+        default_factory=lambda: _env(
+            "ENGRAM_GEMINI_MODEL", "gemini-2.0-flash"))
+
     # --- Models ---
     # Chat: Gemma-2-9b-it (gguf Q4_K_M) — better compliance with XML formats
     # and directives than the 3B; ~5 GB VRAM, compatible with 8 GB.

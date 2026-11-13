@@ -1,28 +1,18 @@
-"""ENGRAM LLM provider interface.
+"""ENGRAM LLM/embedding interfaces.
 
-Abstraction behind which backends live (local LM Studio, OpenAI, Ollama...).
-The rest of ENGRAM depends only on this interface (dependency inversion): it
-is possible to plug in another provider without touching RAG or Roleplay.
+``LLMProvider`` is the historical public name of :class:`LLMProviderPort`
+(kept as an alias so every import and annotation stays valid).
+``EmbeddingProvider`` is the separate contract of the embedding model: a chat
+backend (NVIDIA NIM, Gemini) can be remote while embeddings stay local.
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
 
-from warframe_lore.engram.models import ChatMessage
+from warframe_lore.engram.llm.port import LLMProviderPort
 
-
-class LLMProvider(ABC):
-    """Generates responses (token streaming) from chat messages."""
-
-    @abstractmethod
-    async def chat_stream(
-        self,
-        messages: list[ChatMessage],
-        temperature: float = 0.1,
-    ) -> AsyncIterator[str]:
-        """Iterates over model response tokens (async stream)."""
+LLMProvider = LLMProviderPort
 
 
 class EmbeddingProvider(ABC):
@@ -32,5 +22,9 @@ class EmbeddingProvider(ABC):
     async def embed(self, texts: list[str]) -> list[list[float]]:
         """Returns one vector per text (configured dimension)."""
 
+    async def close(self) -> None:
+        """Release transport resources (no-op for backends without a client)."""
+        return None
 
-__all__ = ["EmbeddingProvider", "LLMProvider"]
+
+__all__ = ["EmbeddingProvider", "LLMProvider", "LLMProviderPort"]

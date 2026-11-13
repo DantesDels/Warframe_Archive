@@ -10,11 +10,18 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .. import commands as cmd
+# Imported lazily inside ``register`` to break the static import cycle
+# ``core.cli -> parser -> subcommands -> commands -> core.cli``.  The
+# handlers are only needed once argparse actually builds the parser, by
+# which point the ``commands`` module is fully loaded.
+cmd = None
 
 
 def register(sub: argparse._SubParsersAction) -> None:
     """Declare the pipeline subcommands on ``sub``."""
+    global cmd
+    from .. import commands as _cmd
+    cmd = _cmd
     _add_run(sub)
     _add_diff(sub)
     _add_status(sub)

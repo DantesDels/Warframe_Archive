@@ -16,6 +16,8 @@ from warframe_lore.discord.bot import LoreMasterBot
 from warframe_lore.discord.config import DiscordConfig
 from warframe_lore.discord.core import build_services
 
+log = logging.getLogger("warframe_lore.discord.main")
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -62,9 +64,15 @@ def launch_bot(token: str | None, ws: str | None = None,
 
     ws_url = ws or config.engram_ws_url
     channels = tuple(channels) or config.allowed_channels
-    # Services composed once, on the shared ledger.
     channel_names = (tuple(channel_names) if channel_names
                      else config.allowed_channel_names)
+    if channels or channel_names:
+        log.info("Channel restriction — IDs: %s; names: %s",
+                 ", ".join(map(str, channels)) or "none",
+                 ", ".join(channel_names) or "none")
+    else:
+        log.info("No channel restriction — answering in every channel")
+    # Services composed once, on the shared ledger.
     services = build_services(db_path=config.activity_db)
     bot = LoreMasterBot(
         gateway_url=ws_url,

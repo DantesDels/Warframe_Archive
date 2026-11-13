@@ -89,15 +89,28 @@ def test_load_channels_file_absent(tmp_path):
     assert ids == set() and names == set()
 
 
-def test_config_fusionne_env_et_fichier_canaux(monkeypatch, tmp_path):
+def test_config_env_prime_sur_le_fichier_canaux(monkeypatch, tmp_path):
     p = tmp_path / "c.json"
     p.write_text('{"channel_id": 1550171060295442482, '
                  '"channel_name": "〉ᴏʀᴀᴄʟᴇ"}', encoding="utf-8")
     monkeypatch.setenv("DISCORD_CHANNELS_FILE", str(p))
     monkeypatch.setenv("DISCORD_CHANNELS", "11")
+    monkeypatch.setenv("DISCORD_CHANNEL_NAMES", "oracle")
     config = DiscordConfig.load()
-    assert 11 in config.allowed_channels
-    assert 1550171060295442482 in config.allowed_channels
+    # ``.env`` / shell wins: the file is only a fallback.
+    assert config.allowed_channels == (11,)
+    assert config.allowed_channel_names == ("oracle",)
+
+
+def test_config_fichier_utilise_quand_env_absent(monkeypatch, tmp_path):
+    p = tmp_path / "c.json"
+    p.write_text('{"channel_id": 1550171060295442482, '
+                 '"channel_name": "〉ᴏʀᴀᴄʟᴇ"}', encoding="utf-8")
+    monkeypatch.delenv("DISCORD_CHANNELS", raising=False)
+    monkeypatch.delenv("DISCORD_CHANNEL_NAMES", raising=False)
+    monkeypatch.setenv("DISCORD_CHANNELS_FILE", str(p))
+    config = DiscordConfig.load()
+    assert config.allowed_channels == (1550171060295442482,)
     assert config.allowed_channel_names == ("〉ᴏʀᴀᴄʟᴇ",)
 
 

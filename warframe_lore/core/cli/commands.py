@@ -123,13 +123,17 @@ def _cmd_bot(args) -> int:
     from warframe_lore.discord.main import launch_bot
 
     if getattr(args, "bot_action", None) != "run":
-        print("Usage: cephalon bot run [--token ...] [--channels ...]",
-              file=sys.stderr)
+        print("Usage: cephalon bot run [--token ...] [--channels ...] "
+              "[--channel-names ...]", file=sys.stderr)
         return 2
     channels = tuple(
         int(x) for x in (args.channels or "").split(",") if x.strip().isdigit())
+    channel_names = tuple(
+        x.strip()
+        for x in (getattr(args, "channel_names", None) or "").split(",")
+        if x.strip())
     return launch_bot(args.token, args.ws, args.prefix, channels,
-                      None, args.verbose)
+                      channel_names, None, args.verbose)
 
 
 # --------------------------------------------------------- command: kim-dm

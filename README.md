@@ -69,8 +69,13 @@ Then, for the AI part: start LM Studio on `:1234` with `gemma-2-9b-it` and
 
 ```bash
 uvicorn warframe_lore.engram.api.main:app --port 8000
-cephalon bot run --channels <DISCORD_CHANNEL_ID>
+cephalon bot run
 ```
+
+The bot answers in the channel configured by `DISCORD_CHANNELS` in `.env`
+(comma-separated IDs, or `DISCORD_CHANNEL_NAMES` for names) — no need to pass
+`--channels` at every launch. `config/discord_channels.json` is only a fallback
+when those variables are unset.
 
 The single-command chain `cephalon update` runs scraper → structured ETL →
 Public Export → static lists → RAG embeddings. Without a subcommand,

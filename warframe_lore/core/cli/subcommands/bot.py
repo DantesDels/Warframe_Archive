@@ -31,7 +31,10 @@ def _add_bot(sub) -> None:
                      help="Commands prefix (default: !)")
     run.add_argument("--channels", default=None,
                      help="Allowed channel IDs, comma-separated "
-                          "(default: config or all)")
+                          "(default: .env or config or all)")
+    run.add_argument("--channel-names", default=None,
+                     help="Allowed channel names, comma-separated "
+                          "(default: .env or config or all)")
     run.add_argument("--verbose", action="store_true")
     run.set_defaults(func=cmd._cmd_bot)
     # ``cephalon bot`` alone (without ``run``) keeps the same handler.

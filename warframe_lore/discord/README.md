@@ -35,7 +35,9 @@ automatically, no dependency), or CLI arguments:
 | Token | `DISCORD_TOKEN` | `--token` | — (required) |
 | WS URL ENGRAM | `ENGRAM_WS_URL` | `--ws` | `ws://localhost:8000/v1/roleplay` |
 | Command prefix | `DISCORD_PREFIX` | `--prefix` | `!` |
-| Dedicated channels | `DISCORD_CHANNELS` | `--channels` | — (every channel) |
+| Dedicated channels (IDs) | `DISCORD_CHANNELS` | `--channels` | — (every channel) |
+| Dedicated channels (names) | `DISCORD_CHANNEL_NAMES` | `--channel-names` | — |
+| Channels file (fallback) | `DISCORD_CHANNELS_FILE` | — | `config/discord_channels.json` |
 | `typing` interval | `DISCORD_TYPING` | — | `5` |
 | Concepteur snowflake | `CREATOR_DISCORD_ID` | — | — (feature off) |
 | Role map | `DISCORD_ROLES_FILE` | — | `config/discord_roles.json` |
@@ -50,12 +52,13 @@ snowflake never leaves the process.
 ```bash
 # 1) project root: create .env (secret, not versioned)
 #    DISCORD_TOKEN=MTE...  (bot token from the Discord portal)
+#    DISCORD_CHANNELS=1550171060295442482  (channel where the Oracle answers)
 
 # 2) from the project root (ENGRAM started automatically if needed)
 cephalon bot run
 # (equivalent: python -m warframe_lore.discord.main, or the "loremaster" script)
 
-# dedicated channel + verbose logs:
+# one-off override + verbose logs (rarely needed: .env is authoritative):
 cephalon bot run --channels <ID> --verbose
 ```
 

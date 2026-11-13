@@ -49,9 +49,10 @@ directory, then any folder passed via `--out`. Rebuild after adding buckets
 
 ## 2. "Loremaster Oracle" Discord Bot
 
-Launch with `python -m warframe_lore.discord.main --channels <id>` (or
-`cephalon bot run`). The bot responds in authorized channels (option
-`--channels` / `DISCORD_CHANNELS`), or if @mentioned elsewhere. Messages
+Launch with `cephalon bot run` (or `python -m warframe_lore.discord.main`).
+The bot responds in the channels configured by `DISCORD_CHANNELS` /
+`DISCORD_CHANNEL_NAMES` in `.env` (comma-separated; `config/discord_channels.json`
+is the fallback when both are unset), or if @mentioned elsewhere. Messages
 starting with `(` or `//` (and bot messages) are ignored ("out-of-roleplay").
 
 ### Behaviour

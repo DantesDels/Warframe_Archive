@@ -59,14 +59,19 @@ def load_channels_file(path: str | Path) -> tuple[set[int], set[str]]:
 
 
 def _channel_restriction() -> tuple[tuple[int, ...], tuple[str, ...]]:
-    """(IDs, names) allowlists merged from the env vars (``DISCORD_CHANNELS``
-    / ``DISCORD_CHANNEL_NAMES``) and the optional channels config file."""
-    ids = {int(x) for x in _env("DISCORD_CHANNELS", "").split(",")
-           if x.strip().isdigit()}
-    names = {x.strip() for x in _env("DISCORD_CHANNEL_NAMES", "").split(",")
-             if x.strip()}
+    """(IDs, names) of the channels the bot may answer in.
+
+    ``DISCORD_CHANNELS`` / ``DISCORD_CHANNEL_NAMES`` (typically set in
+    ``.env``) are the single source of truth when present; otherwise the
+    optional ``config/discord_channels.json`` file is used."""
+    env_ids = {int(x) for x in _env("DISCORD_CHANNELS", "").split(",")
+               if x.strip().isdigit()}
+    env_names = {x.strip() for x in _env("DISCORD_CHANNEL_NAMES", "").split(",")
+                 if x.strip()}
+    if env_ids or env_names:
+        return tuple(sorted(env_ids)), tuple(sorted(env_names))
     file_ids, file_names = load_channels_file(_channels_file())
-    return tuple(sorted(ids | file_ids)), tuple(sorted(names | file_names))
+    return tuple(sorted(file_ids)), tuple(sorted(file_names))
 
 
 @dataclass
@@ -90,10 +95,10 @@ class DiscordConfig:
     prefix: str = field(
         default_factory=lambda: _env("DISCORD_PREFIX", "!"))
     typing_interval: float = float(_env("DISCORD_TYPING", "5"))
-    # Restrict the replies to certain channels (IDs separated by commas);
-    # empty = reply in every accessible channel.  The optional
-    # ``config/discord_channels.json`` file merges in too (see
-    # :func:`load_channels_file`).
+    # Restrict the replies to certain channels (IDs separated by commas,
+    # typically ``DISCORD_CHANNELS`` in ``.env``); empty = reply in every
+    # accessible channel.  When unset, the optional
+    # ``config/discord_channels.json`` file is the fallback.
     allowed_channels: tuple[int, ...] = field(
         default_factory=lambda: _channel_restriction()[0])
     # Restrict the replies by channel NAME too (names separated by commas):

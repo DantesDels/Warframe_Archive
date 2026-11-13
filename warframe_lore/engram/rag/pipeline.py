@@ -28,6 +28,7 @@ from warframe_lore.engram.rag.query.aliases import AliasResolver
 from warframe_lore.engram.rag.query.probes import detect_probe
 from warframe_lore.engram.rag.query.query_guard import sanitize_query
 from warframe_lore.engram.rag.query.search_query import search_query
+from warframe_lore.engram.rag.retrieval.hits import dedupe_first
 from warframe_lore.engram.rag.retrieval.relevance import (
     keep_relevant,
     missing_entity,
@@ -43,6 +44,7 @@ from warframe_lore.engram.rag.retrieval.retriever import (
 if TYPE_CHECKING:
     from warframe_lore.engram.llm import EmbeddingProvider
     from warframe_lore.engram.rag.query.rewriter import QueryRewriter
+    from warframe_lore.engram.rag.retrieval.routes.router import RetrievalRouter
 
 log = logging.getLogger("warframe_lore.engram.rag")
 
@@ -67,10 +69,14 @@ class RetrievalPipeline:
                  suggestion_min_score: float = 0.5,
                  critical_min_score: float | None = None,
                  query_rewriter: QueryRewriter | None = None,
-                 alias_resolver: AliasResolver | None = None) -> None:
+                 alias_resolver: AliasResolver | None = None,
+                 router: RetrievalRouter | None = None) -> None:
         self.embeddings = embeddings
         self.retriever = retriever
         self.prompt_builder = prompt_builder
+        # Optional dual-route strategy (Codex vs Story).  ``None`` keeps the
+        # historical single-retriever behaviour (tests, CLI, degraded setups).
+        self.router = router
         self.suggestion_min_score = suggestion_min_score
         # Critical threshold: below it (typo, out-of-corpus topic) the LLM is
         # NEVER called with a weak passage.  Calibrated on the real corpus
@@ -107,7 +113,10 @@ class RetrievalPipeline:
         search = await search_query(expanded, context or RAGContext(),
                                     self.query_rewriter)
         vector = (await self.embeddings.embed([search]))[0]
-        found = await self.retriever.search(vector)
+        # The router classifies the intent on the expanded wording and hands
+        # it to the lexical channel: aliases must reach FTS exactly as they
+        # reach the embedding.
+        found = await self._search(search, vector, story)
         story_more = False
         if subject:
             page = await self._dossier(subject, vector, exclude_ids)
@@ -120,7 +129,7 @@ class RetrievalPipeline:
                 # and 3 near-identical).  An empty page = drained dossier.
                 found = page.hits
             elif page.hits:
-                found = self._merge_dedup(page.hits + found)
+                found = dedupe_first(page.hits + found)
         if story:
             # The dossier already excludes the metagame kinds in SQL; this
             # second purge covers the semantic-neighbour channel, the only one
@@ -176,6 +185,13 @@ class RetrievalPipeline:
             return None
         return await suggest(question)
 
+    async def _search(self, query: str, vector: list[float],
+                      story: bool) -> list[RAGHit]:
+        """Base passages: dual-route strategy when injected, else the retriever."""
+        if self.router is None:
+            return await self.retriever.search(vector)
+        return await self.router.retrieve(query, vector, story=story)
+
     async def _dossier(self, subject: str, vector: list[float],
                        exclude_ids: list[int] | None = None) -> DossierPage:
         method = getattr(self.retriever, "dossier", None)
@@ -186,17 +202,5 @@ class RetrievalPipeline:
         # (``exclude_ids``) is the only cursor, so no client offset can force
         # a skip forward or loop back.
         return await method(subject, vector, offset=0, exclude_ids=exclude_ids)
-
-    @staticmethod
-    def _merge_dedup(hits: list[RAGHit]) -> list[RAGHit]:
-        """Dedup by passage identity; first occurrence wins (dossier first)."""
-        seen: set[tuple[str, str]] = set()
-        merged: list[RAGHit] = []
-        for hit in hits:
-            key = (hit.page_title, hit.content)
-            if key not in seen:
-                seen.add(key)
-                merged.append(hit)
-        return merged
 
 __all__ = ["Retrieval", "RetrievalPipeline"]

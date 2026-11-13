@@ -31,7 +31,7 @@ warframe_lore/
 │   ├── api/        #   HTTP /v1/rag, WS /v1/roleplay, DI container
 │   ├── rag/        #   query -> retrieval -> prompt -> LLM -> verify
 │   ├── roleplay/   #   turn planning, streaming, deterministic replies
-│   ├── llm/        #   LM Studio chat + embedding clients
+│   ├── llm/        #   LLM port: LM Studio / NVIDIA NIM / Gemini + embeddings
 │   └── models/     #   shared AI domain models
 ├── discord/        # Loremaster Oracle bot (guild, commands, mixins, services)
 ├── web/            # Local read-only UI (stdlib HTTP server + static frontends)
@@ -65,7 +65,9 @@ cephalon ui
 ```
 
 Then, for the AI part: start LM Studio on `:1234` with `gemma-2-9b-it` and
-`bge-m3`, then run the ENGRAM API and (optionally) the bot:
+`bge-m3` (the default local chat backend; set `ENGRAM_LLM_PROVIDER` to
+`nvidia` or `gemini` to use a remote adapter), then run the ENGRAM API and
+(optionally) the bot:
 
 ```bash
 uvicorn warframe_lore.engram.api.main:app --port 8000
@@ -82,7 +84,7 @@ Public Export → static lists → RAG embeddings. Without a subcommand,
 |---|---|---|
 | [`scraper/`](warframe_lore/scraper) | Extraction and cleaning of every external source | [scraper](warframe_lore/scraper) |
 | [`storage/`](warframe_lore/storage) | PostgreSQL/pgvector, JSON megafiles, timeline dataset | [db](warframe_lore/storage/db) · [output](warframe_lore/storage/output) |
-| [`engram/`](warframe_lore/engram) | RAG engine, FastAPI, roleplay WebSocket, LM Studio clients | [engram](warframe_lore/engram) · [RAG flow](warframe_lore/engram/rag/README.md) |
+| [`engram/`](warframe_lore/engram) | RAG engine, FastAPI, roleplay WebSocket, LLM adapters | [engram](warframe_lore/engram) · [RAG flow](warframe_lore/engram/rag/README.md) |
 | [`discord/`](warframe_lore/discord) | Loremaster Oracle bot (cards, gating, streaming) | [discord](warframe_lore/discord) |
 | [`web/`](warframe_lore/web) | Local read-only UI and RAG inspector | [web](warframe_lore/web) |
 | [`core/`](warframe_lore/core) | CLI, infrastructure bootstrap, abstract protocols | [cli](warframe_lore/core/cli) |

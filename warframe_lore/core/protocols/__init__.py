@@ -7,7 +7,7 @@ or network clients.
 
 from __future__ import annotations
 
-from .llm import EmbeddingProvider, LLMProvider
+from .llm import EmbeddingProvider, LLMProvider, LLMProviderPort
 from .retriever import DossierPage, RAGHit, Retriever
 from .roleplay import (
     FRAME_COMMENT,
@@ -47,6 +47,7 @@ __all__ = [
     "FRAME_RESET",
     "FRAME_TOKEN",
     "LLMProvider",
+    "LLMProviderPort",
     "MessageFrame",
     "OpenFrame",
     "PersonaFrame",

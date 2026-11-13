@@ -45,7 +45,7 @@ async def explain_query(question: str, subject: str | None = None) -> int:
 
         from warframe_lore.engram.api.container import Container
         container = Container()
-        call = container.llm.embed([standalone])
+        call = container.embeddings.embed([standalone])
         vector = (await asyncio.wait_for(call, timeout=1.5))[0]
         hits = await asyncio.wait_for(
             container.rag.pipeline.retriever.search(vector), timeout=2.0)

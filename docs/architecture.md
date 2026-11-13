@@ -132,12 +132,15 @@ sources ──▶ scraper/api ──▶ scraper/cleaner ──▶ storage/output
 
 - **`config.py`** — `EngramConfig` (DB/LLM URLs, models, `top_k`, windows,
   thresholds; `ENGRAM_*` variables).
-- **`llm/`** — provider contracts (`LLMProvider`, `EmbeddingProvider`) and the
-  LM Studio implementation (chat streaming, `bge-m3` embeddings).
+- **`llm/`** — provider contracts (`LLMProviderPort`, historical
+  `LLMProvider`, `EmbeddingProvider`) and the adapters behind the port:
+  `LMStudioProvider` (local chat + `bge-m3` embeddings), `NvidiaNimAdapter`,
+  `GeminiAdapter`; `build_llm_provider` maps `ENGRAM_LLM_PROVIDER`.
 - **`rag/`** — `service.py` (orchestration), `pipeline.py` (end-to-end
   retrieval), `query/` (sanitization, hostile probes, aliases, anaphora,
   search query), `retrieval/` (pgvector cosine, hybrid search, dossier,
-  relevance floors, suggestion, entity guard), `prompt/` (XML `<archives>`
+  relevance floors, suggestion, entity guard, `routes/` = Codex hybrid+rerank
+  vs Story chronological), `prompt/` (XML `<archives>`
   template + guards), `verify.py`, `sanitize.py`, `explain.py`.
 - **`roleplay/`** — `turn.py` (`plan_turn`: deterministic short-circuits
   before the LLM), `stream.py` (streamed turn runner), `prompt/` (payload
@@ -332,7 +335,9 @@ handler from the megafile cache.
 | `WF_STATE_FILE` | delta state file |
 | `WF_DATABASE_URL` | async PostgreSQL URL |
 | `WF_MAX_RETRIES` / `WF_TIMEOUT` / `WF_SLEEP` | HTTP robustness |
-| `ENGRAM_LLM_BASE` | LM Studio OpenAI endpoint |
+| `ENGRAM_LLM_BASE` | LM Studio OpenAI endpoint (embeddings) |
+| `ENGRAM_LLM_PROVIDER` | chat backend: `lmstudio` (default), `nvidia`, `gemini` |
+| `ENGRAM_NVIDIA_KEY` / `ENGRAM_GEMINI_KEY` | remote chat API keys |
 | `ENGRAM_CHAT_MODEL` / `ENGRAM_EMBED_MODEL` | model names |
 | `ENGRAM_TOP_K` / `ENGRAM_CRITICAL_MIN_SCORE` | retrieval budget / floor |
 | `ENGRAM_RATE_LIMIT_RAG` / `ENGRAM_RATE_LIMIT_WS` | per-IP quotas |

@@ -86,6 +86,17 @@ class PlainRetriever:
         return list(self.hits)
 
 
+class SuggestingRetriever(PlainRetriever):
+    """Retriever that can propose a close page title (disambiguation)."""
+
+    def __init__(self, hits, title):
+        super().__init__(hits)
+        self.title = title
+
+    async def suggest_title(self, question):
+        return self.title
+
+
 def make_service(retriever):
     return RAGService(
         embeddings=FakeEmbed(),
@@ -318,6 +329,18 @@ class PipelineDossierTests(unittest.TestCase):
         self.assertIsNone(context_text)
         self.assertIsNone(suggestion)
         self.assertFalse(more)
+        self.assertEqual(consumed, [])
+
+    def test_une_suggestion_n_est_jamais_un_contexte(self):
+        # Le marqueur [SUGGESTION] est une consigne du prompt documentaire,
+        # jamais un passage : le tour Roleplay doit voir « aucun contexte » et
+        # répondre de façon déterministe (pas de fiche Codex inventée).
+        retriever = SuggestingRetriever([hit(1, 0.30)], "Hildryn")
+        service = make_service(retriever)
+        context_text, suggestion, more, consumed = run(service.resolve(
+            "qui est Hildry ?"))
+        self.assertIsNone(context_text)
+        self.assertEqual(suggestion, "Hildryn")
         self.assertEqual(consumed, [])
 
     def test_une_continuation_ne_resert_pas_les_voisins_semantiques(self):

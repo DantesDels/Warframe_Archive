@@ -2,9 +2,8 @@
 
 Decides whether a ``message`` frame can be answered WITHOUT the model — hostile
 probe, archives missing, guild-member question, speaker-identity question,
-disambiguation request for an ambiguous story subject — else hands back the
-retrieved passages.  Transport stays in the router, the reply texts live in
-:mod:`replies`.
+disambiguation request for an ambiguous subject — else hands back the retrieved
+passages.  Transport stays in the router, the reply texts live in :mod:`replies`.
 """
 
 from __future__ import annotations
@@ -33,11 +32,11 @@ if TYPE_CHECKING:
     from warframe_lore.engram.api.container import Container
 
 
-# Deterministic disambiguation reply for a STORY request: a close page title
-# was found but no passage can anchor a tale — refusing outright (RAG_ERROR)
-# wastes the hit, so the bot asks the user to confirm the exact subject (the
-# "doute -> précisions" flow).  The CONFIRMED subject then grounds the next
-# turn on a real dossier; a bare suggestion still never anchors a narration.
+# Deterministic disambiguation reply: a close page title was found but no
+# trusted passage supports an answer — refusing outright (RAG_ERROR) wastes the
+# hit, so the bot asks the user to confirm the exact subject (the "doute ->
+# précisions" flow).  The CONFIRMED subject then grounds the next turn on real
+# passages; a bare suggestion never anchors a Codex sheet nor a narration.
 CLARIFY_REPLY = ("Voulez-vous dire « {suggestion} » ? Précisez l'entité "
                  "exacte pour que j'ouvre ses archives, organique.")
 
@@ -104,26 +103,21 @@ async def plan_turn(container: Container, payload: dict, user_text: str,
         # Grow the session's exclusion memory with what the model really saw.
         consumed_chunk_ids.update(new_ids)
 
-    if want_rag and suggestion is not None and payload.get("story"):
-        # A disambiguation near-match cannot ANCHOR a narration: without a
-        # trusted passage the tale would be invented from nothing.  Rather
-        # than refuse cold or feed the marker to the model, ask the organique
-        # to confirm the exact subject — the doubt resolves by precision, and
-        # the confirmed subject grounds the next turn (playtest « Eleanor
-        # Vance »).
+    if want_rag and suggestion is not None:
+        # A partial title match is NOT a trusted passage.  The [SUGGESTION]
+        # marker must never reach the model: the roleplay prompt has no
+        # disambiguation directive, so the Codex template would be filled from
+        # pre-trained weights (playtest « Zikhaio Nuri »).  The doubt resolves
+        # by precision instead, and the confirmed subject grounds the next
+        # turn — a tale included.
         return TurnPlan(reply=CLARIFY_REPLY.format(suggestion=suggestion))
 
-    if want_rag and not context_text and story_more is False \
-            and int(payload.get("dossier_offset") or 0) > 0:
-        # A chain asked for the NEXT page of a tale whose dossier is exhausted:
-        # the archives have nothing left to narrate.  Close the tale instead of
-        # answering "Données insuffisantes" (a data bug) or re-narrating.
-        return TurnPlan(reply=STORY_EXHAUSTED_REPLY)
-
-    if want_rag and not context_text and (suggestion is None
-                                          or payload.get("story")):
-        # No trusted passage, no plausible title: a story left without
-        # passages refuses exactly like any query without a trusted passage.
+    if want_rag and not context_text:
+        # No trusted passage: the LLM is NEVER called, free chat included — a
+        # forced Codex sheet would be invented from nothing.  A continuation of
+        # a drained narrative closes with the archivist sentence instead.
+        if story_more is False and int(payload.get("dossier_offset") or 0) > 0:
+            return TurnPlan(reply=STORY_EXHAUSTED_REPLY)
         return TurnPlan(reply=RAG_ERROR)
 
     reply = (member_reply(payload, persona_mode)

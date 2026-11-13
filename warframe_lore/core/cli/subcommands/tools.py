@@ -10,7 +10,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .. import commands as cmd
+# Imported lazily inside ``register`` to break the static import cycle
+# ``core.cli -> parser -> subcommands -> commands -> core.cli``.
+cmd = None
 
 # Localisation dictionaries / entity names available in the Public Export.
 SUPPORTED_LANGS = {"de", "en", "es", "fr", "it", "ja", "ko", "pl", "pt",
@@ -19,6 +21,9 @@ SUPPORTED_LANGS = {"de", "en", "es", "fr", "it", "ja", "ko", "pl", "pt",
 
 def register(sub: argparse._SubParsersAction) -> None:
     """Declare the tool subcommands on ``sub``."""
+    global cmd
+    from .. import commands as _cmd
+    cmd = _cmd
     _add_ui(sub)
     _add_export_entities(sub)
     _add_kim_dm(sub)

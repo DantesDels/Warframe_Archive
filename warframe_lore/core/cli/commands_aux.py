@@ -59,6 +59,7 @@ async def _cmd_status_impl(args) -> None:
     print("Lore database state:")
     print(f"  Pages in database       : {stats['total_pages']}")
     print(f"  Chunks (RAG)            : {stats['total_chunks']}")
+    print(f"  Chunks w/o vector       : {stats['pending_embeddings']}")
     print(f"  KIM dialogues           : {stats['total_kim_dialogues']}")
     print(f"  Sync records            : {stats['total_sync_records']}")
     print(f"  Last page created       : {_fmt(stats['last_page_created_at'])}")

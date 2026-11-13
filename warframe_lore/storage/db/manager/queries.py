@@ -30,9 +30,10 @@ class SQLQueryMixin:
         """Database state indicators (``cephalon status`` diagnostic).
 
         Returns:
-            ``total_pages``, ``total_chunks``, ``total_kim_dialogues``,
-            ``total_sync_records``, ``total_by_canon``, ``pages_by_bucket``,
-            ``last_page_updated``, ``last_sync_at``.
+            ``total_pages``, ``total_chunks``, ``pending_embeddings``,
+            ``total_kim_dialogues``, ``total_sync_records``,
+            ``total_by_canon``, ``pages_by_bucket``, ``last_page_updated``,
+            ``last_sync_at``.
         """
         session_factory = self._require_session_factory()
         async with session_factory() as session:
@@ -40,6 +41,9 @@ class SQLQueryMixin:
                 select(func.count()).select_from(WikiPage))).scalar_one()
             total_chunks = (await session.execute(
                 select(func.count()).select_from(LoreChunk))).scalar_one()
+            pending_embeddings = (await session.execute(
+                select(func.count()).select_from(LoreChunk).where(
+                    LoreChunk.embedding.is_(None)))).scalar_one()
             total_kim = (await session.execute(
                 select(func.count()).select_from(KimDialogue))).scalar_one()
             total_sync = (await session.execute(
@@ -65,6 +69,7 @@ class SQLQueryMixin:
         return {
             "total_pages": total_pages,
             "total_chunks": total_chunks,
+            "pending_embeddings": pending_embeddings,
             "total_kim_dialogues": total_kim,
             "total_sync_records": total_sync,
             "total_by_canon": total_by_canon,

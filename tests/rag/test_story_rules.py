@@ -49,6 +49,9 @@ STORY_REQUESTS = (
     "raconte-moi l'histoire des Orokin",
     "raconte l'histoire de 1999",
     "conte-moi la légende du Void",
+    "parle-moi de Nuri",
+    "parle-moi d'Albrecht",
+    "parle moi du Cryobell",
     "tell me the story of the Kuva",
     "the story of the Unum",
 )
@@ -62,7 +65,16 @@ class StoryDetectionTests(unittest.TestCase):
 
     def test_un_echange_banal_n_est_pas_un_recit(self):
         for text in ("bonjour Oracle", "qui es-tu",
-                     "quels sont tes avis ?", "hmhm…"):
+                     "quels sont tes avis ?", "hmhm…",
+                     "parle-moi de ta journée"):
+            with self.subTest(text=text):
+                self.assertFalse(is_story_request(text))
+
+    def test_une_question_qui_est_reste_une_fiche_codex(self):
+        # « Qui est X ? » est une FICHE Codex, pas un récit : seules les
+        # formulations narratives (« parle-moi de », « raconte-moi ») ouvrent
+        # le storyteller.
+        for text in ("qui est Zikhaio Nuri ?", "Qui est Ballas ?"):
             with self.subTest(text=text):
                 self.assertFalse(is_story_request(text))
 
@@ -91,6 +103,16 @@ class StoryDetectionTests(unittest.TestCase):
         ):
             with self.subTest(text=text):
                 self.assertEqual(detect_targeted_era(text), era)
+
+    def test_le_lore_du_zariman_recent_ancre_un_recit(self):
+        # Update 44 (« The Icebind ») : Nuri, les Cryobells et le Pic Yuvan
+        # sont des sujets nommés — sans ancre, « parle-moi de Nuri » ouvrait
+        # les trois portes au lieu de raconter.
+        for text in ("parle-moi de Nuri", "raconte-moi l'histoire de Zikhaio Nuri",
+                     "raconte-moi les Cryobells", "parle-moi du Pic Yuvan"):
+            with self.subTest(text=text):
+                self.assertEqual(detect_targeted_era(text), "l'Éveil du Tenno")
+                self.assertIsNotNone(targeted_subject_mention(text))
 
     def test_un_sujet_inconnu_n_a_pas_d_ere_ciblee(self):
         self.assertIsNone(detect_targeted_era("raconte l'histoire de l'Infestation"))

@@ -1,7 +1,8 @@
 """ENGRAM service composition from configuration.
 
-Prepares (only on API process import) the SQLAlchemy async engine,
-the LM Studio LLM/embedding provider, then the RAG and Roleplay services.
+Prepares (only on API process import) the SQLAlchemy async engine, the chat
+adapter selected by the LLM port factory, the local embedding provider, then
+the RAG (dual-route) and Roleplay services.
 """
 
 from __future__ import annotations
@@ -14,18 +15,28 @@ from sqlalchemy.ext.asyncio import (
 
 from warframe_lore.engram.api.ratelimit import SlidingWindowLimiter
 from warframe_lore.engram.config import EngramConfig
-from warframe_lore.engram.llm import LMStudioProvider
+from warframe_lore.engram.llm import (
+    EmbeddingProvider,
+    LMStudioProvider,
+    build_llm_provider,
+)
 from warframe_lore.engram.persona import Persona
 from warframe_lore.engram.rag import (
+    AliasResolver,
     ArchiveVocabulary,
+    CodexRoute,
     CosinusSearch,
     HybridSearch,
     MergedRetriever,
     PromptBuilder,
     QueryRewriter,
     RAGService,
+    RetrievalRouter,
+    SimulatedCrossEncoderReranker,
+    StoryRoute,
     StructuredSearch,
 )
+from warframe_lore.engram.rag.retrieval.routes.codex import CODEX_TOP_N
 from warframe_lore.engram.roleplay import (
     RoleplayService,
     SlidingWindow,
@@ -45,24 +56,36 @@ class Container:
         # Archive-wide vocabulary: the post-generation gate excuses an entity
         # archived on ANY page, not only in the retrieved passages.
         self.vocabulary = ArchiveVocabulary(sessions=self.sessions)
-        self.llm = LMStudioProvider(
-            base_url=self.config.lmstudio_base_url,
-            chat_model=self.config.chat_model,
-            embedding_model=self.config.embedding_model,
-            api_key=self.config.lmstudio_api_key,
-            max_tokens=self.config.chat_max_tokens,
+        self.llm = build_llm_provider(self.config)
+        # Embeddings always stay local (BGE-M3), whatever the chat backend:
+        # a remote adapter (NIM, Gemini) serves chat only.
+        self.embeddings = (self.llm if isinstance(self.llm, EmbeddingProvider)
+                           else self._local_embeddings())
+        self.aliases = AliasResolver()
+        # Hybrid search (RAG Inspector + Codex lexical channel): same alias
+        # middleware as RAGService, so both see the expanded query.
+        self.search = HybridSearch(
+            sessions=self.sessions,
+            embeddings=self.embeddings,
+            alias_resolver=self.aliases,
+        )
+        candidates = max(self.config.top_k, CODEX_TOP_N)
+        semantic = MergedRetriever(
+            CosinusSearch(
+                sessions=self.sessions,
+                top_k=candidates,
+                min_score=self.config.min_score,
+            ),
+            StructuredSearch(sessions=self.sessions, top_k=candidates),
+            top_k=candidates,
+        )
+        self.router = RetrievalRouter(
+            CodexRoute(semantic, self.search, SimulatedCrossEncoderReranker()),
+            StoryRoute(self.sessions),
         )
         self.rag = RAGService(
-            embeddings=self.llm,
-            retriever=MergedRetriever(
-                CosinusSearch(
-                    sessions=self.sessions,
-                    top_k=self.config.top_k,
-                    min_score=self.config.min_score,
-                ),
-                StructuredSearch(sessions=self.sessions, top_k=self.config.top_k),
-                top_k=self.config.top_k,
-            ),
+            embeddings=self.embeddings,
+            retriever=semantic,
             llm=self.llm,
             prompt_builder=PromptBuilder(
                 system_prompt=self._system_prompt(),
@@ -71,14 +94,9 @@ class Container:
             suggestion_min_score=self.config.suggestion_min_score,
             critical_min_score=self.config.critical_min_score,
             query_rewriter=QueryRewriter(llm=self.llm),
+            alias_resolver=self.aliases,
             vocabulary=self.vocabulary,
-        )
-        # Hybrid search (RAG Inspector): same alias middleware as RAGService,
-        # so the inspector reflects exactly what the vectorization sees.
-        self.search = HybridSearch(
-            sessions=self.sessions,
-            embeddings=self.llm,
-            alias_resolver=self.rag.alias_resolver,
+            router=self.router,
         )
         self.roleplay = RoleplayService(
             llm=self.llm,
@@ -116,7 +134,19 @@ class Container:
         """Persona prompt: editable ``persona/oracle`` file, otherwise default."""
         return Persona(self.config.system_prompt).system_prompt()
 
+    def _local_embeddings(self) -> EmbeddingProvider:
+        """Local BGE-M3 provider (chat fields are unused by embeddings)."""
+        return LMStudioProvider(
+            base_url=self.config.lmstudio_base_url,
+            chat_model=self.config.chat_model,
+            embedding_model=self.config.embedding_model,
+            api_key=self.config.lmstudio_api_key,
+            max_tokens=self.config.chat_max_tokens,
+        )
+
     async def aclose(self) -> None:
-        """Releases the SQL pool and the LLM HTTP session."""
+        """Releases the SQL pool and the LLM HTTP session(s)."""
         await self.llm.close()
+        if self.embeddings is not self.llm:
+            await self.embeddings.close()
         await self.engine.dispose()

@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from warframe_lore.engram.rag.context import RAGContext
     from warframe_lore.engram.rag.query.aliases import AliasResolver
     from warframe_lore.engram.rag.query.rewriter import QueryRewriter
+    from warframe_lore.engram.rag.retrieval.routes.router import RetrievalRouter
     from warframe_lore.engram.rag.vocabulary import ArchiveVocabulary
 
 # RAG inference temperature: 0.1 -> analytical/deterministic without blocking
@@ -57,7 +58,8 @@ class RAGService:
                  critical_min_score: float | None = None,
                  query_rewriter: QueryRewriter | None = None,
                  alias_resolver: AliasResolver | None = None,
-                 vocabulary: ArchiveVocabulary | None = None) -> None:
+                 vocabulary: ArchiveVocabulary | None = None,
+                 router: RetrievalRouter | None = None) -> None:
         self.llm = llm
         self.vocabulary = vocabulary
         self.pipeline = RetrievalPipeline(
@@ -65,7 +67,8 @@ class RAGService:
             suggestion_min_score=suggestion_min_score,
             critical_min_score=critical_min_score,
             query_rewriter=query_rewriter,
-            alias_resolver=alias_resolver)
+            alias_resolver=alias_resolver,
+            router=router)
 
     @property
     def prompt_builder(self) -> PromptBuilder:
@@ -123,15 +126,10 @@ class RAGService:
         short = self._short_circuit(prompt, bypass)
         if short is not None:
             return short, []
-        chunks: list[str] = []
-        try:
-            async for token in self.llm.chat_stream(self._messages(prompt),
-                                                    RAG_TEMPERATURE):
-                chunks.append(token)
-        except Exception as exc:  # noqa: BLE001 (LLM down -> abstention)
-            log.error("Generation failed (%s) — serving abstention", exc)
+        answer = await self._generate(prompt)
+        if answer is None:
             return RAG_ERROR, hits
-        answer = strip_trailing_padding("".join(chunks))
+        answer = strip_trailing_padding(answer)
         ok, _ = await verify_answer_with_archive(
             answer, prompt.context, self.vocabulary)
         return (answer if ok else CONFABULATION_ERROR), hits
@@ -152,6 +150,16 @@ class RAGService:
         if short is not None:
             yield short
             return
+        answer = await self._generate(prompt)
+        if answer is None:
+            yield RAG_ERROR
+            return
+        ok, _ = await verify_answer_with_archive(
+            answer, prompt.context, self.vocabulary)
+        yield answer if ok else CONFABULATION_ERROR
+
+    async def _generate(self, prompt: RAGPrompt) -> str | None:
+        """Complete the prompt; ``None`` when the backend failed."""
         chunks: list[str] = []
         try:
             async for token in self.llm.chat_stream(self._messages(prompt),
@@ -159,12 +167,8 @@ class RAGService:
                 chunks.append(token)
         except Exception as exc:  # noqa: BLE001 (LLM down -> abstention)
             log.error("Generation failed (%s) — serving abstention", exc)
-            yield RAG_ERROR
-            return
-        answer = "".join(chunks)
-        ok, _ = await verify_answer_with_archive(
-            answer, prompt.context, self.vocabulary)
-        yield answer if ok else CONFABULATION_ERROR
+            return None
+        return "".join(chunks)
 
     @staticmethod
     def _short_circuit(prompt: RAGPrompt, bypass: bool) -> str | None:

@@ -77,23 +77,45 @@ class HybridSearch:
         for chunk, cosine, page_title in rows:
             hits[chunk.id] = self._hit(chunk, page_title,
                                        cosine=cosine, fts=None)
-        # Full-text pass is best-effort: an all-stopwords query raises at
-        # tsquery parse time — the semantic channel still answers.
-        try:
-            fts_rows = (await session.execute(
-                fts_statement(expanded, self.candidates))).all()
-        except Exception:  # noqa: BLE001 — FTS is an auxiliary channel
-            fts_rows = []
-        for chunk, ts, headline, page_title in fts_rows:
-            hit = hits.get(chunk.id)
+        for lexical in await self._fetch_lexical(
+                session, expanded, self.candidates):
+            hit = hits.get(lexical.chunk_id)
             if hit is None:
-                hits[chunk.id] = self._hit(chunk, page_title, cosine=None,
-                                           fts=ts_rank_normalized(ts))
+                hits[lexical.chunk_id] = lexical
                 continue
-            hit.ts_score = ts_rank_normalized(ts)
-            hit.headline = headline or ""
+            hit.ts_score = lexical.ts_score
+            hit.headline = lexical.headline
             hit.score = fuse(hit.cosine_score, hit.ts_score)
         return hits
+
+    async def _fetch_lexical(self, session, query: str,
+                             candidates: int) -> list[HybridHit]:
+        """PostgreSQL full-text pass (best effort: auxiliary channel).
+
+        An all-stopwords query raises at tsquery parse time; the semantic
+        channel still answers, so the failure is swallowed here.
+        """
+        try:
+            rows = (await session.execute(
+                fts_statement(query, candidates))).all()
+        except Exception:  # noqa: BLE001 — FTS is an auxiliary channel
+            return []
+        lexical: list[HybridHit] = []
+        for chunk, ts, headline, page_title in rows:
+            hit = self._hit(chunk, page_title, cosine=None,
+                            fts=ts_rank_normalized(ts))
+            hit.headline = headline or ""
+            lexical.append(hit)
+        return lexical
+
+    async def lexical_hits(self, query: str,
+                           candidates: int | None = None) -> list[HybridHit]:
+        """Lexical channel only (no embedding) — Codex route's BM25 analogue."""
+        if not query.strip():
+            return []
+        async with self.sessions() as session:
+            return await self._fetch_lexical(
+                session, query, candidates or self.candidates)
 
     @staticmethod
     def _hit(chunk, page_title: str, *, cosine, fts) -> HybridHit:

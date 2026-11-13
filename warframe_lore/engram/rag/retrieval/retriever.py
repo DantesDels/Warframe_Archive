@@ -15,7 +15,7 @@ from typing import Protocol, runtime_checkable
 # eras as the lore: the story corpus must NEVER serve them (playtest Albrecht:
 # Deep Archimedea modifiers, Netracell rewards in the tale).  The kind is read
 # from ``StructuredChunk`` — ``None`` on the lore channel, always kept.
-STORY_EXCLUDED_KINDS = ("game_updates", "game_announcements")
+STORY_EXCLUDED_KINDS = ("game_updates", "game_announcements", "patch_notes")
 
 
 @dataclass

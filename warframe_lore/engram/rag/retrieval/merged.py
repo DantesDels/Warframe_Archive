@@ -10,7 +10,12 @@ from __future__ import annotations
 import asyncio
 
 from warframe_lore.core.protocols.roleplay import STORY_DOSSIER_PAGE
-from warframe_lore.engram.rag.retrieval.retriever import DossierPage, RAGHit, Retriever
+from warframe_lore.engram.rag.retrieval.hits import dedupe_first
+from warframe_lore.engram.rag.retrieval.retriever import (
+    DossierPage,
+    RAGHit,
+    Retriever,
+)
 
 
 class MergedRetriever(Retriever):
@@ -66,9 +71,4 @@ class MergedRetriever(Retriever):
             gathered.extend(page.hits)
             more = more or page.more
 
-        merged: dict[tuple[str, str], RAGHit] = {}
-        for hit in gathered:
-            key = (hit.page_title, hit.content)
-            if key not in merged:
-                merged[key] = hit
-        return DossierPage(hits=list(merged.values()), more=more)
+        return DossierPage(hits=dedupe_first(gathered), more=more)

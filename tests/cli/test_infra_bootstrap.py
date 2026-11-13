@@ -31,11 +31,17 @@ class EndpointTests(unittest.TestCase):
             ("db.example.com", 6543),
         )
 
+    def test_connection_url_is_plain_libpq(self):
+        self.assertEqual(
+            db_bootstrap._connection_url(DB_URL),
+            "postgresql://warframe:warframe@localhost:5432/warframe_lore",
+        )
+
 
 class EnsureDatabaseTests(unittest.TestCase):
-    def test_reachable_port_skips_engine_and_stack(self):
+    def test_ready_database_skips_engine_and_stack(self):
         with (
-            patch.object(db_bootstrap, "_tcp_open", return_value=True),
+            patch.object(db_bootstrap, "_database_ready", return_value=True),
             patch.object(db_bootstrap, "ensure_engine") as ensure_engine,
             patch.object(db_bootstrap, "_start_stack") as start_stack,
         ):
@@ -43,9 +49,9 @@ class EnsureDatabaseTests(unittest.TestCase):
         ensure_engine.assert_not_called()
         start_stack.assert_not_called()
 
-    def test_cold_port_starts_engine_then_stack(self):
+    def test_not_ready_database_starts_engine_then_stack(self):
         with (
-            patch.object(db_bootstrap, "_tcp_open", side_effect=[False, True]),
+            patch.object(db_bootstrap, "_database_ready", return_value=False),
             patch.object(db_bootstrap, "ensure_engine") as ensure_engine,
             patch.object(db_bootstrap, "_start_stack") as start_stack,
             patch.object(db_bootstrap, "wait_until", return_value=True) as wait,
@@ -55,21 +61,36 @@ class EnsureDatabaseTests(unittest.TestCase):
         start_stack.assert_called_once_with()
         wait.assert_called_once()
 
+    def test_starting_database_is_never_reused_as_ready(self):
+        # The port can be open while PostgreSQL still answers
+        # "the database system is starting up": readiness must be an actual
+        # query, otherwise the first real connection races the startup.
+        with (
+            patch.object(db_bootstrap, "_database_ready",
+                         side_effect=[False, True]) as ready,
+            patch.object(db_bootstrap, "ensure_engine"),
+            patch.object(db_bootstrap, "_start_stack"),
+            patch.object(db_bootstrap, "wait_until",
+                         side_effect=lambda condition, timeout: condition()),
+        ):
+            db_bootstrap.ensure_database(DB_URL)
+        self.assertEqual(ready.call_count, 2)
+
     def test_remote_host_is_never_booted(self):
         with (
-            patch.object(db_bootstrap, "_tcp_open") as tcp_open,
+            patch.object(db_bootstrap, "_database_ready") as ready,
             patch.object(db_bootstrap, "ensure_engine") as ensure_engine,
             patch.object(db_bootstrap, "_start_stack") as start_stack,
         ):
             db_bootstrap.ensure_database(
                 "postgresql+asyncpg://db.example.com:5432/warframe_lore")
-        tcp_open.assert_not_called()
+        ready.assert_not_called()
         ensure_engine.assert_not_called()
         start_stack.assert_not_called()
 
-    def test_unreachable_port_raises_after_waiting(self):
+    def test_unreachable_database_raises_after_waiting(self):
         with (
-            patch.object(db_bootstrap, "_tcp_open", return_value=False),
+            patch.object(db_bootstrap, "_database_ready", return_value=False),
             patch.object(db_bootstrap, "ensure_engine"),
             patch.object(db_bootstrap, "_start_stack"),
             patch.object(db_bootstrap, "wait_until", return_value=False),

@@ -59,24 +59,29 @@ La nouvelle brique doit donc être un **atelier**, pas un pipeline figé :
 ## 4. Architecture cible
 
 **Racine de la refonte : `warframe_lore/v1/`.** Tout ce qui est créé dans la
-branche `v1` vit sous ce dossier (et `tests/v1/`, `docs/v1/`). Le code
-existant (`scraper/`, `storage/`, `engram/`, …) n'est **pas modifié** : la
-nouvelle brique cohabite, elle ne casse rien. Les morceaux utiles de l'ancien
-scraper (nettoyage Wikitext/HTML, découpage en chunks) pourront être réutilisés
-plus tard comme étapes, sans dépendance structurelle.
+branche `v1` vit sous ce dossier (et `tests/v1/`, `docs/v1/`). Le domaine de
+scraping est regroupé sous `warframe_lore/v1/scraper/` : dossiers, sources,
+découverte, récupération, tri, sinks, exécutions et adapteurs. Le code existant
+(`scraper/`, `storage/`, `engram/`, …) n'est **pas modifié** : la nouvelle
+brique cohabite, elle ne casse rien. Les morceaux utiles de l'ancien scraper
+(nettoyage Wikitext/HTML, découpage en chunks) pourront être réutilisés plus tard
+comme étapes, sans dépendance structurelle.
 
 ```
 warframe_lore/
   v1/
-    universes/     # Universe, store JSON par dossier, service CRUD
-    discovery/     # port DiscoveryProvider + providers (search, wiki…)
-    sources/       # Source, SourceKind, registre, validation d'une URL
-    fetch/         # fetchers: document, website (crawl complet), api
-    sorting/       # règles de tri → SortedDocument + tags
-    sinks/         # JsonSink, SqlSink, MarkdownSink, ... (port commun)
-    runs/          # orchestration d'une exécution (1 ou N dossiers)
-    cli/           # `python -m warframe_lore.v1.cli`
-    ui/            # API + interface admin (FastAPI + statique léger)
+    scraper/
+      slugs.py       # slugs de dossier partagés
+      storage.py     # persistance JSON partagée
+      universes/     # Universe, store JSON par dossier, service CRUD
+      discovery/     # port DiscoveryProvider + providers (search, wiki…)
+      sources/       # Source, SourceKind, registre, validation d'une URL
+      fetch/         # fetchers: document, website (crawl complet), api
+      sorting/       # règles de tri → SortedDocument + tags
+      sinks/         # JsonSink, SqlSink, MarkdownSink, ... (port commun)
+      runs/          # orchestration d'une exécution (1 ou N dossiers)
+      cli/           # `python -m warframe_lore.v1.scraper.cli`
+      ui/            # API + interface admin (FastAPI + statique léger)
 ```
 
 Règles structurelles (AGENTS.md) : chaque dossier < 15 fichiers, chaque
@@ -97,8 +102,9 @@ universes ──▶ sources ──▶ discovery
                  cli                  ui (API)
 ```
 
-`ui` et `cli` sont des **adapteurs** : ils appellent `runs` et `universes`,
-jamais l'inverse. Aucun module de domaine n'importe FastAPI.
+Ces paquets sont tous sous `v1/scraper/`. `ui` et `cli` sont des **adapteurs** :
+ils appellent `runs` et `universes`, jamais l'inverse. Aucun module de domaine
+n'importe FastAPI.
 
 ---
 

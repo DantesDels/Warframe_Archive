@@ -59,3 +59,6 @@ warframe_lore/web/static/vendor/
 
 # Knowledge graph (graphify)
 graphify-out/
+
+# Packaged v1 UI launcher (local build artifact)
+warframe_lore/v1/*.exe

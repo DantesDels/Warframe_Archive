@@ -21,7 +21,7 @@ from .actions import commands
 from .dialogs import prompt_universe_name
 from .execution_panel import ExecutionPanel
 from .formatting import display_universe_status
-from .runner_ui import start_execution
+from .runner_ui import handle_finished, start_execution
 from .style import app_stylesheet
 from .views import DetailPane, HeaderBar, Sidebar
 from .workspace import WorkshopWorkspace
@@ -32,10 +32,11 @@ VERSION_LABEL = "Version v1.0.0-alpha • Mis à jour : 1h"
 class AtelierApp(QMainWindow):
     """Main desktop window with sidebar, details and live execution."""
 
-    def __init__(self, workspace=None) -> None:
+    def __init__(self, workspace=None, data_path: Path | None = None) -> None:
         super().__init__()
-        self.settings_store = SettingsStore(Path("data/v1/settings.json"))
-        self.workspace = workspace or WorkshopWorkspace()
+        self.data_path = Path(data_path or "data/v1/workspace.json")
+        self.settings_store = SettingsStore(self.data_path.parent / "settings.json")
+        self.workspace = workspace or WorkshopWorkspace(path=self.data_path)
         self.last_plan = None
         self._thread = None
         self._worker = None
@@ -160,3 +161,6 @@ class AtelierApp(QMainWindow):
 
     def start_execution(self, plan) -> None:
         start_execution(self, plan)
+
+    def _on_execution_finished(self, result) -> None:
+        handle_finished(self, result)

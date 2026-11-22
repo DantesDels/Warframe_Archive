@@ -109,7 +109,7 @@ class DesktopWindowTests(unittest.TestCase):
         self.assertEqual(app.details.title.text(), "Warframe")
         tabs = app.details.findChild(QTabWidget)
         self.assertIsNotNone(tabs)
-        self.assertEqual(tabs.count(), 4)
+        self.assertEqual(tabs.count(), 5)
         app.sidebar.select(None)
         app.on_select(None)
         self.assertEqual(app.details.title.text(), "Aucun Univers sélectionné")

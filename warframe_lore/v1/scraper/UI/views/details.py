@@ -8,6 +8,7 @@ from ..formatting import display_universe_status
 from .sources_view import SourcesView
 from .tabs_candidates import candidates_view
 from .tabs_content import documents_view, runs_view
+from .tabs_data import data_view
 
 
 class DetailPane(QWidget):
@@ -64,4 +65,5 @@ class DetailPane(QWidget):
             candidates_view(workspace, universe, on_change),
             f"Candidats ({len(cands)})",
         )
+        tabs.addTab(data_view(workspace, universe), "Data")
         self._set_content(tabs)

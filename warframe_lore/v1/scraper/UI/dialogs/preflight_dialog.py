@@ -53,7 +53,18 @@ class PreflightDialog(QDialog):
         self.relevance.setRange(0, 100)
         self.relevance.setValue(settings.min_relevance)
         form.addRow("Score de pertinence minimal (n %)", self.relevance)
+        self.max_pages = QSpinBox()
+        self.max_pages.setRange(1, 500)
+        self.max_pages.setValue(settings.max_pages_per_source)
+        form.addRow("Pages max par source", self.max_pages)
+        self.max_depth = QSpinBox()
+        self.max_depth.setRange(0, 5)
+        self.max_depth.setValue(settings.max_depth)
+        form.addRow("Profondeur de crawl", self.max_depth)
         layout.addLayout(form)
+        self.same_host = QCheckBox("Limiter au mÃªme domaine")
+        self.same_host.setChecked(settings.same_host_only)
+        layout.addWidget(self.same_host)
         box = QGroupBox("Formats de sortie (multi-sélection)")
         box_layout = QVBoxLayout(box)
         self.formats = {}
@@ -77,7 +88,14 @@ class PreflightDialog(QDialog):
     def _launch(self) -> None:
         formats = tuple(n for n, cb in self.formats.items() if cb.isChecked())
         try:
-            settings = Settings(self.relevance.value(), formats, self.rag.isChecked())
+            settings = Settings(
+                self.relevance.value(),
+                formats,
+                self.rag.isChecked(),
+                self.max_pages.value(),
+                self.max_depth.value(),
+                self.same_host.isChecked(),
+            )
             self.result = LaunchPlan(settings, self.universe_ids)
         except ValueError as error:
             QMessageBox.critical(self, "Pré-exécution", str(error))

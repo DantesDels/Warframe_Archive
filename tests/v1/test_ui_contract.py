@@ -176,8 +176,11 @@ class DesktopWindowTests(unittest.TestCase):
             texts = [btn.text() for btn in box.buttons()]
             self.assertIn("Enregistrer", texts)
             self.assertIn("Annuler", texts)
-            fmt = [cb.text() for cb in dialog.findChildren(QCheckBox)[:6]]
-            self.assertEqual(fmt, ["JSON", "JSONL", "CSV", "Markdown", "SQL", "NoSQL"])
+            fmt = [cb.text() for cb in dialog.findChildren(QCheckBox)]
+            self.assertIn("Limiter au mÃªme domaine", fmt)
+            expected = ["JSON", "JSONL", "CSV", "Markdown", "SQL", "NoSQL"]
+            got = [f for f in fmt if f in set(expected)]
+            self.assertEqual(got, expected)
             dialog.deleteLater()
 
     def test_preflight_dialog_french_buttons_and_formats(self):
@@ -186,8 +189,11 @@ class DesktopWindowTests(unittest.TestCase):
         texts = [btn.text() for btn in box.buttons()]
         self.assertIn("Lancer", texts)
         self.assertIn("Annuler", texts)
-        fmt = [cb.text() for cb in dialog.findChildren(QCheckBox)[:6]]
-        self.assertEqual(fmt, ["JSON", "JSONL", "CSV", "Markdown", "SQL", "NoSQL"])
+        fmt = [cb.text() for cb in dialog.findChildren(QCheckBox)]
+        self.assertIn("Limiter au mÃªme domaine", fmt)
+        expected = ["JSON", "JSONL", "CSV", "Markdown", "SQL", "NoSQL"]
+        got = [f for f in fmt if f in set(expected)]
+        self.assertEqual(got, expected)
         dialog.deleteLater()
 
 

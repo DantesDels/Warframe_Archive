@@ -14,6 +14,9 @@ class Settings:
     min_relevance: int = 60
     output_formats: tuple[str, ...] = ("json", "markdown")
     rag_coupling: bool = True
+    max_pages_per_source: int = 25
+    max_depth: int = 1
+    same_host_only: bool = True
 
     def __post_init__(self) -> None:
         if not 0 <= self.min_relevance <= 100:
@@ -23,6 +26,10 @@ class Settings:
         unknown = set(self.output_formats) - set(OUTPUT_FORMATS)
         if unknown:
             raise ValueError(f"unsupported output formats: {sorted(unknown)}")
+        if self.max_pages_per_source < 1:
+            raise ValueError("max_pages_per_source must be >= 1")
+        if self.max_depth < 0:
+            raise ValueError("max_depth must be >= 0")
 
 
 @dataclass(frozen=True, slots=True)

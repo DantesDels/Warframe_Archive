@@ -46,7 +46,18 @@ class SettingsDialog(QDialog):
         self.relevance.setRange(0, 100)
         self.relevance.setValue(settings.min_relevance)
         form.addRow("Score de pertinence minimal (n %)", self.relevance)
+        self.max_pages = QSpinBox()
+        self.max_pages.setRange(1, 500)
+        self.max_pages.setValue(settings.max_pages_per_source)
+        form.addRow("Pages max par source", self.max_pages)
+        self.max_depth = QSpinBox()
+        self.max_depth.setRange(0, 5)
+        self.max_depth.setValue(settings.max_depth)
+        form.addRow("Profondeur de crawl", self.max_depth)
         layout.addLayout(form)
+        self.same_host = QCheckBox("Limiter au mÃªme domaine")
+        self.same_host.setChecked(settings.same_host_only)
+        layout.addWidget(self.same_host)
         box = QGroupBox("Formats de sortie")
         box_layout = QVBoxLayout(box)
         self.formats = {}
@@ -75,7 +86,14 @@ class SettingsDialog(QDialog):
 
     def build_settings(self) -> Settings:
         formats = tuple(n for n, cb in self.formats.items() if cb.isChecked())
-        return Settings(self.relevance.value(), formats, self.rag.isChecked())
+        return Settings(
+            self.relevance.value(),
+            formats,
+            self.rag.isChecked(),
+            self.max_pages.value(),
+            self.max_depth.value(),
+            self.same_host.isChecked(),
+        )
 
     def _save(self) -> None:
         try:

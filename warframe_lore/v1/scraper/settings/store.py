@@ -20,6 +20,9 @@ class SettingsStore:
             min_relevance=int(payload.get("min_relevance", 60)),
             output_formats=tuple(payload.get("output_formats", ["json", "markdown"])),
             rag_coupling=bool(payload.get("rag_coupling", True)),
+            max_pages_per_source=int(payload.get("max_pages_per_source", 25)),
+            max_depth=int(payload.get("max_depth", 1)),
+            same_host_only=bool(payload.get("same_host_only", True)),
         )
 
     def save(self, settings: Settings) -> None:
@@ -29,5 +32,8 @@ class SettingsStore:
                 "min_relevance": settings.min_relevance,
                 "output_formats": list(settings.output_formats),
                 "rag_coupling": settings.rag_coupling,
+                "max_pages_per_source": settings.max_pages_per_source,
+                "max_depth": settings.max_depth,
+                "same_host_only": settings.same_host_only,
             },
         )

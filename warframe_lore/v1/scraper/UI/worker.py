@@ -8,6 +8,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
+from ..collect.http import HttpClient
 from .artifacts import emit_artifacts
 from .collect import collect_source
 
@@ -24,6 +25,7 @@ class ExecutionWorker(QObject):
         self.plan = plan
         self.snapshot = workspace_snapshot
         self.export_root = Path(export_root)
+        self.client = HttpClient()
 
     def run(self) -> None:
         try:
@@ -33,25 +35,31 @@ class ExecutionWorker(QObject):
             self.finished.emit({"ok": False, "error": str(exc), "runs": []})
 
     def _run(self) -> dict:
-        formats = [f.lower() for f in self.plan.settings.output_formats]
+        settings = self.plan.settings
+        formats = [f.lower() for f in settings.output_formats]
+        limits = {
+            "max_pages_per_source": settings.max_pages_per_source,
+            "max_depth": settings.max_depth,
+            "same_host_only": settings.same_host_only,
+        }
         runs = []
         for uid in self.plan.universe_ids:
             universe = self.snapshot.get(uid)
             if universe:
-                runs.append(self._run_universe(universe, formats))
-        self.progress.emit(100, "Terminé")
-        self.log.emit("Exécution terminée.")
+                runs.append(self._run_universe(universe, formats, limits))
+        self.progress.emit(100, "TerminÃ©")
+        self.log.emit("ExÃ©cution terminÃ©e.")
         return {"ok": True, "runs": runs}
 
-    def _run_universe(self, universe: dict, formats: list[str]) -> dict:
+    def _run_universe(self, universe: dict, formats: list[str], limits: dict) -> dict:
         uid = universe["id"]
         sources = self._active_sources(uid)
         self.log.emit(f"[{universe['name']}] {len(sources)} source(s) active(s)")
-        docs, errors = self._collect_sources(sources, uid)
+        docs, errors = self._collect_sources(sources, uid, limits)
         run = self._build_run(universe, docs, formats, errors)
         out_dir = self.export_root / uid / run["id"]
         emit_artifacts(out_dir, universe, docs, formats)
-        self.log.emit(f"Artefacts exportés: {out_dir}")
+        self.log.emit(f"Artefacts exportÃ©s: {out_dir}")
         return {"universeId": uid, "docs": docs, "run": run}
 
     def _active_sources(self, uid: str) -> list[dict]:
@@ -62,21 +70,21 @@ class ExecutionWorker(QObject):
         ]
 
     def _collect_sources(
-        self, sources: list[dict], uid: str
+        self, sources: list[dict], uid: str, limits: dict
     ) -> tuple[list[dict], list[str]]:
         docs, errors = [], []
         for idx, source in enumerate(sources, start=1):
             pct = min(95, int(idx / max(len(sources), 1) * 80))
             loc = str(source.get("location", ""))[:40]
             self.progress.emit(pct, f"Collecte: {loc}")
-            doc, err = collect_source(source, uid)
-            if doc:
-                docs.append(doc)
-                self.log.emit(f"Collecté: {doc['title']}")
-            if err:
+            new_docs, errs = collect_source(source, uid, self.client, limits)
+            docs.extend(new_docs)
+            for doc in new_docs:
+                self.log.emit(f"CollectÃ©: {doc['title']}")
+            for err in errs:
                 errors.append(err)
                 self.log.emit(f"Avertissement: {err}")
-            time.sleep(0.02)
+            time.sleep(0.01)
         return docs, errors
 
     def _build_run(

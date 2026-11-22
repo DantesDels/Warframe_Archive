@@ -23,6 +23,10 @@ class SettingsStore:
             max_pages_per_source=int(payload.get("max_pages_per_source", 25)),
             max_depth=int(payload.get("max_depth", 1)),
             same_host_only=bool(payload.get("same_host_only", True)),
+            use_cache=bool(payload.get("use_cache", True)),
+            incremental=bool(payload.get("incremental", True)),
+            expand_manifests=bool(payload.get("expand_manifests", True)),
+            max_manifest_urls=int(payload.get("max_manifest_urls", 50)),
         )
 
     def save(self, settings: Settings) -> None:
@@ -35,5 +39,9 @@ class SettingsStore:
                 "max_pages_per_source": settings.max_pages_per_source,
                 "max_depth": settings.max_depth,
                 "same_host_only": settings.same_host_only,
+                "use_cache": settings.use_cache,
+                "incremental": settings.incremental,
+                "expand_manifests": settings.expand_manifests,
+                "max_manifest_urls": settings.max_manifest_urls,
             },
         )

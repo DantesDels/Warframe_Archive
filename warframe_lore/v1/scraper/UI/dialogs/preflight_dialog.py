@@ -65,6 +65,15 @@ class PreflightDialog(QDialog):
         self.same_host = QCheckBox("Limiter au mÃªme domaine")
         self.same_host.setChecked(settings.same_host_only)
         layout.addWidget(self.same_host)
+        self.use_cache = QCheckBox("Cache HTTP conditionnel")
+        self.use_cache.setChecked(settings.use_cache)
+        layout.addWidget(self.use_cache)
+        self.incremental = QCheckBox("IncrÃ©mental (ignorer contenu inchangÃ©)")
+        self.incremental.setChecked(settings.incremental)
+        layout.addWidget(self.incremental)
+        self.expand_manifests = QCheckBox("DÃ©velopper les index/manifests")
+        self.expand_manifests.setChecked(settings.expand_manifests)
+        layout.addWidget(self.expand_manifests)
         box = QGroupBox("Formats de sortie (multi-sélection)")
         box_layout = QVBoxLayout(box)
         self.formats = {}
@@ -95,6 +104,9 @@ class PreflightDialog(QDialog):
                 self.max_pages.value(),
                 self.max_depth.value(),
                 self.same_host.isChecked(),
+                self.use_cache.isChecked(),
+                self.incremental.isChecked(),
+                self.expand_manifests.isChecked(),
             )
             self.result = LaunchPlan(settings, self.universe_ids)
         except ValueError as error:

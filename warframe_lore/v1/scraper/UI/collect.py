@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import time
 
 from ..collect.adapters import collect_pages
@@ -10,40 +11,51 @@ from ..collect.http import HttpClient
 MAX_TEXT = 200_000
 
 
-def collect_source(source: dict, universe_id: str, client: HttpClient, limits: dict):
-    """Collect one or more documents from a source."""
+def collect_source(
+    source: dict, universe_id: str, client: HttpClient, limits: dict, state: dict
+):
+    """Collect one or more documents from a source with incremental state."""
     loc = str(source.get("location", "")).strip()
     kind = str(source.get("kind", "website"))
     try:
         pages = collect_pages(source, client, limits)
     except Exception as exc:  # noqa: BLE001
-        return [], [f"{loc}: {exc}"]
+        return [], [f"{loc}: {exc}"], []
     docs: list[dict] = []
     errors: list[str] = []
+    updates: list[dict] = []
     for page in pages:
         text = _normalize(page.content)[:MAX_TEXT]
         if not text:
             errors.append(f"{page.url}: contenu vide")
             continue
-        docs.append(_doc(source, universe_id, kind, page.title, page.url, text))
-    if not docs and not errors:
-        errors.append(f"{loc}: aucun document collectÃ©")
-    return docs, errors
+        content_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        prev = state.get(page.url) if limits.get("incremental") else None
+        if prev and prev.get("hash") == content_hash:
+            continue
+        doc = _doc(source, universe_id, kind, page.title, page.url, text, content_hash)
+        doc["fromCache"] = bool(page.from_cache)
+        docs.append(doc)
+        updates.append({"url": page.url, "hash": content_hash, "title": page.title})
+    if not docs and not errors and not limits.get("incremental"):
+        errors.append(f"{loc}: aucun document collect\xC3\xA9")
+    return docs, errors, updates
 
 
-def _doc(source: dict, universe_id: str, kind: str, title: str, url: str, text: str):
+def _doc(src: dict, uid: str, kind: str, title: str, url: str, text: str, digest: str):
     return {
-        "id": _doc_id(source),
-        "universeId": universe_id,
-        "sourceId": source.get("id"),
+        "id": _doc_id(src),
+        "universeId": uid,
+        "sourceId": src.get("id"),
         "title": title[:180],
         "url": url,
         "docType": kind,
         "language": _guess_lang(url, text),
-        "relevance": float(source.get("score", 1.0)),
+        "relevance": float(src.get("score", 1.0)),
         "isDuplicate": False,
         "excerpt": text[:320],
         "content": text,
+        "contentHash": digest,
     }
 
 
@@ -64,4 +76,5 @@ def _guess_lang(url: str, text: str) -> str:
     if "/en" in low or "wiki.warframe.com" in low:
         return "en"
     sample = text[:2000]
-    return "fr" if any(ch in sample for ch in "àâéèêëîïôùûç") else "en"
+    french = "\xE0\xE2\xE9\xE8\xEA\xEB\xEE\xEF\xF4\xF9\xFB\xE7"
+    return "fr" if any(ch in sample for ch in french) else "en"

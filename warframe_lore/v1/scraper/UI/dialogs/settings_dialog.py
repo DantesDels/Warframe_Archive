@@ -58,6 +58,21 @@ class SettingsDialog(QDialog):
         self.same_host = QCheckBox("Limiter au mÃªme domaine")
         self.same_host.setChecked(settings.same_host_only)
         layout.addWidget(self.same_host)
+        self.use_cache = QCheckBox("Cache HTTP conditionnel")
+        self.use_cache.setChecked(settings.use_cache)
+        layout.addWidget(self.use_cache)
+        self.incremental = QCheckBox("IncrÃ©mental (ignorer contenu inchangÃ©)")
+        self.incremental.setChecked(settings.incremental)
+        layout.addWidget(self.incremental)
+        self.expand_manifests = QCheckBox("DÃ©velopper les index/manifests")
+        self.expand_manifests.setChecked(settings.expand_manifests)
+        layout.addWidget(self.expand_manifests)
+        self.max_manifest = QSpinBox()
+        self.max_manifest.setRange(1, 500)
+        self.max_manifest.setValue(settings.max_manifest_urls)
+        form2 = QFormLayout()
+        form2.addRow("URLs max par manifest", self.max_manifest)
+        layout.addLayout(form2)
         box = QGroupBox("Formats de sortie")
         box_layout = QVBoxLayout(box)
         self.formats = {}
@@ -93,6 +108,10 @@ class SettingsDialog(QDialog):
             self.max_pages.value(),
             self.max_depth.value(),
             self.same_host.isChecked(),
+            self.use_cache.isChecked(),
+            self.incremental.isChecked(),
+            self.expand_manifests.isChecked(),
+            self.max_manifest.value(),
         )
 
     def _save(self) -> None:

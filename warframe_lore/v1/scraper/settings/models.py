@@ -17,6 +17,10 @@ class Settings:
     max_pages_per_source: int = 25
     max_depth: int = 1
     same_host_only: bool = True
+    use_cache: bool = True
+    incremental: bool = True
+    expand_manifests: bool = True
+    max_manifest_urls: int = 50
 
     def __post_init__(self) -> None:
         if not 0 <= self.min_relevance <= 100:
@@ -30,6 +34,8 @@ class Settings:
             raise ValueError("max_pages_per_source must be >= 1")
         if self.max_depth < 0:
             raise ValueError("max_depth must be >= 0")
+        if self.max_manifest_urls < 1:
+            raise ValueError("max_manifest_urls must be >= 1")
 
 
 @dataclass(frozen=True, slots=True)

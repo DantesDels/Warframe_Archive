@@ -1,4 +1,4 @@
-"""Retrying HTTP client for v1 collection."""
+"""Retrying HTTP client with conditional cache for v1 collection."""
 
 from __future__ import annotations
 
@@ -7,6 +7,8 @@ from dataclasses import dataclass
 
 import certifi
 import requests
+
+from .cache import FetchCache
 
 BROWSER_UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -23,41 +25,98 @@ class FetchResponse:
     content_type: str
     headers: dict[str, str]
     encoding: str | None
+    from_cache: bool = False
 
 
 class HttpClient:
-    def __init__(self, *, timeout: float = 25.0, max_retries: int = 4,
-                 backoff: float = 1.5, min_sleep: float = 0.2) -> None:
+    def __init__(
+        self,
+        *,
+        timeout: float = 25.0,
+        max_retries: int = 4,
+        backoff: float = 1.5,
+        min_sleep: float = 0.2,
+        cache: FetchCache | None = None,
+    ) -> None:
         self.timeout = timeout
         self.max_retries = max_retries
         self.backoff = backoff
         self.min_sleep = min_sleep
+        self.cache = cache
         self._last = 0.0
         self.session = requests.Session()
         self.verify = certifi.where()
 
-    def get(self, url: str, *, headers: dict[str, str] | None = None,
-            params: dict | None = None, allow_redirects: bool = True) -> FetchResponse:
+    def get(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict | None = None,
+        allow_redirects: bool = True,
+        use_cache: bool = True,
+    ) -> FetchResponse:
+        req_headers = dict(headers or browser_headers())
+        cache_key = _cache_key(url, params, req_headers)
+        cached = self.cache.get(cache_key) if self.cache and use_cache else None
+        if cached:
+            etag = cached.get("etag")
+            modified = cached.get("last_modified")
+            if etag:
+                req_headers["If-None-Match"] = etag
+            if modified:
+                req_headers["If-Modified-Since"] = modified
+        response = self._request(url, req_headers, params, allow_redirects)
+        if response.status == 304 and cached and self.cache:
+            content = self.cache.get_content(cache_key) or b""
+            return FetchResponse(
+                url=cached.get("url", url),
+                status=200,
+                content=content,
+                content_type=cached.get("content_type", ""),
+                headers=cached.get("headers", {}),
+                encoding=cached.get("encoding"),
+                from_cache=True,
+            )
+        if self.cache and use_cache and response.status == 200:
+            self.cache.set_content(cache_key, response.content)
+            self.cache.set(
+                cache_key,
+                {
+                    "url": response.url,
+                    "etag": response.headers.get("ETag"),
+                    "last_modified": response.headers.get("Last-Modified"),
+                    "content_type": response.content_type,
+                    "headers": response.headers,
+                    "encoding": response.encoding,
+                },
+            )
+        return response
+
+    def _request(self, url, headers, params, allow_redirects) -> FetchResponse:
         last_exc: Exception | None = None
         for attempt in range(self.max_retries):
             self._throttle()
             try:
                 resp = self.session.get(
-                    url, params=params, headers=headers or browser_headers(),
-                    timeout=self.timeout, verify=self.verify,
+                    url,
+                    params=params,
+                    headers=headers,
+                    timeout=self.timeout,
+                    verify=self.verify,
                     allow_redirects=allow_redirects,
                 )
                 if resp.status_code in {429, 500, 502, 503, 504}:
                     last_exc = requests.HTTPError(response=resp)
                     time.sleep(self.backoff ** attempt)
                     continue
-                resp.raise_for_status()
-                ctype = resp.headers.get("Content-Type", "")
+                if resp.status_code not in {200, 304}:
+                    resp.raise_for_status()
                 return FetchResponse(
                     url=str(resp.url),
                     status=resp.status_code,
-                    content=resp.content,
-                    content_type=ctype,
+                    content=resp.content if resp.status_code != 304 else b"",
+                    content_type=resp.headers.get("Content-Type", ""),
                     headers={k: v for k, v in resp.headers.items()},
                     encoding=resp.encoding,
                 )
@@ -85,3 +144,9 @@ def browser_headers() -> dict[str, str]:
 
 def bot_headers() -> dict[str, str]:
     return {"User-Agent": BOT_UA, "Accept": "application/json,text/plain,*/*"}
+
+
+def _cache_key(url: str, params: dict | None, headers: dict[str, str]) -> str:
+    ua = headers.get("User-Agent", "")
+    accept = headers.get("Accept", "")
+    return f"{url}|{sorted((params or {}).items())}|{ua}|{accept}"

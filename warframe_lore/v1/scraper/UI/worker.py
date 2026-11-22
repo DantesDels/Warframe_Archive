@@ -8,7 +8,9 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
+from ..collect.cache import FetchCache
 from ..collect.http import HttpClient
+from ..storage import read_json, write_json
 from .artifacts import emit_artifacts
 from .collect import collect_source
 
@@ -25,7 +27,10 @@ class ExecutionWorker(QObject):
         self.plan = plan
         self.snapshot = workspace_snapshot
         self.export_root = Path(export_root)
-        self.client = HttpClient()
+        self.cache = FetchCache(self.export_root.parent / "cache" / "http")
+        self.state_path = self.export_root.parent / "incremental_state.json"
+        self.state = read_json(self.state_path, {})
+        self.client = HttpClient(cache=self.cache)
 
     def run(self) -> None:
         try:
@@ -41,14 +46,19 @@ class ExecutionWorker(QObject):
             "max_pages_per_source": settings.max_pages_per_source,
             "max_depth": settings.max_depth,
             "same_host_only": settings.same_host_only,
+            "use_cache": settings.use_cache,
+            "incremental": settings.incremental,
+            "expand_manifests": settings.expand_manifests,
+            "max_manifest_urls": settings.max_manifest_urls,
         }
         runs = []
         for uid in self.plan.universe_ids:
             universe = self.snapshot.get(uid)
             if universe:
                 runs.append(self._run_universe(universe, formats, limits))
-        self.progress.emit(100, "TerminÃ©")
-        self.log.emit("ExÃ©cution terminÃ©e.")
+        write_json(self.state_path, self.state)
+        self.progress.emit(100, "Termin\xC3\xA9")
+        self.log.emit("Ex\xC3\xA9cution termin\xC3\xA9e.")
         return {"ok": True, "runs": runs}
 
     def _run_universe(self, universe: dict, formats: list[str], limits: dict) -> dict:
@@ -59,7 +69,7 @@ class ExecutionWorker(QObject):
         run = self._build_run(universe, docs, formats, errors)
         out_dir = self.export_root / uid / run["id"]
         emit_artifacts(out_dir, universe, docs, formats)
-        self.log.emit(f"Artefacts exportÃ©s: {out_dir}")
+        self.log.emit(f"Artefacts export\xC3\xA9s: {out_dir}")
         return {"universeId": uid, "docs": docs, "run": run}
 
     def _active_sources(self, uid: str) -> list[dict]:
@@ -73,14 +83,20 @@ class ExecutionWorker(QObject):
         self, sources: list[dict], uid: str, limits: dict
     ) -> tuple[list[dict], list[str]]:
         docs, errors = [], []
+        state = self.state.setdefault(uid, {})
         for idx, source in enumerate(sources, start=1):
             pct = min(95, int(idx / max(len(sources), 1) * 80))
             loc = str(source.get("location", ""))[:40]
             self.progress.emit(pct, f"Collecte: {loc}")
-            new_docs, errs = collect_source(source, uid, self.client, limits)
+            new_docs, errs, updates = collect_source(
+                source, uid, self.client, limits, state
+            )
             docs.extend(new_docs)
+            for item in updates:
+                state[item["url"]] = {"hash": item["hash"], "title": item["title"]}
             for doc in new_docs:
-                self.log.emit(f"CollectÃ©: {doc['title']}")
+                suffix = " (cache)" if doc.get("fromCache") else ""
+                self.log.emit(f"Collect\xC3\xA9{suffix}: {doc['title']}")
             for err in errs:
                 errors.append(err)
                 self.log.emit(f"Avertissement: {err}")

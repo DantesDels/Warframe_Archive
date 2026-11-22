@@ -1,13 +1,16 @@
-"""On-disk fetch cache for v1 collection."""
+"""On-disk HTTP/content cache for v1 collection."""
 
 from __future__ import annotations
 
 import hashlib
 import json
+import time
 from pathlib import Path
 
 
 class FetchCache:
+    """Simple content-addressed cache with metadata sidecars."""
+
     def __init__(self, root: Path) -> None:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
@@ -24,8 +27,24 @@ class FetchCache:
     def set(self, key: str, value: dict) -> None:
         path = self._path(key)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
+        payload = dict(value)
+        payload.setdefault("cached_at", int(time.time()))
+        path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    def get_content(self, key: str) -> bytes | None:
+        path = self._blob_path(key)
+        return path.read_bytes() if path.is_file() else None
+
+    def set_content(self, key: str, content: bytes) -> str:
+        path = self._blob_path(key)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+        return hashlib.sha256(content).hexdigest()
 
     def _path(self, key: str) -> Path:
         digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
-        return self.root / digest[:2] / f"{digest}.json"
+        return self.root / "meta" / digest[:2] / f"{digest}.json"
+
+    def _blob_path(self, key: str) -> Path:
+        digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+        return self.root / "blob" / digest[:2] / digest

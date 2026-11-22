@@ -81,7 +81,7 @@ warframe_lore/
       sinks/         # JsonSink, SqlSink, MarkdownSink, ... (port commun)
       runs/          # orchestration d'une exécution (1 ou N Univers)
       cli/           # `python -m warframe_lore.v1.scraper.cli`
-      UI/            # fenêtre Tkinter native (Explorateur d'Univers)
+      UI/            # fenêtre PySide6 native (Explorateur d'Univers)
 ```
 
 Règles structurelles (AGENTS.md) : chaque dossier < 15 fichiers, chaque
@@ -104,7 +104,7 @@ universes ──▶ sources ──▶ discovery
 
 Ces paquets sont tous sous `v1/scraper/`. `UI` et `cli` sont des **adapteurs** :
 ils appellent `runs` et `universes`, jamais l'inverse. Aucun module de domaine
-n'importe Tkinter ni FastAPI.
+n'importe PySide6/Qt ni FastAPI.
 
 ---
 
@@ -164,7 +164,7 @@ sans réseau.
 | Exécution | Lancement, progression, rapport par source et par sink. |
 
 **Prototype en cours (`v1/scraper/UI/`)** : application de bureau **native
-Tkinter** (thème `ttk` moderne, surfaces et espacements distincts), plus de
+PySide6** (thème `ttk` moderne, surfaces et espacements distincts), plus de
 page web ni de serveur FastAPI. La fenêtre « Atelier v1 — Univers » suit le
 modèle d'un explorateur Windows :
 
@@ -234,7 +234,7 @@ Chaque tranche = tests d'abord → implémentation → `graphify update` →
 
 ## 9. Décisions ouvertes
 
-Le mécanisme de découverte (S2) et la technologie de l'UI (Tkinter natif) sont
+Le mécanisme de découverte (S2) et la technologie de l'UI (PySide6 natif) sont
 tranchés. Restent à préciser avant S4–S5 : fournisseurs de découverte réels,
 critères de tri pondérés, détecteur de QR/vision pour S3, et backend vectoriel
 cible du couplage RAG.

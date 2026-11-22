@@ -2,57 +2,95 @@
 
 from __future__ import annotations
 
-import tkinter as tk
-from tkinter import messagebox, ttk
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QGroupBox,
+    QLabel,
+    QMessageBox,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
 
-from ...settings.models import LaunchPlan, Settings
-from .settings_dialog import OptionsFrame
+from ...settings.models import OUTPUT_FORMATS, LaunchPlan, Settings
+
+FORMAT_LABELS = {
+    "json": "JSON",
+    "jsonl": "JSONL",
+    "csv": "CSV",
+    "markdown": "Markdown",
+    "sql": "SQL",
+    "nosql": "NoSQL",
+}
 
 
-class PreflightDialog(tk.Toplevel):
-    """Ask for the final thresholds before launching a scrape."""
+class PreflightDialog(QDialog):
+    """Ask for thresholds, outputs and RAG coupling before launch."""
 
     def __init__(
         self,
-        parent: tk.Misc,
+        parent: QWidget | None,
         settings: Settings,
         universe_ids: tuple[str, ...],
         candidate_count: int,
     ) -> None:
         super().__init__(parent)
-        self.title("Pré-exécution")
-        self.resizable(False, False)
         self.universe_ids = universe_ids
         self.result: LaunchPlan | None = None
-        summary = f"{len(universe_ids)} Univers • {candidate_count} candidats actifs"
-        ttk.Label(self, text=summary).pack(anchor="w", padx=16, pady=(14, 8))
-        self.options = OptionsFrame(self, settings)
-        self.options.pack(fill="x", padx=16, pady=(0, 6))
-        buttons = ttk.Frame(self)
-        buttons.pack(fill="x", padx=16, pady=(6, 16))
-        ttk.Button(buttons, text="Annuler", command=self.destroy).pack(side="right")
-        ttk.Button(
-            buttons, text="Lancer", command=self._launch,
-        ).pack(side="right", padx=6)
-        self.grab_set()
+        self.setWindowTitle("Pré-exécution")
+        self.setModal(True)
+        self.setMinimumWidth(420)
+        layout = QVBoxLayout(self)
+        layout.setSpacing(10)
+        layout.addWidget(
+            QLabel(f"{len(universe_ids)} Univers • {candidate_count} candidats actifs")
+        )
+        form = QFormLayout()
+        self.relevance = QSpinBox()
+        self.relevance.setRange(0, 100)
+        self.relevance.setValue(settings.min_relevance)
+        form.addRow("Score de pertinence minimal (n %)", self.relevance)
+        layout.addLayout(form)
+        box = QGroupBox("Formats de sortie (multi-sélection)")
+        box_layout = QVBoxLayout(box)
+        self.formats = {}
+        for name in OUTPUT_FORMATS:
+            label = FORMAT_LABELS.get(name, name)
+            checkbox = QCheckBox(label)
+            checkbox.setChecked(name in settings.output_formats)
+            self.formats[name] = checkbox
+            box_layout.addWidget(checkbox)
+        layout.addWidget(box)
+        self.rag = QCheckBox("Couplage RAG (découpage en chunks)")
+        self.rag.setChecked(settings.rag_coupling)
+        layout.addWidget(self.rag)
+        buttons = QDialogButtonBox()
+        launch_btn = buttons.addButton("Lancer", QDialogButtonBox.AcceptRole)
+        cancel_btn = buttons.addButton("Annuler", QDialogButtonBox.RejectRole)
+        launch_btn.clicked.connect(self._launch)
+        cancel_btn.clicked.connect(self.reject)
+        layout.addWidget(buttons)
 
     def _launch(self) -> None:
+        formats = tuple(n for n, cb in self.formats.items() if cb.isChecked())
         try:
-            settings = self.options.settings()
+            settings = Settings(self.relevance.value(), formats, self.rag.isChecked())
+            self.result = LaunchPlan(settings, self.universe_ids)
         except ValueError as error:
-            messagebox.showerror("Pré-exécution", str(error), parent=self)
+            QMessageBox.critical(self, "Pré-exécution", str(error))
             return
-        self.result = LaunchPlan(settings, self.universe_ids)
-        self.destroy()
+        self.accept()
 
 
 def open_preflight(
-    parent: tk.Misc,
+    parent: QWidget | None,
     settings: Settings,
     universe_ids: tuple[str, ...],
     candidate_count: int,
 ) -> LaunchPlan | None:
-    """Show the dialog and return the validated launch plan, if any."""
     dialog = PreflightDialog(parent, settings, universe_ids, candidate_count)
-    parent.wait_window(dialog)
+    dialog.exec()
     return dialog.result

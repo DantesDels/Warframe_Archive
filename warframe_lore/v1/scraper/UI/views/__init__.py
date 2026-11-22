@@ -1,8 +1,9 @@
-"""View widgets for the Atelier v1 window."""
+"""View widgets for the Atelier PySide6 window."""
 
 from __future__ import annotations
 
 from .details import DetailPane
-from .tree import UniverseTree
+from .header import HeaderBar
+from .sidebar import Sidebar
 
-__all__ = ["DetailPane", "UniverseTree"]
+__all__ = ["DetailPane", "HeaderBar", "Sidebar"]

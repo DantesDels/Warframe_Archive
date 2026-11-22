@@ -1,7 +1,7 @@
-"""Command and action handlers for the Atelier v1 window."""
+"""Command handlers for the Atelier PySide6 window."""
 
 from __future__ import annotations
 
-from . import commands, curation_actions
+from . import commands
 
-__all__ = ["commands", "curation_actions"]
+__all__ = ["commands"]

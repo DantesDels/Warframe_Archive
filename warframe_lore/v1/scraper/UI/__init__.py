@@ -1,4 +1,4 @@
-"""Native desktop UI adapter for the v1 scraping workshop."""
+"""PySide6 desktop UI adapter for the v1 scraping workshop."""
 
 from __future__ import annotations
 

@@ -1,72 +1,139 @@
-"""Native Atelier v1 window: Explorer-like Universe browser."""
+"""PySide6 main window for Atelier v1 — Univers."""
 
 from __future__ import annotations
 
-import tkinter as tk
 from pathlib import Path
-from tkinter import messagebox, ttk
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtWidgets import (
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QSplitter,
+    QStatusBar,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ..settings import SettingsStore
 from .actions import commands
 from .dialogs import prompt_universe_name
-from .execution import ExecutionPanel
-from .theme import apply_theme
-from .views import DetailPane, UniverseTree, toolbar
+from .execution_panel import ExecutionPanel
+from .formatting import display_universe_status
+from .runner_ui import start_execution
+from .style import app_stylesheet
+from .views import DetailPane, HeaderBar, Sidebar
 from .workspace import WorkshopWorkspace
 
+VERSION_LABEL = "Version v1.0.0-alpha • Mis à jour : 1h"
 
-class AtelierApp(ttk.Frame):
-    """Left tree + right detail pane with grouped actions and live execution."""
 
-    def __init__(self, master: tk.Tk, workspace=None) -> None:
-        super().__init__(master, padding=10)
-        apply_theme(master)
+class AtelierApp(QMainWindow):
+    """Main desktop window with sidebar, details and live execution."""
+
+    def __init__(self, workspace=None) -> None:
+        super().__init__()
         self.settings_store = SettingsStore(Path("data/v1/settings.json"))
         self.workspace = workspace or WorkshopWorkspace()
         self.last_plan = None
-        self.pack(fill="both", expand=True)
-        bar = toolbar.build(self)
-        self.status = ttk.Label(bar, text="", style="Muted.TLabel")
-        self.status.pack(side="right", padx=(8, 2))
-        self._build_browser()
-        self.execution = ExecutionPanel(self)
-        self.execution.pack(fill="x", pady=(8, 0))
+        self._thread = None
+        self._worker = None
+        self.setWindowTitle("Atelier v1 — Univers")
+        self.resize(1200, 760)
+        self.setStyleSheet(app_stylesheet())
+        self._build_ui()
+        self._bind_shortcuts()
         self.refresh()
 
-    def _build_browser(self) -> None:
-        panes = ttk.PanedWindow(self, orient="horizontal")
-        panes.pack(fill="both", expand=True)
-        self.tree = UniverseTree(panes, on_select=self.on_select)
-        self.tree.view.bind("<F2>", lambda _event: self.rename_universe())
-        self.details = DetailPane(panes)
-        panes.add(self.tree, weight=1)
-        panes.add(self.details, weight=3)
+    def _build_ui(self) -> None:
+        central = QWidget()
+        self.setCentralWidget(central)
+        root = QVBoxLayout(central)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+        self.header = HeaderBar()
+        root.addWidget(self.header)
+
+        splitter = QSplitter(Qt.Horizontal)
+        self.sidebar = Sidebar()
+        self.details = DetailPane()
+        splitter.addWidget(self.sidebar)
+        splitter.addWidget(self.details)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 3)
+        root.addWidget(splitter, 1)
+        self._bind_sidebar()
+        self.sidebar.selection_changed.connect(self.on_select)
+
+        self.execution = ExecutionPanel()
+        root.addWidget(self.execution)
+        self.status_bar = QStatusBar()
+        self.status_bar.showMessage("Statut : Prêt")
+        self.status_bar.addPermanentWidget(QLabel(VERSION_LABEL))
+        self.setStatusBar(self.status_bar)
+
+    def _bind_sidebar(self) -> None:
+        self.sidebar.create_requested.connect(self.create_universe)
+        self.sidebar.rename_requested.connect(self.rename_universe)
+        self.sidebar.settings_requested.connect(
+            lambda: commands.open_app_settings(self)
+        )
+        self.sidebar.execute_requested.connect(self._execute_universe)
+        self.sidebar.sync_requested.connect(self._sync_universe)
+        self.sidebar.delete_requested.connect(self._delete_universe)
+        self.sidebar.sync_all_requested.connect(lambda: commands.sync_all(self))
+
+    def _execute_universe(self, universe_id: str) -> None:
+        self.sidebar.select(universe_id)
+        commands.prepare_launch(self)
+
+    def _sync_universe(self, universe_id: str) -> None:
+        self.sidebar.select(universe_id)
+        commands.sync_selected(self, universe_id)
+
+    def _delete_universe(self, universe_id: str) -> None:
+        self.sidebar.select(universe_id)
+        commands.delete_selected(self)
+
+    def _bind_shortcuts(self) -> None:
+        QShortcut(QKeySequence("F2"), self, activated=self.rename_universe)
+
+    def selected_id(self) -> str | None:
+        return self.sidebar.selected_id()
 
     def on_select(self, universe_id: str | None) -> None:
-        self._show_details(universe_id)
-
-    def _show_details(self, universe_id: str | None) -> None:
-        self.details.show(
-            self.workspace.get(universe_id) if universe_id else None,
-            self.workspace,
-            lambda: self.refresh(self.tree.selected_id()),
-        )
+        universe = self.workspace.get(universe_id or "") if universe_id else None
+        self.details.show_universe(universe, self.workspace, self.refresh_current)
+        self._update_header(universe)
 
     def refresh(self, selected_id: str | None = None) -> None:
         universes = self.workspace.universes()
-        self.tree.set_universes(universes)
-        self.status.configure(text=f"{len(universes)} Univers")
-        if selected_id:
-            self.tree.select(selected_id)
-        self._show_details(self.tree.selected_id())
+        current = selected_id or self.selected_id()
+        self.sidebar.set_universes(universes, self.workspace)
+        if current and self.workspace.get(current):
+            self.sidebar.select(current)
+        else:
+            self.sidebar.select(None)
+            self.on_select(None)
+        self._update_header(self.workspace.get(self.selected_id() or ""))
 
-    def start_execution(self, plan) -> None:
-        self.last_plan = plan
-        self.execution.run(plan)
+    def refresh_current(self) -> None:
+        self.refresh(self.selected_id())
+
+    def _update_header(self, universe) -> None:
+        count = len(self.workspace.universes())
+        if universe:
+            status = display_universe_status(universe.get("status", ""))
+            self.header.set_context(universe["name"], count, status)
+        else:
+            self.header.set_context(None, count, "Prêt")
 
     def create_universe(self) -> None:
         name = prompt_universe_name(
-            self, title="Nouvel Univers", used_names=self.workspace.names(),
+            self,
+            title="Nouvel Univers",
+            used_names=self.workspace.names(),
         )
         if name:
             universe = self.workspace.create(name)
@@ -74,9 +141,11 @@ class AtelierApp(ttk.Frame):
             self.refresh(universe["id"])
 
     def rename_universe(self) -> None:
-        universe = self.workspace.get(self.tree.selected_id() or "")
+        universe = self.workspace.get(self.selected_id() or "")
         if universe is None:
-            messagebox.showinfo("Renommer", "Sélectionnez d'abord un Univers.")
+            QMessageBox.information(
+                self, "Renommer", "Sélectionnez d'abord un Univers."
+            )
             return
         name = prompt_universe_name(
             self,
@@ -88,3 +157,6 @@ class AtelierApp(ttk.Frame):
             self.workspace.rename(universe["id"], name)
             commands.apply_discovery(self, universe)
             self.refresh(universe["id"])
+
+    def start_execution(self, plan) -> None:
+        start_execution(self, plan)

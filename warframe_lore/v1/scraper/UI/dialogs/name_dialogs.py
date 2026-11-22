@@ -2,32 +2,36 @@
 
 from __future__ import annotations
 
-import tkinter as tk
-from tkinter import messagebox, simpledialog
+from PySide6.QtWidgets import QInputDialog, QMessageBox, QWidget
 
 
 def prompt_universe_name(
-    parent: tk.Misc,
+    parent: QWidget | None,
     *,
     title: str,
     used_names: set[str],
     initial: str = "",
 ) -> str | None:
-    """Return a unique trimmed name, or None when the user cancels."""
+    """Return a unique trimmed name, or None when cancelled."""
+    current = initial
     while True:
-        answer = simpledialog.askstring(
+        answer, ok = QInputDialog.getText(
+            parent,
             title,
             "Nom de l'Univers :",
-            parent=parent,
-            initialvalue=initial,
+            text=current,
         )
-        if answer is None:
+        if not ok:
             return None
         name = answer.strip()
         if not name:
-            messagebox.showerror(title, "Le nom de l'Univers ne peut pas être vide.")
+            QMessageBox.critical(
+                parent,
+                title,
+                "Le nom de l'Univers ne peut pas être vide.",
+            )
         elif name.casefold() in used_names:
-            messagebox.showerror(title, "Ce nom d'Univers existe déjà.")
+            QMessageBox.critical(parent, title, "Ce nom d'Univers existe déjà.")
         else:
             return name
-        initial = name
+        current = name

@@ -104,9 +104,7 @@ class CurationMixin:
                 item for item in self.data[key] if item["universeId"] != universe_id
             ]
         self.data["runs"] = [
-            item
-            for item in self.data["runs"]
-            if universe_id not in item["universeIds"]
+            item for item in self.data["runs"] if universe_id not in item["universeIds"]
         ]
 
     def _candidate(self, candidate_id: str) -> dict:

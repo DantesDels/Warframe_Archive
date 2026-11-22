@@ -3,19 +3,19 @@
 from __future__ import annotations
 
 KIND_LABELS = {
-    "website": "Site web",
+    "website": "Wiki",
     "api": "API",
     "document": "Document",
 }
 SOURCE_STATUS_LABELS = {
-    "approved": "Approuvée",
-    "candidate": "Candidate",
-    "rejected": "Rejetée",
-    "disabled": "Désactivée",
-    "active": "Active",
-    "suspended": "Suspendue",
-    "blacklisted": "Blacklistée",
-    "proposed": "Proposée",
+    "approved": "Actif",
+    "candidate": "Candidat",
+    "rejected": "Rejeté",
+    "disabled": "Désactivé",
+    "active": "Actif",
+    "suspended": "Suspendu",
+    "blacklisted": "Blacklisté",
+    "proposed": "Proposé",
 }
 UNIVERSE_STATUS_LABELS = {
     "actif": "Actif",

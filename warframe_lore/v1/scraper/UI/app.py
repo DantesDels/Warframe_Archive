@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..settings import SettingsStore
+from ..warframe_seeds import seed_warframe_sources
 from .actions import commands
 from .dialogs import prompt_universe_name
 from .execution_panel import ExecutionPanel
@@ -37,6 +38,7 @@ class AtelierApp(QMainWindow):
         self.data_path = Path(data_path or "data/v1/workspace.json")
         self.settings_store = SettingsStore(self.data_path.parent / "settings.json")
         self.workspace = workspace or WorkshopWorkspace(path=self.data_path)
+        seed_warframe_sources(self.workspace)
         self.last_plan = None
         self._thread = None
         self._worker = None

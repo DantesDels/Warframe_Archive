@@ -21,8 +21,8 @@ class SimpleTable(QTableView):
         self.setAlternatingRowColors(True)
         self.verticalHeader().setVisible(False)
         header = self.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeToContents)
         header.setStretchLastSection(True)
-        header.setSectionResizeMode(QHeaderView.Interactive)
 
     def set_rows(self, rows: list[list[str]], ids: list[str] | None = None) -> None:
         self.model_data.removeRows(0, self.model_data.rowCount())
@@ -32,7 +32,9 @@ class SimpleTable(QTableView):
                 items[0].setData(ids[idx], Qt.UserRole)
             for item in items:
                 item.setEditable(False)
+                item.setTextAlignment(Qt.AlignCenter)
             self.model_data.appendRow(items)
+        self.resizeColumnsToContents()
 
     def selected_id(self) -> str | None:
         indexes = self.selectionModel().selectedRows() if self.selectionModel() else []

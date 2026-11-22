@@ -2,20 +2,9 @@
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
-
-def _table(headers: list[str], rows: list[list[str]]) -> QTableWidget:
-    table = QTableWidget(len(rows), len(headers))
-    table.setHorizontalHeaderLabels(headers)
-    table.verticalHeader().setVisible(False)
-    table.setEditTriggers(QTableWidget.NoEditTriggers)
-    table.setSelectionBehavior(QTableWidget.SelectRows)
-    table.horizontalHeader().setStretchLastSection(True)
-    for row, values in enumerate(rows):
-        for col, value in enumerate(values):
-            table.setItem(row, col, QTableWidgetItem(str(value)))
-    return table
+from .simple_table import SimpleTable
 
 
 def documents_view(workspace, universe) -> QWidget:
@@ -31,7 +20,9 @@ def documents_view(workspace, universe) -> QWidget:
         ]
         for d in workspace.documents_for(universe["id"])
     ]
-    layout.addWidget(_table(["Titre", "Type", "Langue", "Pertinence", "Doublon"], rows))
+    table = SimpleTable(["Titre", "Type", "Langue", "Pertinence", "Doublon"])
+    table.set_rows(rows)
+    layout.addWidget(table)
     return widget
 
 
@@ -47,6 +38,7 @@ def runs_view(workspace, universe) -> QWidget:
         ]
         for r in workspace.runs_for(universe["id"])
     ]
-    table = _table(["Exécution", "Date", "Statut", "Émis"], rows)
+    table = SimpleTable(["Ex?cution", "Date", "Statut", "?mis"])
+    table.set_rows(rows)
     layout.addWidget(table)
     return widget

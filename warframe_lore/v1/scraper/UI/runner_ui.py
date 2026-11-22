@@ -74,24 +74,27 @@ def _apply_result(workspace, result: dict) -> None:
         run = entry.get("run")
         if not uid or not run:
             continue
-        existing = [
+        unchanged = [
             d for d in workspace.data.get("documents", [])
             if d.get("universeId") != uid
         ]
-        merged = _dedupe_docs(existing + docs)
-        workspace.data["documents"] = merged
+        current = [
+            d for d in workspace.data.get("documents", [])
+            if d.get("universeId") == uid
+        ]
+        workspace.data["documents"] = unchanged + _upsert_docs(current, docs)
         workspace.data.setdefault("runs", []).insert(0, run)
     workspace.save()
 
 
-def _dedupe_docs(docs: list[dict]) -> list[dict]:
-    seen: set[str] = set()
-    result: list[dict] = []
-    for doc in docs:
+def _upsert_docs(existing: list[dict], incoming: list[dict]) -> list[dict]:
+    by_key: dict[str, dict] = {}
+    order: list[str] = []
+    for doc in existing + incoming:
         key = str(doc.get("url") or doc.get("id") or "").strip().lower()
-        if key and key in seen:
-            continue
-        if key:
-            seen.add(key)
-        result.append(doc)
-    return result
+        if not key:
+            key = f"id:{doc.get('id', '')}"
+        if key not in by_key:
+            order.append(key)
+        by_key[key] = doc
+    return [by_key[key] for key in order]

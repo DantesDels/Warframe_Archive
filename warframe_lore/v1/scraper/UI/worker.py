@@ -68,7 +68,8 @@ class ExecutionWorker(QObject):
         docs, errors = self._collect_sources(sources, uid, limits)
         run = self._build_run(universe, docs, formats, errors)
         out_dir = self.export_root / uid / run["id"]
-        emit_artifacts(out_dir, universe, docs, formats)
+        manifest = emit_artifacts(out_dir, universe, docs, formats)
+        run["manifest"] = manifest
         self.log.emit(f"Artefacts export\xC3\xA9s: {out_dir}")
         return {"universeId": uid, "docs": docs, "run": run}
 

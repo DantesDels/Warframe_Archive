@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 from pathlib import Path
 
 
 def emit_artifacts(
     out_dir: Path, universe: dict, docs: list[dict], formats: list[str]
-) -> None:
+) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     rows = [{k: v for k, v in d.items() if k != "content"} for d in docs]
+    files: list[Path] = []
     writers = {
         "json": lambda: _write_json(out_dir / "documents.json", docs),
         "jsonl": lambda: _write_jsonl(out_dir / "documents.jsonl", docs),
@@ -26,41 +28,47 @@ def emit_artifacts(
     for fmt in formats:
         writer = writers.get(fmt)
         if writer:
-            writer()
+            path = writer()
+            if path:
+                files.append(path)
+    manifest = _manifest(out_dir, universe, docs, files)
+    _write_json(out_dir / "manifest.json", manifest)
+    return manifest
 
 
-def _write_json(path: Path, payload) -> None:
+def _write_json(path: Path, payload) -> Path:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path
 
 
-def _write_jsonl(path: Path, docs: list[dict]) -> None:
+def _write_jsonl(path: Path, docs: list[dict]) -> Path:
     lines = [json.dumps(d, ensure_ascii=False) for d in docs]
     path.write_text("\n".join(lines), encoding="utf-8")
+    return path
 
 
-def _write_csv(path: Path, rows: list[dict]) -> None:
+def _write_csv(path: Path, rows: list[dict]) -> Path:
     with path.open("w", encoding="utf-8", newline="") as handle:
         fieldnames = list(rows[0].keys()) if rows else ["id"]
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
+    return path
 
 
-def _write_md(path: Path, universe: dict, docs: list[dict]) -> None:
+def _write_md(path: Path, universe: dict, docs: list[dict]) -> Path:
     lines = [f"# {universe['name']}", ""]
     for doc in docs:
         lines.extend([
-            f"## {doc['title']}",
-            "",
-            doc.get("excerpt", ""),
-            "",
-            f"Source: {doc.get('url', '')}",
-            "",
+            f"## {doc['title']}", "",
+            doc.get("excerpt", ""), "",
+            f"Source: {doc.get('url', '')}", "",
         ])
     path.write_text("\n".join(lines), encoding="utf-8")
+    return path
 
 
-def _write_sql(path: Path, docs: list[dict]) -> None:
+def _write_sql(path: Path, docs: list[dict]) -> Path:
     vals = []
     for doc in docs:
         title = doc.get("title", "").replace("'", "''")
@@ -70,3 +78,19 @@ def _write_sql(path: Path, docs: list[dict]) -> None:
     if vals:
         sql += "INSERT INTO documents(id,title,url) VALUES\n" + ",\n".join(vals) + ";\n"
     path.write_text(sql, encoding="utf-8")
+    return path
+
+
+def _manifest(_out_dir: Path, universe: dict, docs: list[dict], files: list[Path]) -> dict:
+    return {
+        "universe": {"id": universe.get("id"), "name": universe.get("name")},
+        "document_count": len(docs),
+        "files": [
+            {
+                "name": p.name,
+                "sha256": hashlib.sha256(p.read_bytes()).hexdigest(),
+                "bytes": p.stat().st_size,
+            }
+            for p in files
+        ],
+    }

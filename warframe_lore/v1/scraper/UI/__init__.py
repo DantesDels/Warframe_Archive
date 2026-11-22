@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 from .app import AtelierApp
-from .mock_data import MOCK_DATA
-from .models import UniverseWorkspace
+from .models import UniverseWorkspace, empty_data
 from .workspace import WorkshopWorkspace
+
+MOCK_DATA = empty_data()
 
 __all__ = [
     "MOCK_DATA",
     "AtelierApp",
     "UniverseWorkspace",
     "WorkshopWorkspace",
+    "empty_data",
 ]

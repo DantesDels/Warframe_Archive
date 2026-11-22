@@ -11,6 +11,8 @@ from warframe_lore.v1.scraper.UI import WorkshopWorkspace
 class CurationTests(unittest.TestCase):
     def setUp(self):
         self.workspace = WorkshopWorkspace()
+        self.workspace.create("Warframe")
+        self.workspace.create("Droit constitutionnel")
 
     def test_candidates_are_scoped_and_serialized(self):
         candidates = discover(self.workspace.get("warframe"), 60)
@@ -19,7 +21,7 @@ class CurationTests(unittest.TestCase):
             len(self.workspace.candidates_for("warframe")),
             len(candidates),
         )
-        self.assertEqual(self.workspace.candidates_for("seigneur-anneaux"), [])
+        self.assertEqual(self.workspace.candidates_for("droit-constitutionnel"), [])
 
     def test_activation_adds_a_source(self):
         self.workspace.set_candidates([
@@ -30,7 +32,7 @@ class CurationTests(unittest.TestCase):
                 location="https://example.org/docs",
                 title="Documentation",
                 score=0.9,
-                proof="Mot-clé",
+                proof="Mot-cl?",
             ),
         ])
         before = len(self.workspace.sources_for("warframe"))

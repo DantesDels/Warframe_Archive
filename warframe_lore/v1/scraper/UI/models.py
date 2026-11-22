@@ -6,30 +6,38 @@ from copy import deepcopy
 from datetime import UTC, datetime
 
 from ..slugs import slugify
-from .mock_data import MOCK_DATA
+
+
+def empty_data() -> dict:
+    """Return an empty, functional workspace dataset."""
+    return {
+        "universes": [],
+        "sources": [],
+        "documents": [],
+        "runs": [],
+        "candidates": [],
+    }
 
 
 class UniverseWorkspace:
-    """In-memory, mutable view of the mock dataset."""
+    """Mutable workspace state, optionally persisted to disk."""
 
     def __init__(self, data: dict | None = None) -> None:
-        self.data = deepcopy(data if data is not None else MOCK_DATA)
+        self.data = deepcopy(data) if data is not None else empty_data()
+        for key in empty_data():
+            self.data.setdefault(key, [])
+
+    def save(self) -> None:
+        """Persist state when a backing store is configured."""
 
     def universes(self) -> list[dict]:
         return self.data["universes"]
 
     def get(self, universe_id: str) -> dict | None:
-        return next(
-            (item for item in self.universes() if item["id"] == universe_id),
-            None,
-        )
+        return next((i for i in self.universes() if i["id"] == universe_id), None)
 
     def names(self, *, exclude: str = "") -> set[str]:
-        return {
-            item["name"].casefold()
-            for item in self.universes()
-            if item["id"] != exclude
-        }
+        return {i["name"].casefold() for i in self.universes() if i["id"] != exclude}
 
     def create(self, name: str, description: str = "") -> dict:
         clean_name = name.strip()
@@ -37,14 +45,12 @@ class UniverseWorkspace:
             raise ValueError("universe name must not be empty")
         universe_id = self._unique_id(slugify(clean_name) or "univers")
         universe = {
-            "id": universe_id,
-            "name": clean_name,
-            "slug": universe_id,
-            "description": description.strip(),
-            "status": "actif",
+            "id": universe_id, "name": clean_name, "slug": universe_id,
+            "description": description.strip(), "status": "actif",
             "createdAt": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
         self.universes().append(universe)
+        self.save()
         return universe
 
     def rename(self, universe_id: str, name: str) -> dict:
@@ -58,6 +64,7 @@ class UniverseWorkspace:
             raise ValueError(f"universe name already in use: {clean_name}")
         universe["name"] = clean_name
         universe["slug"] = slugify(clean_name) or universe_id
+        self.save()
         return universe
 
     def sources_for(self, universe_id: str) -> list[dict]:

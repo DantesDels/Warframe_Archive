@@ -25,6 +25,7 @@ class CurationMixin:
             }
             for item in candidates
         ]
+        self.save()
 
     def candidates_for(self, universe_id: str) -> list[dict]:
         return [
@@ -35,11 +36,13 @@ class CurationMixin:
 
     def update_candidate(self, candidate_id: str, **changes) -> None:
         self._candidate(candidate_id).update(changes)
+        self.save()
 
     def remove_candidate(self, candidate_id: str) -> None:
         self.data["candidates"] = [
             item for item in self.data["candidates"] if item["id"] != candidate_id
         ]
+        self.save()
 
     def add_source_from_candidate(self, candidate_id: str) -> dict:
         candidate = self._candidate(candidate_id)
@@ -56,6 +59,7 @@ class CurationMixin:
         }
         self.data["sources"].append(source)
         self.update_candidate(candidate_id, status="active")
+        self.save()
         return source
 
     def add_manual_source(
@@ -77,12 +81,14 @@ class CurationMixin:
             "proof": "Ajout manuel depuis l'interface",
         }
         self.data["sources"].append(source)
+        self.save()
         return source
 
     def update_source(self, source_id: str, **changes) -> dict:
         for item in self.data["sources"]:
             if item["id"] == source_id:
                 item.update(changes)
+                self.save()
                 return item
         raise KeyError(source_id)
 
@@ -93,6 +99,7 @@ class CurationMixin:
         self.data["documents"] = [
             item for item in self.data["documents"] if item["sourceId"] != source_id
         ]
+        self.save()
 
     def delete_universe(self, universe_id: str) -> None:
         for key in ("universes", "candidates"):
@@ -106,6 +113,7 @@ class CurationMixin:
         self.data["runs"] = [
             item for item in self.data["runs"] if universe_id not in item["universeIds"]
         ]
+        self.save()
 
     def _candidate(self, candidate_id: str) -> dict:
         for item in self.data["candidates"]:

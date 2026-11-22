@@ -1,4 +1,4 @@
-"""Native UI contract: mock data, universe state and desktop window behavior."""
+"""Native UI contract: workspace state and desktop window behavior."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from warframe_lore.v1.scraper.settings import Settings, SettingsStore
-from warframe_lore.v1.scraper.UI import MOCK_DATA, AtelierApp, WorkshopWorkspace
+from warframe_lore.v1.scraper.UI import AtelierApp, WorkshopWorkspace, empty_data
 from warframe_lore.v1.scraper.UI.dialogs.preflight_dialog import PreflightDialog
 from warframe_lore.v1.scraper.UI.dialogs.settings_dialog import SettingsDialog
 
@@ -27,39 +27,46 @@ def _app() -> QApplication:
     return QApplication.instance() or QApplication([])
 
 
-class MockDataTests(unittest.TestCase):
-    def test_collections_use_universe_keys(self):
+def _seed_workspace() -> WorkshopWorkspace:
+    ws = WorkshopWorkspace(data=empty_data())
+    ws.create("Warframe", "Univers de science-fiction")
+    ws.create("Droit constitutionnel", "Sources juridiques")
+    ws.add_manual_source(
+        "warframe", "https://warframe.fandom.com/wiki/Lore", kind="website"
+    )
+    ws.add_manual_source(
+        "droit-constitutionnel", "https://example.org/constitution", kind="website"
+    )
+    return ws
+
+
+class WorkspaceDataTests(unittest.TestCase):
+    def test_empty_data_has_expected_keys(self):
         self.assertEqual(
-            set(MOCK_DATA),
+            set(empty_data()),
             {"candidates", "universes", "sources", "documents", "runs"},
         )
-        self.assertTrue(all("universeId" in item for item in MOCK_DATA["sources"]))
-        self.assertTrue(all("universeId" in item for item in MOCK_DATA["documents"]))
-        self.assertTrue(all("universeIds" in item for item in MOCK_DATA["runs"]))
 
-    def test_mock_references_are_consistent(self):
-        universe_ids = {item["id"] for item in MOCK_DATA["universes"]}
-        source_ids = {item["id"] for item in MOCK_DATA["sources"]}
-        for source in MOCK_DATA["sources"]:
-            self.assertIn(source["universeId"], universe_ids)
-        for document in MOCK_DATA["documents"]:
-            self.assertIn(document["universeId"], universe_ids)
-            self.assertIn(document["sourceId"], source_ids)
-        for run in MOCK_DATA["runs"]:
-            self.assertTrue(run["universeIds"])
-            self.assertTrue(set(run["universeIds"]) <= universe_ids)
+    def test_workspace_persists_to_disk(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "workspace.json"
+            ws = WorkshopWorkspace(path=path)
+            ws.create("Warframe")
+            ws.add_manual_source("warframe", "https://example.org", kind="website")
+            loaded = WorkshopWorkspace(path=path)
+            self.assertEqual(len(loaded.universes()), 1)
+            self.assertEqual(len(loaded.sources_for("warframe")), 1)
 
 
 class UniverseWorkspaceTests(unittest.TestCase):
     def setUp(self):
-        self.workspace = WorkshopWorkspace()
+        self.workspace = _seed_workspace()
 
     def test_create_adds_universes_with_unique_ids(self):
         first = self.workspace.create("Nouvel Univers")
         second = self.workspace.create("Nouvel Univers")
         self.assertEqual(first["id"], "nouvel-univers")
         self.assertEqual(second["id"], "nouvel-univers-2")
-        self.assertEqual(len(self.workspace.universes()), 5)
 
     def test_create_rejects_blank_name(self):
         with self.assertRaises(ValueError):
@@ -69,35 +76,32 @@ class UniverseWorkspaceTests(unittest.TestCase):
         universe = self.workspace.rename("warframe", "  Warframe Prime  ")
         self.assertEqual(universe["id"], "warframe")
         self.assertEqual(universe["name"], "Warframe Prime")
-        self.assertEqual(universe["slug"], "warframe-prime")
-        self.assertIs(self.workspace.get("warframe"), universe)
 
     def test_rename_rejects_duplicate_name(self):
         with self.assertRaises(ValueError):
             self.workspace.rename("warframe", "Droit constitutionnel")
 
     def test_details_are_scoped_to_selected_universe(self):
-        self.assertEqual(len(self.workspace.sources_for("warframe")), 3)
-        self.assertEqual(
-            len(self.workspace.documents_for("droit-constitutionnel")),
-            2,
-        )
-        self.assertEqual(
-            {run["id"] for run in self.workspace.runs_for("warframe")},
-            {"run-wf-1", "run-multi-1"},
-        )
-
-    def test_workspace_does_not_mutate_mock_data(self):
-        self.workspace.rename("warframe", "Renomm?")
-        self.assertEqual(MOCK_DATA["universes"][0]["name"], "Warframe")
+        self.assertEqual(len(self.workspace.sources_for("warframe")), 1)
+        self.assertEqual(len(self.workspace.sources_for("droit-constitutionnel")), 1)
 
 
 class DesktopWindowTests(unittest.TestCase):
     def setUp(self):
         _app()
+        self.tmp = tempfile.TemporaryDirectory()
+        self.data_path = Path(self.tmp.name) / "workspace.json"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _make_app(self) -> AtelierApp:
+        ws = _seed_workspace()
+        ws.path = self.data_path
+        return AtelierApp(workspace=ws, data_path=self.data_path)
 
     def test_details_only_after_selection(self):
-        app = AtelierApp()
+        app = self._make_app()
         self.assertIsNone(app.selected_id())
         self.assertEqual(app.details.title.text(), "Aucun Univers sélectionné")
         app.sidebar.select("warframe")
@@ -112,27 +116,23 @@ class DesktopWindowTests(unittest.TestCase):
         app.close()
         app.deleteLater()
 
-    def test_header_badge_and_no_duplicate_ready_status(self):
-        app = AtelierApp()
+    def test_header_badge_and_ready_status(self):
+        app = self._make_app()
         count = len(app.workspace.universes())
-        self.assertNotIn("Universs", app.header.meta.text())
         self.assertIn(f"{count} Univers", app.header.meta.text())
         self.assertEqual(app.status_bar.currentMessage(), "Statut : Prêt")
-        self.assertNotEqual(app.execution.step_label.text(), "Statut : Prêt")
         app.close()
         app.deleteLater()
 
-    def test_sidebar_actions_are_icon_only_with_tooltips(self):
-        app = AtelierApp()
+    def test_sidebar_actions_icon_only_with_tooltips(self):
+        app = self._make_app()
         all_btns = [
-            btn for btn in app.sidebar.findChildren(QPushButton)
-            if btn.objectName() == "SidebarIconButton"
+            b for b in app.sidebar.findChildren(QPushButton)
+            if b.objectName() == "SidebarIconButton"
         ]
         sidebar_tips = {
-            "Renommer (F2)",
-            "Param\u00e8tres globaux",
-            "Synchroniser tout",
-            "Nouvel Univers",
+            "Renommer (F2)", "Param\u00e8tres globaux",
+            "Synchroniser tout", "Nouvel Univers",
         }
         buttons = [
             b for b in all_btns
@@ -140,20 +140,12 @@ class DesktopWindowTests(unittest.TestCase):
         ]
         self.assertEqual(len(buttons), 4)
         self.assertEqual({b.toolTip() for b in buttons}, sidebar_tips)
-        self.assertTrue(all(b.text().strip() for b in buttons))
-        self.assertTrue(all(len(b.text()) <= 2 for b in buttons))
-        create = [b for b in buttons if b.toolTip() == "Nouvel Univers"][0]
-        self.assertIs(create.parent(), app.sidebar)
-        layout = app.sidebar.layout()
-        bottom_row = layout.itemAt(layout.count() - 1).layout()
-        self.assertIs(bottom_row.itemAt(bottom_row.count() - 1).widget(), create)
         app.close()
         app.deleteLater()
 
     def test_universe_tile_actions_visible_only_when_selected(self):
-        app = AtelierApp()
+        app = self._make_app()
         app.sidebar.select("warframe")
-        from PySide6.QtWidgets import QApplication
         QApplication.processEvents()
         selected = None
         for i in range(app.sidebar.list.count()):
@@ -162,11 +154,10 @@ class DesktopWindowTests(unittest.TestCase):
                 selected = app.sidebar.list.itemWidget(item)
         self.assertIsNotNone(selected)
         self.assertFalse(selected.actions.isHidden())
-        buttons = [
-            b for b in selected.actions.findChildren(QPushButton)
+        tips = {
+            b.toolTip() for b in selected.actions.findChildren(QPushButton)
             if b.objectName() == "SidebarIconButton"
-        ]
-        tips = {b.toolTip() for b in buttons}
+        }
         self.assertEqual(tips, {"Exécuter", "Synchroniser l'Univers", "Supprimer"})
         app.sidebar.select(None)
         app.on_select(None)

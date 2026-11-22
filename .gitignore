@@ -62,3 +62,9 @@ graphify-out/
 
 # Packaged v1 UI launcher (local build artifact)
 warframe_lore/v1/*.exe
+
+# Atelier v1 runtime data/logs (local)
+data/v1/
+warframe_lore/v1/data/
+warframe_lore/v1/atelier_err.log
+warframe_lore/v1/atelier_out.log

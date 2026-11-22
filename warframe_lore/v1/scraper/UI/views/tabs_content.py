@@ -38,7 +38,7 @@ def runs_view(workspace, universe) -> QWidget:
         ]
         for r in workspace.runs_for(universe["id"])
     ]
-    table = SimpleTable(["Ex?cution", "Date", "Statut", "?mis"])
+    table = SimpleTable(["Exécution", "Date", "Statut", "Émis"], equal_columns=True)
     table.set_rows(rows)
     layout.addWidget(table)
     return widget

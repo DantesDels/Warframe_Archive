@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QTableView, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QAbstractItemView, QTableView, QVBoxLayout, QWidget
 
 from .delegates import SourceDelegate
 from .source_model import SourceTableModel
@@ -17,6 +17,7 @@ class SourcesView(QWidget):
         self.workspace = workspace
         self.universe = universe
         self.on_change = on_change
+        self._suspend_btn = None
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.addLayout(build_actions(self))
@@ -25,7 +26,7 @@ class SourcesView(QWidget):
         self.table.setModel(self.model)
         self.table.setItemDelegate(SourceDelegate(self.table))
         self.table.setSelectionBehavior(QTableView.SelectRows)
-        self.table.setSelectionMode(QTableView.SingleSelection)
+        self.table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.table.setAlternatingRowColors(True)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
@@ -33,15 +34,26 @@ class SourcesView(QWidget):
         self.table.setColumnWidth(1, 110)
         self.table.setColumnWidth(2, 120)
         self.table.setColumnWidth(3, 140)
+        self.table.selectionModel().selectionChanged.connect(self.sync_actions)
         layout.addWidget(self.table, 1)
         self.refresh()
 
     def refresh(self) -> None:
         self.model.set_sources(self.workspace.sources_for(self.universe["id"]))
+        self.sync_actions()
+
+    def selected_ids(self) -> list[str]:
+        indexes = self.table.selectionModel().selectedRows()
+        ids = [self.model.source_id_at(i.row()) for i in indexes]
+        return [sid for sid in ids if sid]
 
     def selected_id(self) -> str | None:
-        indexes = self.table.selectionModel().selectedRows()
-        return self.model.source_id_at(indexes[0].row()) if indexes else None
+        ids = self.selected_ids()
+        return ids[0] if ids else None
+
+    def selected_sources(self) -> list[dict]:
+        ids = set(self.selected_ids())
+        return [s for s in self.workspace.data["sources"] if s["id"] in ids]
 
     def current_source(self) -> dict | None:
         source_id = self.selected_id()
@@ -49,3 +61,12 @@ class SourcesView(QWidget):
             (s for s in self.workspace.data["sources"] if s["id"] == source_id),
             None,
         )
+
+    def sync_actions(self) -> None:
+        if self._suspend_btn is None:
+            return
+        sources = self.selected_sources()
+        if sources and all(s.get("status") == "suspended" for s in sources):
+            self._suspend_btn.setText("Activer")
+        else:
+            self._suspend_btn.setText("Suspendre")

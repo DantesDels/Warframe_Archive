@@ -22,6 +22,8 @@ class SourceDelegate(QStyledItemDelegate):
     """Render location, status badges and relevance bars."""
 
     def paint(self, painter: QPainter, option, index) -> None:
+        if option.state & QStyle.State_Selected:
+            painter.fillRect(option.rect, QColor("#dbeafe"))
         col = index.column()
         source = index.data(Qt.UserRole) or {}
         if col == 0:
@@ -41,7 +43,7 @@ class SourceDelegate(QStyledItemDelegate):
     def _paint_text(self, painter, option, text: str) -> None:
         painter.save()
         painter.setPen(QColor("#1e293b"))
-        painter.drawText(option.rect.adjusted(8, 0, -4, 0), Qt.AlignVCenter, text)
+        painter.drawText(option.rect, Qt.AlignCenter, text)
         painter.restore()
 
     def _paint_location(self, painter, option, source: dict) -> None:
@@ -59,7 +61,9 @@ class SourceDelegate(QStyledItemDelegate):
         painter.setRenderHint(QPainter.Antialiasing)
         rect = option.rect.adjusted(8, 8, -8, -8)
         text_width = option.fontMetrics.horizontalAdvance(label)
-        rect.setWidth(min(100, max(64, text_width + 20)))
+        badge_w = min(100, max(64, text_width + 20))
+        rect.setWidth(badge_w)
+        rect.moveLeft(option.rect.left() + (option.rect.width() - badge_w) // 2)
         painter.setBrush(QColor(color))
         painter.setPen(Qt.NoPen)
         painter.drawRoundedRect(rect, 8, 8)

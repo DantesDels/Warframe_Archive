@@ -19,7 +19,7 @@ from ..warframe_seeds import seed_warframe_sources
 from .actions import commands
 from .dialogs import prompt_universe_name
 from .formatting import display_universe_status
-from .runner_ui import handle_finished, start_execution
+from .runner_ui import cleanup_execution, handle_finished, start_execution
 from .style import app_stylesheet
 from .workspace import WorkshopWorkspace
 
@@ -67,6 +67,7 @@ class AtelierApp(QMainWindow):
             self.status_bar.showMessage(f"GraphQL indisponible : {error}")
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        cleanup_execution(self)
         if self._graphql_handle is not None:
             self._graphql_handle.stop()
         super().closeEvent(event)

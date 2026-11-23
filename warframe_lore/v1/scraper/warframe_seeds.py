@@ -18,12 +18,12 @@ WARFRAME_SOURCES: list[dict[str, str]] = [
     {
         "kind": "website",
         "location": "https://www.warframe.com/en",
-        "proof": "Site officiel Warframe (EN), pages publiques et actualit?s.",
+        "proof": "Site officiel Warframe (EN), pages publiques et actualités.",
     },
     {
         "kind": "website",
         "location": "https://www.warframe.com/fr",
-        "proof": "Site officiel Warframe (FR), pages publiques et actualit?s.",
+        "proof": "Site officiel Warframe (FR), pages publiques et actualités.",
     },
     {
         "kind": "website",

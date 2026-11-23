@@ -34,7 +34,7 @@ class CurationTests(unittest.TestCase):
                 location="https://example.org/docs",
                 title="Documentation",
                 score=0.9,
-                proof="Mot-cl?",
+                proof="Mot-clé",
             ),
         ])
         before = len(self.workspace.sources_for("warframe"))

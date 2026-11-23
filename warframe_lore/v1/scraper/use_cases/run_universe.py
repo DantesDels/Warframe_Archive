@@ -47,7 +47,7 @@ def run_universe(
         ctx.observer.event(
             "children_pending_review", universe_id=uid, count=len(pending_children)
         )
-    ctx.observer.log(f"Artefacts export?s : {out_dir}")
+    ctx.observer.log(f"Artefacts exportés : {out_dir}")
     ctx.observer.event(
         "universe_finished",
         universe_id=uid,
@@ -111,7 +111,7 @@ def _collect_sources(
     docs, errors, pending, cancelled = result
     for doc in docs:
         suffix = " (cache)" if doc.get("fromCache") else ""
-        ctx.observer.log(f"Collect?{suffix} : {doc.get('title', '')}")
+        ctx.observer.log(f"Collecté{suffix} : {doc.get('title', '')}")
     for err in errors:
         ctx.observer.event(
             "source_warning", universe_id=uid, message=err, outcome="warning"

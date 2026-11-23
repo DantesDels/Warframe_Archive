@@ -18,7 +18,7 @@ class ScanImportTests(unittest.TestCase):
             result = scan_import("https://example.org/wiki")
         self.assertTrue(result.allowed)
         self.assertEqual(result.code, "allowed_remote")
-        self.assertIn("t?l?chargement", result.reason)
+        self.assertIn("téléchargement", result.reason)
 
     def test_blocks_scripts_and_exec_vectors(self):
         for name in (

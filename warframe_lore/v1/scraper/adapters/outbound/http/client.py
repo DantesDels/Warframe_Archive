@@ -99,7 +99,7 @@ class HttpClientAdapter:
             self._reject(url, verdict)
         ua = str(headers.get("User-Agent", "*"))
         if not self.robots.allowed(url, ua):
-            verdict = ScanResult(False, "Bloqu? par robots.txt.", "blocked_robots", url)
+            verdict = ScanResult(False, "Bloqué par robots.txt.", "blocked_robots", url)
             self._reject(url, verdict)
 
     def _check_payload(self, resp: FetchResponse) -> None:

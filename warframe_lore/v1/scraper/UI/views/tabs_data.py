@@ -23,7 +23,7 @@ def data_view(workspace: Any, universe: dict[str, Any]) -> QWidget:
     layout.setContentsMargins(0, 0, 0, 0)
 
     root = _data_root(workspace, str(universe["id"]))
-    layout.addWidget(QLabel(f"Dossier de donn?es : {root}"))
+    layout.addWidget(QLabel(f"Dossier de données : {root}"))
 
     splitter = QSplitter(Qt.Orientation.Horizontal)
     tree = QTreeView()
@@ -61,7 +61,7 @@ def _populate(model: QStandardItemModel, root: Path) -> None:
     model.clear()
     root_item = model.invisibleRootItem()
     if not root.exists():
-        empty = QStandardItem("Aucune donn?e export?e pour cet univers.")
+        empty = QStandardItem("Aucune donnée exportée pour cet univers.")
         empty.setEditable(False)
         root_item.appendRow(empty)
         return
@@ -113,5 +113,5 @@ def _show_preview(tree: QTreeView, preview: QPlainTextEdit) -> None:
         return
     limit = 200_000
     if len(text) > limit:
-        text = text[:limit] + "\n\n[... aper?u tronqu? ...]"
+        text = text[:limit] + "\n\n[... aperçu tronqué ...]"
     preview.setPlainText(text)

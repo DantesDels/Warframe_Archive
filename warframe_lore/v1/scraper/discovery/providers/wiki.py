@@ -39,7 +39,7 @@ class WikiProvider:
                             out.append(
                                 _candidate(
                                     api, term, universe_id, 0.72,
-                                    "MediaWiki API v?rifi?e",
+                                    "MediaWiki API vérifiée",
                                 )
                             )
                             continue
@@ -47,7 +47,7 @@ class WikiProvider:
                     pass
             out.append(
                 _candidate(
-                    api, term, universe_id, 0.58, "Point d'entr?e wiki/API candidat"
+                    api, term, universe_id, 0.58, "Point d'entrée wiki/API candidat"
                 )
             )
         # dedupe by location

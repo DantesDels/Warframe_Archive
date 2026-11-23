@@ -36,10 +36,10 @@ def scan_import(location: str, *, qr_detector: QrDetector | None = None) -> Scan
         return _blocked(value, "blocked_empty", "Emplacement vide.")
     if _is_remote(value):
         return _allowed(value, "allowed_remote",
-                        "URL accept?e; contenu v?rifi? au t?l?chargement.")
+                        "URL acceptée; contenu vérifié au téléchargement.")
     verdict = classify_suffix(path_suffix(value))
     if verdict is None:
-        return _allowed(value, "allowed_local", "Document accept?.")
+        return _allowed(value, "allowed_local", "Document accepté.")
     code, reason = verdict
     if code == "blocked_image_qr_check":
         return _scan_image(value, Path(value), reason, qr_detector)
@@ -53,8 +53,8 @@ def _scan_image(location: str, path: Path, reason: str,
         return _blocked(location, "blocked_qr_unverified", reason)
     if has_qr:
         return _blocked(location, "blocked_qr_detected",
-                        "Image bloqu?e : code QR d?tect?.")
-    return _allowed(location, "allowed_image", "Image analys?e : aucun QR d?tect?.")
+                        "Image bloquée : code QR détecté.")
+    return _allowed(location, "allowed_image", "Image analysée : aucun QR détecté.")
 
 
 def scan_payload(name: str, *, content: bytes = b"", content_type: str = "",
@@ -65,10 +65,10 @@ def scan_payload(name: str, *, content: bytes = b"", content_type: str = "",
         return _blocked(name, verdict[0], verdict[1])
     ctype = (content_type or "").lower()
     if _looks_executable(content, ctype):
-        return _blocked(name, "blocked_binary", "Contenu ex?cutable/binaire bloqu?.")
+        return _blocked(name, "blocked_binary", "Contenu exécutable/binaire bloqué.")
     if _looks_active(content, ctype):
-        return _blocked(name, "blocked_active_content", "Contenu actif bloqu?.")
-    return _allowed(name, "allowed_payload", "Contenu accept?.")
+        return _blocked(name, "blocked_active_content", "Contenu actif bloqué.")
+    return _allowed(name, "allowed_payload", "Contenu accepté.")
 
 
 def _looks_executable(content: bytes, ctype: str) -> bool:

@@ -26,7 +26,7 @@ class OpenAiCompatLlmAdapter:
 
     def generate(self, request: LlmRequest) -> LlmResponse:
         if not self.budget.enabled:
-            raise RuntimeError("LLM d?sactiv? pour cet Univers.")
+            raise RuntimeError("LLM désactivé pour cet Univers.")
         if self.calls >= self.budget.max_calls:
             raise RuntimeError("Budget d'appels LLM atteint.")
         max_tokens = min(request.max_tokens, self.budget.max_tokens)

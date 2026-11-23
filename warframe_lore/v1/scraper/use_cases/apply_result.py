@@ -104,7 +104,7 @@ def _upsert_pending_children(workspace: Any, uid: str, entry: dict[str, Any]) ->
             "location": url,
             "title": f"Page enfant: {url.rsplit('/', 1)[-1] or url}",
             "score": 0.5,
-            "proof": f"Page enfant d?tect?e depuis {child.get('parent', '')}",
+            "proof": f"Page enfant détectée depuis {child.get('parent', '')}",
             "discoveredBy": "manifest_review",
             "status": "proposed",
             "forceUpdate": False,

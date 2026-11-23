@@ -31,17 +31,13 @@ class UniverseItem(QWidget):
         arow.setContentsMargins(0, 0, 0, 0)
         arow.setSpacing(2)
         for icon, tip, sig in (
-            ("?", "Exécuter", sidebar.execute_requested),
-            ("?", "Synchroniser l'Univers", sidebar.sync_requested),
-            ("?", "Supprimer", sidebar.delete_requested),
+            ("execute", "Exécuter", sidebar.execute_requested),
+            ("sync", "Synchroniser l'Univers", sidebar.sync_requested),
+            ("delete", "Supprimer", sidebar.delete_requested),
         ):
             def _emit(_checked: bool = False, s: Any = sig, u: str = uid) -> None:
                 s.emit(u)
-            btn = icon_button(icon, tip, _emit, 24)
-            btn.setStyleSheet(
-                "QPushButton#SidebarIconButton{font-size:12px;padding:0;}"
-            )
-            arow.addWidget(btn)
+            arow.addWidget(icon_button(icon, tip, _emit, 24))
         self.actions_widget.setVisible(False)
         row.addWidget(
             self.actions_widget,

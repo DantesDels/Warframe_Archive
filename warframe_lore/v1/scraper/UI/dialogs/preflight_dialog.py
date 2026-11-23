@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -39,6 +41,7 @@ class PreflightDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.universe_ids = universe_ids
+        self._base_settings = settings
         self.selected_plan: LaunchPlan | None = None
         self.setWindowTitle("Pré-exécution")
         self.setModal(True)
@@ -62,16 +65,16 @@ class PreflightDialog(QDialog):
         self.max_depth.setValue(settings.max_depth)
         form.addRow("Profondeur de crawl", self.max_depth)
         layout.addLayout(form)
-        self.same_host = QCheckBox("Limiter au mÃªme domaine")
+        self.same_host = QCheckBox("Limiter au même domaine")
         self.same_host.setChecked(settings.same_host_only)
         layout.addWidget(self.same_host)
         self.use_cache = QCheckBox("Cache HTTP conditionnel")
         self.use_cache.setChecked(settings.use_cache)
         layout.addWidget(self.use_cache)
-        self.incremental = QCheckBox("IncrÃ©mental (ignorer contenu inchangÃ©)")
+        self.incremental = QCheckBox("Incrémental (ignorer contenu inchangé)")
         self.incremental.setChecked(settings.incremental)
         layout.addWidget(self.incremental)
-        self.expand_manifests = QCheckBox("DÃ©velopper les index/manifests")
+        self.expand_manifests = QCheckBox("Développer les index/manifests")
         self.expand_manifests.setChecked(settings.expand_manifests)
         layout.addWidget(self.expand_manifests)
         box = QGroupBox("Formats de sortie (multi-sélection)")
@@ -101,32 +104,18 @@ class PreflightDialog(QDialog):
             str(name) for name, cb in self.formats.items() if bool(cb.isChecked())
         )
         try:
-            base = getattr(self, "_base_settings", Settings())
-            settings = Settings(
-                self.relevance.value(),
-                formats,
-                self.rag.isChecked(),
-                self.max_pages.value(),
-                self.max_depth.value(),
-                self.same_host.isChecked(),
-                self.use_cache.isChecked(),
-                self.incremental.isChecked(),
-                self.expand_manifests.isChecked(),
-                base.max_manifest_urls,
-                base.discovery_sitemaps,
-                base.discovery_feeds,
-                base.discovery_web_search,
-                base.discovery_web_search_url,
-                base.discovery_git,
-                base.discovery_wiki,
-                base.discovery_seeds,
-                base.discovery_max_candidates,
-                base.review_child_pages,
-                base.use_playwright,
-                base.max_concurrency,
-                base.per_host_concurrency,
-                base.per_host_delay,
-                base.max_retries,
+            base = self._base_settings
+            settings = replace(
+                base,
+                min_relevance=self.relevance.value(),
+                output_formats=formats,
+                rag_coupling=self.rag.isChecked(),
+                max_pages_per_source=self.max_pages.value(),
+                max_depth=self.max_depth.value(),
+                same_host_only=self.same_host.isChecked(),
+                use_cache=self.use_cache.isChecked(),
+                incremental=self.incremental.isChecked(),
+                expand_manifests=self.expand_manifests.isChecked(),
             )
             self.selected_plan = LaunchPlan(settings, self.universe_ids)
         except ValueError as error:

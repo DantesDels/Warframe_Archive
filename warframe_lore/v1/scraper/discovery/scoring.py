@@ -76,8 +76,8 @@ def _weighted(b: dict[str, float]) -> float:
 def _proof(b: dict[str, float]) -> str:
     return (
         f"Pertinence {int(b['relevance'] * 100)}%, "
-        f"autorit? {int(b['authority'] * 100)}%, "
-        f"fra?cheur {int(b['freshness'] * 100)}%, "
+        f"autorité {int(b['authority'] * 100)}%, "
+        f"fraîcheur {int(b['freshness'] * 100)}%, "
         f"langue {int(b['language'] * 100)}%, "
         f"confiance extraction {int(b['confidence'] * 100)}%"
     )

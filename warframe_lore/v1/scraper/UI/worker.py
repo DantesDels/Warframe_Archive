@@ -61,6 +61,8 @@ class ExecutionWorker(QObject):
         self.quarantine = QuarantineStore(base / "quarantine")
         self.control = RunControl()
         self.client = HttpClient(
+            timeout=10.0,
+            max_retries=2,
             cache=self.cache,
             policy=FetchPolicy(max_bytes=5_000_000),
             event_log=self.events,
@@ -70,17 +72,17 @@ class ExecutionWorker(QObject):
 
     def pause(self) -> None:
         self.control.pause()
-        self.log.emit("Ex?cution en pause.")
+        self.log.emit("Exécution en pause.")
         self.events.emit("run_paused", outcome="paused")
 
     def resume(self) -> None:
         self.control.resume()
-        self.log.emit("Ex?cution reprise.")
+        self.log.emit("Exécution reprise.")
         self.events.emit("run_resumed", outcome="resumed")
 
     def cancel(self) -> None:
         self.control.cancel()
-        self.log.emit("Annulation demand?e.")
+        self.log.emit("Annulation demandée.")
         self.events.emit("run_cancel_requested", outcome="cancelling")
 
     def run(self) -> None:
@@ -114,12 +116,12 @@ class ExecutionWorker(QObject):
             bool(cast(dict[str, Any], r).get("cancelled")) for r in runs
         )
         if cancelled:
-            self.progress.emit(100, "Annul?")
-            self.log.emit("Ex?cution annul?e.")
+            self.progress.emit(100, "Annulé")
+            self.log.emit("Exécution annulée.")
             self.events.emit("run_cancelled", runs=len(runs), outcome="cancelled")
             return {"ok": False, "cancelled": True, "runs": runs}
-        self.progress.emit(100, "Termin?")
-        self.log.emit("Ex?cution termin?e.")
+        self.progress.emit(100, "Terminé")
+        self.log.emit("Exécution terminée.")
         self.events.emit("run_finished", runs=len(runs), outcome="ok")
         return {"ok": True, "runs": runs}
 

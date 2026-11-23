@@ -369,3 +369,26 @@ configuration, et API GraphQL + visualisation du graphe des relations.
 ### Gates
 - `ruff check warframe_lore/v1 tests/v1`, `python -m compileall -q
   warframe_lore`, `pytest -q tests/v1` : verts.
+
+---
+
+## Correctifs UI (post-P2)
+
+- **UTF-8** : restauration des accents dans 26 modules ou tests où le texte
+  français avait été remplacé par `?` (libellés, statuts, messages de
+  sécurité, heuristique de langue). Un contrat de non-régression scanne les
+  sources `.py` de v1 et de tests/v1.
+- **Boutons** : ajout des états `:pressed`, `:focus` et `:disabled` dans la
+  feuille de style globale (retour visuel immédiat), et message de statut
+  quand un lancement est déjà en cours.
+- **Icônes** : les glyphes Unicode (remplacés par `?`) sont abandonnés au
+  profit des `QStyle.StandardPixmap` de Qt (aucune dépendance de police). Les
+  badges de statut utilisent un point coloré dessiné au `QPainter`.
+- **Stabilité d'exécution** : le thread ne s'auto-supprime plus (évite les
+  `RuntimeError` au second lancement), les connexions Pause/Reprendre/
+  Annuler sont déconnectées à chaque fin de run, `closeEvent` annule et
+  arrête le worker, les timeouts HTTP sont bornés (10 s / 2 essais pour la
+  collecte, 4 s / 1 essai pour la découverte).
+- **Tests** : `tests/v1/test_ui_hardening_contract.py` couvre ces quatre
+  points.
+

@@ -58,9 +58,9 @@ class Sidebar(QFrame):
         row = QHBoxLayout()
         row.setSpacing(4)
         for icon, tip, slot in (
-            ("✎", "Renommer (F2)", self.rename_requested.emit),
-            ("⚙", "Paramètres globaux", self.settings_requested.emit),
-            ("↻", "Synchroniser tout", self.sync_all_requested.emit),
+            ("rename", "Renommer (F2)", self.rename_requested.emit),
+            ("settings", "Paramètres globaux", self.settings_requested.emit),
+            ("sync", "Synchroniser tout", self.sync_all_requested.emit),
         ):
             row.addWidget(icon_button(icon, tip, slot))
         row.addStretch(1)
@@ -69,7 +69,7 @@ class Sidebar(QFrame):
     def _create_row(self) -> QHBoxLayout:
         row = QHBoxLayout()
         row.addStretch(1)
-        row.addWidget(icon_button("+", "Nouvel Univers", self.create_requested.emit))
+        row.addWidget(icon_button("add", "Nouvel Univers", self.create_requested.emit))
         return row
 
     def set_universes(self, universes: list[dict[str, Any]], workspace: Any) -> None:

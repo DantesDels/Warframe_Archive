@@ -60,7 +60,7 @@ def _seed_candidates(universe: dict[str, Any], cfg: dict[str, Any]) -> list[Cand
                 location=loc,
                 title=loc,
                 score=0.65,
-                proof="Source seed configur?e",
+                proof="Source seed configurée",
                 discovered_by="seed",
                 score_breakdown={"authority": 0.6, "confidence": 0.7},
                 metadata={"probe": "seed"},

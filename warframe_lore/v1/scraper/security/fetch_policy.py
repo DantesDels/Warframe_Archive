@@ -23,25 +23,25 @@ def check_url(url: str, policy: FetchPolicy | None = None) -> ScanResult:
     value = (url or "").strip()
     parsed = urlparse(value)
     if parsed.scheme not in pol.allowed_schemes:
-        return ScanResult(False, "Sch?ma URL non autoris?.", "blocked_scheme", value)
+        return ScanResult(False, "Schéma URL non autorisé.", "blocked_scheme", value)
     host = parsed.hostname or ""
     if not host:
-        return ScanResult(False, "H?te URL manquant.", "blocked_host", value)
+        return ScanResult(False, "Hôte URL manquant.", "blocked_host", value)
     if _is_private_host(host):
-        return ScanResult(False, "H?te priv?/boucle locale bloqu?.",
+        return ScanResult(False, "Hôte privé/boucle locale bloqué.",
                           "blocked_private_ip", value)
-    return ScanResult(True, "URL autoris?e.", "allowed_url", value)
+    return ScanResult(True, "URL autorisée.", "allowed_url", value)
 
 
 def check_payload(url: str, content: bytes, content_type: str,
                   policy: FetchPolicy | None = None) -> ScanResult:
     pol = policy or FetchPolicy()
     if len(content) > pol.max_bytes:
-        return ScanResult(False, "Taille de contenu au-del? du budget.",
+        return ScanResult(False, "Taille de contenu au-delà du budget.",
                           "blocked_max_bytes", url)
     mime_ok = _mime_allowed(content_type)
     if mime_ok is False:
-        return ScanResult(False, "Type MIME non autoris?.", "blocked_mime", url)
+        return ScanResult(False, "Type MIME non autorisé.", "blocked_mime", url)
     return scan_payload_content(url, content=content, content_type=content_type)
 
 

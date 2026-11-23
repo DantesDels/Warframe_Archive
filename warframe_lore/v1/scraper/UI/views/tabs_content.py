@@ -43,7 +43,7 @@ def runs_view(workspace: Any, universe: dict[str, Any]) -> QWidget:
         ]
         for r in runs
     ]
-    table = SimpleTable(["Ex?cution", "Date", "Statut", "?mis"], equal_columns=True)
+    table = SimpleTable(["Exécution", "Date", "Statut", "Émis"], equal_columns=True)
     table.set_rows(rows)
     layout.addWidget(table)
     return widget

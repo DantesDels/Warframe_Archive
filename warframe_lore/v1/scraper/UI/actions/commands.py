@@ -6,7 +6,6 @@ from dataclasses import replace
 from typing import Any, cast
 
 from PySide6.QtWidgets import QMessageBox
-
 from ...collect.http import HttpClient
 from ...use_cases.discover_universe import discover_universe
 from ..dialogs.preflight_dialog import open_preflight
@@ -37,15 +36,15 @@ def discover_selected(app: Any) -> None:
     universe = cast(dict[str, Any] | None, app.workspace.get(uid or ""))
     if universe is None:
         QMessageBox.information(
-            app, "D?couverte", "S?lectionnez d'abord un Univers."
+            app, "Découverte", "Sélectionnez d'abord un Univers."
         )
         return
     count = apply_discovery(app, universe)
     app.refresh(uid)
     threshold = app.settings_store.load().min_relevance
     QMessageBox.information(
-        app, "D?couverte",
-        f"{count} nouveau(x) candidat(s) ? partir de {threshold} % de pertinence.",
+        app, "Découverte",
+        f"{count} nouveau(x) candidat(s) à partir de {threshold} % de pertinence.",
     )
 
 
@@ -54,7 +53,7 @@ def delete_selected(app: Any) -> None:
     universe = cast(dict[str, Any] | None, app.workspace.get(uid or ""))
     if universe is None:
         QMessageBox.information(
-            app, "Suppression", "S?lectionnez d'abord un Univers."
+            app, "Suppression", "Sélectionnez d'abord un Univers."
         )
         return
     question = (
@@ -73,7 +72,7 @@ def prepare_launch(app: Any) -> None:
     universe = cast(dict[str, Any] | None, app.workspace.get(uid or ""))
     if universe is None:
         QMessageBox.information(
-            app, "Pr?-ex?cution", "S?lectionnez d'abord un Univers."
+            app, "Pré-exécution", "Sélectionnez d'abord un Univers."
         )
         return
     candidates = cast(list[dict[str, Any]],
@@ -92,7 +91,7 @@ def sync_selected(app: Any, universe_id: str | None = None) -> None:
     universe = cast(dict[str, Any] | None, app.workspace.get(uid or ""))
     if universe is None:
         QMessageBox.information(
-            app, "Synchronisation", "S?lectionnez d'abord un Univers."
+            app, "Synchronisation", "Sélectionnez d'abord un Univers."
         )
         return
     count = apply_discovery(app, universe)
@@ -100,7 +99,7 @@ def sync_selected(app: Any, universe_id: str | None = None) -> None:
     QMessageBox.information(
         app, "Synchronisation",
         (
-            f"Synchronisation termin?e pour {universe['name']} "
+            f"Synchronisation terminée pour {universe['name']} "
             f"({count} nouveaux candidats)."
         ),
     )
@@ -115,7 +114,7 @@ def sync_all(app: Any) -> None:
     QMessageBox.information(
         app, "Synchronisation",
         (
-            f"Synchronisation termin?e pour {len(universes)} Univers "
+            f"Synchronisation terminée pour {len(universes)} Univers "
             f"({total} nouveaux candidats)."
         ),
     )

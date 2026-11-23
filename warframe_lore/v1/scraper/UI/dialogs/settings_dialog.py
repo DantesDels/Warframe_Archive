@@ -37,7 +37,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.store = store
         self.selected_settings: Settings | None = None
-        self.setWindowTitle("Param?tres globaux")
+        self.setWindowTitle("Paramètres globaux")
         self.setModal(True)
         self.setMinimumWidth(520)
         settings = store.load()
@@ -187,7 +187,7 @@ class SettingsDialog(QDialog):
         try:
             settings = self.build_settings()
         except ValueError as error:
-            QMessageBox.critical(self, "Param?tres", str(error))
+            QMessageBox.critical(self, "Paramètres", str(error))
             return
         self.store.save(settings)
         self.selected_settings = settings

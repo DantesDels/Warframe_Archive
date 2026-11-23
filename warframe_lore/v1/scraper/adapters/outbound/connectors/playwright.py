@@ -24,7 +24,7 @@ class PlaywrightConnector:
         try:
             from playwright.sync_api import sync_playwright  # type: ignore
         except Exception as exc:  # noqa: BLE001
-            raise RuntimeError("Playwright non install?/configur?") from exc
+            raise RuntimeError("Playwright non installé/configuré") from exc
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=True)
             page = browser.new_page()

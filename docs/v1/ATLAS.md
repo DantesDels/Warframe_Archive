@@ -414,3 +414,36 @@ configuration, et API GraphQL + visualisation du graphe des relations.
   rebuild PyInstaller (`warframe_lore/v1/AtelierV1.exe`) verts.
 
 ---
+
+## Correctifs extraction, statut et ingestion locale
+
+- **HTML** : `collect/html_text.py` remplace les regex par un `HTMLParser`
+  qui ignore intégralement `script`, `style`, `noscript`, `template`, `svg`,
+  `iframe` et `canvas`. Les extraits ne contiennent plus de code JavaScript.
+- **Statut d'exécution** : `ExecutionPanel.set_state()` est l'unique point de
+  synchronisation du libellé, de la barre de progression, des boutons et de
+  `QStatusBar`. Le libellé « Aucune exécution en cours. » ne peut plus
+  coexister avec « Statut : Exécution en cours ».
+- **Candidats** : la colonne *Emplacement* passe en premier, alignée à
+  gauche, éllipsée au milieu avec l'URL complète en infobulle ; l'en-tête
+  reste visible et le défilement est initialisé. Types et états sont
+  localisés via `UI/formatting.py` (`Site web`, `Wiki`, `Dossier local`,
+  `Proposé`, etc.). Le code est réparti dans `UI/views/candidates/`.
+- **Graphe** : les libellés sont dessinés en `#f1f5f9` sur une pastille
+  sombre `#0f172a`, avec un test de rendu qui compte les pixels clairs.
+- **Ingestion locale** : `LocalDirectoryConnector` parcourt récursivement
+  un dossier source (`json`, `jsonl`, `md`, `txt`), refuse les liens symboliques
+  et les fichiers hors racine, applique `scan_payload` à chaque fichier et
+  journalise chaque fichier ignoré. Chaque fichier devient un Document avec
+  son chemin relatif pour titre, son chemin absolu pour URL, son type, sa
+  langue déclarée, son empreinte SHA-256 et un contenu JSON lisible. Les
+  relances ne mettent à jour que les fichiers modifiés.
+- **UI Sources** : le bouton « + Importer dossier » ajoute une source
+  `local_directory` avec la même porte de sécurité que les autres imports.
+- **Gates** : `ruff` vert ; `compileall` vert ; `pytest -q tests/v1` vert
+  (126 tests) ; pyright vert sur les fichiers touchés ; graphify
+  (1 281 nœuds, 2 861 liens, 69 communautés) et
+  `graphify cluster-only docs/v1 --no-label` verts ; PyInstaller global
+  (6.22.2, avec `--paths .venv/Lib/site-packages` car l'interpréteur global
+  n'a pas PySide6) a reconstruit `warframe_lore/v1/AtelierV1.exe`
+  (103 144 413 octets, lancé avec succès).

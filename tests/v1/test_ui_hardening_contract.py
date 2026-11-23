@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QThread  # noqa: E402
@@ -22,6 +24,7 @@ from warframe_lore.v1.scraper.UI.runner_ui import (  # noqa: E402
     cleanup_execution,
 )
 from warframe_lore.v1.scraper.UI.style import app_stylesheet  # noqa: E402
+from warframe_lore.v1.scraper.UI.views.sources_view import SourcesView  # noqa: E402
 from warframe_lore.v1.scraper.UI.worker import ExecutionWorker  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -168,6 +171,41 @@ class ExecutionStateContractTests(unittest.TestCase):
             self.assertEqual(
                 app.status_bar.currentMessage(), "Statut : Exécution en cours"
             )
+            app.close()
+            app.deleteLater()
+
+
+class LocalSourceUiContractTests(unittest.TestCase):
+    def test_sources_tab_can_import_a_directory_as_a_source(self) -> None:
+        _qt_app()
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = WorkshopWorkspace(path=Path(tmp) / "workspace.json")
+            workspace.create("Univers")
+            app = AtelierApp(workspace, workspace.path)
+            app.sidebar.select("univers")
+            QApplication.processEvents()
+            view = app.details.findChild(SourcesView)
+            self.assertIsNotNone(view)
+            assert view is not None
+            button = next(
+                item
+                for item in view.findChildren(QPushButton)
+                if item.text() == "+ Importer dossier"
+            )
+            target = str(Path(tmp) / "corpus")
+            with patch(
+                "warframe_lore.v1.scraper.UI.views.sources_actions.QFileDialog"
+                ".getExistingDirectory",
+                return_value=target,
+            ):
+                button.click()
+            added = [
+                source
+                for source in workspace.sources_for("univers")
+                if source.get("location") == target
+            ]
+            self.assertEqual(len(added), 1)
+            self.assertEqual(added[0]["kind"], "local_directory")
             app.close()
             app.deleteLater()
 

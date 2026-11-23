@@ -21,7 +21,8 @@ def validate_location(kind: SourceKind, location: str) -> None:
     if not candidate:
         raise InvalidSourceError("source location must not be empty")
 
-    if kind is SourceKind.DOCUMENT and _LOCAL_PATH_PATTERN.match(candidate):
+    local_kinds = (SourceKind.DOCUMENT, SourceKind.LOCAL_DIRECTORY)
+    if kind in local_kinds and _LOCAL_PATH_PATTERN.match(candidate):
         return
 
     parsed = urlparse(candidate)

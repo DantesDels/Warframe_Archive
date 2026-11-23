@@ -39,6 +39,9 @@ from warframe_lore.v1.scraper.UI.graph.layout import (
 )
 from warframe_lore.v1.scraper.UI.graph.view import GraphCanvas
 from warframe_lore.v1.scraper.UI.style import app_stylesheet
+from warframe_lore.v1.scraper.UI.views.simple_table import SimpleTable
+from warframe_lore.v1.scraper.UI.views.tabs_candidates import candidates_view
+
 UI_ROOT = (
     Path(__file__).resolve().parents[2] / "warframe_lore" / "v1" / "scraper" / "UI"
 )
@@ -50,6 +53,8 @@ MOJIBAKE_TOKENS = (
     "\u00e2\u0080\u0099",
     "\u00c2\u00a0",
 )
+
+
 def _app() -> QApplication:
     app = QApplication.instance()
     if isinstance(app, QApplication):
@@ -377,6 +382,39 @@ class GraphRenderingContractTests(unittest.TestCase):
             self.assertIsNotNone(app.details.findChild(GraphCanvas))
             app.close()
             app.deleteLater()
+
+
+class CandidatesTableContractTests(unittest.TestCase):
+    def test_location_first_column_is_visible_elided_and_localized(self) -> None:
+        _app()
+        workspace = _seed_workspace()
+        location = "https://example.org/très/long/chemin/vers/une/source.json"
+        workspace.data["candidates"] = [
+            {
+                "id": "candidate-1",
+                "universeId": "warframe",
+                "kind": "website",
+                "location": location,
+                "title": "Titre court",
+                "score": 0.8,
+                "status": "proposed",
+                "proof": "découverte",
+            }
+        ]
+        widget = candidates_view(workspace, workspace.get("warframe"), lambda: None)
+        table = widget.findChild(SimpleTable)
+        self.assertIsNotNone(table)
+        assert table is not None
+        self.assertEqual(table.model_data.horizontalHeaderItem(0).text(), "Emplacement")
+        self.assertFalse(table.horizontalHeader().isHidden())
+        item = table.model_data.item(0, 0)
+        assert item is not None
+        self.assertEqual(item.text(), location)
+        self.assertEqual(item.toolTip(), location)
+        self.assertTrue(item.textAlignment() & Qt.AlignmentFlag.AlignLeft)
+        self.assertEqual(table.model_data.item(0, 2).text(), "Site web")
+        self.assertEqual(table.model_data.item(0, 4).text(), "Proposé")
+
 
 if __name__ == "__main__":
     unittest.main()

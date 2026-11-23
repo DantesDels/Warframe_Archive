@@ -9,6 +9,7 @@ class SourceKind(StrEnum):
     """How a source must be fetched."""
 
     DOCUMENT = "document"
+    LOCAL_DIRECTORY = "local_directory"
     WEBSITE = "website"
     API = "api"
 

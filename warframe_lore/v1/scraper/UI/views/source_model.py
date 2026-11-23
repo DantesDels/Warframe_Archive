@@ -6,6 +6,8 @@ from typing import Any
 
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QPersistentModelIndex, Qt
 
+from ..formatting import display_kind, display_source_status
+
 COLUMNS = [
     "Emplacement (URL/Path)",
     "Type",
@@ -59,9 +61,13 @@ class SourceTableModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.UserRole:
             return source
         if role == Qt.ItemDataRole.DisplayRole and col in (0, 1):
-            return source.get("location", "") if col == 0 else source.get("kind", "")
+            if col == 0:
+                return source.get("location", "")
+            return display_kind(str(source.get("kind", "")))
         if role == Qt.ItemDataRole.DisplayRole and col in (2, 3):
-            return source.get("status", "") if col == 2 else source.get("score", 0)
+            if col == 2:
+                return display_source_status(str(source.get("status", "")))
+            return source.get("score", 0)
         if role == Qt.ItemDataRole.ToolTipRole and col == 0:
             return source.get("location", "")
         return None

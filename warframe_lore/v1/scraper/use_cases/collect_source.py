@@ -40,7 +40,10 @@ def collect_source(
     for item in accepted:
         page = item.page
         text = str(page.content)[:MAX_TEXT]
-        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        metadata = _metadata(page)
+        digest = str(metadata.get("contentHash") or "") or hashlib.sha256(
+            text.encode("utf-8")
+        ).hexdigest()
         prev = state.get(page.url) if bool(limits.get("incremental")) else None
         prev_hash = (
             str(cast(dict[str, Any], prev).get("hash", ""))
@@ -58,19 +61,24 @@ def collect_source(
     return docs, errors, updates
 
 
+def _metadata(page: CollectedPage) -> dict[str, Any]:
+    """Return the optional connector metadata as a typed mapping."""
+    return cast(dict[str, Any], getattr(page, "metadata", None) or {})
+
+
 def _doc(
     src: dict[str, Any], uid: str, page: CollectedPage, text: str, digest: str
 ) -> dict[str, Any]:
+    metadata = _metadata(page)
     return {
         "id": _doc_id(src),
         "universeId": uid,
         "sourceId": src.get("id"),
         "title": str(page.title)[:180],
         "url": str(page.url),
-        "docType": str(src.get("kind", "website")),
+        "docType": str(metadata.get("docType") or src.get("kind", "website")),
         "language": str(
-            getattr(page, "metadata", {}).get("language")
-            or _guess_lang(str(page.url), text)
+            metadata.get("language") or _guess_lang(str(page.url), text)
         ),
         "relevance": float(src.get("score", 1.0) or 1.0),
         "isDuplicate": False,
@@ -92,4 +100,4 @@ def _guess_lang(url: str, text: str) -> str:
         return "fr"
     if "/en" in low or "wiki.warframe.com" in low:
         return "en"
-    return "fr" if any(ch in text[:2000] for ch in "?????????????") else "en"
+    return "fr" if any(ch in text[:2000] for ch in "àâçéèêëîïôûùüÿœæ") else "en"

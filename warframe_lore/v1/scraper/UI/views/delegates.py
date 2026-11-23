@@ -13,15 +13,12 @@ from PySide6.QtWidgets import (
     QStyleOptionViewItem,
 )
 
-KIND_LABELS = {"website": "Wiki", "api": "API", "document": "Document"}
-STATUS_LABELS = {
-    "approved": ("Actif", "#22a06b"),
-    "active": ("Actif", "#22a06b"),
-    "suspended": ("Suspendu", "#e06a5d"),
-    "blacklisted": ("Blacklist?", "#64748b"),
-    "candidate": ("Candidat", "#64748b"),
-    "rejected": ("Rejet?", "#64748b"),
-    "disabled": ("D?sactiv?", "#64748b"),
+from ..formatting import display_kind, display_source_status
+
+STATUS_COLORS = {
+    "approved": "#22a06b",
+    "active": "#22a06b",
+    "suspended": "#e06a5d",
 }
 
 
@@ -47,9 +44,14 @@ class SourceDelegate(QStyledItemDelegate):
             self._paint_location(painter, option, source)
             return
         if col == 1:
-            self._paint_text(
-                painter, option, KIND_LABELS.get(str(source.get("kind", "")), "")
+            painter.save()
+            painter.setPen(QColor("#1e293b"))
+            painter.drawText(
+                option.rect,
+                Qt.AlignmentFlag.AlignCenter,
+                display_kind(str(source.get("kind", ""))),
             )
+            painter.restore()
             return
         if col == 2:
             self._paint_badge(painter, option, str(source.get("status", "")))
@@ -59,31 +61,31 @@ class SourceDelegate(QStyledItemDelegate):
             return
         super().paint(painter, option, index)
 
-    def _paint_text(
-        self, painter: QPainter, option: QStyleOptionViewItem, text: str
-    ) -> None:
-        painter.save()
-        painter.setPen(QColor("#1e293b"))
-        painter.drawText(option.rect, Qt.AlignmentFlag.AlignCenter, text)
-        painter.restore()
-
     def _paint_location(
         self, painter: QPainter, option: QStyleOptionViewItem, source: dict[str, Any]
     ) -> None:
         painter.save()
         status = str(source.get("status", ""))
-        icon = "?" if status == "suspended" else "?"
-        text = f"{icon} {source.get('location', '')}"
+        dot_color = "#e06a5d" if status == "suspended" else "#22a06b"
+        painter.setBrush(QColor(dot_color))
+        painter.setPen(Qt.PenStyle.NoPen)
+        center_y = option.rect.center().y()
+        painter.drawEllipse(option.rect.left() + 6, center_y - 4, 8, 8)
         painter.setPen(QColor("#1e293b"))
-        painter.drawText(
-            option.rect.adjusted(8, 0, -4, 0), Qt.AlignmentFlag.AlignVCenter, text
+        rect = option.rect.adjusted(24, 0, -4, 0)
+        elided = option.fontMetrics.elidedText(
+            str(source.get("location", "")),
+            Qt.TextElideMode.ElideMiddle,
+            max(0, rect.width()),
         )
+        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elided)
         painter.restore()
 
     def _paint_badge(
         self, painter: QPainter, option: QStyleOptionViewItem, status: str
     ) -> None:
-        label, color = STATUS_LABELS.get(status, (status, "#64748b"))
+        label = display_source_status(status)
+        color = STATUS_COLORS.get(status, "#64748b")
         painter.save()
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = option.rect.adjusted(8, 8, -8, -8)

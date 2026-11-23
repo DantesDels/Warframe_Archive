@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 KIND_LABELS = {
-    "website": "Wiki",
+    "website": "Site web",
     "api": "API",
+    "wiki": "Wiki",
     "document": "Document",
+    "local_directory": "Dossier local",
 }
 SOURCE_STATUS_LABELS = {
     "approved": "Actif",

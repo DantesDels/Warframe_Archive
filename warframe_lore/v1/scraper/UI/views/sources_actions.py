@@ -22,6 +22,7 @@ def build_actions(view: Any) -> QHBoxLayout:
     buttons = [
         ("+ Ajouter URL", lambda: add_url(view)),
         ("+ Importer fichier", lambda: import_file(view)),
+        ("+ Importer dossier", lambda: import_directory(view)),
     ]
     for label, slot in buttons:
         btn = QPushButton(label)
@@ -53,10 +54,17 @@ def import_file(view: Any) -> None:
         _add_location(view, path, "document")
 
 
+def import_directory(view: Any) -> None:
+    """Add a local directory as a recursive structured-document source."""
+    path = QFileDialog.getExistingDirectory(view, "Importer un dossier")
+    if path:
+        _add_location(view, path, "local_directory")
+
+
 def _add_location(view: Any, location: str, kind: str) -> None:
     allowed, reason = validate_import(location)
     if not allowed:
-        QMessageBox.critical(view, "S?curit? ? l'import", reason)
+        QMessageBox.critical(view, "Sécurité à l'import", reason)
         return
     view.workspace.add_manual_source(str(view.universe["id"]), location, kind=kind)
     view.on_change()
@@ -125,5 +133,5 @@ def force_update(view: Any) -> None:
         return
     for source in sources:
         view.workspace.update_source(str(source["id"]), forceUpdate=True)
-    QMessageBox.information(view, "Forcer MAJ", "Mise ? jour forc?e demand?e.")
+    QMessageBox.information(view, "Forcer MAJ", "Mise à jour forcée demandée.")
     view.on_change()

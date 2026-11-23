@@ -73,7 +73,7 @@ class SettingsDialog(QDialog):
             discovery_seeds=seeds,
             discovery_max_candidates=self.discovery_max.value(),
             review_child_pages=self.review_children.isChecked(),
-            use_playwright=base.use_playwright,
+            use_playwright=self.use_playwright.isChecked(),
             max_concurrency=self.max_conc.value(),
             per_host_concurrency=self.host_conc.value(),
             per_host_delay=base.per_host_delay,

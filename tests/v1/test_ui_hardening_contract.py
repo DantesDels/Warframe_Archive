@@ -98,6 +98,20 @@ class FeedbackContractTests(unittest.TestCase):
             app.close()
             app.deleteLater()
 
+    def test_explicit_vector_icons_are_distinct_and_non_empty(self) -> None:
+        from warframe_lore.v1.scraper.UI.views.sidebar_btn import vector_icon
+
+        _qt_app()
+        signatures: dict[str, bytes] = {}
+        for name in ("rename", "settings", "sync", "add", "execute", "delete"):
+            icon = vector_icon(name, 32)
+            self.assertFalse(icon.isNull(), name)
+            img = icon.pixmap(32, 32).toImage()
+            raw = bytes(img.constBits())
+            self.assertTrue(any(raw), f"empty icon: {name}")
+            signatures[name] = raw
+        self.assertEqual(len(set(signatures.values())), 6)
+
 
 class LifecycleContractTests(unittest.TestCase):
     def test_cleanup_disconnects_control_slots(self) -> None:

@@ -56,9 +56,12 @@ def build_crawl_section(dialog: Any, body: QVBoxLayout, settings: Settings) -> N
     dialog.review_children = _check(
         "Valider les pages enfants avant ingestion", settings.review_child_pages
     )
+    dialog.use_playwright = _check(
+        "Rendu JS/SPA via Playwright (sites dynamiques)", settings.use_playwright
+    )
     for cb in (
         dialog.same_host, dialog.use_cache, dialog.incremental,
-        dialog.expand_manifests, dialog.review_children,
+        dialog.expand_manifests, dialog.review_children, dialog.use_playwright,
     ):
         lay.addWidget(cb)
     body.addWidget(box)

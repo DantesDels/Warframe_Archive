@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
-
 import json
 import re
+from typing import Any, cast
 from urllib.parse import urljoin
 
 _URL_RE = re.compile(r"https?://[^\s\"'<>]+")

@@ -27,6 +27,22 @@ class SettingsStore:
             incremental=bool(payload.get("incremental", True)),
             expand_manifests=bool(payload.get("expand_manifests", True)),
             max_manifest_urls=int(payload.get("max_manifest_urls", 50)),
+            discovery_sitemaps=bool(payload.get("discovery_sitemaps", True)),
+            discovery_feeds=bool(payload.get("discovery_feeds", True)),
+            discovery_web_search=bool(payload.get("discovery_web_search", False)),
+            discovery_web_search_url=str(payload.get("discovery_web_search_url", "")),
+            discovery_git=bool(payload.get("discovery_git", False)),
+            discovery_wiki=bool(payload.get("discovery_wiki", True)),
+            discovery_seeds=tuple(
+                str(x) for x in payload.get("discovery_seeds", []) if str(x).strip()
+            ),
+            discovery_max_candidates=int(payload.get("discovery_max_candidates", 30)),
+            review_child_pages=bool(payload.get("review_child_pages", True)),
+            use_playwright=bool(payload.get("use_playwright", False)),
+            max_concurrency=int(payload.get("max_concurrency", 4)),
+            per_host_concurrency=int(payload.get("per_host_concurrency", 2)),
+            per_host_delay=float(payload.get("per_host_delay", 0.2)),
+            max_retries=int(payload.get("max_retries", 2)),
         )
 
     def save(self, settings: Settings) -> None:
@@ -43,5 +59,19 @@ class SettingsStore:
                 "incremental": settings.incremental,
                 "expand_manifests": settings.expand_manifests,
                 "max_manifest_urls": settings.max_manifest_urls,
+                "discovery_sitemaps": settings.discovery_sitemaps,
+                "discovery_feeds": settings.discovery_feeds,
+                "discovery_web_search": settings.discovery_web_search,
+                "discovery_web_search_url": settings.discovery_web_search_url,
+                "discovery_git": settings.discovery_git,
+                "discovery_wiki": settings.discovery_wiki,
+                "discovery_seeds": list(settings.discovery_seeds),
+                "discovery_max_candidates": settings.discovery_max_candidates,
+                "review_child_pages": settings.review_child_pages,
+                "use_playwright": settings.use_playwright,
+                "max_concurrency": settings.max_concurrency,
+                "per_host_concurrency": settings.per_host_concurrency,
+                "per_host_delay": settings.per_host_delay,
+                "max_retries": settings.max_retries,
             },
         )

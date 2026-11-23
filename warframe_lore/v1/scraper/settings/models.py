@@ -21,6 +21,20 @@ class Settings:
     incremental: bool = True
     expand_manifests: bool = True
     max_manifest_urls: int = 50
+    discovery_sitemaps: bool = True
+    discovery_feeds: bool = True
+    discovery_web_search: bool = False
+    discovery_web_search_url: str = ""
+    discovery_git: bool = False
+    discovery_wiki: bool = True
+    discovery_seeds: tuple[str, ...] = ()
+    discovery_max_candidates: int = 30
+    review_child_pages: bool = True
+    use_playwright: bool = False
+    max_concurrency: int = 4
+    per_host_concurrency: int = 2
+    per_host_delay: float = 0.2
+    max_retries: int = 2
 
     def __post_init__(self) -> None:
         if not 0 <= self.min_relevance <= 100:
@@ -36,6 +50,16 @@ class Settings:
             raise ValueError("max_depth must be >= 0")
         if self.max_manifest_urls < 1:
             raise ValueError("max_manifest_urls must be >= 1")
+        if self.discovery_max_candidates < 1:
+            raise ValueError("discovery_max_candidates must be >= 1")
+        if self.max_concurrency < 1:
+            raise ValueError("max_concurrency must be >= 1")
+        if self.per_host_concurrency < 1:
+            raise ValueError("per_host_concurrency must be >= 1")
+        if self.per_host_delay < 0:
+            raise ValueError("per_host_delay must be >= 0")
+        if self.max_retries < 0:
+            raise ValueError("max_retries must be >= 0")
 
 
 @dataclass(frozen=True, slots=True)

@@ -46,7 +46,7 @@ class PreflightDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
         layout.addWidget(
-            QLabel(f"{len(universe_ids)} Univers • {candidate_count} candidats actifs")
+            QLabel(f"{len(universe_ids)} Univers - {candidate_count} candidats actifs")
         )
         form = QFormLayout()
         self.relevance = QSpinBox()
@@ -97,8 +97,11 @@ class PreflightDialog(QDialog):
         layout.addWidget(buttons)
 
     def _launch(self) -> None:
-        formats = tuple(str(name) for name, cb in self.formats.items() if bool(cb.isChecked()))
+        formats = tuple(
+            str(name) for name, cb in self.formats.items() if bool(cb.isChecked())
+        )
         try:
+            base = getattr(self, "_base_settings", Settings())
             settings = Settings(
                 self.relevance.value(),
                 formats,
@@ -109,6 +112,21 @@ class PreflightDialog(QDialog):
                 self.use_cache.isChecked(),
                 self.incremental.isChecked(),
                 self.expand_manifests.isChecked(),
+                base.max_manifest_urls,
+                base.discovery_sitemaps,
+                base.discovery_feeds,
+                base.discovery_web_search,
+                base.discovery_web_search_url,
+                base.discovery_git,
+                base.discovery_wiki,
+                base.discovery_seeds,
+                base.discovery_max_candidates,
+                base.review_child_pages,
+                base.use_playwright,
+                base.max_concurrency,
+                base.per_host_concurrency,
+                base.per_host_delay,
+                base.max_retries,
             )
             self.selected_plan = LaunchPlan(settings, self.universe_ids)
         except ValueError as error:

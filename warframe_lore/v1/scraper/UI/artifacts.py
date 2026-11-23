@@ -14,6 +14,8 @@ def emit_artifacts(
     universe: dict[str, Any],
     docs: list[dict[str, Any]],
     formats: list[str],
+    *,
+    rag_coupling: bool = False,
 ) -> dict[str, Any]:
     out_dir.mkdir(parents=True, exist_ok=True)
     rows = [{k: v for k, v in d.items() if k != "content"} for d in docs]
@@ -35,6 +37,14 @@ def emit_artifacts(
             path = writer()
             if path:
                 files.append(path)
+    if rag_coupling:
+        files.append(_write_chunks(out_dir / "chunks.jsonl", universe, docs))
+        files.append(
+            _write_vector_adapter(out_dir / "vectors.sqlite.json", universe, docs)
+        )
+        parquet = _write_parquet(out_dir / "chunks.parquet", universe, docs)
+        if parquet:
+            files.append(parquet)
     manifest = _manifest(out_dir, universe, docs, files)
     _write_json(out_dir / "manifest.json", manifest)
     return manifest
@@ -77,18 +87,143 @@ def _write_sql(path: Path, docs: list[dict[str, Any]]) -> Path:
     for doc in docs:
         title = str(doc.get("title", "") or "").replace("'", "''")
         url = str(doc.get("url", "") or "").replace("'", "''")
-        doc_id = str(doc.get('id', '')).replace("'", "''")
-        vals.append(f"({chr(39)}{doc_id}{chr(39)}, {chr(39)}{title}{chr(39)}, {chr(39)}{url}{chr(39)})")
+        doc_id = str(doc.get("id", "")).replace("'", "''")
+        vals.append(f"('{doc_id}', '{title}', '{url}')")
     sql = "CREATE TABLE IF NOT EXISTS documents(id TEXT, title TEXT, url TEXT);\n"
     if vals:
-        sql += "INSERT INTO documents(id,title,url) VALUES\n" + ",\n".join(vals) + ";\n"
+        sql += (
+            "INSERT INTO documents(id,title,url) VALUES\n"
+            + ",\n".join(vals)
+            + ";\n"
+        )
     path.write_text(sql, encoding="utf-8")
     return path
 
 
-def _manifest(_out_dir: Path, universe: dict[str, Any], docs: list[dict[str, Any]],
-               files: list[Path]) -> dict[str, Any]:
+def _write_chunks(
+    path: Path, universe: dict[str, Any], docs: list[dict[str, Any]]
+) -> Path:
+    lines: list[str] = []
+    for doc in docs:
+        content = str(doc.get("content", "") or "")
+        chunks = chunk_text(content)
+        for idx, chunk in enumerate(chunks):
+            lines.append(
+                json.dumps(
+                    {
+                        "chunk_id": f"{doc.get('id', 'doc')}::{idx}",
+                        "universe_id": universe.get("id"),
+                        "source_id": doc.get("sourceId"),
+                        "url": doc.get("url"),
+                        "version": doc.get("version", 1),
+                        "trust_score": doc.get("relevance", 1.0),
+                        "timestamp": doc.get("lastSeenRunId"),
+                        "chunk_index": idx,
+                        "text": chunk,
+                    },
+                    ensure_ascii=False,
+                )
+            )
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return path
+
+
+def chunk_text(text: str, *, max_chars: int = 1200, overlap: int = 120) -> list[str]:
+    clean = (text or "").strip()
+    if not clean:
+        return []
+    paragraphs = [p.strip() for p in clean.split("\n\n") if p.strip()]
+    chunks: list[str] = []
+    buf = ""
+    for para in paragraphs:
+        candidate = f"{buf}\n\n{para}".strip() if buf else para
+        if len(candidate) <= max_chars:
+            buf = candidate
+            continue
+        if buf:
+            chunks.append(buf)
+        if len(para) <= max_chars:
+            buf = para
+        else:
+            start = 0
+            while start < len(para):
+                end = min(len(para), start + max_chars)
+                chunks.append(para[start:end].strip())
+                if end >= len(para):
+                    break
+                start = max(end - overlap, start + 1)
+            buf = ""
+    if buf:
+        chunks.append(buf)
+    return [c for c in chunks if c]
+
+
+def _write_vector_adapter(
+    path: Path, universe: dict[str, Any], docs: list[dict[str, Any]]
+) -> Path:
+    items = []
+    for doc in docs:
+        for idx, chunk in enumerate(chunk_text(str(doc.get("content", "") or ""))[:3]):
+            items.append({
+                "chunk_id": f"{doc.get('id', 'doc')}::{idx}",
+                "universe_id": universe.get("id"),
+                "source_id": doc.get("sourceId"),
+                "url": doc.get("url"),
+                "version": doc.get("version", 1),
+                "trust_score": doc.get("relevance", 1.0),
+                "timestamp": doc.get("lastSeenRunId"),
+                "text": chunk,
+                "embedding": None,
+            })
+    payload = {
+        "adapter": "sqlite-vec/pgvector-compatible",
+        "schema": {
+            "table": "chunks",
+            "columns": [
+                "chunk_id", "universe_id", "source_id", "url", "version",
+                "trust_score", "timestamp", "text", "embedding",
+            ],
+        },
+        "items": items,
+    }
+    return _write_json(path, payload)
+
+
+def _write_parquet(
+    path: Path, universe: dict[str, Any], docs: list[dict[str, Any]]
+) -> Path | None:
+    try:
+        import pandas as pd  # type: ignore
+    except Exception:
+        return None
+    rows = []
+    for doc in docs:
+        for idx, chunk in enumerate(chunk_text(str(doc.get("content", "") or ""))):
+            rows.append({
+                "chunk_id": f"{doc.get('id', 'doc')}::{idx}",
+                "universe_id": universe.get("id"),
+                "source_id": doc.get("sourceId"),
+                "url": doc.get("url"),
+                "version": doc.get("version", 1),
+                "trust_score": doc.get("relevance", 1.0),
+                "timestamp": doc.get("lastSeenRunId"),
+                "text": chunk,
+            })
+    try:
+        pd.DataFrame(rows).to_parquet(path, index=False)
+        return path
+    except Exception:
+        return None
+
+
+def _manifest(
+    _out_dir: Path,
+    universe: dict[str, Any],
+    docs: list[dict[str, Any]],
+    files: list[Path],
+) -> dict[str, Any]:
     return {
+        "schema_version": "1.1",
         "universe": {"id": universe.get("id"), "name": universe.get("name")},
         "document_count": len(docs),
         "files": [

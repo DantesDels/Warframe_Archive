@@ -25,13 +25,25 @@ class ConnectorRegistry:
 
 def default_registry() -> ConnectorRegistry:
     from .document import DocumentConnector
+    from .feed import FeedConnector
     from .html import HtmlConnector
     from .lzma import LzmaConnector
     from .mediawiki import MediaWikiConnector
+    from .playwright import PlaywrightConnector
+    from .rest import RestConnector
+    from .sitemap import SitemapConnector
 
     registry = ConnectorRegistry()
-    connectors = (DocumentConnector(), LzmaConnector(),
-                  MediaWikiConnector(), HtmlConnector())
+    connectors = (
+        DocumentConnector(),
+        LzmaConnector(),
+        SitemapConnector(),
+        FeedConnector(),
+        MediaWikiConnector(),
+        RestConnector(),
+        PlaywrightConnector(),
+        HtmlConnector(),
+    )
     for connector in connectors:
         registry.register(cast(SourceConnectorPort, connector))
     return registry

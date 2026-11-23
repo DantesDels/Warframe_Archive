@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any, cast
 
 CANDIDATE_STATUSES = ("proposed", "active", "suspended", "blacklisted")
+DISCOVERY_PROVIDERS = ("keywords", "web_search", "sitemap", "feed", "git", "wiki",
+    "api")
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,6 +24,12 @@ class Candidate:
     discovered_by: str = "keywords"
     status: str = "proposed"
     force_update: bool = False
+    score_breakdown: dict[str, float] = field(
+        default_factory=lambda: cast(dict[str, float], {})
+    )
+    metadata: dict[str, Any] = field(
+        default_factory=lambda: cast(dict[str, Any], {})
+    )
 
     def __post_init__(self) -> None:
         if not 0 <= self.score <= 1:

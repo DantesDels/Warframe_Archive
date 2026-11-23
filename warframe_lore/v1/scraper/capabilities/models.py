@@ -12,7 +12,10 @@ class CrawlBudget:
     max_depth: int = 1
     same_host_only: bool = True
     max_manifest_urls: int = 50
+    max_concurrency: int = 4
     per_host_concurrency: int = 2
+    per_host_delay: float = 0.2
+    max_retries: int = 2
 
 
 @dataclass(slots=True)

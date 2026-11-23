@@ -10,7 +10,8 @@ from typing import Any, Protocol, cast
 class ConnectorContext:
     client: Any
     limits: dict[str, Any] = field(default_factory=lambda: cast(dict[str, Any], {}))
-    capabilities: dict[str, Any] = field(default_factory=lambda: cast(dict[str, Any], {}))
+    capabilities: dict[str, Any] = field(default_factory=lambda: cast(dict[str, Any],
+        {}))
 
 
 @dataclass(slots=True)

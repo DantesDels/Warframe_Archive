@@ -63,9 +63,10 @@ def _single_html(ctx: ConnectorContext, url: str) -> CollectedPage:
 def _extract(ctx: ConnectorContext, api: str, title: str) -> list[CollectedPage]:
     params: dict[str, str | int] = {
         "action": "query",
-        "prop": "extracts|info",
+        "prop": "extracts|info|revisions",
         "explaintext": 1,
         "inprop": "url",
+        "rvprop": "ids|timestamp",
         "redirects": 1,
         "titles": title,
         "format": "json",
@@ -76,6 +77,14 @@ def _extract(ctx: ConnectorContext, api: str, title: str) -> list[CollectedPage]
     pages = cast(dict[str, Any], query.get("pages", {}))
     page = cast(dict[str, Any], next(iter(pages.values()), cast(dict[str, Any], {})))
     text = str(page.get("extract", "") or "").strip()
+    touched = str(page.get("touched") or page.get("revid") or "")
+    state = _mw_state(ctx, api)
+    incremental = bool(ctx.limits.get("incremental", True))
+    page_key = str(page.get("pageid") or title)
+    if incremental and touched and state.get(page_key) == touched:
+        return []
+    if touched:
+        state[page_key] = touched
     if not text:
         return []
     return [
@@ -86,6 +95,7 @@ def _extract(ctx: ConnectorContext, api: str, title: str) -> list[CollectedPage]
             from_cache=bool(resp.from_cache),
             raw=cast(bytes | None, resp.content),
             content_type=str(resp.content_type),
+            metadata={"touched": touched, "revid": str(page.get("lastrevid", ""))},
         )
     ]
 
@@ -131,6 +141,13 @@ def _get(ctx: ConnectorContext, api: str, params: dict[str, str | int]) -> Any:
 
 def _cache(ctx: ConnectorContext) -> bool:
     return bool(ctx.limits.get("use_cache", True))
+
+
+def _mw_state(ctx: ConnectorContext, url: str) -> dict[str, str]:
+    root = ctx.limits.setdefault("connector_state", {})
+    bucket = root.setdefault("mediawiki", {})
+    item = bucket.setdefault(url, {})
+    return item  # type: ignore[return-value]
 
 
 def _json(data: bytes) -> dict[str, Any]:

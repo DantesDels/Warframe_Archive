@@ -43,6 +43,8 @@ class CurationMixin:
                 "discoveredBy": item.discovered_by,
                 "status": item.status,
                 "forceUpdate": item.force_update,
+                "scoreBreakdown": dict(item.score_breakdown),
+                "metadata": dict(item.metadata),
             }
             for item in candidates
         ]

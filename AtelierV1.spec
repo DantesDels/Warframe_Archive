@@ -2,8 +2,8 @@
 
 
 a = Analysis(
-    ['warframe_lore/v1/scraper/UI/launcher.py'],
-    pathex=['.'],
+    ['warframe_lore/v1/scraper/UI/app.py'],
+    pathex=[],
     binaries=[],
     datas=[],
     hiddenimports=[],

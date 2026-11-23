@@ -38,7 +38,8 @@ def runs_view(workspace: Any, universe: dict[str, Any]) -> QWidget:
             str(r.get("id", "")),
             str(r.get("startedAt", r.get("date", ""))),
             str(r.get("status", "")),
-            str(cast(dict[str, Any], r.get("counts", {}) or {}).get("emitted", r.get("emitted", ""))),
+            str(cast(dict[str, Any], r.get("counts", {}) or {}).get("emitted",
+                r.get("emitted", ""))),
         ]
         for r in runs
     ]

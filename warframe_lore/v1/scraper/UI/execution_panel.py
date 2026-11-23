@@ -6,9 +6,11 @@ from datetime import datetime
 
 from PySide6.QtWidgets import (
     QFrame,
+    QHBoxLayout,
     QLabel,
     QPlainTextEdit,
     QProgressBar,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -29,14 +31,27 @@ class ExecutionPanel(QFrame):
         self.logs = QPlainTextEdit()
         self.logs.setReadOnly(True)
         self.logs.setMaximumBlockCount(2000)
-        self.logs.setPlaceholderText("Les journaux d'exécution apparaîtront ici.")
+        self.logs.setPlaceholderText("Les journaux d'ex?cution appara?tront ici.")
+        controls = QHBoxLayout()
+        self.pause_btn = QPushButton("Pause")
+        self.resume_btn = QPushButton("Reprendre")
+        self.cancel_btn = QPushButton("Annuler")
+        self.resume_btn.setEnabled(False)
+        controls.addWidget(self.pause_btn)
+        controls.addWidget(self.resume_btn)
+        controls.addWidget(self.cancel_btn)
+        controls.addStretch(1)
         layout.addWidget(self.step_label)
         layout.addWidget(self.progress)
+        layout.addLayout(controls)
         layout.addWidget(self.logs, 1)
 
     def reset(self) -> None:
         self.progress.setValue(0)
-        self.step_label.setText("Préparation de l'exécution...")
+        self.step_label.setText("Pr?paration de l'ex?cution...")
+        self.pause_btn.setEnabled(True)
+        self.resume_btn.setEnabled(False)
+        self.cancel_btn.setEnabled(True)
         self.logs.clear()
 
     def set_progress(self, percent: int, step: str) -> None:

@@ -5,8 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QItemSelection, QItemSelectionModel
-
 from PySide6.QtCore import QItemSelection, Qt
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
@@ -45,7 +43,8 @@ def data_view(workspace: Any, universe: dict[str, Any]) -> QWidget:
     tree.expandAll()
     selection_model = tree.selectionModel()
     if selection_model is not None:
-        def _on_selection_changed(_selected: QItemSelection, _deselected: QItemSelection) -> None:
+        def _on_selection_changed(_selected: QItemSelection,
+            _deselected: QItemSelection) -> None:
             _show_preview(tree, preview)
 
         selection_model.selectionChanged.connect(_on_selection_changed)

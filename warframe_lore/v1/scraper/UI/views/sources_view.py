@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, cast
+from collections.abc import Callable
+from typing import Any, cast
 
 from PySide6.QtWidgets import QAbstractItemView, QTableView, QVBoxLayout, QWidget
 
@@ -48,7 +49,8 @@ class SourcesView(QWidget):
 
     def refresh(self) -> None:
         self.model.set_sources(
-            cast(list[dict[str, Any]], self.workspace.sources_for(str(self.universe["id"])))
+            cast(list[dict[str, Any]],
+                self.workspace.sources_for(str(self.universe["id"])))
         )
         self.sync_actions()
 

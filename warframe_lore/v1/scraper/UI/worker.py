@@ -15,6 +15,7 @@ from ..security.fetch_policy import FetchPolicy
 from ..settings import Settings
 from ..storage import read_json, write_json
 from ..use_cases.ports import UniverseRunContext
+from ..use_cases.run_controls import RunControl
 from ..use_cases.run_universe import run_universe
 
 
@@ -54,9 +55,11 @@ class ExecutionWorker(QObject):
         base = self.export_root.parent
         self.cache = FetchCache(base / "cache" / "http")
         self.state_path = base / "incremental_state.json"
+        self.checkpoint_path = base / "run_checkpoint.json"
         self.state = cast(dict[str, Any], read_json(self.state_path, {}))
         self.events = EventLog(base / "events.jsonl")
         self.quarantine = QuarantineStore(base / "quarantine")
+        self.control = RunControl()
         self.client = HttpClient(
             cache=self.cache,
             policy=FetchPolicy(max_bytes=5_000_000),
@@ -64,6 +67,21 @@ class ExecutionWorker(QObject):
             quarantine=self.quarantine,
         )
         self.observer = _WorkerObserver(self)
+
+    def pause(self) -> None:
+        self.control.pause()
+        self.log.emit("Ex?cution en pause.")
+        self.events.emit("run_paused", outcome="paused")
+
+    def resume(self) -> None:
+        self.control.resume()
+        self.log.emit("Ex?cution reprise.")
+        self.events.emit("run_resumed", outcome="resumed")
+
+    def cancel(self) -> None:
+        self.control.cancel()
+        self.log.emit("Annulation demand?e.")
+        self.events.emit("run_cancel_requested", outcome="cancelling")
 
     def run(self) -> None:
         try:
@@ -82,6 +100,8 @@ class ExecutionWorker(QObject):
             "run_started", universes=list(self.plan.universe_ids), actor="user"
         )
         for uid in self.plan.universe_ids:
+            if self.control.is_cancelled():
+                break
             universe = cast(dict[str, Any] | None, self.snapshot.get(str(uid)))
             if universe:
                 runs.append(
@@ -90,6 +110,14 @@ class ExecutionWorker(QObject):
                     )
                 )
         write_json(self.state_path, self.state)
+        cancelled = self.control.is_cancelled() or any(
+            bool(cast(dict[str, Any], r).get("cancelled")) for r in runs
+        )
+        if cancelled:
+            self.progress.emit(100, "Annul?")
+            self.log.emit("Ex?cution annul?e.")
+            self.events.emit("run_cancelled", runs=len(runs), outcome="cancelled")
+            return {"ok": False, "cancelled": True, "runs": runs}
         self.progress.emit(100, "Termin?")
         self.log.emit("Ex?cution termin?e.")
         self.events.emit("run_finished", runs=len(runs), outcome="ok")
@@ -105,4 +133,11 @@ def _limits(settings: Settings) -> dict[str, Any]:
         "incremental": settings.incremental,
         "expand_manifests": settings.expand_manifests,
         "max_manifest_urls": settings.max_manifest_urls,
+        "review_child_pages": settings.review_child_pages,
+        "use_playwright": settings.use_playwright,
+        "rag_coupling": settings.rag_coupling,
+        "max_concurrency": settings.max_concurrency,
+        "per_host_concurrency": settings.per_host_concurrency,
+        "per_host_delay": settings.per_host_delay,
+        "max_retries": settings.max_retries,
     }

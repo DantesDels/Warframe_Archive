@@ -110,7 +110,8 @@ class Sidebar(QFrame):
             return
         for index in range(self.list.count()):
             item = self.list.item(index)
-            if item is not None and item.data(int(Qt.ItemDataRole.UserRole)) == universe_id:
+            uid = item.data(int(Qt.ItemDataRole.UserRole)) if item else None
+            if item is not None and uid == universe_id:
                 self.list.setCurrentItem(item)
                 self._sync_item_actions(universe_id)
                 return

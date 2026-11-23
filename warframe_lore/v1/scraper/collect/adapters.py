@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from ..connectors.base import CollectedPage, ConnectorContext
 from ..connectors.registry import default_registry
@@ -17,14 +17,19 @@ def collect_pages(
     ctx = ConnectorContext(client=client, limits=limits)
     pages = _REGISTRY.resolve(source, ctx).collect(source, ctx)
     if limits.get("expand_manifests"):
-        pages = _expand(pages, ctx)
+        review = bool(limits.get("review_child_pages", True))
+        pages = _expand(pages, ctx, review=review)
     return pages
 
 
-def _expand(pages: list[CollectedPage], ctx: ConnectorContext) -> list[CollectedPage]:
+def _expand(
+    pages: list[CollectedPage], ctx: ConnectorContext, *, review: bool = True
+) -> list[CollectedPage]:
     out = list(pages)
     seen = {p.url.rstrip("/") for p in out}
     budget = max(0, int(ctx.limits.get("max_manifest_urls", 50)))
+    pending = cast(list[dict[str, str]], ctx.limits.setdefault("pending_child_urls",
+        []))
     for page in pages:
         for child in extract_manifest_urls(page.content, page.url, limit=budget):
             norm = child.rstrip("/")
@@ -32,7 +37,10 @@ def _expand(pages: list[CollectedPage], ctx: ConnectorContext) -> list[Collected
                 continue
             seen.add(norm)
             budget -= 1
-            out.extend(_collect_child(child, ctx))
+            if review:
+                pending.append({"url": child, "parent": page.url})
+            else:
+                out.extend(_collect_child(child, ctx))
             if budget <= 0:
                 break
     return out

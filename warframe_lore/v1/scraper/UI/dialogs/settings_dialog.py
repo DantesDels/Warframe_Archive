@@ -104,7 +104,9 @@ class SettingsDialog(QDialog):
         layout.addWidget(buttons)
 
     def build_settings(self) -> Settings:
-        formats = tuple(str(name) for name, cb in self.formats.items() if bool(cb.isChecked()))
+        formats = tuple(str(name) for name,
+            cb in self.formats.items() if bool(cb.isChecked()))
+        base = self.store.load()
         return Settings(
             self.relevance.value(),
             formats,
@@ -116,6 +118,20 @@ class SettingsDialog(QDialog):
             self.incremental.isChecked(),
             self.expand_manifests.isChecked(),
             self.max_manifest.value(),
+            self.discovery_sitemaps.isChecked(),
+            self.discovery_feeds.isChecked(),
+            base.discovery_web_search,
+            base.discovery_web_search_url,
+            self.discovery_git.isChecked(),
+            self.discovery_wiki.isChecked(),
+            base.discovery_seeds,
+            base.discovery_max_candidates,
+            self.review_children.isChecked(),
+            base.use_playwright,
+            self.max_conc.value(),
+            self.host_conc.value(),
+            base.per_host_delay,
+            self.retries.value(),
         )
 
     def _save(self) -> None:

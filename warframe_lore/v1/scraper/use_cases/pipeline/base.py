@@ -11,7 +11,8 @@ class PipelineContext:
     source: dict[str, Any]
     universe_id: str
     settings: dict[str, Any] = field(default_factory=lambda: cast(dict[str, Any], {}))
-    capabilities: dict[str, Any] = field(default_factory=lambda: cast(dict[str, Any], {}))
+    capabilities: dict[str, Any] = field(default_factory=lambda: cast(dict[str, Any],
+        {}))
 
 
 @dataclass(slots=True)

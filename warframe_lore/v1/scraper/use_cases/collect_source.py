@@ -22,6 +22,7 @@ def collect_source(
     state: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[str], list[dict[str, str]]]:
     loc = str(source.get("location", "")).strip()
+    limits.setdefault("connector_state", state.setdefault("_connector_state", {}))
     try:
         pages = cast(list[CollectedPage], collect_pages(source, client, limits))
     except Exception as exc:  # noqa: BLE001
@@ -50,6 +51,10 @@ def collect_source(
             continue
         docs.append(_doc(source, uid, page, text, digest))
         updates.append({"url": str(page.url), "hash": digest, "title": str(page.title)})
+    pending = cast(list[dict[str, str]], limits.get("pending_child_urls", []))
+    if pending:
+        updates.extend({"url": p["url"], "hash": "",
+            "title": f"child:{p['parent']}"} for p in pending)
     return docs, errors, updates
 
 

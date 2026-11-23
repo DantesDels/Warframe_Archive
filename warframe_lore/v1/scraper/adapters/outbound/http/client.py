@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping, cast
+from typing import Any, cast
 
 import certifi
 import requests
 
+from ....adapters.outbound.persistence.quarantine import QuarantineStore
 from ....collect.cache import FetchCache
 from ....ports.outbound.events import EventLogPort
-from ....adapters.outbound.persistence.quarantine import QuarantineStore
 from ....security.fetch_policy import FetchPolicy, check_payload, check_url
 from ....security.models import ScanResult
 from .cache_flow import cache_key, conditional_headers, store
@@ -73,7 +74,8 @@ class HttpClientAdapter:
         key = cache_key(url, dict(params) if params else None, req_headers)
         cached = self.cache.get(key) if self.cache and use_cache else None
         cond = conditional_headers(req_headers, cached)
-        resp = self._request(url, cond, dict(params) if params else None, allow_redirects)
+        resp = self._request(url, cond, dict(params) if params else None,
+            allow_redirects)
         if resp.status == 304 and cached and self.cache:
             content = self.cache.get_content(key) or b""
             resp = FetchResponse(
@@ -104,11 +106,13 @@ class HttpClientAdapter:
         verdict = check_payload(resp.url, resp.content, resp.content_type, self.policy)
         if not verdict.allowed:
             if self.quarantine:
-                self.quarantine.put(resp.url, resp.content, verdict.reason, verdict.code)
+                self.quarantine.put(resp.url, resp.content, verdict.reason,
+                    verdict.code)
             self._reject(resp.url, verdict)
 
     def _reject(self, url: str, verdict: ScanResult) -> None:
-        self._emit("security_blocked", url=url, code=verdict.code, reason=verdict.reason)
+        self._emit("security_blocked", url=url, code=verdict.code,
+            reason=verdict.reason)
         raise PermissionError(f"{verdict.code}: {verdict.reason}")
 
     def _emit(self, event_type: str, **payload: Any) -> None:

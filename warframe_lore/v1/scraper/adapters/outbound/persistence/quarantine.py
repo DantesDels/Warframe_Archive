@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import hashlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 
 class QuarantineStore:

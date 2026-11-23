@@ -6,35 +6,50 @@ from typing import Any, cast
 
 from PySide6.QtWidgets import QMessageBox
 
-from ...discovery import discover
+from ...collect.http import HttpClient
+from ...settings.models import Settings
+from ...use_cases.discover_universe import discover_universe
 from ..dialogs.preflight_dialog import open_preflight
 from ..dialogs.settings_io import open_settings
 
 
 def apply_discovery(app: Any, universe: dict[str, Any]) -> int:
-    threshold = int(app.settings_store.load().min_relevance)
-    candidates = discover(universe, threshold)
-    # keep existing manual/active sources; merge discovered as candidates
-    existing = {str(c.get("location", "")) for c in app.workspace.candidates_for(str(universe["id"]))}
-    new_candidates = [c for c in candidates if c.location not in existing]
-    merged = list(cast(list[dict[str, Any]], app.workspace.candidates_for(str(universe["id"]))))
-    for item in new_candidates:
-        merged.append({
-            "id": item.id,
-            "universeId": item.universe_id,
-            "kind": item.kind,
-            "location": item.location,
-            "title": item.title,
-            "score": item.score,
-            "proof": item.proof,
-            "discoveredBy": item.discovered_by,
-            "status": item.status,
-            "forceUpdate": item.force_update,
-        })
-    kept = [c for c in app.workspace.data.get("candidates", []) if c.get("universeId") != universe["id"]]
-    kept.extend(merged)
-    app.workspace.data["candidates"] = kept
-    app.workspace.save()
+    settings = app.settings_store.load()
+    # seed discovery from existing source locations (generic, universe-driven)
+    seeds = [
+        str(s.get("location", "")).strip()
+        for s in app.workspace.sources_for(str(universe.get("id", "")))
+        if str(s.get("location", "")).strip()
+    ]
+    settings = Settings(
+        settings.min_relevance,
+        settings.output_formats,
+        settings.rag_coupling,
+        settings.max_pages_per_source,
+        settings.max_depth,
+        settings.same_host_only,
+        settings.use_cache,
+        settings.incremental,
+        settings.expand_manifests,
+        settings.max_manifest_urls,
+        settings.discovery_sitemaps,
+        settings.discovery_feeds,
+        settings.discovery_web_search,
+        settings.discovery_web_search_url,
+        settings.discovery_git,
+        settings.discovery_wiki,
+        tuple(seeds),
+        settings.discovery_max_candidates,
+        settings.review_child_pages,
+        settings.use_playwright,
+        settings.max_concurrency,
+        settings.per_host_concurrency,
+        settings.per_host_delay,
+        settings.max_retries,
+    )
+    new_candidates = discover_universe(
+        app.workspace, universe, settings, client=HttpClient()
+    )
     return len(new_candidates)
 
 
@@ -86,7 +101,8 @@ def prepare_launch(app: Any) -> None:
             app, "Pr?-ex?cution", "S?lectionnez d'abord un Univers."
         )
         return
-    candidates = cast(list[dict[str, Any]], app.workspace.candidates_for(str(universe["id"])))
+    candidates = cast(list[dict[str, Any]],
+        app.workspace.candidates_for(str(universe["id"])))
     active = [item for item in candidates if item.get("status") == "active"]
     plan = open_preflight(
         app, app.settings_store.load(), (universe["id"],), len(active)

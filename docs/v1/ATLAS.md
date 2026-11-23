@@ -251,3 +251,49 @@ cible du couplage RAG.
 
 
 - Frontière renforcée: use cases applicatifs (collect/run/apply) dans scraper/use_cases, pipeline applicatif dans scraper/use_cases/pipeline (shims compat dans scraper/pipeline), policy fetch-time domaine dans scraper/security/fetch_policy.py avec adapter outbound mince, exécution UI branchée via ExecutionObserver/UniverseRunContext.
+
+
+## Ã‰tat P1 (implÃ©mentÃ© sur feat/v1-ui, non commitÃ©)
+
+P1 livrÃ© dans `warframe_lore/v1/` avec gates verts (`ruff`, `compileall`, `pytest tests/v1`).
+
+### DÃ©couverte
+- Providers modulaires configurables: `keyword`, `web_search` (endpoint opt-in `{query}`), `sitemap`, `feed`, `git`, `wiki`, plus seeds issus des sources existantes.
+- Scoring hybride explicable (`relevance/authority/freshness/language/confidence`) + `score_breakdown` + signal `homonym_risk`.
+- DÃ©dup URL normalisÃ©e, limite `discovery_max_candidates`.
+
+### Collecte/connecteurs
+- Registry: `document`, `lzma`, `sitemap`, `feed`, `mediawiki`, `rest`, `playwright` (opt-in), `html`.
+- Sitemap: parse `lastmod` + delta incrÃ©mental via `connector_state`.
+- RSS/Atom: parse entries + delta `updated/published`.
+- REST/JSON: pagination `next`/cursor simple, headers/auth bearer/header custom.
+- MediaWiki: requÃªte extracts+revisions, delta `touched/revid`.
+- Documents locaux: `.txt/.md/.json/.csv/.xml/.html` natif, best-effort `.pdf/.docx/.pptx` via libs optionnelles, fallback UTF-8.
+
+### Pipeline/qualitÃ©
+- Normalisation: encodage robuste, NFKC, nettoyage boilerplate lÃ©ger, dÃ©tection langue heuristique, filtre `language`.
+- DÃ©dup: exact URL, exact contenu SHA-256, near-dedup SimHash + MinHash/Jaccard.
+- SÃ©curitÃ©: `SecurityStage` conserve la politique payload existante.
+
+### RAG/export
+- `emit_artifacts(..., rag_coupling=True)` Ã©crit `chunks.jsonl` avec provenance (`chunk_id`, `universe_id`, `source_id`, `url`, `version`, `trust_score`, `timestamp`).
+- Chunking structurel simple par paragraphes + dÃ©coupe bornÃ©e.
+- Export vector-ready `vectors.sqlite.json` (adapter sqlite-vec/pgvector-compatible, embedding null).
+- Export Parquet optionnel `chunks.parquet` si pandas/pyarrow disponible.
+- Manifest `schema_version=1.1`.
+
+### ExÃ©cution/orchestration
+- Worker Qt conserve UI main-thread apply; exÃ©cution bornÃ©e async via `asyncio.to_thread`.
+- Limites: `max_concurrency`, `per_host_concurrency`, `per_host_delay`, `max_retries`.
+- Reprise: checkpoint `run_checkpoint.json` avec `completed_source_ids` (compat `last_source_index`), skip sources complÃ©tÃ©es.
+- ContrÃ´les: pause/reprise/annulation coopÃ©ratives, events/logs, Ã©tat UI.
+
+### Revue humaine
+- `review_child_pages` activable; expansion manifest peut crÃ©er candidats `proposed` `manifest_review`.
+- `PrÃ©visualiser enfants` ajoute des candidats Ã  valider; `collect/adapters` respecte `pending_child_urls`.
+
+### Limites connues / suivi
+- Playwright/Parquet optionnels selon dÃ©pendances installÃ©es.
+- Homonymie/scoring heuristiques explicables, pas SOTA.
+- MediaWiki delta par page/touched; pas synchronisation API avancÃ©e complÃ¨te.
+- UI nâ€™expose pas encore tous les rÃ©glages discovery avancÃ©s (seeds/web search URL).

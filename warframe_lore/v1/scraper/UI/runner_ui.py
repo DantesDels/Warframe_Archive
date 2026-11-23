@@ -21,6 +21,14 @@ def start_execution(app: Any, plan: Any) -> None:
     thread.started.connect(worker.run)
     worker.progress.connect(app.execution.set_progress)
     worker.log.connect(app.execution.add_log)
+    app.execution.pause_btn.clicked.connect(worker.pause)
+    app.execution.resume_btn.clicked.connect(worker.resume)
+    app.execution.cancel_btn.clicked.connect(worker.cancel)
+    app.execution.pause_btn.clicked.connect(lambda: _set_paused(app, True))
+    app.execution.resume_btn.clicked.connect(lambda: _set_paused(app, False))
+    app.execution.cancel_btn.clicked.connect(
+        lambda: app.execution.cancel_btn.setEnabled(False)
+    )
     app._worker = worker
     app._thread = thread
     worker.finished.connect(
@@ -29,6 +37,13 @@ def start_execution(app: Any, plan: Any) -> None:
     thread.finished.connect(thread.deleteLater)
     app.execution.reset()
     thread.start()
+
+
+def _set_paused(app: Any, paused: bool) -> None:
+    app.execution.pause_btn.setEnabled(not paused)
+    app.execution.resume_btn.setEnabled(paused)
+    state = "Pause" if paused else "Ex?cution en cours"
+    app.status_bar.showMessage(f"Statut : {state}")
 
 
 class _Snapshot:
@@ -75,5 +90,13 @@ def handle_finished(app: Any, result: object) -> None:
     result_dict = cast(dict[str, Any], result) if isinstance(result, dict) else None
     if result_dict is not None and result_dict.get("ok"):
         apply_result(app.workspace, result_dict)
+    elif result_dict is not None and result_dict.get("cancelled"):
+        apply_result(app.workspace, result_dict)
     app.refresh()
-    app.status_bar.showMessage("Statut : Pr?t")
+    app.execution.pause_btn.setEnabled(False)
+    app.execution.resume_btn.setEnabled(False)
+    app.execution.cancel_btn.setEnabled(False)
+    if result_dict and result_dict.get("cancelled"):
+        app.status_bar.showMessage("Statut : Annul?")
+    else:
+        app.status_bar.showMessage("Statut : Pr?t")

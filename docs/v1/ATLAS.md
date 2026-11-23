@@ -392,3 +392,25 @@ configuration, et API GraphQL + visualisation du graphe des relations.
 - **Tests** : `tests/v1/test_ui_hardening_contract.py` couvre ces quatre
   points.
 
+---
+
+## Correctifs UI/UX (screenshot)
+
+- **UTF-8** : les trois libellés doublement encodés de la pré-exécution
+  (`mÃªme`, `IncrÃ©mental`, `DÃ©velopper`) sont restaurés ; un test analyse
+  toutes les sources de `UI/` pour interdire les séquences `Ã©`, `Ãª`, `Ã¨`,
+  `Ã `, `â€™`, `Â `.
+- **Graphe** : `UI/graph/` fournit un layout en couches sans collision
+  (une cellule par nœud), des libellés de 22 caractères maximum avec `...`,
+  le détail complet (type, URL, statut, pertinence) au survol et au clic, un
+  zoom molette, un déplacement par glisser et un bouton « Ajuster la vue ».
+  `views/graph_view.py` reste une façade compatible.
+- **Contraste** : la barre de progression utilise un texte blanc gras sur
+  une piste sombre et un chunk bleu (`#1d4ed8`) ; les cases à cocher non
+  cochées ont une bordure visible `#64748b` et un fond blanc.
+- **Feuille de style** : refactoring en table de règles déclaratives
+  (`_STYLES`) pour rester sous la limite de 100 lignes de code.
+- **Gates** : `ruff`, `compileall`, `pytest -q tests/v1`, graphify et
+  rebuild PyInstaller (`warframe_lore/v1/AtelierV1.exe`) verts.
+
+---

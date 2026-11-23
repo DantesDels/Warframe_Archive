@@ -159,8 +159,10 @@ class DesktopWindowTests(unittest.TestCase):
         tabs = app.details.findChild(QTabWidget)
         self.assertIsNotNone(tabs)
         assert tabs is not None
-        self.assertEqual(tabs.count(), 6)
+        self.assertEqual(tabs.count(), 8)
         self.assertEqual(tabs.tabText(5), "Graphe")
+        self.assertEqual(tabs.tabText(6), "Veille")
+        self.assertTrue(tabs.tabText(7).startswith("Lacunes"))
         app.sidebar.select(None)
         app.on_select(None)
         self.assertEqual(app.details.title.text(), "Aucun Univers sélectionné")
@@ -496,6 +498,44 @@ class CandidatesTableContractTests(unittest.TestCase):
         clear_sel.click()
         self.assertEqual(table.selected_ids(), [])
         widget.deleteLater()
+
+    def test_bulk_activate_650_candidates_saves_once_and_stays_fast(self) -> None:
+        from unittest.mock import patch
+
+        _app()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "workspace.json"
+            ws = WorkshopWorkspace(path=path)
+            ws.create("Atlas")
+            ws.data["candidates"] = [
+                {
+                    "id": f"bulk-{i}",
+                    "universeId": "atlas",
+                    "kind": "website",
+                    "location": f"https://atlas.example/item-{i}",
+                    "title": f"Item {i}",
+                    "score": 0.9,
+                    "status": "proposed",
+                    "discoveredBy": "manifest_review",
+                    "proof": "bulk test",
+                }
+                for i in range(650)
+            ]
+            ws.save()
+            widget = candidates_view(ws, ws.get("atlas"), lambda: None)
+            table = widget.findChild(SimpleTable)
+            assert table is not None
+            table.selectAll()
+            activate_btn = next(
+                b for b in widget.findChildren(QPushButton) if b.text() == "Activer"
+            )
+            with patch(
+                "warframe_lore.v1.scraper.UI.workspace.write_json"
+            ) as write_mock:
+                activate_btn.click()
+            self.assertEqual(write_mock.call_count, 1)
+            self.assertEqual(len(ws.sources_for("atlas")), 650)
+            widget.deleteLater()
 
 
 class MalformedDataContract(unittest.TestCase):

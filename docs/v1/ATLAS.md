@@ -597,3 +597,50 @@ configuration, et API GraphQL + visualisation du graphe des relations.
   combiné texte + état (`Proposés`, `Actifs`, `Suspendus`, `Blacklistés`), et
   actions en lot (*Activer* sans doublon de source, *Suspendre*, *Blacklister*
   avec mise à jour du statut candidat, *Supprimer*).
+
+---
+
+## Phase P2 — Veille Événementielle & Active Learning (`feat/v1-p2`)
+
+- **Watchers conditionnels & Scheduler local (`scraper/watch/`)** :
+  - Classification automatique des sources (`rss`, `sitemap`, `github_release`
+    avec résolution `api.github.com/repos/<owner>/<repo>/releases`, `changelog`,
+    `api`) et calcul d'empreintes structurées (`parsers.py`, `detectors.py`).
+  - Sondage HTTP conditionnel (`If-None-Match` / `If-Modified-Since` / `304`)
+    protégé par `check_url()` (`probe.py`), persistance de `watch_state` par
+    source et journal `watch_events`, backoff sur erreurs (`runner.py`).
+  - `LocalWatchScheduler` coopératif démarré au cycle de vie de l'application
+    (`UI/runtime/app_lifecycle.py`) et `run_targeted_delta()` déclenchant une
+    collecte incrémentale limitée aux seules sources modifiées (`delta.py`).
+  - Onglet UI **« Veille »** (`UI/views/watch/`) : activation de la veille auto,
+    intervalle (`poll_minutes`), bouton « Vérifier maintenant » et
+    « Delta sur changements » non bloquants (`QThread`).
+- **Boucle de rétroaction RAG `KnowledgeGap` (`scraper/gaps/`)** :
+  - Modèle `KnowledgeGap` avec déduplication, compteur `hits`, score de
+    priorité (`priority_score`) et transformation en requêtes de découverte
+    ciblées (`query_builder.py`, `discover_for_gap()`).
+  - Ingestion depuis `data/v1/gaps.jsonl` (`ingest.py`) et serveur HTTP local
+    autonome `POST /gaps` / `GET /gaps` (`server.py`, stdlib sans dépendance).
+  - Onglet UI **« Lacunes »** (`UI/views/gaps/`) : validation humaine en lot
+    (*Découvrir sources* en arrière-plan, *Marquer résolue*, *Ignorer*,
+    *Supprimer*, *Importer gaps.jsonl*, *+ Ajouter lacune*) avec sélection
+    multiple et affichage des requêtes suggérées.
+- **Catalogues SPA/JS, autorité parente & jauge de découverte (`collect/spa.py`,
+  `connectors/playwright.py`, `use_cases/child_scoring.py`,
+  `use_cases/review_children.py`, `UI/runtime/discovery_runner.py`)** :
+  détection générique des pages SPA/JS (`looks_like_spa`) et rendu headless
+  Playwright (`render_spa_page` avec défilement, onglets `[role=tab]` et
+  interception des endpoints JSON même domaine) dans `PlaywrightConnector` et
+  `preview_child_candidates` ; conservation de l'URL finale redirigée (ex.
+  préfixe de langue `/en/...`) ; héritage du score d'autorité du domaine parent
+  officiel (`child_authority_score`, ex. 92 % au lieu de 50 % plat) ; jauge de
+  progression positionnée à 100 % (`state="done"`) à la fin d'une découverte.
+- **Passage à l'échelle des actions en lot (`storage.py`, `UI/workspace.py`,
+  `UI/views/candidates/bulk.py`, `UI/views/sources_actions.py`,
+  `UI/graph/scene.py`, `UI/views/details.py`)** : écriture JSON atomique
+  verrouillée par `threading.Lock` + `os.replace` ; gestionnaire
+  `workspace.batch_save()` + mutations en $O(N)$ réduisant l'activation en lot
+  de 637 candidats de ~22 s (1 274 écritures disque) à ~0,25 s (1 écriture) ;
+  conservation de l'onglet actif au rafraîchissement ; plafonnement du canvas
+  Qt à 240 nœuds prioritaires (export HTML complet conservé) et sémaphore
+  Playwright (`Semaphore(2)`).

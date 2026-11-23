@@ -159,7 +159,7 @@ class DesktopWindowTests(unittest.TestCase):
         tabs = app.details.findChild(QTabWidget)
         self.assertIsNotNone(tabs)
         assert tabs is not None
-        self.assertEqual(tabs.count(), 8)
+        self.assertEqual(tabs.count(), 9)
         self.assertEqual(tabs.tabText(5), "Graphe")
         self.assertEqual(tabs.tabText(6), "Veille")
         self.assertTrue(tabs.tabText(7).startswith("Lacunes"))

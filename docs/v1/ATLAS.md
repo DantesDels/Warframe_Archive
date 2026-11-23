@@ -684,3 +684,42 @@ configuration, et API GraphQL + visualisation du graphe des relations.
     **« Extraire connaissances »** (`SemanticExtractWorker` sur `QThread`) dans
     l'onglet *Graphe*, avec catégories dynamiques (*Personnages*, *Lieux*,
     *Factions*, *Concepts*, *Chronologie*) et rendu HTML Graphify enrichi.
+
+---
+
+## Phase P4 — Résolution de Conflits & Vérité Temporelle (Opt-in, `feat/v1-p4`)
+
+- **Profils de confiance & Affirmations atomiques (`scraper/truth/`)** :
+  - Profils de confiance hiérarchisés par source (`trust.py`) : *Officiel*
+    (`1.00`), *Documentation* (`0.85`), *Wiki communautaire* (`0.70`) et *Tiers*
+    (`0.45`), inférés automatiquement et surchargeables manuellement par source
+    (`source["trustProfile"]`).
+  - Extraction déterministe FR/EN d'affirmations atomiques (`claim_patterns.py`,
+    `claims.py`, `models.py`) avec polarité (`affirm` / `negate`), hydratation
+    des blobs et provenance exacte par `chunk_id` (`doc_id::index`).
+- **Détection de contradictions & Vérité temporelle (`detector.py`,
+  `temporal.py`, `llm_verify.py`, `pipeline.py`, `arbitration.py`,
+  `export.py`)** :
+  - Alignement inter-sources par `(sujet_canonique, attribut)` : les mises à
+    jour successives sur une même source font passer l'ancienne affirmation au
+    statut *Obsolète* (`valid_to`, `superseded_by`) et enregistrent un
+    `TemporalEvent` dans l'historique.
+  - Les divergences inter-sources créent un `ConflictRecord` candidat avec
+    statut `conflicting` (*En conflit*) et recommandation pondérée par profil de
+    confiance.
+  - Vérification LLM opt-in (`capabilities.fact_check`) exécutée **uniquement**
+    sur les conflits candidats ouverts, sous budget strict (`max_calls`,
+    `max_tokens`).
+  - Arbitrage humain (`keep_a`, `keep_b`, `obsolete`, `dismiss`) préservé lors
+    des ré-analyses et export opt-in (`exports/<uid>/truth/` : `claims.jsonl`,
+    `conflicts.json`, `temporal_history.json`, `truth_summary.json`) branché
+    dans `emit_artifacts`.
+- **Intégration UI (`UI/views/conflicts/`, `UI/views/details.py`,
+  `UI/dialogs/capabilities_dialog.py`)** :
+  - Nouvel onglet **« Conflits (N) »** dans `DetailPane` avec filtres
+    texte/statut, tableau comparatif *Valeur A / Valeur B*, panneau preuves &
+    verdict LLM, bouton asynchrone *Analyser les conflits* (`QThread`), actions
+    d'arbitrage en lot (*Garder A*, *Garder B*, *Marquer obsolète*, *Ignorer*)
+    et dialogue *Profils de confiance…* (`TrustProfilesDialog`).
+  - Case à cocher *Vérification factuelle & Conflits (Fact-check)* dans
+    *Capacités de l'Univers* partageant le formulaire de budget LLM.

@@ -50,7 +50,9 @@ class CapabilitiesDialog(QDialog):
         self._build_budget_box(body, config)
         self._build_toggles(body, config)
         self.llm_budget_box = LlmBudgetBox(config.graph_rag, self)
-        self._toggles["graph_rag"].toggled.connect(self.llm_budget_box.setEnabled)
+        self._toggles["graph_rag"].toggled.connect(self._sync_llm_box)
+        self._toggles["fact_check"].toggled.connect(self._sync_llm_box)
+        self._sync_llm_box()
         body.addWidget(self.llm_budget_box)
         buttons = QDialogButtonBox()
         role = QDialogButtonBox.ButtonRole
@@ -104,6 +106,7 @@ class CapabilitiesDialog(QDialog):
             "rag": QCheckBox("RAG activé"),
             "watch": QCheckBox("Veille (Watch) activée"),
             "graph_rag": QCheckBox("GraphRAG activé (budget)"),
+            "fact_check": QCheckBox("Vérification factuelle & Conflits (Fact-check)"),
         }
         for key, toggle in self._toggles.items():
             toggle.setChecked(bool(getattr(cfg, key).enabled))
@@ -130,15 +133,19 @@ class CapabilitiesDialog(QDialog):
         if preset is not None:
             self.mode_help.setText(preset.description)
 
+    def _sync_llm_box(self) -> None:
+        on = any(self._toggles[k].isChecked() for k in ("graph_rag", "fact_check"))
+        self.llm_budget_box.setEnabled(on)
+
     def _save(self) -> None:
         config = UniverseCapabilities.from_dict(self._base_caps)
         config.crawl.mode = str(self.mode_combo.currentData() or "custom")
         config.crawl.topic_tags = self.tag_editor.tags()
         for name, spinbox in self._spinboxes.items():
             setattr(config.crawl, name, spinbox.value())
-        config.rag.enabled = self._toggles["rag"].isChecked()
-        config.watch.enabled = self._toggles["watch"].isChecked()
-        config.graph_rag.enabled = self._toggles["graph_rag"].isChecked()
+        for key in ("rag", "watch", "graph_rag", "fact_check"):
+            getattr(config, key).enabled = self._toggles[key].isChecked()
         self.llm_budget_box.apply_to(config.graph_rag)
+        self.llm_budget_box.apply_to(config.fact_check)
         self.result_capabilities = config.to_dict()
         self.accept()

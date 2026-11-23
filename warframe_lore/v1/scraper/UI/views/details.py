@@ -15,7 +15,9 @@ from PySide6.QtWidgets import (
 )
 
 from ...gaps import gaps_for
+from ...truth import open_conflicts_count
 from ..formatting import display_universe_status
+from .conflicts import conflicts_view
 from .data.tabs import data_view
 from .gaps import gaps_view
 from .graph_view import graph_view
@@ -90,27 +92,25 @@ class DetailPane(QWidget):
         self.subtitle.setText(f"{universe.get('description', '')} • {status}")
         tabs = QTabWidget()
         sources = cast(list[dict[str, Any]], workspace.sources_for(uid))
-        documents = cast(list[dict[str, Any]], workspace.documents_for(uid))
+        docs = cast(list[dict[str, Any]], workspace.documents_for(uid))
         runs = cast(list[dict[str, Any]], workspace.runs_for(uid))
-        candidates = cast(list[dict[str, Any]], workspace.candidates_for(uid))
-        tabs.addTab(
-            SourcesView(workspace, universe, on_change), f"Sources ({len(sources)})"
-        )
-        tabs.addTab(
-            documents_view(workspace, universe), f"Documents ({len(documents)})"
-        )
-        tabs.addTab(runs_view(workspace, universe), f"Exécutions ({len(runs)})")
-        tabs.addTab(
-            candidates_view(workspace, universe, on_change),
-            f"Candidats ({len(candidates)})",
-        )
-        tabs.addTab(data_view(workspace, universe, on_change), "Data")
-        tabs.addTab(graph_view(workspace, universe), "Graphe")
-        tabs.addTab(watch_view(workspace, universe, on_change), "Veille")
+        cands = cast(list[dict[str, Any]], workspace.candidates_for(uid))
         gaps = gaps_for(workspace, uid)
-        tabs.addTab(
-            gaps_view(workspace, universe, on_change), f"Lacunes ({len(gaps)})"
+        open_c = open_conflicts_count(workspace, uid)
+        c_view = candidates_view(workspace, universe, on_change)
+        specs = (
+            (SourcesView(workspace, universe, on_change), f"Sources ({len(sources)})"),
+            (documents_view(workspace, universe), f"Documents ({len(docs)})"),
+            (runs_view(workspace, universe), f"Exécutions ({len(runs)})"),
+            (c_view, f"Candidats ({len(cands)})"),
+            (data_view(workspace, universe, on_change), "Data"),
+            (graph_view(workspace, universe), "Graphe"),
+            (watch_view(workspace, universe, on_change), "Veille"),
+            (gaps_view(workspace, universe, on_change), f"Lacunes ({len(gaps)})"),
+            (conflicts_view(workspace, universe, on_change), f"Conflits ({open_c})"),
         )
+        for widget, label in specs:
+            tabs.addTab(widget, label)
         if 0 <= self._active_tab_index < tabs.count():
             tabs.setCurrentIndex(self._active_tab_index)
         tabs.currentChanged.connect(self._remember_tab)

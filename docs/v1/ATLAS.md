@@ -723,3 +723,45 @@ configuration, et API GraphQL + visualisation du graphe des relations.
     et dialogue *Profils de confiance…* (`TrustProfilesDialog`).
   - Case à cocher *Vérification factuelle & Conflits (Fact-check)* dans
     *Capacités de l'Univers* partageant le formulaire de budget LLM.
+
+---
+
+## Phase P5 — Multimodalité & Auto-Réparation Sécurisée (Opt-in, `feat/v1-p5`)
+
+- **Connecteurs multimodaux bornés (`scraper/multimodal/`,
+  `adapters/outbound/connectors/multimodal.py`, `connectors/registry.py`)** :
+  - Garde-fous stricts (`guards.py`) sur la taille maximale (`max_file_mb`) et
+    la durée audio/vidéo maximale (`max_media_minutes`, sonde native WAV +
+    estimation conservatrice).
+  - **OCR** (`ocr.py`) pour images et PDF scannés (couche texte `pypdf` puis
+    repli `pytesseract` / backend injectable).
+  - **ASR** (`asr.py`) pour fichiers audio/vidéo (backends `faster_whisper` /
+    `whisper` ou injectable, repli propre sans crash si non installé).
+  - **Vision** (`vision.py`) pour cartes, schémas et infographies (métadonnées
+    binaires PNG/BMP/JPEG/WEBP, type visuel, description VLM optionnelle et
+    texte OCR combinés en Markdown structuré).
+  - `MultimodalConnector` enregistré dans `default_registry()`, strictement
+    opt-in via `capabilities.multimodal.enabled`.
+- **Auto-réparation sécurisée & Quarantaine (`scraper/self_heal/`,
+  `connectors/html.py`)** :
+  - Détection de casse de parseur (`detector.py`) : contenu vide, troncature
+    anormale ou ratio boilerplate élevé (`>= 72 %`).
+  - Bac à sable anti-prompt-injection (`sandbox.py`) : suppression des balises
+    actives/commentaires, détection et neutralisation des directives d'injection
+    (`[REDACTED_INJECTION]`, balises `<<<UNTRUSTED_HTML>>>`), allowlist stricte
+    de syntaxe CSS (`validate_css_selector`) et évaluation réelle en mémoire
+    (`evaluate_selector_in_sandbox`).
+  - Génération de propositions (`repair.py`) via LLM sous budget
+    (`capabilities.self_heal`) ou repli DOM déterministe, systématiquement
+    placées en **quarantaine** (`quarantine.py`).
+  - **Promotion exclusivement humaine** (`promote_proposal`) écrivant
+    `source["config"]["contentSelector"]`, consommé ensuite par `HtmlConnector`
+    (`extract_with_selector`).
+- **Intégration UI (`UI/dialogs/multimodal_budget_box.py`,
+  `UI/views/self_heal/`, `UI/views/details.py`)** :
+  - Section *Connecteurs multimodaux bornés* (`OCR`, `ASR`, `Vision`,
+    `max_file_mb`, `max_media_minutes`) et case *Auto-réparation sécurisée* dans
+    *Capacités de l'Univers*.
+  - Nouvel onglet **« Quarantaine (N) »** dans `DetailPane` avec diagnostic
+    asynchrone (`SelfHealScanWorker`), aperçu avant/après, alertes d'injection
+    neutralisées et boutons *Promouvoir le sélecteur* / *Rejeter*.

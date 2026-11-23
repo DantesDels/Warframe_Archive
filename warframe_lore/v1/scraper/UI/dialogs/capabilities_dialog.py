@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 from ...capabilities.models import UniverseCapabilities
 from ...capabilities.modes import CRAWL_MODES, MODES_BY_KEY
 from .llm_budget_box import LlmBudgetBox
+from .multimodal_budget_box import MultimodalBudgetBox
 from .responsive import fit_to_screen, scrollable_dialog_body
 from .tag_editor import TagEditor
 
@@ -32,6 +33,14 @@ _BUDGET_FIELDS = (
     ("max_concurrency", "Concurrence max", 1, 64),
     ("per_host_concurrency", "Concurrence / domaine", 1, 32),
     ("max_retries", "Nouvelles tentatives", 0, 20),
+)
+_TOGGLE_SPECS = (
+    ("rag", "RAG activé"),
+    ("watch", "Veille (Watch) activée"),
+    ("graph_rag", "GraphRAG activé (budget)"),
+    ("fact_check", "Vérification factuelle & Conflits (Fact-check)"),
+    ("multimodal", "Multimodalité bornée (OCR / ASR / Vision)"),
+    ("self_heal", "Auto-réparation sécurisée (quarantaine)"),
 )
 
 
@@ -50,15 +59,18 @@ class CapabilitiesDialog(QDialog):
         self._build_budget_box(body, config)
         self._build_toggles(body, config)
         self.llm_budget_box = LlmBudgetBox(config.graph_rag, self)
-        self._toggles["graph_rag"].toggled.connect(self._sync_llm_box)
-        self._toggles["fact_check"].toggled.connect(self._sync_llm_box)
+        self.multimodal_box = MultimodalBudgetBox(config.multimodal, self)
+        for key in ("graph_rag", "fact_check", "self_heal"):
+            self._toggles[key].toggled.connect(self._sync_llm_box)
+        self._toggles["multimodal"].toggled.connect(self.multimodal_box.setEnabled)
         self._sync_llm_box()
         body.addWidget(self.llm_budget_box)
+        body.addWidget(self.multimodal_box)
         buttons = QDialogButtonBox()
         role = QDialogButtonBox.ButtonRole
-        save_btn = buttons.addButton("Enregistrer", role.AcceptRole)
-        cancel_btn = buttons.addButton("Annuler", role.RejectRole)
-        for btn in (save_btn, cancel_btn):
+        btn_specs = (("Enregistrer", role.AcceptRole), ("Annuler", role.RejectRole))
+        for label, r in btn_specs:
+            btn = buttons.addButton(label, r)
             if isinstance(btn, QPushButton):
                 btn.setAutoDefault(False)
                 btn.setDefault(False)
@@ -70,12 +82,12 @@ class CapabilitiesDialog(QDialog):
     def _build_mode_box(self, body: QVBoxLayout, cfg: UniverseCapabilities) -> None:
         box = QGroupBox("Mode de recherche guidé")
         lay = QVBoxLayout(box)
-        self.mode_combo = QComboBox()
+        combo = QComboBox()
+        self.mode_combo = combo
         for preset in CRAWL_MODES:
-            self.mode_combo.addItem(preset.label, preset.key)
-        idx = max(0, self.mode_combo.findData(cfg.crawl.mode))
-        self.mode_combo.setCurrentIndex(idx)
-        lay.addWidget(self.mode_combo)
+            combo.addItem(preset.label, preset.key)
+        combo.setCurrentIndex(max(0, combo.findData(cfg.crawl.mode)))
+        lay.addWidget(combo)
         self.mode_help = QLabel()
         self.mode_help.setWordWrap(True)
         lay.addWidget(self.mode_help)
@@ -102,40 +114,31 @@ class CapabilitiesDialog(QDialog):
     def _build_toggles(self, body: QVBoxLayout, cfg: UniverseCapabilities) -> None:
         box = QGroupBox("Modules optionnels")
         lay = QVBoxLayout(box)
-        self._toggles = {
-            "rag": QCheckBox("RAG activé"),
-            "watch": QCheckBox("Veille (Watch) activée"),
-            "graph_rag": QCheckBox("GraphRAG activé (budget)"),
-            "fact_check": QCheckBox("Vérification factuelle & Conflits (Fact-check)"),
-        }
-        for key, toggle in self._toggles.items():
-            toggle.setChecked(bool(getattr(cfg, key).enabled))
-            lay.addWidget(toggle)
+        self._toggles = {}
+        for key, label in _TOGGLE_SPECS:
+            self._toggles[key] = QCheckBox(label)
+            self._toggles[key].setChecked(bool(getattr(cfg, key).enabled))
+            lay.addWidget(self._toggles[key])
         body.addWidget(box)
 
     def _on_mode_changed(self, _index: int) -> None:
-        key = str(self.mode_combo.currentData() or "custom")
-        preset = MODES_BY_KEY.get(key)
+        preset = MODES_BY_KEY.get(str(self.mode_combo.currentData() or "custom"))
         if preset is None:
             return
         self.mode_help.setText(preset.description)
-        for field_name in (
-            "max_pages", "max_depth", "max_manifest_urls",
-            "source_timeout_seconds", "max_concurrency", "per_host_concurrency",
-        ):
-            value = getattr(preset, field_name)
-            if value is not None and field_name in self._spinboxes:
-                self._spinboxes[field_name].setValue(int(value))
+        for name, spin in self._spinboxes.items():
+            value = getattr(preset, name, None)
+            if value is not None:
+                spin.setValue(int(value))
 
     def _refresh_mode_help(self) -> None:
-        key = str(self.mode_combo.currentData() or "custom")
-        preset = MODES_BY_KEY.get(key)
+        preset = MODES_BY_KEY.get(str(self.mode_combo.currentData() or "custom"))
         if preset is not None:
             self.mode_help.setText(preset.description)
 
     def _sync_llm_box(self) -> None:
-        on = any(self._toggles[k].isChecked() for k in ("graph_rag", "fact_check"))
-        self.llm_budget_box.setEnabled(on)
+        keys = ("graph_rag", "fact_check", "self_heal")
+        self.llm_budget_box.setEnabled(any(self._toggles[k].isChecked() for k in keys))
 
     def _save(self) -> None:
         config = UniverseCapabilities.from_dict(self._base_caps)
@@ -143,9 +146,10 @@ class CapabilitiesDialog(QDialog):
         config.crawl.topic_tags = self.tag_editor.tags()
         for name, spinbox in self._spinboxes.items():
             setattr(config.crawl, name, spinbox.value())
-        for key in ("rag", "watch", "graph_rag", "fact_check"):
-            getattr(config, key).enabled = self._toggles[key].isChecked()
-        self.llm_budget_box.apply_to(config.graph_rag)
-        self.llm_budget_box.apply_to(config.fact_check)
+        for key, cb in self._toggles.items():
+            getattr(config, key).enabled = cb.isChecked()
+        for llm_key in ("graph_rag", "fact_check", "self_heal"):
+            self.llm_budget_box.apply_to(getattr(config, llm_key))
+        self.multimodal_box.apply_to(config.multimodal)
         self.result_capabilities = config.to_dict()
         self.accept()

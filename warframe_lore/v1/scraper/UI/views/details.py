@@ -15,12 +15,14 @@ from PySide6.QtWidgets import (
 )
 
 from ...gaps import gaps_for
+from ...self_heal import quarantined_count
 from ...truth import open_conflicts_count
 from ..formatting import display_universe_status
 from .conflicts import conflicts_view
 from .data.tabs import data_view
 from .gaps import gaps_view
 from .graph_view import graph_view
+from .self_heal import self_heal_view
 from .sources_view import SourcesView
 from .tabs_candidates import candidates_view
 from .tabs_content import documents_view, runs_view
@@ -97,7 +99,9 @@ class DetailPane(QWidget):
         cands = cast(list[dict[str, Any]], workspace.candidates_for(uid))
         gaps = gaps_for(workspace, uid)
         open_c = open_conflicts_count(workspace, uid)
+        quar_n = quarantined_count(workspace, uid)
         c_view = candidates_view(workspace, universe, on_change)
+        sh_view = self_heal_view(workspace, universe, on_change)
         specs = (
             (SourcesView(workspace, universe, on_change), f"Sources ({len(sources)})"),
             (documents_view(workspace, universe), f"Documents ({len(docs)})"),
@@ -108,6 +112,7 @@ class DetailPane(QWidget):
             (watch_view(workspace, universe, on_change), "Veille"),
             (gaps_view(workspace, universe, on_change), f"Lacunes ({len(gaps)})"),
             (conflicts_view(workspace, universe, on_change), f"Conflits ({open_c})"),
+            (sh_view, f"Quarantaine ({quar_n})"),
         )
         for widget, label in specs:
             tabs.addTab(widget, label)

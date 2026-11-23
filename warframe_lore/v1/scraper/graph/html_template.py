@@ -94,13 +94,28 @@ HTML_TEMPLATE = """<!doctype html>
 </div>
 <script>
 const GRAPH = __GRAPH_DATA__;
-const COLORS = { Universe: "#0ea5e9", Source: "#22c55e", Document: "#f59e0b", Candidate: "#a855f7", Unknown: "#64748b" };
-const KIND_LABELS = { Universe: "Univers", Source: "Sources", Document: "Documents", Candidate: "Candidats" };
-const EDGE_COLORS = { HAS_SOURCE: "#22c55e", PRODUCED: "#f59e0b", HAS_CANDIDATE: "#a855f7", HAS_DOCUMENT: "#64748b" };
+const COLORS = {
+  Universe: "#0ea5e9", Source: "#22c55e", Document: "#f59e0b", Candidate: "#a855f7",
+  Person: "#ec4899", Location: "#14b8a6", Faction: "#f97316", Concept: "#6366f1",
+  Timeline: "#eab308", Unknown: "#64748b"
+};
+const KIND_LABELS = {
+  Universe: "Univers", Source: "Sources", Document: "Documents", Candidate: "Candidats",
+  Person: "Personnages", Location: "Lieux", Faction: "Factions", Concept: "Concepts",
+  Timeline: "Chronologie"
+};
+const EDGE_COLORS = {
+  HAS_SOURCE: "#22c55e", PRODUCED: "#f59e0b", HAS_CANDIDATE: "#a855f7", HAS_DOCUMENT: "#64748b",
+  BELONGS_TO: "#f97316", LOCATED_IN: "#14b8a6", ALLIED_WITH: "#22c55e", OPPOSES: "#ef4444",
+  CREATED_BY: "#ec4899", PART_OF: "#6366f1", OCCURRED_IN: "#eab308", RELATED_TO: "#94a3b8"
+};
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const visibleKinds = { Universe: true, Source: true, Document: true, Candidate: true, Unknown: true };
+const visibleKinds = {
+  Universe: true, Source: true, Document: true, Candidate: true,
+  Person: true, Location: true, Faction: true, Concept: true, Timeline: true, Unknown: true
+};
 let selectedId = null, hoveredId = null, physics = true;
 let cam = { x: 0, y: 0, z: 1 };
 
@@ -288,6 +303,10 @@ function selectNode(id) {
   if (url) html += `<div class="field"><b>URL :</b> <a href="${url}" target="_blank" rel="noopener">${url}</a></div>`;
   if (attrs.status) html += `<div class="field"><b>Statut :</b> ${attrs.status}</div>`;
   if (attrs.score !== undefined) html += `<div class="field"><b>Pertinence :</b> ${attrs.score}</div>`;
+  if (attrs.aliases && attrs.aliases.length) html += `<div class="field"><b>Alias :</b> ${attrs.aliases.join(", ")}</div>`;
+  if (attrs.taxonomy && attrs.taxonomy.length) html += `<div class="field"><b>Taxonomie :</b> ${attrs.taxonomy.join(", ")}</div>`;
+  if (attrs.mentions !== undefined) html += `<div class="field"><b>Mentions :</b> ${attrs.mentions} (${attrs.extractor || "rules"})</div>`;
+  if (attrs.chunk_ids && attrs.chunk_ids.length) html += `<div class="field"><b>Chunks :</b> ${attrs.chunk_ids.slice(0, 5).join(", ")}</div>`;
   const neigh = (adj.get(id) || []).slice(0, 20);
   if (neigh.length) {
     html += `<div class="field" style="margin-top:8px"><b>Voisins (${(adj.get(id) || []).length}) :</b></div>`;
@@ -311,7 +330,9 @@ function focusNode(id) {
 const legend = document.getElementById("legend");
 const counts = {};
 for (const n of nodes) counts[n.kind] = (counts[n.kind] || 0) + 1;
-for (const kind of ["Universe", "Source", "Document", "Candidate"]) {
+const isSemantic = (GRAPH.meta && GRAPH.meta.mode === "knowledge") || ["Person", "Location", "Faction", "Concept", "Timeline"].some(k => counts[k] > 0);
+const legendKinds = isSemantic ? ["Person", "Location", "Faction", "Concept", "Timeline"] : ["Universe", "Source", "Document", "Candidate"];
+for (const kind of legendKinds) {
   const row = document.createElement("label");
   row.className = "legend-row";
   row.innerHTML = `<input type="checkbox" checked><span class="dot" style="background:${COLORS[kind]}"></span><span>${KIND_LABELS[kind]}</span><span class="cnt">${counts[kind] || 0}</span>`;

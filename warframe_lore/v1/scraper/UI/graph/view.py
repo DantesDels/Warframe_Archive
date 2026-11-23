@@ -2,89 +2,97 @@
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import (
-    QDialog,
-    QHBoxLayout,
-    QPushButton,
-    QSplitter,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
-from ...graph.export import export_graph
 from ...graph.model import build_graph
-from ..dialogs.responsive import fit_to_screen
-from ..style import apply_theme
 from .graphics_view import GraphGraphicsView
 from .items import GraphNodeItem, full_location
 from .scene import build_scene, filter_graph
+from .semantic_worker import (
+    SemanticExtractionController,
+    load_saved_knowledge_graph,
+)
 from .sidebar import GraphSidebar
+from .toolbar import (
+    build_graph_toolbar,
+    export_and_open_html,
+    make_graph_splitter,
+    show_fullscreen_graph,
+)
 
 
 class GraphCanvas(QWidget):
-    """Full-height Graphify-style canvas with zoom, filters, search and popout."""
+    """Full-height Graphify-style canvas with zoom, filters, search and GraphRAG."""
 
     def __init__(
-        self,
-        graph: dict[str, Any],
-        parent: QWidget | None = None,
-        *,
-        allow_popout: bool = True,
-        export_dir: Path | None = None,
+        self, graph: dict[str, Any], parent: QWidget | None = None, *,
+        allow_popout: bool = True, export_dir: Path | None = None,
+        knowledge_graph: dict[str, Any] | None = None,
+        workspace: Any = None, universe: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(parent)
-        self._graph = graph
-        self._export_dir = export_dir
+        self._sources_graph, self._knowledge_graph = graph, knowledge_graph
+        self._graph, self._export_dir = graph, export_dir
         self._node_items: list[GraphNodeItem] = []
         self.setMinimumHeight(300)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(6)
-        layout.addLayout(self._build_toolbar(allow_popout))
-        splitter = QSplitter(Qt.Orientation.Horizontal)
+        bar, self.mode_combo, extract_btn = build_graph_toolbar(
+            allow_popout=allow_popout, can_extract=bool(workspace and universe),
+            on_mode_changed=self.set_mode, on_fit=self.fit_graph,
+            on_zoom_in=lambda: self.view.zoom_by(1.25),
+            on_zoom_out=lambda: self.view.zoom_by(0.8),
+            on_open_html=self.open_html_graph, on_extract=self.extract_knowledge,
+            on_fullscreen=self.open_fullscreen,
+        )
+        self._extractor = SemanticExtractionController(
+            workspace, universe, export_dir, extract_btn,
+            self._on_extract_done, self._on_extract_error,
+        )
+        layout.addLayout(bar)
         self.view = GraphGraphicsView(self)
         self.sidebar = GraphSidebar(
-            graph,
-            on_filter=self._rebuild_scene,
-            on_search=self._focus_search,
-            parent=self,
+            graph, on_filter=self._rebuild_scene,
+            on_search=self._focus_search, parent=self,
         )
         self.detail = self.sidebar.detail
-        splitter.addWidget(self.view)
-        splitter.addWidget(self.sidebar)
-        splitter.setStretchFactor(0, 4)
-        splitter.setStretchFactor(1, 1)
-        layout.addWidget(splitter, 1)
+        layout.addWidget(make_graph_splitter(self.view, self.sidebar), 1)
         self._rebuild_scene(self.sidebar.enabled_kinds())
 
-    def _build_toolbar(self, allow_popout: bool) -> QHBoxLayout:
-        bar = QHBoxLayout()
-        specs: list[tuple[str, str, Any]] = [
-            ("Ajuster la vue", "GraphFitButton", self.fit_graph),
-            ("Zoom +", "", lambda: self.view.zoom_by(1.25)),
-            ("Zoom -", "", lambda: self.view.zoom_by(0.8)),
-            ("Ouvrir HTML (Graphify)", "GraphOpenHtmlButton", self.open_html_graph),
-        ]
-        if allow_popout:
-            specs.append(("Plein écran", "GraphFullscreenButton", self.open_fullscreen))
-        for label, obj_name, handler in specs:
-            btn = QPushButton(label)
-            if obj_name:
-                btn.setObjectName(obj_name)
-            btn.clicked.connect(handler)
-            bar.addWidget(btn)
-        bar.addStretch(1)
-        return bar
+    def set_mode(self, mode: str) -> None:
+        """Switch between 'sources' and 'knowledge' (GraphRAG) graphs."""
+        idx = self.mode_combo.findData(mode)
+        if idx >= 0 and self.mode_combo.currentIndex() != idx:
+            self.mode_combo.setCurrentIndex(idx)
+            return
+        empty_kg = {"nodes": [], "edges": [], "meta": {"mode": "knowledge"}}
+        self._graph = (
+            (self._knowledge_graph or empty_kg)
+            if mode == "knowledge"
+            else self._sources_graph
+        )
+        self.sidebar.set_graph(self._graph)
+        self._rebuild_scene(self.sidebar.enabled_kinds())
+
+    def extract_knowledge(self) -> None:
+        """Launch asynchronous semantic extraction for the current universe."""
+        self._extractor.start()
+
+    def _on_extract_done(self, graph: dict[str, Any], summary: str) -> None:
+        self._knowledge_graph = graph
+        self.set_mode("knowledge")
+        self.sidebar.detail.setPlainText(f"Extraction terminée : {summary}")
+
+    def _on_extract_error(self, message: str) -> None:
+        self.sidebar.detail.setPlainText(f"Erreur d'extraction : {message}")
 
     def _rebuild_scene(self, kinds: set[str]) -> None:
-        subgraph = filter_graph(self._graph, kinds)
-        self.scene, self._node_items = build_scene(subgraph)
+        self.scene, self._node_items = build_scene(filter_graph(self._graph, kinds))
         self.view.setScene(self.scene)
         for item in self._node_items:
             item.node_clicked.connect(self.show_node)
@@ -92,11 +100,9 @@ class GraphCanvas(QWidget):
 
     def _focus_search(self, query: str) -> None:
         needle = query.strip().casefold()
-        if not needle:
-            return
         for item in self._node_items:
             hay = f"{item.node.get('label', '')} {full_location(item.node)}".casefold()
-            if needle in hay:
+            if needle and needle in hay:
                 self.view.centerOn(item)
                 self.show_node(item.node)
                 return
@@ -111,34 +117,28 @@ class GraphCanvas(QWidget):
 
     def open_fullscreen(self) -> None:
         """Open a dedicated large window displaying this graph."""
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Atelier v1 — Graphe des sources (Plein écran)")
-        apply_theme(dialog)
-        lay = QVBoxLayout(dialog)
-        lay.setContentsMargins(6, 6, 6, 6)
-        canvas = GraphCanvas(
-            self._graph, dialog, allow_popout=False, export_dir=self._export_dir
+        show_fullscreen_graph(
+            self,
+            lambda dlg: GraphCanvas(
+                self._graph, dlg, allow_popout=False,
+                export_dir=self._export_dir, knowledge_graph=self._knowledge_graph,
+            ),
         )
-        lay.addWidget(canvas, 1)
-        fit_to_screen(
-            dialog, ideal_width=1440, ideal_height=860,
-            width_ratio=0.94, height_ratio=0.9,
-        )
-        dialog.exec()
 
     def open_html_graph(self) -> Path:
         """Export the interactive Graphify-style HTML graph and open it."""
-        out_dir = self._export_dir or (Path(tempfile.gettempdir()) / "atelier_v1_graph")
-        paths = export_graph(out_dir, self._graph)
-        html_path = paths[1]
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(html_path.resolve())))
-        return html_path
+        return export_and_open_html(self._graph, self._export_dir)
 
 
 def graph_view(workspace: Any, universe: dict[str, Any]) -> QWidget:
     """Build the full-height Graph tab for one universe."""
     uid = str(universe.get("id", ""))
-    graph = build_graph(workspace, universe_id=uid)
     ws_path = getattr(workspace, "path", None)
     base = ws_path.parent if isinstance(ws_path, Path) else Path("data/v1")
-    return GraphCanvas(graph, export_dir=base / "exports" / uid)
+    return GraphCanvas(
+        build_graph(workspace, universe_id=uid),
+        export_dir=base / "exports" / uid,
+        knowledge_graph=load_saved_knowledge_graph(workspace, universe),
+        workspace=workspace,
+        universe=universe,
+    )

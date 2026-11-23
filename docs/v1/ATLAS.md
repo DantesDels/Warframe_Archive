@@ -644,3 +644,43 @@ configuration, et API GraphQL + visualisation du graphe des relations.
   conservation de l'onglet actif au rafraîchissement ; plafonnement du canvas
   Qt à 240 nœuds prioritaires (export HTML complet conservé) et sémaphore
   Playwright (`Semaphore(2)`).
+
+---
+
+## Phase P3 — Décorticage Sémantique & GraphRAG (Opt-in, `feat/v1-p3`)
+
+- **Extraction sémantique structurée (`scraper/semantic/`)** :
+  - Modèles typés génériques multi-univers (`models.py`) : entités typées
+    (`person`, `location`, `faction`, `concept`, `timeline`), relations
+    dirigées typées (`BELONGS_TO`, `LOCATED_IN`, `ALLIED_WITH`, `OPPOSES`,
+    `CREATED_BY`, `PART_OF`, `OCCURRED_IN`, `RELATED_TO`), mentions et
+    provenance exacte par `chunk_id` (`doc_id::index`, aligné avec
+    `chunks.jsonl`).
+  - Extracteur déterministe FR/EN (`patterns.py`, `rules.py`, `relations.py`) :
+    taxonomie documentaire, repères chronologiques, entités nommées, alias
+    explicites (`alias`, `known as`, `aka`) et relations intra-phrases sans
+    aucun appel réseau.
+  - Enrichissement LLM optionnel sous budget (`adapters/outbound/llm/openai_compat.py`,
+    `semantic/llm_extract.py`) : client OpenAI-compatible (`/chat/completions`)
+    strictement gardé par `enabled`, `max_calls`, `max_tokens`, `vram_gb` et
+    `model` non vide (aucun appel par défaut).
+- **Résolution d'alias, pipeline & bundle GraphRAG (`aliases.py`, `remap.py`,
+  `pipeline.py`, `runtime_helpers.py`, `export.py`)** :
+  - Fusion des variantes canoniques, accents, alias explicites et pluriels avec
+    remappage complet des `Relation` et `Mention` et marquage `hybrid` lorsque
+    règles et LLM convergent.
+  - Hydratation automatique des blobs déchargés (`data/v1/blobs/<blobRef>`) et
+    persistance dans `workspace.data["knowledge_graphs"][universe_id]`.
+  - Export GraphRAG (`exports/<uid>/graphrag/` et opt-in dans `emit_artifacts`
+    quand `capabilities.graph_rag.enabled` est actif) : `entities.jsonl`,
+    `relations.jsonl`, `mentions.jsonl`, `graphrag_bundle.json` (index
+    `chunk_links`), `knowledge_graph.json` et `knowledge_graph.html` interactif
+    hors ligne.
+- **Intégration UI (`UI/dialogs/llm_budget_box.py`, `UI/graph/`)** :
+  - Formulaire de budget LLM/GraphRAG (`endpoint`, `model`, `max_tokens`,
+    `max_calls`, `vram_gb`) dans *Capacités de l'Univers*, activé uniquement
+    lorsque *GraphRAG activé (budget)* est coché.
+  - Sélecteur **« Sources / Connaissances (GraphRAG) »** et bouton asynchrone
+    **« Extraire connaissances »** (`SemanticExtractWorker` sur `QThread`) dans
+    l'onglet *Graphe*, avec catégories dynamiques (*Personnages*, *Lieux*,
+    *Factions*, *Concepts*, *Chronologie*) et rendu HTML Graphify enrichi.

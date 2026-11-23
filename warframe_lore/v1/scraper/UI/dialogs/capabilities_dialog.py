@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 
 from ...capabilities.models import UniverseCapabilities
 from ...capabilities.modes import CRAWL_MODES, MODES_BY_KEY
+from .llm_budget_box import LlmBudgetBox
 from .responsive import fit_to_screen, scrollable_dialog_body
 from .tag_editor import TagEditor
 
@@ -42,11 +43,15 @@ class CapabilitiesDialog(QDialog):
         self.setWindowTitle("Capacités de l'Univers")
         self.setModal(True)
         self.result_capabilities: dict[str, Any] | None = None
+        self._base_caps = capabilities
         config = UniverseCapabilities.from_dict(capabilities)
         outer, body = scrollable_dialog_body(self)
         self._build_mode_box(body, config)
         self._build_budget_box(body, config)
         self._build_toggles(body, config)
+        self.llm_budget_box = LlmBudgetBox(config.graph_rag, self)
+        self._toggles["graph_rag"].toggled.connect(self.llm_budget_box.setEnabled)
+        body.addWidget(self.llm_budget_box)
         buttons = QDialogButtonBox()
         role = QDialogButtonBox.ButtonRole
         save_btn = buttons.addButton("Enregistrer", role.AcceptRole)
@@ -126,7 +131,7 @@ class CapabilitiesDialog(QDialog):
             self.mode_help.setText(preset.description)
 
     def _save(self) -> None:
-        config = UniverseCapabilities.from_dict({})
+        config = UniverseCapabilities.from_dict(self._base_caps)
         config.crawl.mode = str(self.mode_combo.currentData() or "custom")
         config.crawl.topic_tags = self.tag_editor.tags()
         for name, spinbox in self._spinboxes.items():
@@ -134,5 +139,6 @@ class CapabilitiesDialog(QDialog):
         config.rag.enabled = self._toggles["rag"].isChecked()
         config.watch.enabled = self._toggles["watch"].isChecked()
         config.graph_rag.enabled = self._toggles["graph_rag"].isChecked()
+        self.llm_budget_box.apply_to(config.graph_rag)
         self.result_capabilities = config.to_dict()
         self.accept()

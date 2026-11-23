@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections import defaultdict, deque
 from typing import Any
 from urllib.parse import urlsplit
@@ -65,10 +66,12 @@ def graph_layers(graph: dict[str, Any]) -> list[list[dict[str, Any]]]:
 def layout_positions(graph: dict[str, Any]) -> dict[str, tuple[float, float]]:
     """Return collision-free centres wrapping wide layers into balanced rows."""
     layers = graph_layers(graph)
+    total = sum(len(layer) for layer in layers)
+    per_row = max(MAX_PER_ROW, min(14, int(math.sqrt(max(total, 1)) * 1.4)))
     rows: list[list[dict[str, Any]]] = []
     for layer in layers:
-        for start in range(0, len(layer), MAX_PER_ROW):
-            rows.append(layer[start : start + MAX_PER_ROW])
+        for start in range(0, len(layer), per_row):
+            rows.append(layer[start : start + per_row])
     columns = max((len(row) for row in rows), default=1) or 1
     row_width = columns * CELL_WIDTH
     positions: dict[str, tuple[float, float]] = {}

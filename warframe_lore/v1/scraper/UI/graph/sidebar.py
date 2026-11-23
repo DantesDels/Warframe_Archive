@@ -23,6 +23,13 @@ KIND_ORDER = (
     ("Document", "Documents"),
     ("Candidate", "Candidats"),
 )
+SEMANTIC_KIND_ORDER = (
+    ("Person", "Personnages"),
+    ("Location", "Lieux"),
+    ("Faction", "Factions"),
+    ("Concept", "Concepts"),
+    ("Timeline", "Chronologie"),
+)
 
 
 class GraphSidebar(QWidget):
@@ -37,6 +44,7 @@ class GraphSidebar(QWidget):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
+        self._on_filter = on_filter
         self.setMinimumWidth(210)
         self.setMaximumWidth(320)
         layout = QVBoxLayout(self)
@@ -50,12 +58,40 @@ class GraphSidebar(QWidget):
         self.search.textChanged.connect(on_search)
         layout.addWidget(self.search)
 
-        counts = _kind_counts(graph)
-        box = QGroupBox("Catégories")
-        box_lay = QVBoxLayout(box)
-        box_lay.setSpacing(4)
+        self._cat_box = QGroupBox("Catégories")
+        self._cat_lay = QVBoxLayout(self._cat_box)
+        self._cat_lay.setSpacing(4)
         self.checks: dict[str, QCheckBox] = {}
-        for kind, label in KIND_ORDER:
+        layout.addWidget(self._cat_box)
+
+        info_box = QGroupBox("Détails du nœud")
+        info_lay = QVBoxLayout(info_box)
+        self.detail = QPlainTextEdit()
+        self.detail.setObjectName("GraphNodeDetail")
+        self.detail.setReadOnly(True)
+        info_lay.addWidget(self.detail, 1)
+        layout.addWidget(info_box, 1)
+
+        self.stats = QLabel()
+        self.stats.setObjectName("MutedHint")
+        layout.addWidget(self.stats)
+        self.set_graph(graph)
+
+    def set_graph(self, graph: dict[str, Any]) -> None:
+        """Rebuild category checkboxes and stats for a new graph dataset."""
+        while self._cat_lay.count():
+            item = self._cat_lay.takeAt(0)
+            widget = item.widget() if item else None
+            if widget is not None:
+                widget.deleteLater()
+        self.checks.clear()
+        counts = _kind_counts(graph)
+        mode = str((graph.get("meta") or {}).get("mode", ""))
+        semantic_present = mode == "knowledge" or any(
+            k in counts for k, _ in SEMANTIC_KIND_ORDER
+        )
+        order = SEMANTIC_KIND_ORDER if semantic_present else KIND_ORDER
+        for kind, label in order:
             cb = QCheckBox(f"{label} ({counts.get(kind, 0)})")
             cb.setChecked(True)
             color = NODE_COLORS.get(kind, "#64748b")
@@ -64,25 +100,13 @@ class GraphSidebar(QWidget):
                 f"QCheckBox::indicator:checked {{ background: {color};"
                 f" border-color: {color}; }}"
             )
-            cb.toggled.connect(lambda _c: on_filter(self.enabled_kinds()))
-            box_lay.addWidget(cb)
+            cb.toggled.connect(lambda _c: self._on_filter(self.enabled_kinds()))
+            self._cat_lay.addWidget(cb)
             self.checks[kind] = cb
-        layout.addWidget(box)
-
-        info_box = QGroupBox("Détails du nœud")
-        info_lay = QVBoxLayout(info_box)
-        self.detail = QPlainTextEdit()
-        self.detail.setObjectName("GraphNodeDetail")
-        self.detail.setReadOnly(True)
         self.detail.setPlainText("Cliquez sur un nœud pour voir ses détails.")
-        info_lay.addWidget(self.detail, 1)
-        layout.addWidget(info_box, 1)
-
         nodes_n = len(graph.get("nodes", []))
         edges_n = len(graph.get("edges", []))
-        self.stats = QLabel(f"{nodes_n} nœuds · {edges_n} liens")
-        self.stats.setObjectName("MutedHint")
-        layout.addWidget(self.stats)
+        self.stats.setText(f"{nodes_n} nœuds · {edges_n} liens")
 
     def enabled_kinds(self) -> set[str]:
         """Return the set of currently checked node kinds."""

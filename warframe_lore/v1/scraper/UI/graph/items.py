@@ -15,6 +15,11 @@ NODE_COLORS = {
     "Source": "#22c55e",
     "Document": "#f59e0b",
     "Candidate": "#a855f7",
+    "Person": "#ec4899",
+    "Location": "#14b8a6",
+    "Faction": "#f97316",
+    "Concept": "#6366f1",
+    "Timeline": "#eab308",
     "Unknown": "#64748b",
 }
 LABEL_COLOR = "#f1f5f9"
@@ -30,11 +35,25 @@ def full_location(node: dict[str, Any]) -> str:
 def node_tooltip(node: dict[str, Any]) -> str:
     """Describe the node without truncation for the hover tooltip."""
     attrs = node.get("attrs") or {}
-    lines = [f"Type : {node.get('kind', '')}", f"URL : {full_location(node)}"]
+    lines = [f"Type : {node.get('kind', '')}"]
+    loc = full_location(node)
+    if attrs.get("location") or attrs.get("url"):
+        lines.append(f"URL : {loc}")
+    else:
+        lines.append(f"Nom : {loc}")
     if attrs.get("status"):
         lines.append(f"Statut : {attrs['status']}")
     if attrs.get("score") is not None:
         lines.append(f"Pertinence : {attrs['score']}")
+    if attrs.get("aliases"):
+        lines.append(f"Alias : {', '.join(attrs['aliases'][:6])}")
+    if attrs.get("taxonomy"):
+        lines.append(f"Taxonomie : {', '.join(attrs['taxonomy'][:5])}")
+    if attrs.get("mentions") is not None:
+        ext = attrs.get("extractor", "rules")
+        lines.append(f"Mentions : {attrs['mentions']} ({ext})")
+    if attrs.get("chunk_ids"):
+        lines.append(f"Chunks : {', '.join(attrs['chunk_ids'][:4])}")
     return "\n".join(lines)
 
 

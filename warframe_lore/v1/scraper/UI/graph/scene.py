@@ -16,16 +16,30 @@ EDGE_COLORS = {
     "PRODUCED": "#f59e0b",
     "HAS_CANDIDATE": "#a855f7",
     "HAS_DOCUMENT": "#64748b",
+    "BELONGS_TO": "#f97316",
+    "LOCATED_IN": "#14b8a6",
+    "ALLIED_WITH": "#22c55e",
+    "OPPOSES": "#ef4444",
+    "CREATED_BY": "#ec4899",
+    "PART_OF": "#6366f1",
+    "OCCURRED_IN": "#eab308",
+    "RELATED_TO": "#94a3b8",
 }
 NODE_RADII = {
     "Universe": 15.0,
     "Source": 12.5,
     "Document": 10.0,
     "Candidate": 10.0,
+    "Person": 12.0,
+    "Location": 12.0,
+    "Faction": 13.0,
+    "Concept": 10.5,
+    "Timeline": 11.5,
 }
 
 
 _MAX_SCENE_NODES = 240
+_MAX_SEMANTIC_SCENE_NODES = 120
 
 
 def filter_graph(
@@ -35,11 +49,19 @@ def filter_graph(
     nodes = list(graph.get("nodes", []))
     if allowed_kinds:
         nodes = [n for n in nodes if str(n.get("kind", "")) in allowed_kinds]
-    if len(nodes) > _MAX_SCENE_NODES:
-        priority = {"Universe": 0, "Source": 1, "Candidate": 2, "Document": 3}
-        nodes = sorted(
-            nodes, key=lambda n: priority.get(str(n.get("kind", "")), 4)
-        )[:_MAX_SCENE_NODES]
+    is_semantic = str((graph.get("meta") or {}).get("mode", "")) == "knowledge"
+    cap = _MAX_SEMANTIC_SCENE_NODES if is_semantic else _MAX_SCENE_NODES
+    if len(nodes) > cap:
+        if is_semantic:
+            nodes = sorted(
+                nodes,
+                key=lambda n: -int((n.get("attrs") or {}).get("mentions", 0)),
+            )[:cap]
+        else:
+            priority = {"Universe": 0, "Source": 1, "Candidate": 2, "Document": 3}
+            nodes = sorted(
+                nodes, key=lambda n: priority.get(str(n.get("kind", "")), 4)
+            )[:cap]
     ids = {str(n.get("id", "")) for n in nodes}
     edges = [
         e for e in graph.get("edges", [])

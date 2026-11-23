@@ -14,12 +14,15 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...gaps import gaps_for
 from ..formatting import display_universe_status
 from .data.tabs import data_view
+from .gaps import gaps_view
 from .graph_view import graph_view
 from .sources_view import SourcesView
 from .tabs_candidates import candidates_view
 from .tabs_content import documents_view, runs_view
+from .watch import watch_view
 
 
 class DetailPane(QWidget):
@@ -50,6 +53,7 @@ class DetailPane(QWidget):
         layout.addSpacing(8)
         layout.addWidget(self.body, 1)
         self._current: tuple[Any, dict[str, Any], Callable[[], None]] | None = None
+        self._active_tab_index = 0
         self.clear()
 
     def clear(self) -> None:
@@ -102,7 +106,19 @@ class DetailPane(QWidget):
         )
         tabs.addTab(data_view(workspace, universe, on_change), "Data")
         tabs.addTab(graph_view(workspace, universe), "Graphe")
+        tabs.addTab(watch_view(workspace, universe, on_change), "Veille")
+        gaps = gaps_for(workspace, uid)
+        tabs.addTab(
+            gaps_view(workspace, universe, on_change), f"Lacunes ({len(gaps)})"
+        )
+        if 0 <= self._active_tab_index < tabs.count():
+            tabs.setCurrentIndex(self._active_tab_index)
+        tabs.currentChanged.connect(self._remember_tab)
         self._set_content(tabs)
+
+    def _remember_tab(self, index: int) -> None:
+        if index >= 0:
+            self._active_tab_index = index
 
     def _edit_capabilities(self) -> None:
         """Open the capabilities editor for the current universe."""

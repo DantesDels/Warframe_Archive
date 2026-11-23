@@ -33,15 +33,17 @@ class HtmlConnector:
         url = str(source.get("location", "")).strip()
         prefix = infer_path_prefix(url, str(source.get("path_prefix") or ""))
         excludes = tuple(str(x) for x in (source.get("exclude_paths") or ()))
-        return collect_html(url, ctx, path_prefix=prefix, extra_excludes=excludes)
+        cfg = source.get("config") if isinstance(source.get("config"), dict) else {}
+        selector = str(cfg.get("contentSelector") or "").strip()
+        return collect_html(
+            url, ctx, path_prefix=prefix, extra_excludes=excludes,
+            content_selector=selector,
+        )
 
 
 def collect_html(
-    url: str,
-    ctx: ConnectorContext,
-    *,
-    path_prefix: str = "",
-    extra_excludes: tuple[str, ...] = (),
+    url: str, ctx: ConnectorContext, *, path_prefix: str = "",
+    extra_excludes: tuple[str, ...] = (), content_selector: str = "",
 ) -> list[CollectedPage]:
     limits = ctx.limits
     max_pages = max(1, int(limits.get("max_pages_per_source", 1)))
@@ -66,11 +68,9 @@ def collect_html(
         resp = _fetch_html(ctx, current, use_cache)
         if resp is None:
             continue
-        page, html_body = _build_page(resp)
-        matched = matches_topic_tags(
-            tags, page.url, page.title, page.content[:2000]
-        )
-        if depth == 0 or matched:
+        page, html_body = _build_page(resp, content_selector=content_selector)
+        ok_tag = matches_topic_tags(tags, page.url, page.title, page.content[:2000])
+        if depth == 0 or ok_tag:
             pages.append(page)
             reporter.page(len(pages), max_pages, str(resp.url))
         if depth >= max_depth or not html_body:
@@ -79,10 +79,8 @@ def collect_html(
             if link.rstrip("/") in seen:
                 continue
             if keep_crawl_url(link, url, prefix=prefix, extra_excludes=extra_excludes):
-                if tags and matches_topic_tags(tags, link):
-                    queue.insert(0, (link, depth + 1))
-                else:
-                    queue.append((link, depth + 1))
+                idx = 0 if (tags and matches_topic_tags(tags, link)) else len(queue)
+                queue.insert(idx, (link, depth + 1))
     return pages
 
 
@@ -93,7 +91,9 @@ def _fetch_html(ctx: ConnectorContext, url: str, use_cache: bool) -> Any | None:
         return None
 
 
-def _build_page(resp: Any) -> tuple[CollectedPage, str]:
+def _build_page(
+    resp: Any, *, content_selector: str = ""
+) -> tuple[CollectedPage, str]:
     ctype = str(getattr(resp, "content_type", "") or "").lower()
     raw = bytes(getattr(resp, "content", b""))
     body = raw.decode(getattr(resp, "encoding", None) or "utf-8", errors="replace")
@@ -107,7 +107,7 @@ def _build_page(resp: Any) -> tuple[CollectedPage, str]:
             from_cache=from_cache, raw=raw, content_type=ctype,
         ), ""
     title = html_title(body) or urlparse(resp_url).netloc
-    markdown = markdown_to_text(body)
+    markdown = _extract_markdown(body, content_selector)
     language = detect_language(resp_url, markdown, html_language(body))
     sections = split_sections(title, markdown)
     page = CollectedPage(
@@ -119,3 +119,13 @@ def _build_page(resp: Any) -> tuple[CollectedPage, str]:
         },
     )
     return page, body
+
+
+def _extract_markdown(html_body: str, selector: str) -> str:
+    if selector:
+        from ....self_heal.sandbox import extract_with_selector
+
+        selected = extract_with_selector(html_body, selector)
+        if selected:
+            return selected
+    return markdown_to_text(html_body)

@@ -30,6 +30,7 @@ def default_registry() -> ConnectorRegistry:
     from .local_directory import LocalDirectoryConnector
     from .lzma import LzmaConnector
     from .mediawiki import MediaWikiConnector
+    from .multimodal import MultimodalConnector
     from .playwright import PlaywrightConnector
     from .rest import RestConnector
     from .sitemap import SitemapConnector
@@ -37,6 +38,7 @@ def default_registry() -> ConnectorRegistry:
     registry = ConnectorRegistry()
     connectors = (
         LocalDirectoryConnector(),
+        MultimodalConnector(),
         DocumentConnector(),
         LzmaConnector(),
         SitemapConnector(),

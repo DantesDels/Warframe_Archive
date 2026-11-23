@@ -65,6 +65,9 @@ def merge_caps(
             merged[key] = crawl[key]
     if "mode" in crawl:
         merged["crawl_mode"] = crawl["mode"]
+    for opt_key in ("multimodal", "self_heal"):
+        if opt_key in (caps or {}) and opt_key not in merged:
+            merged[opt_key] = caps[opt_key]
     if "source_timeout_seconds" not in merged:
         pages = int(merged.get("max_pages_per_source", 25) or 25)
         if pages > 100:

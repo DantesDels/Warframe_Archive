@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
+
+from .models import FetchResponse
 
 
 def cache_key(url: str, params: dict[str, Any] | None, headers: dict[str, str]) -> str:
@@ -21,6 +23,20 @@ def conditional_headers(
     if cached.get("last_modified"):
         req["If-Modified-Since"] = cached["last_modified"]
     return req
+
+
+def from_cached(
+    cache: Any, key: str, cached: dict[str, Any], url: str
+) -> FetchResponse:
+    return FetchResponse(
+        str(cached.get("url", url)),
+        200,
+        cache.get_content(key) or b"",
+        str(cached.get("content_type", "")),
+        cast(dict[str, str], cached.get("headers", {})),
+        cast(str | None, cached.get("encoding")),
+        from_cache=True,
+    )
 
 
 def store(cache: Any, key: str, resp: Any) -> None:

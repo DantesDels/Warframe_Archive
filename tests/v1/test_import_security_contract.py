@@ -82,6 +82,30 @@ class ScanImportTests(unittest.TestCase):
         self.assertFalse(blocked.allowed)
         self.assertTrue(allowed.allowed)
 
+    def test_payload_hook_allows_dot_com_roots_and_web_documents(self):
+        for url, ctype in (
+            ("https://wiki.warframe.com/", "text/html"),
+            ("https://starwars.fandom.com/", "text/html"),
+            ("https://example.com/sitemap.xml", "application/xml"),
+            ("https://example.com/lore/index.html", "text/html"),
+            ("https://example.com/guide.pdf", "application/pdf"),
+        ):
+            with self.subTest(url=url):
+                res = scan_payload(url, content=b"<html><body>ok</body></html>",
+                                   content_type=ctype)
+                self.assertTrue(res.allowed, f"{url} was blocked: {res.reason}")
+
+    def test_payload_hook_still_blocks_remote_executables_and_archives(self):
+        for url in (
+            "https://example.com/download/setup.exe?v=1",
+            "https://example.com/files/archive.zip",
+            "https://example.com/static/app.js",
+            "https://example.com/macro.docm",
+        ):
+            with self.subTest(url=url):
+                res = scan_payload(url, content=b"data")
+                self.assertFalse(res.allowed, f"{url} should be blocked")
+
 
 class UiCompatibilityTests(unittest.TestCase):
     def test_validate_import_delegates_to_scanner(self):

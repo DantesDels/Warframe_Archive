@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.parse import urlparse
 
 SCRIPT_EXTENSIONS = {
     ".bat", ".cmd", ".com", ".cpl", ".exe", ".gadget", ".hta", ".inf",
@@ -51,5 +52,8 @@ def classify_suffix(suffix: str) -> tuple[str, str] | None:
 
 
 def path_suffix(location: str) -> str:
-    """Extract a normalized suffix from a local path-like location."""
-    return Path(location).suffix.lower()
+    """Extract a normalized suffix from a local path or URL path component."""
+    value = (location or "").strip()
+    if value.lower().startswith(("http://", "https://")):
+        return Path(urlparse(value).path).suffix.lower()
+    return Path(value).suffix.lower()

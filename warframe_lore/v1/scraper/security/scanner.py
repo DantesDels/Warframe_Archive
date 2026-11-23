@@ -61,8 +61,10 @@ def scan_payload(name: str, *, content: bytes = b"", content_type: str = "",
                  qr_detector: QrDetector | None = None) -> ScanResult:
     """Fetch-time hook to validate a named payload before ingestion."""
     verdict = classify_suffix(path_suffix(name))
-    if verdict and verdict[0] != "blocked_image_qr_check":
-        return _blocked(name, verdict[0], verdict[1])
+    remote_allowed = {"blocked_image_qr_check", "blocked_active_content"}
+    if verdict and not (_is_remote(name) and verdict[0] in remote_allowed):
+        if verdict[0] != "blocked_image_qr_check":
+            return _blocked(name, verdict[0], verdict[1])
     ctype = (content_type or "").lower()
     if _looks_executable(content, ctype):
         return _blocked(name, "blocked_binary", "Contenu exécutable/binaire bloqué.")

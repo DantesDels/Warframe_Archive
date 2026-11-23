@@ -23,9 +23,22 @@ from warframe_lore.v1.scraper.ports.outbound.sources import (
     CollectedPage,
     ConnectorContext,
 )
+from warframe_lore.v1.scraper.storage import read_json
 from warframe_lore.v1.scraper.UI.artifacts import emit_artifacts
 from warframe_lore.v1.scraper.UI.models import UniverseWorkspace
 from warframe_lore.v1.scraper.use_cases.apply_result import apply_result
+
+
+class JsonStorageTests(unittest.TestCase):
+    def test_corrupt_file_falls_back_to_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "workspace.json"
+            path.write_text("{invalid json", encoding="utf-8")
+            self.assertEqual(read_json(path, {"fallback": True}), {"fallback": True})
+
+    def test_missing_file_falls_back_to_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(read_json(Path(tmp) / "absent.json", []), [])
 
 
 class ConnectorRegistryTests(unittest.TestCase):

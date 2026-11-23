@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import ipaddress
-import socket
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
+from ..observability.network import resolve_host
 from .models import ScanResult
 from .scanner import scan_payload as scan_payload_content
 
@@ -63,7 +63,7 @@ def _is_private_host(host: str) -> bool:
     if lowered == "localhost":
         return True
     try:
-        infos = socket.getaddrinfo(host, None)
+        infos = resolve_host(host)
     except Exception:
         return False
     for info in infos:

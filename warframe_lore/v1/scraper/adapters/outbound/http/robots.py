@@ -5,6 +5,10 @@ from __future__ import annotations
 from urllib.parse import urlparse
 from urllib.robotparser import RobotFileParser
 
+import requests
+
+from ....observability.network import HTTP_TIMEOUT
+
 
 class RobotsPolicy:
     """Caches robots.txt parsers per host."""
@@ -36,10 +40,13 @@ class RobotsPolicy:
         base = f"{parsed.scheme}://{parsed.netloc}"
         if base in self._parsers:
             return self._parsers[base]
+        robots_url = f"{base}/robots.txt"
         rp = RobotFileParser()
-        rp.set_url(f"{base}/robots.txt")
+        rp.set_url(robots_url)
         try:
-            rp.read()
+            response = requests.get(robots_url, timeout=HTTP_TIMEOUT)
+            response.raise_for_status()
+            rp.parse(response.text.splitlines())
         except Exception:
             self._parsers[base] = None
             return None

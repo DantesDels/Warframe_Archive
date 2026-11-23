@@ -1,4 +1,4 @@
-"""Pre-execution dialog collecting the launch plan."""
+"""Responsive pre-execution dialog collecting the launch plan."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from dataclasses import replace
 
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...settings.models import OUTPUT_FORMATS, LaunchPlan, Settings
+from .responsive import fit_to_screen, scrollable_dialog_body
 
 FORMAT_LABELS = {
     "json": "JSON",
@@ -27,17 +29,21 @@ FORMAT_LABELS = {
     "sql": "SQL",
     "nosql": "NoSQL",
 }
+CRAWL_PROFILES: tuple[tuple[str, int | None, int | None], ...] = (
+    ("Personnalisé", None, None),
+    ("Petite recherche (30 pages, prof. 1)", 30, 1),
+    ("Recherche thématique / ciblée (500 pages, prof. 3)", 500, 3),
+    ("Recherche globale (1 000 pages, prof. 3)", 1000, 3),
+    ("Recherche poussée (25 000 pages, prof. 6)", 25000, 6),
+)
 
 
 class PreflightDialog(QDialog):
     """Ask for thresholds, outputs and RAG coupling before launch."""
 
     def __init__(
-        self,
-        parent: QWidget | None,
-        settings: Settings,
-        universe_ids: tuple[str, ...],
-        candidate_count: int,
+        self, parent: QWidget | None, settings: Settings,
+        universe_ids: tuple[str, ...], candidate_count: int,
     ) -> None:
         super().__init__(parent)
         self.universe_ids = universe_ids
@@ -45,71 +51,75 @@ class PreflightDialog(QDialog):
         self.selected_plan: LaunchPlan | None = None
         self.setWindowTitle("Pré-exécution")
         self.setModal(True)
-        self.setMinimumWidth(420)
-        layout = QVBoxLayout(self)
-        layout.setSpacing(10)
-        layout.addWidget(
-            QLabel(f"{len(universe_ids)} Univers - {candidate_count} candidats actifs")
-        )
-        form = QFormLayout()
-        self.relevance = QSpinBox()
-        self.relevance.setRange(0, 100)
-        self.relevance.setValue(settings.min_relevance)
-        form.addRow("Score de pertinence minimal (n %)", self.relevance)
-        self.max_pages = QSpinBox()
-        self.max_pages.setRange(1, 500)
-        self.max_pages.setValue(settings.max_pages_per_source)
-        form.addRow("Pages max par source", self.max_pages)
-        self.max_depth = QSpinBox()
-        self.max_depth.setRange(0, 5)
-        self.max_depth.setValue(settings.max_depth)
-        form.addRow("Profondeur de crawl", self.max_depth)
-        layout.addLayout(form)
-        self.same_host = QCheckBox("Limiter au même domaine")
-        self.same_host.setChecked(settings.same_host_only)
-        layout.addWidget(self.same_host)
-        self.use_cache = QCheckBox("Cache HTTP conditionnel")
-        self.use_cache.setChecked(settings.use_cache)
-        layout.addWidget(self.use_cache)
-        self.incremental = QCheckBox("Incrémental (ignorer contenu inchangé)")
-        self.incremental.setChecked(settings.incremental)
-        layout.addWidget(self.incremental)
-        self.expand_manifests = QCheckBox("Développer les index/manifests")
-        self.expand_manifests.setChecked(settings.expand_manifests)
-        layout.addWidget(self.expand_manifests)
-        box = QGroupBox("Formats de sortie (multi-sélection)")
-        box_layout = QVBoxLayout(box)
-        self.formats: dict[str, QCheckBox] = {}
-        for name in OUTPUT_FORMATS:
-            label = FORMAT_LABELS.get(name, name)
-            checkbox = QCheckBox(label)
-            checkbox.setChecked(name in settings.output_formats)
-            self.formats[name] = checkbox
-            box_layout.addWidget(checkbox)
-        layout.addWidget(box)
-        self.rag = QCheckBox("Couplage RAG (découpage en chunks)")
-        self.rag.setChecked(settings.rag_coupling)
-        layout.addWidget(self.rag)
+        outer, body = scrollable_dialog_body(self)
+        summary = f"{len(universe_ids)} Univers - {candidate_count} candidats actifs"
+        body.addWidget(QLabel(summary))
+        self._build_form(body, settings)
+        self._build_options(body, settings)
+        self._build_formats(body, settings)
+        self.rag = _check("Couplage RAG (découpage en chunks)", settings.rag_coupling)
+        body.addWidget(self.rag)
         buttons = QDialogButtonBox()
-        launch_btn = buttons.addButton("Lancer", QDialogButtonBox.ButtonRole.AcceptRole)
-        cancel_btn = buttons.addButton(
-            "Annuler", QDialogButtonBox.ButtonRole.RejectRole
+        role = QDialogButtonBox.ButtonRole
+        buttons.addButton("Lancer", role.AcceptRole).clicked.connect(self._launch)
+        buttons.addButton("Annuler", role.RejectRole).clicked.connect(self.reject)
+        outer.addWidget(buttons)
+        fit_to_screen(self, ideal_width=480, ideal_height=620)
+
+    def _build_form(self, body: QVBoxLayout, settings: Settings) -> None:
+        form = QFormLayout()
+        self.profile = QComboBox()
+        for label, _, _ in CRAWL_PROFILES:
+            self.profile.addItem(label)
+        self.profile.currentIndexChanged.connect(self._apply_profile)
+        form.addRow("Profil de collecte", self.profile)
+        self.relevance = _spin(0, 100, settings.min_relevance)
+        form.addRow("Score de pertinence minimal (n %)", self.relevance)
+        self.max_pages = _spin(1, 50000, settings.max_pages_per_source)
+        form.addRow("Pages max par source", self.max_pages)
+        self.max_depth = _spin(0, 10, settings.max_depth)
+        form.addRow("Profondeur de crawl", self.max_depth)
+        body.addLayout(form)
+
+    def _build_options(self, body: QVBoxLayout, settings: Settings) -> None:
+        self.same_host = _check("Limiter au même domaine", settings.same_host_only)
+        self.use_cache = _check("Cache HTTP conditionnel", settings.use_cache)
+        self.incremental = _check(
+            "Incrémental (ignorer contenu inchangé)", settings.incremental
         )
-        launch_btn.clicked.connect(self._launch)
-        cancel_btn.clicked.connect(self.reject)
-        layout.addWidget(buttons)
+        self.expand_manifests = _check(
+            "Développer les index/manifests", settings.expand_manifests
+        )
+        for box in (
+            self.same_host, self.use_cache, self.incremental, self.expand_manifests,
+        ):
+            body.addWidget(box)
+
+    def _build_formats(self, body: QVBoxLayout, settings: Settings) -> None:
+        box = QGroupBox("Formats de sortie (multi-sélection)")
+        lay = QVBoxLayout(box)
+        self.formats = {
+            n: _check(FORMAT_LABELS.get(n, n), n in settings.output_formats)
+            for n in OUTPUT_FORMATS
+        }
+        for cb in self.formats.values():
+            lay.addWidget(cb)
+        body.addWidget(box)
+
+    def _apply_profile(self, index: int) -> None:
+        if 0 <= index < len(CRAWL_PROFILES):
+            _, pages, depth = CRAWL_PROFILES[index]
+            if pages is not None:
+                self.max_pages.setValue(pages)
+            if depth is not None:
+                self.max_depth.setValue(depth)
 
     def _launch(self) -> None:
-        formats = tuple(
-            str(name) for name, cb in self.formats.items() if bool(cb.isChecked())
-        )
+        formats = tuple(n for n, cb in self.formats.items() if cb.isChecked())
         try:
-            base = self._base_settings
             settings = replace(
-                base,
-                min_relevance=self.relevance.value(),
-                output_formats=formats,
-                rag_coupling=self.rag.isChecked(),
+                self._base_settings, min_relevance=self.relevance.value(),
+                output_formats=formats, rag_coupling=self.rag.isChecked(),
                 max_pages_per_source=self.max_pages.value(),
                 max_depth=self.max_depth.value(),
                 same_host_only=self.same_host.isChecked(),
@@ -124,11 +134,22 @@ class PreflightDialog(QDialog):
         self.accept()
 
 
+def _spin(low: int, high: int, value: int) -> QSpinBox:
+    box = QSpinBox()
+    box.setRange(low, high)
+    box.setValue(value)
+    return box
+
+
+def _check(label: str, checked: bool) -> QCheckBox:
+    box = QCheckBox(label)
+    box.setChecked(checked)
+    return box
+
+
 def open_preflight(
-    parent: QWidget | None,
-    settings: Settings,
-    universe_ids: tuple[str, ...],
-    candidate_count: int,
+    parent: QWidget | None, settings: Settings,
+    universe_ids: tuple[str, ...], candidate_count: int,
 ) -> LaunchPlan | None:
     dialog = PreflightDialog(parent, settings, universe_ids, candidate_count)
     dialog.exec()

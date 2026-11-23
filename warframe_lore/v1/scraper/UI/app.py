@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from PySide6.QtGui import QCloseEvent, QKeySequence, QShortcut
-from PySide6.QtWidgets import QMainWindow, QMessageBox, QStatusBar
+from PySide6.QtWidgets import QMainWindow, QStatusBar
 
 if TYPE_CHECKING:
     from .execution_panel import ExecutionPanel
@@ -17,10 +17,11 @@ if TYPE_CHECKING:
 from ..settings import SettingsStore
 from ..warframe_seeds import seed_warframe_sources
 from .actions import commands
-from .dialogs import prompt_universe_name
 from .formatting import display_universe_status
-from .runner_ui import cleanup_execution, handle_finished, start_execution
-from .style import app_stylesheet
+from .runner_ui import handle_finished, start_execution
+from .runtime.app_lifecycle import start_graphql as _start_graphql
+from .runtime.app_lifecycle import stop_services as _stop_services
+from .style import apply_theme
 from .workspace import WorkshopWorkspace
 
 
@@ -44,32 +45,19 @@ class AtelierApp(QMainWindow):
         self._worker: Any = None
         self._graphql_handle: Any = None
         self.setWindowTitle("Atelier v1 — Univers")
-        self.resize(1200, 760)
-        self.setStyleSheet(app_stylesheet())
+        self.setMinimumSize(720, 500)
+        from .dialogs.responsive import fit_to_screen
+
+        fit_to_screen(self, ideal_width=1200, ideal_height=760,
+                      width_ratio=0.92, height_ratio=0.88)
+        apply_theme(self)
         self._build_ui()
         self._bind_shortcuts()
         self.refresh()
-        self._start_graphql_if_enabled()
-
-    def _start_graphql_if_enabled(self) -> None:
-        settings = self.settings_store.load()
-        if not settings.graph_api_enabled:
-            return
-        try:
-            from ..graph.server import start_graphql_server
-
-            self._graphql_handle = start_graphql_server(
-                self.workspace,
-                host=settings.graph_api_host,
-                port=settings.graph_api_port,
-            )
-        except Exception as error:  # noqa: BLE001
-            self.status_bar.showMessage(f"GraphQL indisponible : {error}")
+        _start_graphql(self)
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        cleanup_execution(self)
-        if self._graphql_handle is not None:
-            self._graphql_handle.stop()
+        _stop_services(self)
         super().closeEvent(event)
 
     def _build_ui(self) -> None:
@@ -91,7 +79,14 @@ class AtelierApp(QMainWindow):
 
     def _bind_shortcuts(self) -> None:
         sc = QShortcut(QKeySequence("F2"), self)
-        sc.activated.connect(self.rename_universe)
+        sc.activated.connect(self._shortcut_rename)
+
+    def _shortcut_rename(self) -> None:
+        from PySide6.QtWidgets import QApplication, QLineEdit, QTextEdit
+
+        if isinstance(QApplication.focusWidget(), (QLineEdit, QTextEdit)):
+            return
+        self.rename_universe()
 
     def selected_id(self) -> str | None:
         return cast(str | None, self.sidebar.selected_id())
@@ -130,37 +125,10 @@ class AtelierApp(QMainWindow):
             self.header.set_context(None, count, "Prêt")
 
     def create_universe(self) -> None:
-        name = prompt_universe_name(
-            self,
-            title="Nouvel Univers",
-            used_names=set(cast(list[str], self.workspace.names())),
-        )
-        if name:
-            universe = cast(dict[str, Any], self.workspace.create(name))
-            commands.apply_discovery(self, universe)
-            self.refresh(str(universe["id"]))
+        commands.create_universe(self)
 
     def rename_universe(self) -> None:
-        universe = cast(
-            dict[str, Any] | None, self.workspace.get(self.selected_id() or "")
-        )
-        if universe is None:
-            QMessageBox.information(
-                self, "Renommer", "Sélectionnez d'abord un Univers."
-            )
-            return
-        name = prompt_universe_name(
-            self,
-            title="Renommer l'Univers",
-            used_names=set(
-                cast(list[str], self.workspace.names(exclude=str(universe["id"])))
-            ),
-            initial=str(universe.get("name", "")),
-        )
-        if name:
-            self.workspace.rename(str(universe["id"]), name)
-            commands.apply_discovery(self, universe)
-            self.refresh(str(universe["id"]))
+        commands.rename_universe(self)
 
     def start_execution(self, plan: Any) -> None:
         start_execution(self, plan)

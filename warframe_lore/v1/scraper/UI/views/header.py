@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
 
 class HeaderBar(QFrame):
@@ -18,6 +18,10 @@ class HeaderBar(QFrame):
         self.title.setObjectName("HeaderTitle")
         self.selection = QLabel("SÉLECTION : —")
         self.selection.setObjectName("HeaderSelection")
+        self.selection.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred
+        )
+        self.selection.setMinimumWidth(0)
         self.meta = QLabel("• —")
         self.meta.setObjectName("HeaderMeta")
         self.meta.setContentsMargins(0, 0, 6, 0)

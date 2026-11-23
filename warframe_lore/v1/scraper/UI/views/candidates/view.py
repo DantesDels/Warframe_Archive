@@ -1,49 +1,86 @@
-"""Localized candidates table and its toolbar."""
+"""Compact, multi-selectable candidates curation tab with detail strip."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Any, cast
 
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from ...formatting import display_kind, display_percent, display_source_status
 from ..simple_table import SimpleTable
-from .actions import add_manual, apply_status, preview_children, remove_candidate
+from .toolbar import (
+    CandidateFilterProxy,
+    build_actions_bar,
+    build_filter_and_select_bar,
+)
 
 HEADERS = ["Emplacement", "Titre", "Type", "Pertinence", "État", "Preuve/score"]
-STATUS_ACTIONS = (
-    ("Activer", "active"),
-    ("Suspendre", "suspended"),
-    ("Blacklister", "blacklisted"),
-)
-TOOL_ACTIONS = (
-    ("Prévisualiser enfants", preview_children),
-    ("Supprimer", remove_candidate),
-    ("Ajout manuel", add_manual),
-)
+COMPACT_WIDTHS = {1: 155, 2: 86, 3: 78, 4: 88}
 
 
 def candidates_view(
     workspace: Any, universe: dict[str, Any], on_change: Callable[[], None]
 ) -> QWidget:
-    """Build the candidate list with stable sizing and French labels."""
+    """Build a compact, multi-selectable candidates curation view."""
     widget = QWidget()
     layout = QVBoxLayout(widget)
-    layout.addWidget(
-        QLabel("Sources découvertes en attente de validation ou filtrées.")
+    layout.setContentsMargins(6, 6, 6, 6)
+    layout.setSpacing(6)
+
+    table = SimpleTable(
+        HEADERS,
+        stretch_columns=[0],
+        elide_first=True,
+        left_columns={0, 1, 5},
+        multi_select=True,
+        column_widths=COMPACT_WIDTHS,
+        hidden_columns={5},
     )
-    table = SimpleTable(HEADERS, stretch_columns=[0], elide_first=True)
-    rows, ids = _rows(workspace, universe)
+    proxy = CandidateFilterProxy(table)
+    table.use_proxy(proxy)
+    rows, ids, by_id = _rows(workspace, universe)
     table.set_rows(rows, ids)
-    layout.addLayout(_actions(table, workspace, universe, on_change))
+
+    detail = QLabel()
+    detail.setObjectName("CandidateDetail")
+    detail.setWordWrap(True)
+    detail.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+    detail.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Minimum)
+    detail.setMinimumWidth(0)
+
+    actions_bar, bulk_buttons, count_label = build_actions_bar(
+        table, workspace, universe, on_change
+    )
+
+    def _sync_state() -> None:
+        selected = table.selected_ids()
+        visible = proxy.rowCount()
+        total = len(rows)
+        shown = f"{visible}" if visible == total else f"{visible}/{total}"
+        sel_txt = f"{len(selected)} sélectionné(s)" if selected else "aucune sélection"
+        count_label.setText(f"{shown} candidats · {sel_txt}")
+        for btn in bulk_buttons:
+            btn.setEnabled(bool(selected))
+        detail.setText(_detail_text(selected, by_id))
+
+    filter_bar, _, _ = build_filter_and_select_bar(table, proxy, _sync_state)
+    sel_model = table.selectionModel()
+    if sel_model is not None:
+        sel_model.selectionChanged.connect(lambda *_a: _sync_state())
+
+    layout.addLayout(filter_bar)
+    layout.addLayout(actions_bar)
     layout.addWidget(table, 1)
+    layout.addWidget(detail)
+    _sync_state()
     return widget
 
 
 def _rows(
     workspace: Any, universe: dict[str, Any]
-) -> tuple[list[list[str]], list[str]]:
+) -> tuple[list[list[str]], list[str], dict[str, dict[str, Any]]]:
     candidates = cast(
         list[dict[str, Any]], workspace.candidates_for(str(universe["id"]))
     )
@@ -58,31 +95,23 @@ def _rows(
         ]
         for item in candidates
     ]
-    return rows, [str(item.get("id", "")) for item in candidates]
+    ids = [str(item.get("id", "")) for item in candidates]
+    by_id = {str(item.get("id", "")): item for item in candidates}
+    return rows, ids, by_id
 
 
-def _actions(
-    table: SimpleTable,
-    workspace: Any,
-    universe: dict[str, Any],
-    on_change: Callable[[], None],
-) -> QHBoxLayout:
-    bar = QHBoxLayout()
-    for label, status in STATUS_ACTIONS:
-        button = QPushButton(label)
-        button.clicked.connect(
-            lambda _checked=False, value=status: apply_status(
-                table, workspace, on_change, value
-            )
+def _detail_text(selected: list[str], by_id: dict[str, dict[str, Any]]) -> str:
+    if not selected:
+        return (
+            "Astuce : cliquez « Tout sélectionner », Ctrl+clic ou Maj+clic pour "
+            "activer, suspendre, blacklister ou supprimer plusieurs candidats."
         )
-        bar.addWidget(button)
-    for label, action in TOOL_ACTIONS:
-        button = QPushButton(label)
-        button.clicked.connect(
-            lambda _checked=False, fn=action: fn(
-                table, workspace, universe, on_change
-            )
+    if len(selected) > 1:
+        return (
+            f"{len(selected)} candidats sélectionnés — utilisez Activer, Suspendre, "
+            "Blacklister ou Supprimer pour les traiter en lot."
         )
-        bar.addWidget(button)
-    bar.addStretch(1)
-    return bar
+    item = by_id.get(selected[0]) or {}
+    loc = str(item.get("location", ""))
+    proof = str(item.get("proof", "")).strip()
+    return f"URL : {loc}   |   Preuve : {proof}" if proof else f"URL : {loc}"

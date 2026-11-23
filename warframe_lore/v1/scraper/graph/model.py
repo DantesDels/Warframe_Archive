@@ -23,78 +23,39 @@ def build_graph(
 def _add_children(
     nodes: list[dict[str, Any]],
     edges: list[dict[str, Any]],
-    universe_id: str,
+    uid: str,
     workspace: Any,
 ) -> None:
-    for source in workspace.sources_for(universe_id):
-        source_id = str(source.get("id", ""))
-        nodes.append(
-            _node(
-                "Source",
-                source_id,
-                source.get("title") or source.get("location", ""),
-                {"location": source.get("location", "")},
-            )
-        )
-        edges.append(
-            _edge(
-                f"Universe:{universe_id}",
-                f"Source:{source_id}",
-                "HAS_SOURCE",
-            )
-        )
-    for document in workspace.documents_for(universe_id):
-        document_id = str(document.get("id", ""))
-        source_id = str(document.get("sourceId", ""))
-        nodes.append(
-            _node(
-                "Document",
-                document_id,
-                document.get("title", document_id),
-                {"url": document.get("url", ""), "sourceId": source_id},
-            )
-        )
-        edges.append(
-            _edge(
-                f"Universe:{universe_id}",
-                f"Document:{document_id}",
-                "HAS_DOCUMENT",
-            )
-        )
-        if source_id:
-            edges.append(
-                _edge(f"Source:{source_id}", f"Document:{document_id}", "PRODUCED")
-            )
-    for candidate in workspace.candidates_for(universe_id):
-        candidate_id = str(candidate.get("id", ""))
-        nodes.append(
-            _node(
-                "Candidate",
-                candidate_id,
-                candidate.get("title") or candidate.get("location", ""),
-                {
-                    "status": candidate.get("status", ""),
-                    "score": candidate.get("score", 0),
-                },
-            )
-        )
-        edges.append(
-            _edge(
-                f"Universe:{universe_id}",
-                f"Candidate:{candidate_id}",
-                "HAS_CANDIDATE",
-            )
-        )
+    for src in workspace.sources_for(uid):
+        sid = str(src.get("id", ""))
+        attrs = {
+            "location": src.get("location", ""), "kind": src.get("kind", ""),
+            "status": src.get("status", ""), "score": src.get("score", 0),
+        }
+        title = src.get("title") or src.get("location", "")
+        nodes.append(_node("Source", sid, title, attrs))
+        edges.append(_edge(f"Universe:{uid}", f"Source:{sid}", "HAS_SOURCE"))
+    for doc in workspace.documents_for(uid):
+        did, sid = str(doc.get("id", "")), str(doc.get("sourceId", ""))
+        attrs = {"url": doc.get("url", ""), "sourceId": sid}
+        nodes.append(_node("Document", did, doc.get("title", did), attrs))
+        edges.append(_edge(f"Universe:{uid}", f"Document:{did}", "HAS_DOCUMENT"))
+        if sid:
+            edges.append(_edge(f"Source:{sid}", f"Document:{did}", "PRODUCED"))
+    for cand in workspace.candidates_for(uid):
+        cid = str(cand.get("id", ""))
+        attrs = {"status": cand.get("status", ""), "score": cand.get("score", 0)}
+        label = cand.get("title") or cand.get("location", "")
+        nodes.append(_node("Candidate", cid, label, attrs))
+        edges.append(_edge(f"Universe:{uid}", f"Candidate:{cid}", "HAS_CANDIDATE"))
 
 
 def _node(
     kind: str, identifier: str, label: Any, attributes: dict[str, Any]
 ) -> dict[str, Any]:
     return {
-        "id": f"{kind}:{identifier}",
-        "kind": kind,
-        "label": str(label),
-        "attrs": attributes,
+        "id": f"{kind}:{identifier}", "kind": kind,
+        "label": str(label), "attrs": attributes,
     }
 
 
@@ -104,20 +65,15 @@ def _edge(source: str, target: str, relation: str) -> dict[str, Any]:
 
 def _unique_nodes(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen: set[str] = set()
-    unique: list[dict[str, Any]] = []
-    for node in nodes:
-        if node["id"] not in seen:
-            seen.add(node["id"])
-            unique.append(node)
-    return unique
+    return [n for n in nodes if not (n["id"] in seen or seen.add(n["id"]))]
 
 
 def _unique_edges(edges: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen: set[tuple[str, str, str]] = set()
-    unique: list[dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for edge in edges:
         key = (edge["source"], edge["target"], edge["type"])
         if key not in seen:
             seen.add(key)
-            unique.append(edge)
-    return unique
+            out.append(edge)
+    return out

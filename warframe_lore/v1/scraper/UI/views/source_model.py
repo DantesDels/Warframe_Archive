@@ -84,4 +84,4 @@ class SourceTableModel(QAbstractTableModel):
 
     def source_id_at(self, row: int) -> str | None:
         source = self.source_at(row)
-        return source["id"] if source else None
+        return str(source.get("id")) if source and source.get("id") else None

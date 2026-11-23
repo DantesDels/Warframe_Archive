@@ -1,4 +1,4 @@
-"""Pure layered layout and short labels for the relation graph."""
+"""Pure layered wrapped layout and short labels for the relation graph."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 CELL_WIDTH = 232.0
 CELL_HEIGHT = 78.0
 LABEL_LIMIT = 22
+MAX_PER_ROW = 6
 
 
 def short_label(node: dict[str, Any], limit: int = LABEL_LIMIT) -> str:
@@ -62,14 +63,18 @@ def graph_layers(graph: dict[str, Any]) -> list[list[dict[str, Any]]]:
 
 
 def layout_positions(graph: dict[str, Any]) -> dict[str, tuple[float, float]]:
-    """Return collision-free centres: one cell per node, layers as rows."""
+    """Return collision-free centres wrapping wide layers into balanced rows."""
     layers = graph_layers(graph)
-    columns = max((len(layer) for layer in layers), default=1) or 1
+    rows: list[list[dict[str, Any]]] = []
+    for layer in layers:
+        for start in range(0, len(layer), MAX_PER_ROW):
+            rows.append(layer[start : start + MAX_PER_ROW])
+    columns = max((len(row) for row in rows), default=1) or 1
     row_width = columns * CELL_WIDTH
     positions: dict[str, tuple[float, float]] = {}
-    for row_index, layer in enumerate(layers):
-        offset = (row_width - len(layer) * CELL_WIDTH) / 2
-        for column_index, node in enumerate(layer):
+    for row_index, row in enumerate(rows):
+        offset = (row_width - len(row) * CELL_WIDTH) / 2
+        for column_index, node in enumerate(row):
             x_pos = offset + column_index * CELL_WIDTH + CELL_WIDTH / 2
             y_pos = row_index * CELL_HEIGHT + CELL_HEIGHT / 2
             positions[str(node["id"])] = (x_pos, y_pos)

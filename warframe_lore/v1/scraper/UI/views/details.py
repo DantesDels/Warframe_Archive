@@ -15,11 +15,11 @@ from PySide6.QtWidgets import (
 )
 
 from ..formatting import display_universe_status
+from .data.tabs import data_view
 from .graph_view import graph_view
 from .sources_view import SourcesView
 from .tabs_candidates import candidates_view
 from .tabs_content import documents_view, runs_view
-from .tabs_data import data_view
 
 
 class DetailPane(QWidget):
@@ -100,7 +100,7 @@ class DetailPane(QWidget):
             candidates_view(workspace, universe, on_change),
             f"Candidats ({len(candidates)})",
         )
-        tabs.addTab(data_view(workspace, universe), "Data")
+        tabs.addTab(data_view(workspace, universe, on_change), "Data")
         tabs.addTab(graph_view(workspace, universe), "Graphe")
         self._set_content(tabs)
 

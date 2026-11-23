@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QDialogButtonBox,
+    QLineEdit,
     QPushButton,
     QStyleOptionGraphicsItem,
     QTabWidget,
@@ -38,9 +39,11 @@ from warframe_lore.v1.scraper.UI.graph.layout import (
     short_label,
 )
 from warframe_lore.v1.scraper.UI.graph.view import GraphCanvas
+from warframe_lore.v1.scraper.UI.models import UniverseWorkspace
 from warframe_lore.v1.scraper.UI.style import app_stylesheet
 from warframe_lore.v1.scraper.UI.views.simple_table import SimpleTable
 from warframe_lore.v1.scraper.UI.views.tabs_candidates import candidates_view
+from warframe_lore.v1.scraper.UI.views.tabs_content import documents_view, runs_view
 
 UI_ROOT = (
     Path(__file__).resolve().parents[2] / "warframe_lore" / "v1" / "scraper" / "UI"
@@ -122,6 +125,14 @@ class UniverseWorkspaceTests(unittest.TestCase):
     def test_details_are_scoped_to_selected_universe(self):
         self.assertEqual(len(self.workspace.sources_for("warframe")), 1)
         self.assertEqual(len(self.workspace.sources_for("droit-constitutionnel")), 1)
+
+    def test_legacy_list_capabilities_are_normalized(self):
+        workspace = UniverseWorkspace(
+            data={"capabilities": [], "universes": [{"id": "warframe"}]}
+        )
+        caps = workspace.capabilities_for("warframe")
+        self.assertIsInstance(workspace.data["capabilities"], dict)
+        self.assertIsInstance(caps, dict)
 
 
 class DesktopWindowTests(unittest.TestCase):
@@ -414,6 +425,123 @@ class CandidatesTableContractTests(unittest.TestCase):
         self.assertTrue(item.textAlignment() & Qt.AlignmentFlag.AlignLeft)
         self.assertEqual(table.model_data.item(0, 2).text(), "Site web")
         self.assertEqual(table.model_data.item(0, 4).text(), "Proposé")
+        self.assertTrue(table.isColumnHidden(5))
+
+    def test_candidates_bulk_selection_status_filter_and_actions(self) -> None:
+        from PySide6.QtWidgets import QComboBox, QLabel
+
+        _app()
+        workspace = _seed_workspace()
+        workspace.data["candidates"] = [
+            {
+                "id": f"c-{i}",
+                "universeId": "warframe",
+                "kind": "website",
+                "location": f"https://example.org/page-{i}",
+                "title": f"Page {i}",
+                "score": 0.9 - i * 0.1,
+                "status": "suspended" if i == 2 else "proposed",
+                "discoveredBy": "wiki",
+                "proof": f"Preuve {i}",
+            }
+            for i in range(3)
+        ]
+        refreshes: list[int] = []
+        widget = candidates_view(
+            workspace, workspace.get("warframe"), lambda: refreshes.append(1)
+        )
+        table = widget.findChild(SimpleTable)
+        assert table is not None
+        status_filter = widget.findChild(QComboBox, "CandidateStatusFilter")
+        select_all = widget.findChild(QPushButton, "CandidatesSelectAllButton")
+        clear_sel = widget.findChild(QPushButton, "CandidatesClearSelectionButton")
+        detail = widget.findChild(QLabel, "CandidateDetail")
+        assert status_filter and select_all and clear_sel and detail
+
+        # Filter to only "Proposé" (2 rows) and select all visible
+        idx = status_filter.findData("Proposé")
+        status_filter.setCurrentIndex(idx)
+        select_all.click()
+        self.assertEqual(set(table.selected_ids()), {"c-0", "c-1"})
+        self.assertIn("2 candidats sélectionnés", detail.text())
+
+        # Bulk activate both proposed candidates (and ensure re-activating won't dup)
+        activate_btn = next(
+            b for b in widget.findChildren(QPushButton) if b.text() == "Activer"
+        )
+        before_sources = len(workspace.sources_for("warframe"))
+        activate_btn.click()
+        self.assertEqual(len(workspace.sources_for("warframe")), before_sources + 2)
+        activate_btn.click()
+        self.assertEqual(len(workspace.sources_for("warframe")), before_sources + 2)
+
+        # Bulk blacklist marks candidates blacklisted and removes derived sources
+        blacklist_btn = next(
+            b for b in widget.findChildren(QPushButton) if b.text() == "Blacklister"
+        )
+        blacklist_btn.click()
+        by_id = {c["id"]: c for c in workspace.candidates_for("warframe")}
+        self.assertEqual(by_id["c-0"]["status"], "blacklisted")
+        self.assertEqual(by_id["c-1"]["status"], "blacklisted")
+
+        # Select all 3 (reset filter) and bulk delete
+        status_filter.setCurrentIndex(0)
+        select_all.click()
+        self.assertEqual(len(table.selected_ids()), 3)
+        del_btn = next(
+            b for b in widget.findChildren(QPushButton) if b.text() == "Supprimer"
+        )
+        del_btn.click()
+        self.assertEqual(workspace.candidates_for("warframe"), [])
+        clear_sel.click()
+        self.assertEqual(table.selected_ids(), [])
+        widget.deleteLater()
+
+
+class MalformedDataContract(unittest.TestCase):
+    def test_views_tolerate_legacy_and_invalid_records(self):
+        from warframe_lore.v1.scraper.UI.models import UniverseWorkspace
+
+        _app()
+        data = empty_data()
+        data["universes"] = [{"name": "Sans identifiant"}]
+        data["sources"] = [{"universeId": "u1", "location": "x"}]
+        data["documents"] = [
+            {"universeId": "u1", "relevance": "oops", "title": "Doc"},
+            {"universeId": "u1", "title": "Sans score"},
+        ]
+        data["runs"] = [{"universeIds": ["u1"], "counts": "not-a-dict"}]
+        workspace = UniverseWorkspace(data=data)
+        universe = {"id": "u1", "name": "U1"}
+        self.assertIsNotNone(documents_view(workspace, universe))
+        self.assertIsNotNone(runs_view(workspace, universe))
+        self.assertEqual(workspace.names(), {"sans identifiant"})
+        self.assertEqual(len(workspace.sources_for("u1")), 1)
+        self.assertEqual(len(workspace.runs_for("u1")), 1)
+
+    def test_per_universe_capabilities_are_normalized(self):
+        from warframe_lore.v1.scraper.UI.models import UniverseWorkspace
+
+        data = empty_data()
+        data["capabilities"] = {"u1": []}
+        workspace = UniverseWorkspace(data=data)
+        self.assertIsInstance(workspace.capabilities_for("u1"), dict)
+
+    def test_f2_shortcut_ignores_text_fields(self):
+        _app()
+        with tempfile.TemporaryDirectory() as tmp:
+            window = AtelierApp(data_path=Path(tmp) / "workspace.json")
+            window.show()
+            field = QLineEdit(window)
+            field.show()
+            field.setFocus()
+            field.activateWindow()
+            QApplication.processEvents()
+            calls: list[bool] = []
+            window.rename_universe = lambda: calls.append(True)  # type: ignore[method-assign]
+            window._shortcut_rename()
+            self.assertEqual(calls, [])
+            window.close()
 
 
 if __name__ == "__main__":

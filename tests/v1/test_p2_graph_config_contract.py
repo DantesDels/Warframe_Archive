@@ -224,6 +224,194 @@ class ConfigContractTests(unittest.TestCase):
         self.assertTrue(dialog.result_capabilities["graph_rag"]["enabled"])
         dialog.deleteLater()
 
+    def test_capabilities_modes_and_tags_persist(self):
+        if QApplication.instance() is None:
+            QApplication([])
+        dialog = CapabilitiesDialog(None, {})
+        idx = dialog.mode_combo.findData("thematic")
+        self.assertGreaterEqual(idx, 0)
+        dialog.mode_combo.setCurrentIndex(idx)
+        self.assertEqual(dialog._spinboxes["max_pages"].value(), 500)
+        dialog.tags_input.setText("Lore, Quests; Characters, Lore")
+        dialog._save()
+        assert dialog.result_capabilities is not None
+        crawl = dialog.result_capabilities["crawl"]
+        self.assertEqual(crawl["mode"], "thematic")
+        self.assertEqual(crawl["topic_tags"], ["Lore", "Quests", "Characters"])
+        ex_idx = dialog.mode_combo.findData("exhaustive")
+        dialog.mode_combo.setCurrentIndex(ex_idx)
+        self.assertEqual(dialog._spinboxes["max_pages"].value(), 25000)
+        self.assertEqual(dialog._spinboxes["source_timeout_seconds"].value(), 0)
+        dialog.deleteLater()
+
+    def test_dialogs_are_scrollable_and_execution_panel_never_overflows(self):
+        from PySide6.QtWidgets import QScrollArea
+
+        from warframe_lore.v1.scraper.observability.progress import (
+            ProgressEvent,
+            ProgressReporter,
+        )
+        from warframe_lore.v1.scraper.UI.dialogs.preflight_dialog import (
+            PreflightDialog,
+        )
+        from warframe_lore.v1.scraper.UI.execution_panel import ExecutionPanel
+
+        if QApplication.instance() is None:
+            QApplication([])
+        with tempfile.TemporaryDirectory() as tmp:
+            store = SettingsStore(Path(tmp) / "settings.json")
+            for dlg in (
+                SettingsDialog(None, store),
+                CapabilitiesDialog(None, {}),
+                PreflightDialog(None, Settings(), ("u1",), 1),
+            ):
+                self.assertTrue(dlg.findChildren(QScrollArea))
+                dlg.deleteLater()
+        panel = ExecutionPanel()
+        panel.resize(900, 260)
+        panel.set_state("running")
+        huge_url = "https://wiki.example.com/api.php?action=query&titles=" + "|".join(
+            f"VeryLongPageTitle{i}" for i in range(60)
+        )
+        events: list[ProgressEvent] = []
+        ProgressReporter(events.append).http(huge_url, 200)
+        self.assertIn("lot de 60 pages", events[0].message)
+        panel.on_event(events[0])
+        self.assertLessEqual(panel.minimumSizeHint().width(), 900)
+        panel.deleteLater()
+
+    def test_high_contrast_theme_and_interactive_tag_editor(self):
+        from PySide6.QtGui import QPalette
+        from PySide6.QtWidgets import QPushButton
+
+        from warframe_lore.v1.scraper.UI.style import app_stylesheet, light_palette
+
+        if QApplication.instance() is None:
+            QApplication([])
+        css = app_stylesheet()
+        for token in (
+            "QScrollArea", "QComboBox", "QComboBox QAbstractItemView",
+            "QGroupBox", "alternate-background-color", "QPushButton#TagChip",
+        ):
+            self.assertIn(token, css)
+        pal = light_palette()
+        self.assertGreater(pal.color(QPalette.ColorRole.Window).lightness(), 230)
+        self.assertGreater(pal.color(QPalette.ColorRole.Base).lightness(), 240)
+        self.assertLess(pal.color(QPalette.ColorRole.Text).lightness(), 40)
+
+        dialog = CapabilitiesDialog(None, {"crawl": {"topic_tags": ["Lore", "Quests"]}})
+        dialog.tag_editor.input.setText("Weapons, Lore")
+        dialog.tag_editor.add_button.click()
+        self.assertEqual(dialog.tag_editor.tags(), ["Lore", "Quests", "Weapons"])
+        chips = [
+            b for b in dialog.tag_editor.findChildren(QPushButton)
+            if b.objectName() == "TagChip"
+        ]
+        self.assertEqual(len(chips), 3)
+        chips[1].click()  # remove "Quests"
+        self.assertEqual(dialog.tag_editor.tags(), ["Lore", "Weapons"])
+        dialog._save()
+        assert dialog.result_capabilities is not None
+        self.assertEqual(
+            dialog.result_capabilities["crawl"]["topic_tags"], ["Lore", "Weapons"]
+        )
+        dialog.tag_editor.clear_button.click()
+        self.assertEqual(dialog.tag_editor.tags(), [])
+        dialog.deleteLater()
+
+    def test_clear_universe_data_resets_only_target_universe(self):
+        from PySide6.QtWidgets import QPlainTextEdit, QPushButton
+
+        from warframe_lore.v1.scraper.UI.views.data.cleanup import clear_universe_data
+        from warframe_lore.v1.scraper.UI.views.data.tabs import data_view
+
+        if QApplication.instance() is None:
+            QApplication([])
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            ws = WorkshopWorkspace(path=base / "workspace.json")
+            ws.create("Alpha")
+            ws.create("Beta")
+            ws.add_manual_source("alpha", "https://alpha.example/wiki", kind="wiki")
+            ws.data["sources"][0]["connector_state"] = {"rev": 99}
+            local_dir = base / "user_corpus"
+            local_dir.mkdir()
+            (local_dir / "keep.md").write_text("keep", encoding="utf-8")
+            ws.add_manual_source("alpha", str(local_dir), kind="local_directory")
+            blobs = base / "blobs"
+            blobs.mkdir()
+            (blobs / "a.txt").write_text("alpha", encoding="utf-8")
+            (blobs / "b.txt").write_text("beta", encoding="utf-8")
+            ws.data["documents"] = [
+                {"id": "d1", "universeId": "alpha", "blobPath": "blobs/a.txt"},
+                {"id": "d2", "universeId": "beta", "blobPath": "blobs/b.txt"},
+            ]
+            ws.data["document_versions"] = [
+                {"universeId": "alpha", "documentId": "d1"},
+                {"universeId": "beta", "documentId": "d2"},
+            ]
+            ws.data["runs"] = [
+                {"id": "r1", "universeIds": ["alpha"]},
+                {"id": "r2", "universeIds": ["alpha", "beta"]},
+            ]
+            exp_alpha = base / "exports" / "alpha"
+            exp_alpha.mkdir(parents=True)
+            (exp_alpha / "out.json").write_text("{}", encoding="utf-8")
+
+            tab = data_view(ws, ws.get("alpha"))
+            self.assertIsNotNone(tab.findChild(QPushButton, "DangerButton"))
+            self.assertIsNotNone(tab.findChild(QPlainTextEdit, "DataPreview"))
+            tab.deleteLater()
+
+            stats = clear_universe_data(ws, "alpha")
+            self.assertEqual(stats["documents"], 1)
+            self.assertEqual(stats["blobs"], 1)
+            self.assertEqual(stats["files"], 1)
+            self.assertEqual(ws.documents_for("alpha"), [])
+            self.assertEqual(len(ws.documents_for("beta")), 1)
+            self.assertEqual(len(ws.sources_for("alpha")), 2)
+            self.assertNotIn("connector_state", ws.sources_for("alpha")[0])
+            self.assertFalse((blobs / "a.txt").exists())
+            self.assertTrue((blobs / "b.txt").exists())
+            self.assertFalse(exp_alpha.exists())
+            self.assertTrue((local_dir / "keep.md").exists())
+            self.assertEqual(len(ws.runs_for("alpha")), 0)
+            self.assertEqual(len(ws.runs_for("beta")), 1)
+
+    def test_table_filtering_sorting_and_graphify_controls(self):
+        from PySide6.QtWidgets import QLineEdit, QPushButton
+
+        from warframe_lore.v1.scraper.UI.graph.view import GraphCanvas
+        from warframe_lore.v1.scraper.UI.views.sources_view import SourcesView
+        from warframe_lore.v1.scraper.UI.views.tabs_content import documents_view
+
+        if QApplication.instance() is None:
+            QApplication([])
+        ws = _workspace()
+        ws.add_manual_source("codex", "https://other.example/news", kind="website")
+        sv = SourcesView(ws, ws.get("codex"), lambda: None)
+        self.assertTrue(sv.table.isSortingEnabled())
+        sv.filter_input.setText("other.example")
+        self.assertEqual(sv.proxy.rowCount(), 1)
+        sv.table.selectRow(0)
+        self.assertEqual(len(sv.selected_ids()), 1)
+        self.assertEqual(sv.current_source()["location"], "https://other.example/news")
+        sv.deleteLater()
+
+        dv = documents_view(ws, ws.get("codex"))
+        self.assertIsNotNone(dv.findChild(QLineEdit, "TableFilterInput"))
+        dv.deleteLater()
+
+        graph = build_graph(ws, universe_id="codex")
+        canvas = GraphCanvas(graph)
+        self.assertIsNotNone(canvas.findChild(QPushButton, "GraphFullscreenButton"))
+        self.assertIsNotNone(canvas.findChild(QPushButton, "GraphOpenHtmlButton"))
+        self.assertIsNotNone(canvas.findChild(QLineEdit, "GraphSearchInput"))
+        initial_count = len(canvas._node_items)
+        canvas.sidebar.checks["Document"].setChecked(False)
+        self.assertLess(len(canvas._node_items), initial_count)
+        canvas.deleteLater()
+
 
 if __name__ == "__main__":
     unittest.main()

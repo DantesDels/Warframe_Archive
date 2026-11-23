@@ -1,15 +1,23 @@
-"""Sources tab with action bar and styled table."""
+"""Sources tab with action bar, live filter, sorting and styled table."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Any, cast
 
-from PySide6.QtWidgets import QAbstractItemView, QTableView, QVBoxLayout, QWidget
+from PySide6.QtCore import QSortFilterProxyModel, Qt
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QHeaderView,
+    QTableView,
+    QVBoxLayout,
+    QWidget,
+)
 
 from .delegates import SourceDelegate
 from .source_model import SourceTableModel
 from .sources_actions import build_actions
+from .table_filter import build_filter_bar
 
 
 class SourcesView(QWidget):
@@ -25,42 +33,70 @@ class SourcesView(QWidget):
         self._suspend_btn: Any = None
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
         layout.addLayout(build_actions(self))
         self.model = SourceTableModel()
+        self.proxy = QSortFilterProxyModel(self)
+        self.proxy.setSourceModel(self.model)
+        self.proxy.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self.proxy.setSortCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self.proxy.setFilterKeyColumn(-1)
         self.table = QTableView()
-        self.table.setModel(self.model)
+        self.table.setModel(self.proxy)
         self.table.setItemDelegate(SourceDelegate(self.table))
         self.table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.table.setAlternatingRowColors(True)
+        self.table.setSortingEnabled(True)
+        self.table.setWordWrap(False)
         self.table.verticalHeader().setVisible(False)
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.setColumnWidth(0, 420)
+        self.table.verticalHeader().setDefaultSectionSize(34)
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        header.setMinimumSectionSize(90)
         self.table.setColumnWidth(1, 110)
         self.table.setColumnWidth(2, 120)
-        self.table.setColumnWidth(3, 140)
+        self.table.setColumnWidth(3, 145)
         selection_model = self.table.selectionModel()
         if selection_model is not None:
-            def _on_sel(*_args: object) -> None:
-                self.sync_actions()
-            selection_model.selectionChanged.connect(_on_sel)
+            selection_model.selectionChanged.connect(lambda *_a: self.sync_actions())
+        sources = cast(
+            list[dict[str, Any]], self.workspace.sources_for(str(self.universe["id"]))
+        )
+        bar, self.filter_input, self.count_label = build_filter_bar(
+            "Filtrer les sources par URL, type ou statut...",
+            len(sources),
+            self._apply_filter,
+            unit="sources",
+        )
+        layout.addLayout(bar)
         layout.addWidget(self.table, 1)
         self.refresh()
 
+    def _apply_filter(self, query: str) -> int:
+        self.proxy.setFilterFixedString(query.strip())
+        return self.proxy.rowCount()
+
     def refresh(self) -> None:
-        self.model.set_sources(
-            cast(list[dict[str, Any]],
-                self.workspace.sources_for(str(self.universe["id"])))
+        sources = cast(
+            list[dict[str, Any]], self.workspace.sources_for(str(self.universe["id"]))
         )
+        self.model.set_sources(sources)
+        self.count_label.setText(f"{self.proxy.rowCount()} sources")
         self.sync_actions()
 
     def selected_ids(self) -> list[str]:
         selection_model = self.table.selectionModel()
         if selection_model is None:
             return []
-        indexes = selection_model.selectedRows()
-        ids = [self.model.source_id_at(i.row()) for i in indexes]
-        return [sid for sid in ids if sid]
+        ids: list[str] = []
+        for idx in selection_model.selectedRows():
+            src_row = self.proxy.mapToSource(idx).row()
+            sid = self.model.source_id_at(src_row)
+            if sid:
+                ids.append(sid)
+        return ids
 
     def selected_id(self) -> str | None:
         ids = self.selected_ids()

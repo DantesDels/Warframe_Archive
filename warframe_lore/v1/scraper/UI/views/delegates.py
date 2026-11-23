@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QStyleOptionViewItem,
 )
 
-from ..formatting import display_kind, display_source_status
+from ..formatting import coerce_score, display_kind, display_source_status
 
 STATUS_COLORS = {
     "approved": "#22a06b",
@@ -57,7 +57,7 @@ class SourceDelegate(QStyledItemDelegate):
             self._paint_badge(painter, option, str(source.get("status", "")))
             return
         if col == 3:
-            self._paint_score(painter, option, float(source.get("score", 0) or 0))
+            self._paint_score(painter, option, coerce_score(source.get("score", 0)))
             return
         super().paint(painter, option, index)
 

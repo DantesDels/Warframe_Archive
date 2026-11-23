@@ -1,4 +1,4 @@
-"""Curation actions triggered from the candidates table."""
+"""Bulk and single-item curation actions triggered from the candidates table."""
 
 from __future__ import annotations
 
@@ -7,14 +7,37 @@ from typing import Any, cast
 
 from PySide6.QtWidgets import QInputDialog, QMessageBox
 
-from ....collect.http import HttpClient
-from ....use_cases.review_children import preview_child_candidates
 from ...security import validate_import
 from ..simple_table import SimpleTable
+from .preview_worker import start_preview
+
+
+def _activate_candidate(workspace: Any, candidate_id: str) -> None:
+    candidate = workspace._candidate(candidate_id)
+    uid = str(candidate.get("universeId", ""))
+    location = str(candidate.get("location", "")).strip()
+    existing = next(
+        (
+            s for s in workspace.sources_for(uid)
+            if str(s.get("location", "")).strip() == location
+        ),
+        None,
+    )
+    if existing is not None:
+        workspace.update_source(str(existing["id"]), status="approved", selected=True)
+        workspace.update_candidate(candidate_id, status="active")
+        return
+    workspace.add_source_from_candidate(candidate_id)
+
+
+def _blacklist_candidate(workspace: Any, candidate_id: str) -> None:
+    workspace.delete_source(f"src-{candidate_id}")
+    workspace.update_candidate(candidate_id, status="blacklisted")
+
 
 STATUS_HANDLERS = {
-    "active": lambda workspace, cid: workspace.add_source_from_candidate(cid),
-    "blacklisted": lambda workspace, cid: workspace.delete_source(f"src-{cid}"),
+    "active": _activate_candidate,
+    "blacklisted": _blacklist_candidate,
     "suspended": lambda workspace, cid: workspace.update_candidate(
         cid, status="suspended"
     ),
@@ -24,11 +47,14 @@ STATUS_HANDLERS = {
 def apply_status(
     table: SimpleTable, workspace: Any, on_change: Callable[[], None], status: str
 ) -> None:
-    """Move the selected candidate to the requested lifecycle status."""
-    candidate_id = table.selected_id()
-    if candidate_id:
-        STATUS_HANDLERS[status](workspace, candidate_id)
-        on_change()
+    """Apply a lifecycle status to every currently selected candidate."""
+    candidate_ids = table.selected_ids()
+    if not candidate_ids:
+        return
+    handler = STATUS_HANDLERS[status]
+    for candidate_id in candidate_ids:
+        handler(workspace, candidate_id)
+    on_change()
 
 
 def remove_candidate(
@@ -37,12 +63,14 @@ def remove_candidate(
     _universe: dict[str, Any],
     on_change: Callable[[], None],
 ) -> None:
-    """Remove a rejected candidate and its derived source."""
-    candidate_id = table.selected_id()
-    if candidate_id:
+    """Remove all selected candidates and their derived sources."""
+    candidate_ids = table.selected_ids()
+    if not candidate_ids:
+        return
+    for candidate_id in candidate_ids:
         workspace.delete_source(f"src-{candidate_id}")
         workspace.remove_candidate(candidate_id)
-        on_change()
+    on_change()
 
 
 def preview_children(
@@ -51,7 +79,7 @@ def preview_children(
     universe: dict[str, Any],
     on_change: Callable[[], None],
 ) -> None:
-    """Discover child URLs of the selected source for manual review."""
+    """Discover child URLs of the first selected candidate for manual review."""
     candidate_id = table.selected_id()
     candidates = cast(
         list[dict[str, Any]], workspace.candidates_for(str(universe["id"]))
@@ -61,21 +89,9 @@ def preview_children(
     )
     if not candidate:
         return
-    try:
-        children = preview_child_candidates(
-            workspace, universe, str(candidate.get("location", "")), client=HttpClient()
-        )
-    except Exception as exc:  # noqa: BLE001
-        QMessageBox.warning(
-            None, "Prévisualisation", f"Impossible de prévisualiser : {exc}"
-        )
-        return
-    QMessageBox.information(
-        None,
-        "Prévisualisation",
-        f"{len(children)} page(s) enfant(s) ajoutée(s) comme candidats à valider.",
+    start_preview(
+        table, workspace, universe, str(candidate.get("location", "")), on_change
     )
-    on_change()
 
 
 def add_manual(

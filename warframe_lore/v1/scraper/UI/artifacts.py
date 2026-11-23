@@ -129,33 +129,9 @@ def _write_chunks(
 
 
 def chunk_text(text: str, *, max_chars: int = 1200, overlap: int = 120) -> list[str]:
-    clean = (text or "").strip()
-    if not clean:
-        return []
-    paragraphs = [p.strip() for p in clean.split("\n\n") if p.strip()]
-    chunks: list[str] = []
-    buf = ""
-    for para in paragraphs:
-        candidate = f"{buf}\n\n{para}".strip() if buf else para
-        if len(candidate) <= max_chars:
-            buf = candidate
-            continue
-        if buf:
-            chunks.append(buf)
-        if len(para) <= max_chars:
-            buf = para
-        else:
-            start = 0
-            while start < len(para):
-                end = min(len(para), start + max_chars)
-                chunks.append(para[start:end].strip())
-                if end >= len(para):
-                    break
-                start = max(end - overlap, start + 1)
-            buf = ""
-    if buf:
-        chunks.append(buf)
-    return [c for c in chunks if c]
+    from ..use_cases.pipeline.chunking import chunk_text as _chunk
+
+    return _chunk(text, max_chars=max_chars, overlap=overlap)
 
 
 def _write_vector_adapter(

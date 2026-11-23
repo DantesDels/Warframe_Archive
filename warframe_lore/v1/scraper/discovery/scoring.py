@@ -33,10 +33,12 @@ def score_candidate(
     reason = _proof(breakdown)
     meta = dict(candidate.metadata)
     meta["score_reason"] = reason
-    if _is_probable_homonym(name, text, relevance):
-        score = min(score, 0.2)
+    homonym, h_reason = _homonym_assessment(name, text, host, relevance)
+    if homonym:
+        score = min(score, 0.25)
         meta["homonym_risk"] = True
-        reason = reason + " ; risque d'homonymie détecté"
+        meta["homonym_reason"] = h_reason
+        reason = f"{reason} ; homonymie: {h_reason}"
     return replace(
         candidate,
         score=round(min(0.99, max(0.0, score)), 3),
@@ -81,8 +83,20 @@ def _proof(b: dict[str, float]) -> str:
     )
 
 
-def _is_probable_homonym(name: str, text: str, relevance: float) -> bool:
-    if not name or relevance >= 0.45:
-        return False
+def _homonym_assessment(
+    name: str, text: str, host: str, relevance: float
+) -> tuple[bool, str]:
     tokens = [t for t in name.split() if len(t) >= 4]
-    return bool(tokens) and not any(t in text for t in tokens)
+    if not tokens:
+        return False, ""
+    name_hit = any(t in text for t in tokens)
+    if relevance < 0.45 and not name_hit:
+        return True, "termes univers absents du candidat"
+    if any(t in host for t in _GENERIC_HOST_TOKENS):
+        overlap = sum(1 for t in tokens if t in text)
+        if relevance < 0.55 and overlap <= 1:
+            return True, "contexte ambigu sur hôte générique"
+        single_ambiguous = len(tokens) == 1 and relevance < 0.7
+        if name_hit and (overlap < len(tokens) or single_ambiguous):
+            return True, "homonyme possible sur hôte générique"
+    return False, ""

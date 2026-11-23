@@ -77,14 +77,20 @@ def _extract(ctx: ConnectorContext, api: str, title: str) -> list[CollectedPage]
     pages = cast(dict[str, Any], query.get("pages", {}))
     page = cast(dict[str, Any], next(iter(pages.values()), cast(dict[str, Any], {})))
     text = str(page.get("extract", "") or "").strip()
-    touched = str(page.get("touched") or page.get("revid") or "")
+    revid = str(page.get("lastrevid") or "")
+    touched = str(page.get("touched") or "")
+    revs = page.get("revisions")
+    if isinstance(revs, list) and revs and isinstance(revs[0], dict):
+        revid = str(revs[0].get("revid") or revid)
+        touched = str(revs[0].get("timestamp") or touched)
+    marker = f"{revid}:{touched}" if (revid or touched) else ""
     state = _mw_state(ctx, api)
     incremental = bool(ctx.limits.get("incremental", True))
     page_key = str(page.get("pageid") or title)
-    if incremental and touched and state.get(page_key) == touched:
+    if incremental and marker and state.get(page_key) == marker:
         return []
-    if touched:
-        state[page_key] = touched
+    if marker:
+        state[page_key] = marker
     if not text:
         return []
     return [

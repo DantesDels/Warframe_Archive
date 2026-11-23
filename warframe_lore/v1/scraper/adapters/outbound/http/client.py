@@ -140,7 +140,12 @@ class HttpClientAdapter:
                 )
                 if r.status_code in {429, 500, 502, 503, 504}:
                     last_exc = requests.HTTPError(response=r)
-                    time.sleep(self.backoff**attempt)
+                    ra = str(r.headers.get("Retry-After", "")).strip()
+                    delay = int(ra) if ra.isdigit() else self.backoff**attempt
+                    if attempt + 1 >= self.max_retries:
+                        suffix = f" retry-after={ra}" if ra else ""
+                        raise RuntimeError(f"HTTP {r.status_code} {url}{suffix}")
+                    time.sleep(min(float(delay), 30.0))
                     continue
                 if r.status_code not in {200, 304}:
                     r.raise_for_status()

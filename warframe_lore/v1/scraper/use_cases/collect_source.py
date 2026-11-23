@@ -68,7 +68,10 @@ def _doc(
         "title": str(page.title)[:180],
         "url": str(page.url),
         "docType": str(src.get("kind", "website")),
-        "language": _guess_lang(str(page.url), text),
+        "language": str(
+            getattr(page, "metadata", {}).get("language")
+            or _guess_lang(str(page.url), text)
+        ),
         "relevance": float(src.get("score", 1.0) or 1.0),
         "isDuplicate": False,
         "excerpt": text[:320],

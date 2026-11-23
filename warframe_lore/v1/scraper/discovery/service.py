@@ -32,9 +32,11 @@ def discover(
         str(universe.get("name", "")), str(universe.get("description", ""))
     )
     active = _providers(provider, providers, cfg)
-    found: list[Candidate] = list(_seed_candidates(universe, cfg))
+    u2 = dict(universe)
+    u2["_discovery_cfg"] = cfg
+    found: list[Candidate] = list(_seed_candidates(u2, cfg))
     for prov in active:
-        found.extend(_search(prov, keywords, str(universe.get("id", "")), universe))
+        found.extend(_search(prov, keywords, str(universe.get("id", "")), u2))
     scored = [score_candidate(item, universe, keywords) for item in found]
     kept = [item for item in scored if item.score * 100 >= min_relevance]
     deduped = _dedupe(kept)
@@ -81,10 +83,15 @@ def _search(provider: Any, keywords: list[str], uid: str, universe: dict[str,
     search = getattr(provider, "search", None)
     if search is None:
         return []
+    cfg = universe.get("_discovery_cfg", {}) if isinstance(universe, dict) else {}
+    client = cfg.get("http_client") if isinstance(cfg, dict) else None
     try:
-        result = search(keywords, uid, universe=universe)
+        result = search(keywords, uid, universe=universe, client=client)
     except TypeError:
-        result = search(keywords, uid)
+        try:
+            result = search(keywords, uid, universe=universe)
+        except TypeError:
+            result = search(keywords, uid)
     return [item for item in result if isinstance(item, Candidate)]
 
 

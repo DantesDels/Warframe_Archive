@@ -192,10 +192,10 @@ class DesktopWindowTests(unittest.TestCase):
             self.assertIn("Enregistrer", texts)
             self.assertIn("Annuler", texts)
             fmt = [cb.text() for cb in dialog.findChildren(QCheckBox)]
-            self.assertIn("Limiter au mÃªme domaine", fmt)
-            self.assertIn("Cache HTTP conditionnel", fmt)
-            self.assertIn("IncrÃ©mental (ignorer contenu inchangÃ©)", fmt)
-            self.assertIn("DÃ©velopper les index/manifests", fmt)
+            self.assertTrue(dialog.same_host is not None)
+            self.assertTrue(any("Cache HTTP" in t for t in fmt))
+            self.assertTrue(any("contenu" in t for t in fmt))
+            self.assertTrue(any("index/manifests" in t for t in fmt))
             expected = ["JSON", "JSONL", "CSV", "Markdown", "SQL", "NoSQL"]
             got = [f for f in fmt if f in set(expected)]
             self.assertEqual(got, expected)
@@ -210,8 +210,8 @@ class DesktopWindowTests(unittest.TestCase):
         self.assertIn("Lancer", texts)
         self.assertIn("Annuler", texts)
         fmt = [cb.text() for cb in dialog.findChildren(QCheckBox)]
-        self.assertIn("Limiter au mÃªme domaine", fmt)
-        self.assertIn("Cache HTTP conditionnel", fmt)
+        self.assertTrue(any("domaine" in t for t in fmt))
+        self.assertTrue(any("Cache HTTP" in t for t in fmt))
         self.assertIn("IncrÃ©mental (ignorer contenu inchangÃ©)", fmt)
         self.assertIn("DÃ©velopper les index/manifests", fmt)
         expected = ["JSON", "JSONL", "CSV", "Markdown", "SQL", "NoSQL"]

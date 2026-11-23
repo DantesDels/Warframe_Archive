@@ -102,6 +102,18 @@ async def _retry_collect(source, uid, ctx, limits, state_dict, retries):
         except Exception as exc:  # noqa: BLE001
             last_err = exc
             if attempt < retries:
-                await asyncio.sleep(min(2 ** attempt, 5))
+                delay = _retry_delay(exc, attempt)
+                await asyncio.sleep(delay)
     loc = str(source.get("location", ""))
     return [], [f"{loc}: {last_err}"], [], []
+
+
+def _retry_delay(exc: Exception, attempt: int) -> float:
+    msg = str(exc)
+    # simple Retry-After/429 hint
+    for token in msg.replace(":", " ").split():
+        if token.isdigit() and 1 <= int(token) <= 120 and "429" in msg:
+            return float(int(token))
+    if "429" in msg or "rate limit" in msg.lower():
+        return float(min(2 ** attempt + 2, 15))
+    return float(min(2 ** attempt, 5))

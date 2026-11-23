@@ -121,6 +121,21 @@ class P1DiscoveryTests(unittest.TestCase):
         names = [type(p).__name__ for p in providers]
         self.assertEqual(names, ["KeywordProvider"])
 
+    def test_homonym_metadata_reason_present(self):
+        class P:
+            def search(self, _k, uid, **_kw):
+                return [Candidate("1", uid, "website", "https://github.com/x",
+                                  "Mercury element", 0.2, "raw",
+                                  discovered_by="web_search")]
+
+        out = discover(
+            {"id": "u", "name": "Mercury RPG", "description": ""},
+            0,
+            providers=[P()],
+        )
+        self.assertTrue(out[0].metadata.get("homonym_risk"))
+        self.assertIn("homonym_reason", out[0].metadata)
+
 
 if __name__ == "__main__":
     unittest.main()

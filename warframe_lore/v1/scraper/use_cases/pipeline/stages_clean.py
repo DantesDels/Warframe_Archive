@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
+import re
+
 from .base import PipelineContext, PipelineItem
+
+_BOILERPLATE = re.compile(
+    r"(cookie|consent|subscribe|newsletter|sign in|log in|privacy policy|"
+    r"terms of use|all rights reserved|javascript is required)",
+    re.I,
+)
+_NAV_LINE = re.compile(r"^(home|menu|search|skip to content|back to top)$", re.I)
 
 
 class CleanStage:
@@ -14,11 +23,35 @@ class CleanStage:
             if not item.accepted:
                 continue
             text = item.page.content
+            text = _strip_boilerplate(text)
             text = "\n".join(line.rstrip() for line in text.splitlines())
-            while "\n\n\n" in text:
-                text = text.replace("\n\n\n", "\n\n")
-            item.page.content = text.strip()
-            if not item.page.content:
+            text = re.sub(r"\n{3,}", "\n\n", text)
+            text = text.strip()
+            item.page.content = text
+            if len(text) < 10:
                 item.accepted = False
-                item.reason = "contenu vide apres nettoyage"
+                item.reason = "contenu vide ou boilerplate apres nettoyage"
         return items
+
+
+def _strip_boilerplate(text: str) -> str:
+    lines = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            lines.append("")
+            continue
+        if _NAV_LINE.match(line):
+            continue
+        if len(line) < 120 and _BOILERPLATE.search(line):
+            continue
+        # drop very short menu-like lines only
+        if len(line) <= 1:
+            continue
+        lines.append(line)
+    # remove long common footer tails
+    cleaned = "\n".join(lines)
+    cleaned = re.sub(
+        r"(?:\n(?:Cookies?|Privacy|Terms).{0,120}){2,}\s*$", "", cleaned, flags=re.I
+    )
+    return cleaned

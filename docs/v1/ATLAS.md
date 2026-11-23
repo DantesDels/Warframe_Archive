@@ -253,47 +253,56 @@ cible du couplage RAG.
 - Frontière renforcée: use cases applicatifs (collect/run/apply) dans scraper/use_cases, pipeline applicatif dans scraper/use_cases/pipeline (shims compat dans scraper/pipeline), policy fetch-time domaine dans scraper/security/fetch_policy.py avec adapter outbound mince, exécution UI branchée via ExecutionObserver/UniverseRunContext.
 
 
-## Ã‰tat P1 (implÃ©mentÃ© sur feat/v1-ui, non commitÃ©)
+## Etat P1 (livre sur feat/v1-ui)
 
-P1 livrÃ© dans `warframe_lore/v1/` avec gates verts (`ruff`, `compileall`, `pytest tests/v1`).
+P1 implemente dans `warframe_lore/v1/` avec gates verts (`ruff`, `compileall`, `pytest tests/v1`).
 
-### DÃ©couverte
-- Providers modulaires configurables: `keyword`, `web_search` (endpoint opt-in `{query}`), `sitemap`, `feed`, `git`, `wiki`, plus seeds issus des sources existantes.
-- Scoring hybride explicable (`relevance/authority/freshness/language/confidence`) + `score_breakdown` + signal `homonym_risk`.
-- DÃ©dup URL normalisÃ©e, limite `discovery_max_candidates`.
+### Decisions P0 actees
+- Stale/deleted: politique conservatrice (marquer stale/missing + horodatage/log, pas de suppression auto).
+- Capabilities UI: pas d'editeur dedie P0/P1 (config workspace/capabilities existante).
+- EXE: artefact build conserve dans `dist/`, pas copie dans `warframe_lore/v1/`.
+- `docs/v1/graphify-out/`: ignore/regenerable.
+
+### Decouverte
+- Providers modulaires configurables: `keyword`, `web_search` (endpoint opt-in `{query}/{q}`, probe HTTP client + parsing JSON generique), `sitemap`, `feed`, `git` (probe GitHub Search API + fallback), `wiki` (probe MediaWiki/Wikipedia API + validation), seeds issues des sources existantes.
+- Scoring hybride explicable (`relevance/authority/freshness/language/confidence`) + `score_breakdown` + `homonym_risk`/`homonym_reason`.
+- Dedup URL normalisee, limite `discovery_max_candidates`.
 
 ### Collecte/connecteurs
 - Registry: `document`, `lzma`, `sitemap`, `feed`, `mediawiki`, `rest`, `playwright` (opt-in), `html`.
-- Sitemap: parse `lastmod` + delta incrÃ©mental via `connector_state`.
-- RSS/Atom: parse entries + delta `updated/published`.
-- REST/JSON: pagination `next`/cursor simple, headers/auth bearer/header custom.
-- MediaWiki: requÃªte extracts+revisions, delta `touched/revid`.
-- Documents locaux: `.txt/.md/.json/.csv/.xml/.html` natif, best-effort `.pdf/.docx/.pptx` via libs optionnelles, fallback UTF-8.
+- Sitemap: `lastmod` + delta incremental via `connector_state`.
+- RSS/Atom: entries + delta `updated/published`.
+- REST/JSON: pagination `next/next_url/...`, `Link rel=next`, `pageInfo.endCursor/nextCursor` (injection cursor si param connu), headers/auth bearer/header custom, POST JSON optionnel.
+- MediaWiki: extracts+revisions, delta incremental par marqueur `revid:timestamp/touched`.
+- Documents locaux: natif `.txt/.md/.json/.csv/.xml/.html`, best-effort `.pdf/.docx/.pptx`, fallback UTF-8.
 
-### Pipeline/qualitÃ©
-- Normalisation: encodage robuste, NFKC, nettoyage boilerplate lÃ©ger, dÃ©tection langue heuristique, filtre `language`.
-- DÃ©dup: exact URL, exact contenu SHA-256, near-dedup SimHash + MinHash/Jaccard.
-- SÃ©curitÃ©: `SecurityStage` conserve la politique payload existante.
+### Pipeline/qualite
+- Normalisation: encodage robuste, nettoyage, detection langue (`langdetect` si dispo, sinon heuristique URL/stopwords).
+- Cleaning: suppression boilerplate/nav/cookies legere (pragmatique), seuil contenu vide.
+- Dedup: exact URL, exact contenu SHA-256, near-dedup SimHash + MinHash/Jaccard.
+- Securite: `SecurityStage` conserve la politique payload existante.
 
 ### RAG/export
-- `emit_artifacts(..., rag_coupling=True)` Ã©crit `chunks.jsonl` avec provenance (`chunk_id`, `universe_id`, `source_id`, `url`, `version`, `trust_score`, `timestamp`).
-- Chunking structurel simple par paragraphes + dÃ©coupe bornÃ©e.
-- Export vector-ready `vectors.sqlite.json` (adapter sqlite-vec/pgvector-compatible, embedding null).
+- `emit_artifacts(..., rag_coupling=True)` ecrit `chunks.jsonl` avec provenance (`chunk_id`, `universe_id`, `source_id`, `url`, `version`, `trust_score`, `timestamp`).
+- Chunking structure-aware pragmatique (paragraphes/titres/phrases, overlap, fallback borne).
+- Export vector-ready `vectors.sqlite.json` (adapter sqlite-vec/pgvector-compatible, `embedding: null`).
 - Export Parquet optionnel `chunks.parquet` si pandas/pyarrow disponible.
 - Manifest `schema_version=1.1`.
 
-### ExÃ©cution/orchestration
-- Worker Qt conserve UI main-thread apply; exÃ©cution bornÃ©e async via `asyncio.to_thread`.
+### Execution/orchestration
+- Worker Qt main-thread apply; execution bornee async via `asyncio.to_thread`.
 - Limites: `max_concurrency`, `per_host_concurrency`, `per_host_delay`, `max_retries`.
-- Reprise: checkpoint `run_checkpoint.json` avec `completed_source_ids` (compat `last_source_index`), skip sources complÃ©tÃ©es.
-- ContrÃ´les: pause/reprise/annulation coopÃ©ratives, events/logs, Ã©tat UI.
+- Retries/backoff; prise en compte `Retry-After` HTTP 429/5xx (client + scheduler).
+- Reprise: checkpoint `run_checkpoint.json` avec `completed_source_ids` (compat `last_source_index`), skip sources completees.
+- Controles: pause/reprise/annulation cooperatives, events/logs, etat UI.
 
 ### Revue humaine
-- `review_child_pages` activable; expansion manifest peut crÃ©er candidats `proposed` `manifest_review`.
-- `PrÃ©visualiser enfants` ajoute des candidats Ã  valider; `collect/adapters` respecte `pending_child_urls`.
+- `review_child_pages` activable; expansion manifest peut creer candidats `proposed` `manifest_review`.
+- `Previsualiser enfants` ajoute des candidats a valider; ingestion auto bloquee quand review active.
 
-### Limites connues / suivi
-- Playwright/Parquet optionnels selon dÃ©pendances installÃ©es.
-- Homonymie/scoring heuristiques explicables, pas SOTA.
-- MediaWiki delta par page/touched; pas synchronisation API avancÃ©e complÃ¨te.
-- UI nâ€™expose pas encore tous les rÃ©glages discovery avancÃ©s (seeds/web search URL).
+### Limites connues (acceptees pour cloture P1)
+- Discovery web/git/wiki: probes generiques/API publiques simples; pas d'integrations OAuth/API-key specifiques moteurs/services.
+- Homonymie/langue/readability/chunking: heuristiques explicables, pas NER/entity linking/readability ML/embeddings semantiques.
+- REST/GraphQL/MediaWiki: couverture pragmatique patterns courants; pas exhaustif (tous cursors/schemas/auth flows/sync MediaWiki avancee).
+- Playwright/Parquet optionnels selon dependances installees.
+- Pas d'editeur UI dedie capabilities Univers (reporte).

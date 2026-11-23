@@ -1,78 +1,64 @@
-"""Pipeline stage: normalize text, encoding and language hints."""
+"""Pipeline stage: normalize content and metadata."""
 
 from __future__ import annotations
 
 import re
-import unicodedata
 
 from .base import PipelineContext, PipelineItem
-
-_BOILERPLATE = re.compile(
-    r"(cookie|subscribe|newsletter|sign in|log in|privacy policy|all rights reserved)",
-    re.I,
-)
 
 
 class NormalizeStage:
     name = "normalize"
 
-    def run(
-        self, items: list[PipelineItem], ctx: PipelineContext
-    ) -> list[PipelineItem]:
-        min_chars = int(ctx.settings.get("min_text_chars", 1))
-        wanted_lang = str(ctx.settings.get("language") or "").lower()
+    def run(self, items: list[PipelineItem],
+            _ctx: PipelineContext) -> list[PipelineItem]:
         for item in items:
-            page = item.page
-            text = _coerce_text(page.content, getattr(page, "raw", b""))
-            text = unicodedata.normalize("NFKC", text)
+            if not item.accepted:
+                continue
+            text = item.page.content or ""
             text = text.replace("\r\n", "\n").replace("\r", "\n")
-            lines = []
-            for raw in text.splitlines():
-                line = " ".join(raw.split()).strip()
-                if not line:
-                    continue
-                if _BOILERPLATE.search(line) and len(line) < 120:
-                    continue
-                lines.append(line)
-            page.content = "\n".join(lines).strip()
-            lang = detect_language(page.content)
-            meta = getattr(page, "metadata", None)
-            if isinstance(meta, dict):
-                meta["language"] = lang
-            if not page.content or len(page.content) < min_chars:
+            text = re.sub(r"[ \t]+", " ", text)
+            text = re.sub(r"\n\s*\n+", "\n", text)
+            text = _strip_light_boilerplate(text).strip()
+            item.page.content = text
+            lang = _detect_lang(item.page.content, str(item.page.url))
+            item.page.metadata.setdefault("language", lang)
+            if not item.page.content:
                 item.accepted = False
-                item.reason = "contenu vide"
-            elif wanted_lang and lang != "unknown":
-                if wanted_lang[:2] != lang[:2]:
-                    item.accepted = False
-                    item.reason = f"langue_filtr?e:{lang}"
+                item.reason = "contenu vide apres normalisation"
         return items
 
 
-def _coerce_text(text: str, raw: bytes | None) -> str:
-    if isinstance(text, str) and text.strip():
-        return text
-    data = raw or b""
-    for enc in ("utf-8", "utf-16", "cp1252", "latin-1"):
-        try:
-            return data.decode(enc)
-        except Exception:
+def _strip_light_boilerplate(text: str) -> str:
+    drop = re.compile(
+        r"^(subscribe.*|newsletter.*|sign in|log in|cookies?.*|accept all)$", re.I
+    )
+    lines = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if drop.match(line):
             continue
-    return data.decode("utf-8", errors="replace")
+        lines.append(raw)
+    return "\n".join(lines)
 
 
-def detect_language(text: str) -> str:
-    sample = f" {(text or '').lower()} "
-    if len(sample.strip()) < 10:
-        return "unknown"
-    fr_words = (" le ", " la ", " les ", " des ", " et ", " du ", " en ")
-    en_words = (" the ", " and ", " of ", " to ", " in ", " is ")
-    es_words = (" el ", " la ", " los ", " de ", " y ", " en ")
-    de_words = (" der ", " die ", " und ", " das ", " ist ", " zu ")
+def _detect_lang(text: str, url: str) -> str:
+    low = url.lower()
+    if "/fr" in low or ".fr/" in low or "lang=fr" in low:
+        return "fr"
+    if "/en" in low or ".en/" in low or "lang=en" in low:
+        return "en"
+    try:
+        from langdetect import detect  # type: ignore
+
+        sample = text[:4000]
+        if len(sample.strip()) >= 40:
+            return str(detect(sample))
+    except Exception:
+        pass
+    sample = text[:2000].lower()
+    fr_words = (" le ", " la ", " les ", " des ", " et ", " une ", " est ")
     fr = sum(sample.count(w) for w in fr_words)
+    en_words = (" the ", " and ", " of ", " to ", " in ", " is ", " for ")
     en = sum(sample.count(w) for w in en_words)
-    es = sum(sample.count(w) for w in es_words)
-    de = sum(sample.count(w) for w in de_words)
-    scores = {"fr": fr, "en": en, "es": es, "de": de}
-    lang, score = max(scores.items(), key=lambda kv: kv[1])
-    return lang if score > 0 else "unknown"
+    return "fr" if fr > en else "en"

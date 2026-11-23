@@ -59,6 +59,7 @@ def run_universe(
         formats,
         rag_coupling=bool(limits.get("rag_coupling")),
         graph_enabled=bool(limits.get("graph_enabled", True)),
+        graph_rag_config=caps.get("graph_rag"),
         reporter=reporter,
     )
     if pending_children:

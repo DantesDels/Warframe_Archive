@@ -92,6 +92,18 @@ def emit_artifacts(
         from ..graph.run_graph import write_run_graph
 
         files.extend(write_run_graph(out_dir, universe, docs))
+    graph_rag_cfg = kwargs.get("graph_rag_config")
+    graph_rag_on = bool(kwargs.get("graph_rag_enabled")) or (
+        isinstance(graph_rag_cfg, dict) and bool(graph_rag_cfg.get("enabled"))
+    )
+    if graph_rag_on:
+        from ..semantic.export import export_graphrag_bundle
+        from ..semantic.pipeline import extract_docs_semantics
+
+        bundle = extract_docs_semantics(
+            docs, str(universe.get("id", "")), llm_budget=graph_rag_cfg
+        )
+        files.extend(export_graphrag_bundle(out_dir / "graphrag", universe, bundle))
     manifest = _manifest(out_dir, universe, docs, files)
     _write_json(out_dir / "manifest.json", manifest)
     return manifest

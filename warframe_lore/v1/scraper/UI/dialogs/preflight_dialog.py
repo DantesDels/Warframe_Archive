@@ -39,7 +39,7 @@ class PreflightDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.universe_ids = universe_ids
-        self.result: LaunchPlan | None = None
+        self.selected_plan: LaunchPlan | None = None
         self.setWindowTitle("Pré-exécution")
         self.setModal(True)
         self.setMinimumWidth(420)
@@ -76,7 +76,7 @@ class PreflightDialog(QDialog):
         layout.addWidget(self.expand_manifests)
         box = QGroupBox("Formats de sortie (multi-sélection)")
         box_layout = QVBoxLayout(box)
-        self.formats = {}
+        self.formats: dict[str, QCheckBox] = {}
         for name in OUTPUT_FORMATS:
             label = FORMAT_LABELS.get(name, name)
             checkbox = QCheckBox(label)
@@ -88,14 +88,16 @@ class PreflightDialog(QDialog):
         self.rag.setChecked(settings.rag_coupling)
         layout.addWidget(self.rag)
         buttons = QDialogButtonBox()
-        launch_btn = buttons.addButton("Lancer", QDialogButtonBox.AcceptRole)
-        cancel_btn = buttons.addButton("Annuler", QDialogButtonBox.RejectRole)
+        launch_btn = buttons.addButton("Lancer", QDialogButtonBox.ButtonRole.AcceptRole)
+        cancel_btn = buttons.addButton(
+            "Annuler", QDialogButtonBox.ButtonRole.RejectRole
+        )
         launch_btn.clicked.connect(self._launch)
         cancel_btn.clicked.connect(self.reject)
         layout.addWidget(buttons)
 
     def _launch(self) -> None:
-        formats = tuple(n for n, cb in self.formats.items() if cb.isChecked())
+        formats = tuple(str(name) for name, cb in self.formats.items() if bool(cb.isChecked()))
         try:
             settings = Settings(
                 self.relevance.value(),
@@ -108,7 +110,7 @@ class PreflightDialog(QDialog):
                 self.incremental.isChecked(),
                 self.expand_manifests.isChecked(),
             )
-            self.result = LaunchPlan(settings, self.universe_ids)
+            self.selected_plan = LaunchPlan(settings, self.universe_ids)
         except ValueError as error:
             QMessageBox.critical(self, "Pré-exécution", str(error))
             return
@@ -123,4 +125,4 @@ def open_preflight(
 ) -> LaunchPlan | None:
     dialog = PreflightDialog(parent, settings, universe_ids, candidate_count)
     dialog.exec()
-    return dialog.result
+    return dialog.selected_plan

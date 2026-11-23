@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -13,7 +15,7 @@ from PySide6.QtWidgets import (
 from ..security import validate_import
 
 
-def build_actions(view) -> QHBoxLayout:
+def build_actions(view: Any) -> QHBoxLayout:
     bar = QHBoxLayout()
     view._suspend_btn = QPushButton("Suspendre")
     view._suspend_btn.clicked.connect(lambda: toggle_suspend(view))
@@ -39,79 +41,89 @@ def build_actions(view) -> QHBoxLayout:
     return bar
 
 
-def add_url(view) -> None:
+def add_url(view: Any) -> None:
     value, ok = QInputDialog.getText(view, "Ajouter une URL", "URL de la source :")
     if ok and value.strip():
         _add_location(view, value.strip(), "website")
 
 
-def import_file(view) -> None:
+def import_file(view: Any) -> None:
     path, _ = QFileDialog.getOpenFileName(view, "Importer un fichier")
     if path:
         _add_location(view, path, "document")
 
 
-def _add_location(view, location: str, kind: str) -> None:
+def _add_location(view: Any, location: str, kind: str) -> None:
     allowed, reason = validate_import(location)
     if not allowed:
         QMessageBox.critical(view, "S?curit? ? l'import", reason)
         return
-    view.workspace.add_manual_source(view.universe["id"], location, kind=kind)
+    view.workspace.add_manual_source(str(view.universe["id"]), location, kind=kind)
     view.on_change()
 
 
-def toggle_suspend(view) -> None:
-    sources = view.selected_sources()
+def toggle_suspend(view: Any) -> None:
+    sources = cast(list[dict[str, Any]], view.selected_sources())
     if not sources:
         return
-    all_suspended = all(s.get("status") == "suspended" for s in sources)
+    all_suspended = all(str(s.get("status")) == "suspended" for s in sources)
     status = "approved" if all_suspended else "suspended"
     for source in sources:
         view.workspace.update_source(
-            source["id"], status=status, selected=status == "approved",
+            str(source["id"]),
+            status=status,
+            selected=status == "approved",
         )
     view.on_change()
 
 
-def edit_source(view) -> None:
-    source = view.current_source()
+def edit_source(view: Any) -> None:
+    source = cast(dict[str, Any] | None, view.current_source())
     if not source:
         return
     value, ok = QInputDialog.getText(
-        view, "Modifier la source", "Emplacement :", text=source["location"],
+        view,
+        "Modifier la source",
+        "Emplacement :",
+        text=str(source.get("location", "")),
     )
     if ok and value.strip():
-        view.workspace.update_source(source["id"], location=value.strip())
+        view.workspace.update_source(str(source["id"]), location=value.strip())
         view.on_change()
 
 
-def delete_source(view) -> None:
-    sources = view.selected_sources()
+def delete_source(view: Any) -> None:
+    sources = cast(list[dict[str, Any]], view.selected_sources())
     if not sources:
         return
-    question = "Supprimer la source s?lectionn?e ?"
+    question = "Supprimer la source sélectionnée ?"
     if len(sources) > 1:
-        question = f"Supprimer les {len(sources)} sources s?lectionn?es ?"
-    if QMessageBox.question(view, "Suppression", question) == QMessageBox.Yes:
+        question = f"Supprimer les {len(sources)} sources sélectionnées ?"
+    if (
+        QMessageBox.question(view, "Suppression", question)
+        == QMessageBox.StandardButton.Yes
+    ):
         for source in sources:
-            view.workspace.delete_source(source["id"])
+            view.workspace.delete_source(str(source["id"]))
         view.on_change()
 
 
-def blacklist_source(view) -> None:
-    sources = view.selected_sources()
+def blacklist_source(view: Any) -> None:
+    sources = cast(list[dict[str, Any]], view.selected_sources())
     if not sources:
         return
     for source in sources:
-        view.workspace.update_source(source["id"], status="blacklisted", selected=False)
+        view.workspace.update_source(
+            str(source["id"]), status="blacklisted", selected=False
+        )
     view.on_change()
 
 
-def force_update(view) -> None:
-    sources = view.selected_sources()
+def force_update(view: Any) -> None:
+    sources = cast(list[dict[str, Any]], view.selected_sources())
     if not sources:
         return
     for source in sources:
-        view.workspace.update_source(source["id"], forceUpdate=True)
+        view.workspace.update_source(str(source["id"]), forceUpdate=True)
     QMessageBox.information(view, "Forcer MAJ", "Mise ? jour forc?e demand?e.")
     view.on_change()

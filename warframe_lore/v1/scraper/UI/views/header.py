@@ -25,7 +25,10 @@ class HeaderBar(QFrame):
         layout.addSpacing(12)
         layout.addWidget(self.selection)
         layout.addStretch(1)
-        layout.addWidget(self.meta, alignment=Qt.AlignRight | Qt.AlignVCenter)
+        layout.addWidget(
+            self.meta,
+            alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+        )
 
     def set_context(self, selected: str | None, count: int, status: str) -> None:
         name = selected or "—"

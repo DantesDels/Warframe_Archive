@@ -6,11 +6,15 @@ import csv
 import hashlib
 import json
 from pathlib import Path
+from typing import Any
 
 
 def emit_artifacts(
-    out_dir: Path, universe: dict, docs: list[dict], formats: list[str]
-) -> dict:
+    out_dir: Path,
+    universe: dict[str, Any],
+    docs: list[dict[str, Any]],
+    formats: list[str],
+) -> dict[str, Any]:
     out_dir.mkdir(parents=True, exist_ok=True)
     rows = [{k: v for k, v in d.items() if k != "content"} for d in docs]
     files: list[Path] = []
@@ -36,18 +40,18 @@ def emit_artifacts(
     return manifest
 
 
-def _write_json(path: Path, payload) -> Path:
+def _write_json(path: Path, payload: Any) -> Path:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
 
 
-def _write_jsonl(path: Path, docs: list[dict]) -> Path:
+def _write_jsonl(path: Path, docs: list[dict[str, Any]]) -> Path:
     lines = [json.dumps(d, ensure_ascii=False) for d in docs]
     path.write_text("\n".join(lines), encoding="utf-8")
     return path
 
 
-def _write_csv(path: Path, rows: list[dict]) -> Path:
+def _write_csv(path: Path, rows: list[dict[str, Any]]) -> Path:
     with path.open("w", encoding="utf-8", newline="") as handle:
         fieldnames = list(rows[0].keys()) if rows else ["id"]
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -56,7 +60,7 @@ def _write_csv(path: Path, rows: list[dict]) -> Path:
     return path
 
 
-def _write_md(path: Path, universe: dict, docs: list[dict]) -> Path:
+def _write_md(path: Path, universe: dict[str, Any], docs: list[dict[str, Any]]) -> Path:
     lines = [f"# {universe['name']}", ""]
     for doc in docs:
         lines.extend([
@@ -68,12 +72,13 @@ def _write_md(path: Path, universe: dict, docs: list[dict]) -> Path:
     return path
 
 
-def _write_sql(path: Path, docs: list[dict]) -> Path:
-    vals = []
+def _write_sql(path: Path, docs: list[dict[str, Any]]) -> Path:
+    vals: list[str] = []
     for doc in docs:
-        title = doc.get("title", "").replace("'", "''")
-        url = doc.get("url", "").replace("'", "''")
-        vals.append(f"('{doc.get('id', '')}', '{title}', '{url}')")
+        title = str(doc.get("title", "") or "").replace("'", "''")
+        url = str(doc.get("url", "") or "").replace("'", "''")
+        doc_id = str(doc.get('id', '')).replace("'", "''")
+        vals.append(f"({chr(39)}{doc_id}{chr(39)}, {chr(39)}{title}{chr(39)}, {chr(39)}{url}{chr(39)})")
     sql = "CREATE TABLE IF NOT EXISTS documents(id TEXT, title TEXT, url TEXT);\n"
     if vals:
         sql += "INSERT INTO documents(id,title,url) VALUES\n" + ",\n".join(vals) + ";\n"
@@ -81,7 +86,8 @@ def _write_sql(path: Path, docs: list[dict]) -> Path:
     return path
 
 
-def _manifest(_out_dir: Path, universe: dict, docs: list[dict], files: list[Path]) -> dict:
+def _manifest(_out_dir: Path, universe: dict[str, Any], docs: list[dict[str, Any]],
+               files: list[Path]) -> dict[str, Any]:
     return {
         "universe": {"id": universe.get("id"), "name": universe.get("name")},
         "document_count": len(docs),

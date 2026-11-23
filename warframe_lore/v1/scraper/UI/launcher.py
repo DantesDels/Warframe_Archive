@@ -11,7 +11,9 @@ from warframe_lore.v1.scraper.UI.app import AtelierApp
 
 def main() -> None:
     """Open the Atelier v1 desktop window."""
-    app = QApplication.instance() or QApplication(sys.argv)
+    from PySide6.QtWidgets import QApplication
+    app_obj = QApplication.instance()
+    app = app_obj if isinstance(app_obj, QApplication) else QApplication(sys.argv)
     window = AtelierApp()
     window.show()
     sys.exit(app.exec())

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import json
 import re
 from urllib.parse import urljoin
@@ -38,15 +40,16 @@ def _from_json(line: str, base_url: str) -> list[str]:
         return []
     out: list[str] = []
 
-    def walk(value):
+    def walk(value: Any) -> None:
         if isinstance(value, dict):
-            for k, v in value.items():
-                if isinstance(v, str) and k.lower() in {"url", "href", "path", "file"}:
+            for k, v in cast(dict[str, Any], value).items():
+                key = str(k).lower() if isinstance(k, str) else ""
+                if isinstance(v, str) and key in {"url", "href", "path", "file"}:
                     out.append(urljoin(base_url, v))
                 else:
                     walk(v)
         elif isinstance(value, list):
-            for item in value:
+            for item in cast(list[Any], value):
                 walk(item)
 
     walk(payload)

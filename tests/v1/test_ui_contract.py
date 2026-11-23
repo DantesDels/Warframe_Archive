@@ -24,7 +24,10 @@ from warframe_lore.v1.scraper.UI.dialogs.settings_dialog import SettingsDialog
 
 
 def _app() -> QApplication:
-    return QApplication.instance() or QApplication([])
+    app = QApplication.instance()
+    if isinstance(app, QApplication):
+        return app
+    return QApplication([])
 
 
 def _seed_workspace() -> WorkshopWorkspace:
@@ -44,7 +47,10 @@ class WorkspaceDataTests(unittest.TestCase):
     def test_empty_data_has_expected_keys(self):
         self.assertEqual(
             set(empty_data()),
-            {"candidates", "universes", "sources", "documents", "runs"},
+            {
+                "candidates", "universes", "sources", "documents",
+                "document_versions", "runs", "capabilities",
+            },
         )
 
     def test_workspace_persists_to_disk(self):
@@ -109,6 +115,7 @@ class DesktopWindowTests(unittest.TestCase):
         self.assertEqual(app.details.title.text(), "Warframe")
         tabs = app.details.findChild(QTabWidget)
         self.assertIsNotNone(tabs)
+        assert tabs is not None
         self.assertEqual(tabs.count(), 5)
         app.sidebar.select(None)
         app.on_select(None)
@@ -147,15 +154,20 @@ class DesktopWindowTests(unittest.TestCase):
         app = self._make_app()
         app.sidebar.select("warframe")
         QApplication.processEvents()
-        selected = None
+        from warframe_lore.v1.scraper.UI.views.sidebar_item import UniverseItem
+
+        selected: UniverseItem | None = None
         for i in range(app.sidebar.list.count()):
             item = app.sidebar.list.item(i)
             if item.data(0x0100) == "warframe":
-                selected = app.sidebar.list.itemWidget(item)
+                widget = app.sidebar.list.itemWidget(item)
+                if isinstance(widget, UniverseItem):
+                    selected = widget
         self.assertIsNotNone(selected)
-        self.assertFalse(selected.actions.isHidden())
+        assert selected is not None
+        self.assertFalse(selected.actions_widget.isHidden())
         tips = {
-            b.toolTip() for b in selected.actions.findChildren(QPushButton)
+            b.toolTip() for b in selected.actions_widget.findChildren(QPushButton)
             if b.objectName() == "SidebarIconButton"
         }
         self.assertEqual(tips, {"Exécuter", "Synchroniser l'Univers", "Supprimer"})
@@ -164,7 +176,8 @@ class DesktopWindowTests(unittest.TestCase):
         QApplication.processEvents()
         for i in range(app.sidebar.list.count()):
             widget = app.sidebar.list.itemWidget(app.sidebar.list.item(i))
-            self.assertFalse(widget.actions.isVisible())
+            assert isinstance(widget, UniverseItem)
+            self.assertFalse(widget.actions_widget.isVisible())
         app.close()
         app.deleteLater()
 
@@ -173,6 +186,8 @@ class DesktopWindowTests(unittest.TestCase):
             store = SettingsStore(Path(tmp) / "settings.json")
             dialog = SettingsDialog(None, store)
             box = dialog.findChild(QDialogButtonBox)
+            self.assertIsNotNone(box)
+            assert box is not None
             texts = [btn.text() for btn in box.buttons()]
             self.assertIn("Enregistrer", texts)
             self.assertIn("Annuler", texts)
@@ -189,6 +204,8 @@ class DesktopWindowTests(unittest.TestCase):
     def test_preflight_dialog_french_buttons_and_formats(self):
         dialog = PreflightDialog(None, Settings(), ("warframe",), 3)
         box = dialog.findChild(QDialogButtonBox)
+        self.assertIsNotNone(box)
+        assert box is not None
         texts = [btn.text() for btn in box.buttons()]
         self.assertIn("Lancer", texts)
         self.assertIn("Annuler", texts)

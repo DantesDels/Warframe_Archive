@@ -34,7 +34,7 @@ class SettingsDialog(QDialog):
     def __init__(self, parent: QWidget | None, store: SettingsStore) -> None:
         super().__init__(parent)
         self.store = store
-        self.result: Settings | None = None
+        self.selected_settings: Settings | None = None
         self.setWindowTitle("Paramètres globaux")
         self.setModal(True)
         self.setMinimumWidth(460)
@@ -75,7 +75,7 @@ class SettingsDialog(QDialog):
         layout.addLayout(form2)
         box = QGroupBox("Formats de sortie")
         box_layout = QVBoxLayout(box)
-        self.formats = {}
+        self.formats: dict[str, QCheckBox] = {}
         for name in OUTPUT_FORMATS:
             label = FORMAT_LABELS.get(name, name)
             checkbox = QCheckBox(label)
@@ -93,14 +93,18 @@ class SettingsDialog(QDialog):
         note.setWordWrap(True)
         layout.addWidget(note)
         buttons = QDialogButtonBox()
-        save_btn = buttons.addButton("Enregistrer", QDialogButtonBox.AcceptRole)
-        cancel_btn = buttons.addButton("Annuler", QDialogButtonBox.RejectRole)
+        save_btn = buttons.addButton(
+            "Enregistrer", QDialogButtonBox.ButtonRole.AcceptRole
+        )
+        cancel_btn = buttons.addButton(
+            "Annuler", QDialogButtonBox.ButtonRole.RejectRole
+        )
         save_btn.clicked.connect(self._save)
         cancel_btn.clicked.connect(self.reject)
         layout.addWidget(buttons)
 
     def build_settings(self) -> Settings:
-        formats = tuple(n for n, cb in self.formats.items() if cb.isChecked())
+        formats = tuple(str(name) for name, cb in self.formats.items() if bool(cb.isChecked()))
         return Settings(
             self.relevance.value(),
             formats,
@@ -121,11 +125,6 @@ class SettingsDialog(QDialog):
             QMessageBox.critical(self, "Paramètres", str(error))
             return
         self.store.save(settings)
-        self.result = settings
+        self.selected_settings = settings
         self.accept()
 
-
-def open_settings(parent: QWidget | None, store: SettingsStore) -> Settings | None:
-    dialog = SettingsDialog(parent, store)
-    dialog.exec()
-    return dialog.result

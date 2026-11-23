@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from .models import Candidate
 from .providers import KeywordProvider
 
@@ -16,7 +18,7 @@ def keywords_for(name: str, description: str = "") -> list[str]:
 
 
 def discover(
-    universe: dict,
+    universe: dict[str, Any],
     min_relevance: int,
     provider: KeywordProvider | None = None,
 ) -> list[Candidate]:

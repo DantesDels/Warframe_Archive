@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
+from typing import Any
 from uuid import uuid4
 
 from .kinds import SourceKind, SourceStatus
@@ -56,7 +57,7 @@ def source_to_payload(source: Source) -> dict[str, object]:
     }
 
 
-def source_from_payload(payload: dict[str, object]) -> Source:
+def source_from_payload(payload: dict[str, Any]) -> Source:
     """Rebuild a source from its JSON representation."""
     data = dict(payload)
     data["kind"] = SourceKind(data["kind"])

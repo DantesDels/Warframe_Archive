@@ -238,3 +238,16 @@ Le mécanisme de découverte (S2) et la technologie de l'UI (PySide6 natif) sont
 tranchés. Restent à préciser avant S4–S5 : fournisseurs de découverte réels,
 critères de tri pondérés, détecteur de QR/vision pour S3, et backend vectoriel
 cible du couplage RAG.
+
+## 10. Mise à jour P0 (fondations)
+
+- Ports/Adapters hexagonaux: ports inbound/outbound, adapters inbound qt et outbound (connectors/http/persistence/security/llm), façades compat conservées.
+- Connecteurs pluggables: SourceConnectorPort + ConnectorRegistry + document/html/mediawiki/lzma.
+- Pipeline composable: normalize/clean/dedupe/security branché dans UI/collect.py.
+- Sécurité fetch-time: allowlist schémas, SSRF/private/loopback/link-local/reserved DNS, max_bytes, MIME/magic/exécutable, robots+crawl-delay, quarantaine, événements sécurité.
+- Traçabilité: events.jsonl append-only + manifest export versionné schema_version + SHA-256.
+- Incrémental/versioning: upsert URL/id, document_versions, version, lastSeenRunId, stale, runs conservés.
+- Capabilities par Univers: UniverseCapabilities persistées, budgets crawl/rag/watch/graph_rag/fact_check/multimodal/self_heal/active_learning, LlmBudget avec provider/model/endpoint/max_tokens/max_calls/vram_gb; adapter LLM budget-aware sans appel réel par défaut.
+
+
+- Frontière renforcée: use cases applicatifs (collect/run/apply) dans scraper/use_cases, pipeline applicatif dans scraper/use_cases/pipeline (shims compat dans scraper/pipeline), policy fetch-time domaine dans scraper/security/fetch_policy.py avec adapter outbound mince, exécution UI branchée via ExecutionObserver/UniverseRunContext.

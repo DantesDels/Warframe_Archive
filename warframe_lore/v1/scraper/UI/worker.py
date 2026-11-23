@@ -2,17 +2,34 @@
 
 from __future__ import annotations
 
-import time
-from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
 
 from PySide6.QtCore import QObject, Signal
 
+from ..adapters.outbound.persistence.quarantine import QuarantineStore
 from ..collect.cache import FetchCache
 from ..collect.http import HttpClient
+from ..events.log import EventLog
+from ..security.fetch_policy import FetchPolicy
+from ..settings import Settings
 from ..storage import read_json, write_json
-from .artifacts import emit_artifacts
-from .collect import collect_source
+from ..use_cases.ports import UniverseRunContext
+from ..use_cases.run_universe import run_universe
+
+
+class _WorkerObserver:
+    def __init__(self, worker: ExecutionWorker) -> None:
+        self.worker = worker
+
+    def progress(self, percent: int, step: str) -> None:
+        self.worker.progress.emit(percent, step)
+
+    def log(self, message: str) -> None:
+        self.worker.log.emit(message)
+
+    def event(self, event_type: str, **payload: Any) -> None:
+        self.worker.events_log.emit(event_type, payload)
 
 
 class ExecutionWorker(QObject):
@@ -21,112 +38,71 @@ class ExecutionWorker(QObject):
     progress = Signal(int, str)
     log = Signal(str)
     finished = Signal(object)
+    events_log = Signal(str, object)
 
-    def __init__(self, plan, workspace_snapshot, export_root: Path) -> None:
+    client: HttpClient
+    export_root: Path
+    snapshot: Any
+    state: dict[str, Any]
+    observer: _WorkerObserver
+
+    def __init__(self, plan: Any, workspace_snapshot: Any, export_root: Path) -> None:
         super().__init__()
         self.plan = plan
         self.snapshot = workspace_snapshot
         self.export_root = Path(export_root)
-        self.cache = FetchCache(self.export_root.parent / "cache" / "http")
-        self.state_path = self.export_root.parent / "incremental_state.json"
-        self.state = read_json(self.state_path, {})
-        self.client = HttpClient(cache=self.cache)
+        base = self.export_root.parent
+        self.cache = FetchCache(base / "cache" / "http")
+        self.state_path = base / "incremental_state.json"
+        self.state = cast(dict[str, Any], read_json(self.state_path, {}))
+        self.events = EventLog(base / "events.jsonl")
+        self.quarantine = QuarantineStore(base / "quarantine")
+        self.client = HttpClient(
+            cache=self.cache,
+            policy=FetchPolicy(max_bytes=5_000_000),
+            event_log=self.events,
+            quarantine=self.quarantine,
+        )
+        self.observer = _WorkerObserver(self)
 
     def run(self) -> None:
         try:
             self.finished.emit(self._run())
         except Exception as exc:  # noqa: BLE001
             self.log.emit(f"Erreur: {exc}")
+            self.events.emit("run_failed", error=str(exc), outcome="failed")
             self.finished.emit({"ok": False, "error": str(exc), "runs": []})
 
-    def _run(self) -> dict:
-        settings = self.plan.settings
-        formats = [f.lower() for f in settings.output_formats]
-        limits = {
-            "max_pages_per_source": settings.max_pages_per_source,
-            "max_depth": settings.max_depth,
-            "same_host_only": settings.same_host_only,
-            "use_cache": settings.use_cache,
-            "incremental": settings.incremental,
-            "expand_manifests": settings.expand_manifests,
-            "max_manifest_urls": settings.max_manifest_urls,
-        }
-        runs = []
+    def _run(self) -> dict[str, Any]:
+        settings = cast(Settings, self.plan.settings)
+        limits = _limits(settings)
+        formats = [str(f).lower() for f in settings.output_formats]
+        runs: list[dict[str, Any]] = []
+        self.events.emit(
+            "run_started", universes=list(self.plan.universe_ids), actor="user"
+        )
         for uid in self.plan.universe_ids:
-            universe = self.snapshot.get(uid)
+            universe = cast(dict[str, Any] | None, self.snapshot.get(str(uid)))
             if universe:
-                runs.append(self._run_universe(universe, formats, limits))
+                runs.append(
+                    run_universe(
+                        cast(UniverseRunContext, self), universe, formats, limits
+                    )
+                )
         write_json(self.state_path, self.state)
-        self.progress.emit(100, "Termin\xC3\xA9")
-        self.log.emit("Ex\xC3\xA9cution termin\xC3\xA9e.")
+        self.progress.emit(100, "Termin?")
+        self.log.emit("Ex?cution termin?e.")
+        self.events.emit("run_finished", runs=len(runs), outcome="ok")
         return {"ok": True, "runs": runs}
 
-    def _run_universe(self, universe: dict, formats: list[str], limits: dict) -> dict:
-        uid = universe["id"]
-        sources = self._active_sources(uid)
-        self.log.emit(f"[{universe['name']}] {len(sources)} source(s) active(s)")
-        docs, errors = self._collect_sources(sources, uid, limits)
-        run = self._build_run(universe, docs, formats, errors)
-        out_dir = self.export_root / uid / run["id"]
-        manifest = emit_artifacts(out_dir, universe, docs, formats)
-        run["manifest"] = manifest
-        self.log.emit(f"Artefacts export\xC3\xA9s: {out_dir}")
-        return {"universeId": uid, "docs": docs, "run": run}
 
-    def _active_sources(self, uid: str) -> list[dict]:
-        allowed = {"approved", "active"}
-        return [
-            s for s in self.snapshot.sources_by_uid.get(uid, [])
-            if s.get("status") in allowed or s.get("selected")
-        ]
-
-    def _collect_sources(
-        self, sources: list[dict], uid: str, limits: dict
-    ) -> tuple[list[dict], list[str]]:
-        docs, errors = [], []
-        state = self.state.setdefault(uid, {})
-        for idx, source in enumerate(sources, start=1):
-            pct = min(95, int(idx / max(len(sources), 1) * 80))
-            loc = str(source.get("location", ""))[:40]
-            self.progress.emit(pct, f"Collecte: {loc}")
-            new_docs, errs, updates = collect_source(
-                source, uid, self.client, limits, state
-            )
-            docs.extend(new_docs)
-            for item in updates:
-                state[item["url"]] = {"hash": item["hash"], "title": item["title"]}
-            for doc in new_docs:
-                suffix = " (cache)" if doc.get("fromCache") else ""
-                self.log.emit(f"Collect\xC3\xA9{suffix}: {doc['title']}")
-            for err in errs:
-                errors.append(err)
-                self.log.emit(f"Avertissement: {err}")
-            time.sleep(0.01)
-        return docs, errors
-
-    def _build_run(
-        self, universe: dict, docs: list[dict], formats: list[str], errors: list[str]
-    ) -> dict:
-        now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-        run_id = f"run-{universe['id']}-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
-        uid = universe["id"]
-        counts = {
-            "discovered": len(self.snapshot.candidates_by_uid.get(uid, [])),
-            "approved": len(self.snapshot.sources_by_uid.get(uid, [])),
-            "fetched": len(docs),
-            "sorted": len(docs),
-            "emitted": len(docs),
-        }
-        return {
-            "id": run_id,
-            "universeIds": [uid],
-            "startedAt": now,
-            "status": "done" if docs or not errors else "failed",
-            "counts": counts,
-            "formats": formats,
-            "sinks": [
-                {"name": f.upper(), "count": len(docs), "status": "done"}
-                for f in formats
-            ],
-            "errors": errors,
-        }
+def _limits(settings: Settings) -> dict[str, Any]:
+    return {
+        "max_pages_per_source": settings.max_pages_per_source,
+        "max_depth": settings.max_depth,
+        "same_host_only": settings.same_host_only,
+        "use_cache": settings.use_cache,
+        "incremental": settings.incremental,
+        "expand_manifests": settings.expand_manifests,
+        "max_manifest_urls": settings.max_manifest_urls,
+    }

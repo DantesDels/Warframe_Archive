@@ -79,8 +79,9 @@ class SourceRegistryTests(unittest.TestCase):
         self.registry.add("warframe", new_source(
             SourceKind.WEBSITE, "https://wiki.example.com", id="s1"))
         self.registry.set_status("warframe", "s1", SourceStatus.APPROVED)
-        self.assertIs(self.registry.get("warframe", "s1").status,
-                      SourceStatus.APPROVED)
+        source = self.registry.get("warframe", "s1")
+        assert source is not None
+        self.assertIs(source.status, SourceStatus.APPROVED)
 
     def test_remove(self):
         self.registry.add("warframe", new_source(

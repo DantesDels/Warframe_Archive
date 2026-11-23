@@ -6,6 +6,7 @@ import hashlib
 import json
 import time
 from pathlib import Path
+from typing import Any
 
 
 class FetchCache:
@@ -15,7 +16,7 @@ class FetchCache:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
 
-    def get(self, key: str) -> dict | None:
+    def get(self, key: str) -> dict[str, Any] | None:
         path = self._path(key)
         if not path.is_file():
             return None
@@ -24,7 +25,7 @@ class FetchCache:
         except Exception:
             return None
 
-    def set(self, key: str, value: dict) -> None:
+    def set(self, key: str, value: dict[str, Any]) -> None:
         path = self._path(key)
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = dict(value)

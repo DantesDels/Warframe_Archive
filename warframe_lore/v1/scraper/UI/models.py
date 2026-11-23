@@ -4,42 +4,56 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import UTC, datetime
+from typing import Any
 
 from ..slugs import slugify
 
 
-def empty_data() -> dict:
+def empty_data() -> dict[str, Any]:
     """Return an empty, functional workspace dataset."""
     return {
         "universes": [],
         "sources": [],
         "documents": [],
+        "document_versions": [],
         "runs": [],
         "candidates": [],
+        "capabilities": {},
     }
 
 
 class UniverseWorkspace:
     """Mutable workspace state, optionally persisted to disk."""
 
-    def __init__(self, data: dict | None = None) -> None:
-        self.data = deepcopy(data) if data is not None else empty_data()
+    def __init__(self, data: dict[str, Any] | None = None) -> None:
+        self.data: dict[str, Any] = deepcopy(data) if data is not None else empty_data()
         for key in empty_data():
             self.data.setdefault(key, [])
 
     def save(self) -> None:
         """Persist state when a backing store is configured."""
 
-    def universes(self) -> list[dict]:
-        return self.data["universes"]
+    def universes(self) -> list[dict[str, Any]]:
+        return self.data.setdefault("universes", [])
 
-    def get(self, universe_id: str) -> dict | None:
+    def get(self, universe_id: str) -> dict[str, Any] | None:
         return next((i for i in self.universes() if i["id"] == universe_id), None)
+
+    def capabilities_for(self, universe_id: str) -> dict[str, Any]:
+        from ..capabilities import default_capabilities
+        caps = self.data.setdefault("capabilities", {})
+        if universe_id not in caps:
+            caps[universe_id] = default_capabilities()
+        return caps[universe_id]
+
+    def set_capabilities(self, universe_id: str, caps: dict[str, Any]) -> None:
+        self.data.setdefault("capabilities", {})[universe_id] = caps
+        self.save()
 
     def names(self, *, exclude: str = "") -> set[str]:
         return {i["name"].casefold() for i in self.universes() if i["id"] != exclude}
 
-    def create(self, name: str, description: str = "") -> dict:
+    def create(self, name: str, description: str = "") -> dict[str, Any]:
         clean_name = name.strip()
         if not clean_name:
             raise ValueError("universe name must not be empty")
@@ -53,7 +67,7 @@ class UniverseWorkspace:
         self.save()
         return universe
 
-    def rename(self, universe_id: str, name: str) -> dict:
+    def rename(self, universe_id: str, name: str) -> dict[str, Any]:
         universe = self.get(universe_id)
         if universe is None:
             raise KeyError(universe_id)
@@ -67,13 +81,13 @@ class UniverseWorkspace:
         self.save()
         return universe
 
-    def sources_for(self, universe_id: str) -> list[dict]:
+    def sources_for(self, universe_id: str) -> list[dict[str, Any]]:
         return [s for s in self.data["sources"] if s["universeId"] == universe_id]
 
-    def documents_for(self, universe_id: str) -> list[dict]:
+    def documents_for(self, universe_id: str) -> list[dict[str, Any]]:
         return [d for d in self.data["documents"] if d["universeId"] == universe_id]
 
-    def runs_for(self, universe_id: str) -> list[dict]:
+    def runs_for(self, universe_id: str) -> list[dict[str, Any]]:
         return [r for r in self.data["runs"] if universe_id in r["universeIds"]]
 
     def _unique_id(self, base: str) -> str:

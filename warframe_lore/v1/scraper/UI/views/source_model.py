@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from typing import Any
+
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QPersistentModelIndex, Qt
 
 COLUMNS = [
     "Emplacement (URL/Path)",
@@ -15,48 +17,61 @@ COLUMNS = [
 class SourceTableModel(QAbstractTableModel):
     """Read-only table model exposing workspace source records."""
 
-    def __init__(self, sources: list[dict] | None = None) -> None:
+    def __init__(self, sources: list[dict[str, Any]] | None = None) -> None:
         super().__init__()
         self._sources = list(sources or [])
 
-    def rowCount(self, parent: QModelIndex | None = None) -> int:
-        if parent and parent.isValid():
+    def rowCount(
+        self, parent: QModelIndex | QPersistentModelIndex | None = None
+    ) -> int:
+        if parent is not None and parent.isValid():
             return 0
         return len(self._sources)
 
-    def columnCount(self, parent: QModelIndex | None = None) -> int:
-        if parent and parent.isValid():
+    def columnCount(
+        self, parent: QModelIndex | QPersistentModelIndex | None = None
+    ) -> int:
+        if parent is not None and parent.isValid():
             return 0
         return len(COLUMNS)
 
-    def headerData(self, section: int, orientation, role=Qt.DisplayRole):
-        if role != Qt.DisplayRole:
+    def headerData(
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: int = int(Qt.ItemDataRole.DisplayRole),
+    ) -> Any:
+        if role != Qt.ItemDataRole.DisplayRole:
             return None
-        if orientation == Qt.Horizontal and 0 <= section < len(COLUMNS):
+        if orientation == Qt.Orientation.Horizontal and 0 <= section < len(COLUMNS):
             return COLUMNS[section]
         return None
 
-    def data(self, index: QModelIndex, role=Qt.DisplayRole):
+    def data(
+        self,
+        index: QModelIndex | QPersistentModelIndex,
+        role: int = int(Qt.ItemDataRole.DisplayRole),
+    ) -> Any:
         if not index.isValid() or not (0 <= index.row() < len(self._sources)):
             return None
         source = self._sources[index.row()]
         col = index.column()
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             return source
-        if role == Qt.DisplayRole and col in (0, 1):
+        if role == Qt.ItemDataRole.DisplayRole and col in (0, 1):
             return source.get("location", "") if col == 0 else source.get("kind", "")
-        if role == Qt.DisplayRole and col in (2, 3):
+        if role == Qt.ItemDataRole.DisplayRole and col in (2, 3):
             return source.get("status", "") if col == 2 else source.get("score", 0)
-        if role == Qt.ToolTipRole and col == 0:
+        if role == Qt.ItemDataRole.ToolTipRole and col == 0:
             return source.get("location", "")
         return None
 
-    def set_sources(self, sources: list[dict]) -> None:
+    def set_sources(self, sources: list[dict[str, Any]]) -> None:
         self.beginResetModel()
         self._sources = list(sources)
         self.endResetModel()
 
-    def source_at(self, row: int) -> dict | None:
+    def source_at(self, row: int) -> dict[str, Any] | None:
         if 0 <= row < len(self._sources):
             return self._sources[row]
         return None

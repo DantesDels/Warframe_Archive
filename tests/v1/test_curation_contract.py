@@ -15,7 +15,9 @@ class CurationTests(unittest.TestCase):
         self.workspace.create("Droit constitutionnel")
 
     def test_candidates_are_scoped_and_serialized(self):
-        candidates = discover(self.workspace.get("warframe"), 60)
+        universe = self.workspace.get("warframe")
+        assert universe is not None
+        candidates = discover(universe, 60)
         self.workspace.set_candidates(candidates)
         self.assertEqual(
             len(self.workspace.candidates_for("warframe")),

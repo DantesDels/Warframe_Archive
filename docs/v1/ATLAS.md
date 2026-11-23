@@ -260,7 +260,7 @@ P1 implemente dans `warframe_lore/v1/` avec gates verts (`ruff`, `compileall`, `
 ### Decisions P0 actees
 - Stale/deleted: politique conservatrice (marquer stale/missing + horodatage/log, pas de suppression auto).
 - Capabilities UI: pas d'editeur dedie P0/P1 (config workspace/capabilities existante).
-- EXE: artefact build conserve dans `dist/`, pas copie dans `warframe_lore/v1/`.
+- EXE: binaire unique généré dans `warframe_lore/v1/AtelierV1.exe` (`--distpath warframe_lore/v1`, ignoré par git).
 - `docs/v1/graphify-out/`: ignore/regenerable.
 
 ### Decouverte
@@ -387,8 +387,8 @@ configuration, et API GraphQL + visualisation du graphe des relations.
 - **Stabilité d'exécution** : le thread ne s'auto-supprime plus (évite les
   `RuntimeError` au second lancement), les connexions Pause/Reprendre/
   Annuler sont déconnectées à chaque fin de run, `closeEvent` annule et
-  arrête le worker, les timeouts HTTP sont bornés (10 s / 2 essais pour la
-  collecte, 4 s / 1 essai pour la découverte).
+  arrête le worker, les timeouts HTTP sont bornés ((5 s connexion, 15 s lecture) / 2 essais pour la
+  collecte, memes bornes pour la découverte).
 - **Tests** : `tests/v1/test_ui_hardening_contract.py` couvre ces quatre
   points.
 
@@ -447,3 +447,153 @@ configuration, et API GraphQL + visualisation du graphe des relations.
   (6.22.2, avec `--paths .venv/Lib/site-packages` car l'interpréteur global
   n'a pas PySide6) a reconstruit `warframe_lore/v1/AtelierV1.exe`
   (103 144 413 octets, lancé avec succès).
+
+---
+
+## Exécution temps réel, contrôle immédiat et timeouts stricts
+
+- **Cause racine** : `thread.started.connect(worker.run)` exécutait `run()`
+  directement sur le `QThread` avant le démarrage de sa boucle d'événements.
+  Les slots `pause`/`resume`/`cancel` émis depuis le thread UI restaient en
+  file et n'étaient jamais livrés : le bouton changeait d'état mais le travail
+  continuait, et un worker en pause pouvait attendre indéfiniment.
+- **Correction** : `UI/runtime/work_launcher.py` émet une requête mise en file
+  (`Qt.ConnectionType.QueuedConnection`) exécutée dans la boucle du worker.
+  `RunControl` (`threading.Event`) est appelé directement par les boutons UI
+  via `runner_ui._connect_controls`, sans traverser la file Qt.
+- **Observabilité** : `scraper/observability/` fournit `ProgressReporter`,
+  `ProgressEvent`, `SourceDeadline`, `HTTP_TIMEOUT` et `resolve_host`. Le
+  reporter est transporté par `limits["reporter"]` jusqu'aux adaptateurs HTTP,
+  aux connecteurs HTML/REST/MediaWiki, à l'expansion de manifestes, au
+  planificateur et aux exports. Chaque source, page, requête HTTP, retry,
+  cache, étape ignorée et export produit une ligne française horodatée dans
+  `ExecutionPanel`. `events_log` est reconnecté au panneau via
+  `runtime/execution_events.py`. Un battement toutes les 3 secondes garantit
+  une activité visible même pendant une requête lente.
+- **Bornes** : `HTTP_TIMEOUT = (5.0, 15.0)` (connexion, lecture), résolution
+  DNS limitée à 2 s dans un pool, `robots.txt` chargé via `requests` au lieu
+  de `RobotFileParser.read()` non borné, budget par source
+  (`DEFAULT_SOURCE_TIMEOUT = 120 s`) appliqué au scheduler, aux retries et à
+  toutes les boucles coopératives.
+- **Découverte** : déplacée hors du thread UI (`UI/runtime/discovery_runner.py`)
+  avec achèvement par callback ; plus aucun `QApplication.processEvents()`.
+- **Structure** : `UI/artifacts.py` est découpé en `runtime/artifact_formats.py`
+  et `runtime/artifact_rag.py` ; `connectors/rest.py` et `mediawiki.py` délèguent
+  leur parsing à `rest_parsing.py` et `mediawiki_api.py` ; les helpers de
+  cycle de vie, d'events et de status vivent dans `UI/runtime/`.
+- **Vérification** : `ruff`, `compileall`, 134 tests (`pytest -q tests/v1`),
+  pyright (0 erreur sur le périmètre v1 touché), graphify (1 437 nœuds,
+  3 271 liens, 81 communautés), `graphify cluster-only docs/v1 --no-label`
+  et rebuild PyInstaller verts. `warframe_lore/v1/AtelierV1.exe`
+  (98 560 853 octets) a été lancé avec succès.
+
+---
+
+## Validation exhaustive de milestone (Zéro Crash / Zéro Régression)
+
+- **Affinité de thread** : les callbacks `worker.finished` et
+  `worker.events_log` passent désormais par `runtime/main_thread_bridge.py`.
+  Un `QObject` ancré sur le thread UI reçoit les signaux en
+  `QueuedConnection` : les lambdas sans contexte s'exécutaient auparavant
+  dans le thread émetteur et touchaient `ExecutionPanel` / `Sidebar` hors
+  thread UI (`killTimer` / `setParent` / access violation).
+- **Synchro répétée** : `_finish()` attend l'arrêt complet du thread avant
+  d'enchaîner, ne supprime plus le worker depuis le thread UI et ne libère
+  les références que si elles appartiennent encore à ce thread. La boucle
+  `sync_all` peut chaîner plusieurs univers sans race de destruction Qt.
+- **Concurrence** : découverte et exécution partagent le même garde-fou —
+  l'une refuse de démarrer si l'autre tourne, pour éviter un état incohérent
+  de la jauge et des boutons Pause/Reprendre/Annuler.
+- **Prévisualisation** : `views/candidates/preview_worker.py` déplace
+  l'appel HTTP de « Prévisualiser enfants » dans un `QThread` ; le clic ne
+  gèle plus l'interface, le résultat revient sur le thread UI.
+- **Données dégradées** : `read_json` retombe sur une valeur sûre (avec
+  avertissement journalisé) pour un fichier corrompu ; scores, pertinence,
+  `counts`, identifiants et capacités malformés sont normalisés dans
+  `UI/formatting.py`, `UI/models.py` et `UI/views/tabs_content.py`.
+- **Raccourci F2** : ignoré quand un champ de saisie a le focus, pour ne pas
+  renommer un Univers pendant la saisie du filtre.
+- **Gates** : `ruff`, `compileall`, 146 tests (`pytest -q tests/v1`),
+  graphify, `graphify cluster-only docs/v1 --no-label`, rebuild et lancement
+  de l'EXE verts. La règle contraignante est inscrite dans
+  `REFACTO/REGLES_CODAGE.md` §5.
+
+---
+
+## Finalisation P1 — Parité volume/qualité multi-univers
+
+- **Sécurité URL (`security/policy.py`, `security/scanner.py`)** : `path_suffix`
+  lit `urlparse(location).path` (fin du faux positif bloquant les racines `.com`
+  comme `wiki.warframe.com/` ou `starwars.fandom.com/`), et `scan_payload`
+  autorise les pages `.html`/`.xml`/`.pdf` sur fetch HTTP distant tout en
+  maintenant le blocage des exécutables, scripts JS purs, macros et archives.
+- **MediaWiki universel (`connectors/mediawiki.py`, `connectors/wiki/`)** :
+  auto-découverte d'API (`/api.php`, `/w/api.php`, `/wiki/api.php` via
+  `siteinfo`), distinction racine/catégorie/article unique (fin de l'arrêt sur
+  `Main Page`), récupération par lots (`BATCH_SIZE=20`, pré-filtre delta
+  `prop=info` par lots de 50), exploration récursive de catégories et liens de
+  portail/hub, pagination `allpages` sans redirections.
+- **Sitemap réel (`connectors/sitemap.py`, `collect/sitemap_xml.py`)** :
+  récursion `<sitemapindex>`, delta `lastmod`, et téléchargement réel des pages
+  HTML converties en Markdown + `sections[]`.
+- **Qualité HTML & Wikitext (`collect/dom_clean.py`, `collect/wikitext.py`,
+  `collect/crawl_filter.py`, `connectors/html.py`)** : `HtmlConnector` produit
+  désormais du Markdown structuré + `sections[]`, filtre les routes
+  transactionnelles génériques (`/login`, `/shop`, `/cart`, `/promocode`, …) et
+  scope les préfixes de locale (`/en`, `/fr`). `dom_clean` fusionne les balises
+  inline (`unwrap` + `smooth`) pour préserver les chiffres/mots courts.
+  `wikitext.py` extrait le libellé des templates inline courts, supprime les
+  liens `[[File:...]]` et convertit les listes imbriquées en Markdown.
+- **Découverte multi-univers & Profils de collecte** : `SitemapProvider` et
+  `FeedProvider` probent désormais les vrais domaines des sources de l'univers
+  (`robots.txt` `Sitemap:`, `<link rel="alternate">`) ; `WikiProvider` vérifie
+  `wiki.<slug>.com`, `<slug>.wiki.gg`, `<slug>.fandom.com` et Wikipédia EN/FR.
+  `PreflightDialog` propose 3 profils (Aperçu 25, Standard 250, Archive 5 000)
+  et `CrawlBudget` expose `source_timeout_seconds` avec mise à l'échelle auto.
+- **Passage à l'échelle (`UI/exports/buckets.py`, `collect/manifest.py`,
+  `use_cases/apply_result.py`, `use_cases/blob_store.py`)** : consolidation des
+  micro-buckets (`< 3` pages si `> 12` catégories) dans `General_<LANG>.json`,
+  support des fichiers relatifs avec digest dans `extract_manifest_urls`, et
+  déchargement des corps volumineux dans `data/v1/blobs/<hash>.txt` pour garder
+  `workspace.json` léger et fluide.
+- **UI responsive & logs compacts (`UI/dialogs/responsive.py`,
+  `UI/execution_panel.py`, `UI/app.py`, `UI/app_ui.py`, `UI/views/header.py`,
+  `observability/format_url.py`)** : toutes les fenêtres et boîtes de dialogue
+  (`AtelierApp`, `Paramètres`, `Capacités`, `Pré-exécution`) s'adaptent à la
+  géométrie disponible de l'écran via `fit_to_screen()` et un corps défilant
+  `QScrollArea` (pied de page épinglé). Les lots MediaWiki (`titles=...`) sont
+  résumés (`... (lot de N pages)`) et le bandeau d'étape (`step_label`,
+  `QSizePolicy.Ignored`) ne peut plus élargir la fenêtre hors écran pendant le
+  scraping. `html_extract.extract_links()` ignore les URLs de gabarits
+  non rendus (`{{url}}` / `%7B%7B...%7D%7D`).
+- **Modes guidés dans Capacités (`capabilities/modes.py`,
+  `UI/dialogs/capabilities_dialog.py`, `UI/dialogs/tag_editor.py`,
+  `connectors/wiki/search.py`, `collect/crawl_filter.py`)** : 4 profils prêts à
+  l'emploi + `Personnalisé` (*Petite recherche* 30 pages, *Recherche thématique
+  par tags/catégories* 500 pages + éditeur interactif `TagEditor` avec ajout et
+  suppression individuelle ou globale des tags, *Recherche globale* 1 000 pages,
+  *Recherche poussée exhaustive* 25 000 pages sans coupe-circuit de délai). Les
+  `topic_tags` pilotent activement la collecte MediaWiki (catégories + recherche
+  plein texte) et le crawl HTML (priorisation et filtrage des sous-pages).
+- **Contraste, Data & Ergonomie (`UI/style.py`, `UI/views/data/cleanup.py`,
+  `UI/views/simple_table.py`, `UI/views/table_filter.py`, `UI/graph/`,
+  `graph/html_template.py`)** : palette claire explicite (`light_palette` +
+  style `Fusion`) empêchant le mode sombre Windows de rendre illisibles les
+  fenêtres de paramètres, comboboxes, groupes ou lignes alternées ; bouton
+  « Vider les données » dans l'onglet *Data* (supprime documents, versions,
+  exécutions, exports, blobs orphelins et état incrémental d'un Univers tout en
+  conservant ses sources et dossiers locaux) ; filtrage temps réel, tri
+  numérique/alphabétique, redimensionnement interactif et infobulles sur tous
+  les tableaux (*Sources*, *Documents*, *Exécutions*, *Candidats*) ; onglet
+  *Graphe* repensé façon Graphify (canvas sombre plein cadre, barre latérale de
+  recherche/filtres/inspection, fenêtre « Plein écran » dédiée et export
+  `graph.html` interactif autonome sans CDN).
+- **Curation en lot des candidats (`UI/views/candidates/toolbar.py`,
+  `UI/views/candidates/view.py`, `UI/views/candidates/actions.py`,
+  `UI/views/simple_table.py`)** : tableau compact sans défilement horizontal
+  (colonne *Preuve/score* masquée mais indexée à la recherche et affichée dans
+  le bandeau détail inférieur), sélection multiple (`ExtendedSelection`,
+  Ctrl/Maj+clic, boutons « Tout sélectionner » et « Désélectionner »), filtre
+  combiné texte + état (`Proposés`, `Actifs`, `Suspendus`, `Blacklistés`), et
+  actions en lot (*Activer* sans doublon de source, *Suspendre*, *Blacklister*
+  avec mise à jour du statut candidat, *Supprimer*).

@@ -25,15 +25,21 @@ NODE_RADII = {
 }
 
 
+_MAX_SCENE_NODES = 240
+
+
 def filter_graph(
     graph: dict[str, Any], allowed_kinds: set[str] | None = None
 ) -> dict[str, Any]:
-    """Return a subgraph containing only nodes whose kind is enabled."""
-    if not allowed_kinds:
-        return graph
-    nodes = [
-        n for n in graph.get("nodes", []) if str(n.get("kind", "")) in allowed_kinds
-    ]
+    """Return a bounded subgraph containing only nodes whose kind is enabled."""
+    nodes = list(graph.get("nodes", []))
+    if allowed_kinds:
+        nodes = [n for n in nodes if str(n.get("kind", "")) in allowed_kinds]
+    if len(nodes) > _MAX_SCENE_NODES:
+        priority = {"Universe": 0, "Source": 1, "Candidate": 2, "Document": 3}
+        nodes = sorted(
+            nodes, key=lambda n: priority.get(str(n.get("kind", "")), 4)
+        )[:_MAX_SCENE_NODES]
     ids = {str(n.get("id", "")) for n in nodes}
     edges = [
         e for e in graph.get("edges", [])

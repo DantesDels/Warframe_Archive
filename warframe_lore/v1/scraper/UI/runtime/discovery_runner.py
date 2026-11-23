@@ -53,6 +53,7 @@ def start_discovery(
         app.execution.set_state("busy", "Opération déjà en cours.")
         return
     app.execution.set_state("running", "Découverte en cours...")
+    app.execution.set_progress(-1, "Découverte en cours...")
     thread = QThread(app)
     worker = DiscoveryWorker(app, universe, settings)
     launcher = WorkLauncher()
@@ -103,10 +104,11 @@ def _finish(app: Any, thread: QThread, worker: QObject, result: object,
     if payload.get("ok"):
         count = int(payload.get("count", 0))
         app.execution.add_log(f"{count} nouveau(x) candidat(s) découvert(s).")
+        app.execution.set_state("done", "Découverte terminée.")
     else:
         count = 0
         app.execution.add_log(f"Découverte impossible : {payload.get('error', '')}")
-    app.execution.set_state("idle", "Découverte terminée.")
+        app.execution.set_state("error", "Découverte impossible.")
     app.refresh()
     thread.quit()
     thread.wait(2000)

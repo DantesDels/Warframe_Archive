@@ -9,6 +9,7 @@ from PySide6.QtCore import QObject, Qt, QThread, Signal
 from PySide6.QtWidgets import QMessageBox
 
 from ....collect.http import HttpClient
+from ....settings import SettingsStore
 from ....use_cases.review_children import preview_child_candidates
 from ...runtime.main_thread_bridge import MainThreadBridge
 from ...runtime.work_launcher import WorkLauncher
@@ -34,8 +35,17 @@ class PreviewWorker(QObject):
 
     def run(self) -> None:
         try:
+            ws_path = getattr(self.workspace, "path", None)
+            use_pw = False
+            if ws_path is not None:
+                store = SettingsStore(ws_path.parent / "settings.json")
+                use_pw = store.load().use_playwright
             children = preview_child_candidates(
-                self.workspace, self.universe, self.location, client=HttpClient()
+                self.workspace,
+                self.universe,
+                self.location,
+                client=HttpClient(),
+                use_playwright=use_pw,
             )
             self.finished.emit({"ok": True, "count": len(children)})
         except Exception as exc:  # noqa: BLE001

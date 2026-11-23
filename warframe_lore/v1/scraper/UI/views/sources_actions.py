@@ -1,7 +1,8 @@
-"""Action handlers for the sources tab."""
+"""Action handlers for the sources tab with single-save batch mutations."""
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import Any, cast
 
 from PySide6.QtWidgets import (
@@ -15,16 +16,19 @@ from PySide6.QtWidgets import (
 from ..security import validate_import
 
 
+def _batch(workspace: Any) -> Any:
+    return workspace.batch_save() if hasattr(workspace, "batch_save") else nullcontext()
+
+
 def build_actions(view: Any) -> QHBoxLayout:
     bar = QHBoxLayout()
     view._suspend_btn = QPushButton("Suspendre")
     view._suspend_btn.clicked.connect(lambda: toggle_suspend(view))
-    buttons = [
+    for label, slot in (
         ("+ Ajouter URL", lambda: add_url(view)),
         ("+ Importer fichier", lambda: import_file(view)),
         ("+ Importer dossier", lambda: import_directory(view)),
-    ]
-    for label, slot in buttons:
+    ):
         btn = QPushButton(label)
         btn.clicked.connect(slot)
         bar.addWidget(btn)
@@ -74,14 +78,13 @@ def toggle_suspend(view: Any) -> None:
     sources = cast(list[dict[str, Any]], view.selected_sources())
     if not sources:
         return
-    all_suspended = all(str(s.get("status")) == "suspended" for s in sources)
-    status = "approved" if all_suspended else "suspended"
-    for source in sources:
-        view.workspace.update_source(
-            str(source["id"]),
-            status=status,
-            selected=status == "approved",
-        )
+    all_susp = all(str(s.get("status")) == "suspended" for s in sources)
+    status = "approved" if all_susp else "suspended"
+    with _batch(view.workspace):
+        for src in sources:
+            view.workspace.update_source(
+                str(src["id"]), status=status, selected=status == "approved"
+            )
     view.on_change()
 
 
@@ -89,12 +92,8 @@ def edit_source(view: Any) -> None:
     source = cast(dict[str, Any] | None, view.current_source())
     if not source:
         return
-    value, ok = QInputDialog.getText(
-        view,
-        "Modifier la source",
-        "Emplacement :",
-        text=str(source.get("location", "")),
-    )
+    loc = str(source.get("location", ""))
+    value, ok = QInputDialog.getText(view, "Modifier", "Emplacement :", text=loc)
     if ok and value.strip():
         view.workspace.update_source(str(source["id"]), location=value.strip())
         view.on_change()
@@ -104,26 +103,24 @@ def delete_source(view: Any) -> None:
     sources = cast(list[dict[str, Any]], view.selected_sources())
     if not sources:
         return
-    question = "Supprimer la source sélectionnée ?"
-    if len(sources) > 1:
-        question = f"Supprimer les {len(sources)} sources sélectionnées ?"
-    if (
-        QMessageBox.question(view, "Suppression", question)
-        == QMessageBox.StandardButton.Yes
-    ):
-        for source in sources:
-            view.workspace.delete_source(str(source["id"]))
-        view.on_change()
+    n = len(sources)
+    msg = f"Supprimer {n} sources ?" if n > 1 else "Supprimer la source ?"
+    if QMessageBox.question(view, "Suppression", msg) != QMessageBox.StandardButton.Yes:
+        return
+    with _batch(view.workspace):
+        for src in sources:
+            view.workspace.delete_source(str(src["id"]))
+    view.on_change()
 
 
 def blacklist_source(view: Any) -> None:
     sources = cast(list[dict[str, Any]], view.selected_sources())
     if not sources:
         return
-    for source in sources:
-        view.workspace.update_source(
-            str(source["id"]), status="blacklisted", selected=False
-        )
+    with _batch(view.workspace):
+        for src in sources:
+            sid = str(src["id"])
+            view.workspace.update_source(sid, status="blacklisted", selected=False)
     view.on_change()
 
 
@@ -131,7 +128,8 @@ def force_update(view: Any) -> None:
     sources = cast(list[dict[str, Any]], view.selected_sources())
     if not sources:
         return
-    for source in sources:
-        view.workspace.update_source(str(source["id"]), forceUpdate=True)
+    with _batch(view.workspace):
+        for src in sources:
+            view.workspace.update_source(str(src["id"]), forceUpdate=True)
     QMessageBox.information(view, "Forcer MAJ", "Mise à jour forcée demandée.")
     view.on_change()

@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from typing import Any, cast
 
 from .blob_store import blobs_dir, compact_doc
+from .child_scoring import child_authority_score
 
 
 def apply_result(workspace: Any, result: dict[str, Any]) -> None:
@@ -29,13 +30,9 @@ def apply_result(workspace: Any, result: dict[str, Any]) -> None:
 
 
 def _upsert_docs(
-    existing: list[dict[str, Any]],
-    incoming: list[dict[str, Any]],
-    run_id: str,
+    existing: list[dict[str, Any]], incoming: list[dict[str, Any]], run_id: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    by_key: dict[str, dict[str, Any]] = {}
-    order: list[str] = []
-    versions: list[dict[str, Any]] = []
+    by_key, order, versions = {}, [], []
     for doc in existing:
         key = _doc_key(doc)
         by_key[key] = doc
@@ -45,12 +42,8 @@ def _upsert_docs(
         prev = by_key.get(key)
         if prev is not None:
             versions.append(_snapshot(prev, doc, run_id))
-            next_doc = {
-                **doc,
-                "version": int(prev.get("version", 1) or 1) + 1,
-                "lastSeenRunId": run_id,
-                "stale": False,
-            }
+            ver = int(prev.get("version", 1) or 1) + 1
+            next_doc = {**doc, "version": ver, "lastSeenRunId": run_id, "stale": False}
         else:
             order.append(key)
             next_doc = {**doc, "version": 1, "lastSeenRunId": run_id, "stale": False}
@@ -96,19 +89,23 @@ def _upsert_pending_children(
         if not url or key in existing:
             continue
         existing.add(key)
-        cands.append(_child_candidate(uid, url, key, idx, child.get("parent", "")))
+        parent = str(child.get("parent", ""))
+        score, bd = child_authority_score(workspace, uid, parent, url)
+        cands.append(_child_candidate(uid, url, key, idx, parent, score, bd))
 
 
 def _child_candidate(
-    uid: str, url: str, key: str, idx: int, parent: str
+    uid: str, url: str, key: str, idx: int, parent: str,
+    score: float = 0.5, breakdown: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     return {
         "id": f"child-{uid}-{abs(hash((uid, key, idx))) % 1000000}",
         "universeId": uid, "kind": "website", "location": url,
         "title": f"Page enfant: {url.rsplit('/', 1)[-1] or url}",
-        "score": 0.5, "proof": f"Page enfant détectée depuis {parent}",
+        "score": score, "proof": f"Page enfant détectée depuis {parent}",
         "discoveredBy": "manifest_review", "status": "proposed",
-        "forceUpdate": False, "scoreBreakdown": {"confidence": 0.5},
+        "forceUpdate": False,
+        "scoreBreakdown": breakdown or {"confidence": score},
         "metadata": {"parent_location": parent, "needs_review": True},
     }
 

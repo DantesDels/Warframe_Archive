@@ -34,12 +34,12 @@ def build_ui(app: Any) -> None:
     root.addWidget(splitter, 1)
     _bind_sidebar(app)
     app.sidebar.selection_changed.connect(app.on_select)
-    app.execution = ExecutionPanel()
-    root.addWidget(app.execution)
     app.status_bar = QStatusBar()
-    app.status_bar.showMessage("Statut : Prêt")
-    app.status_bar.addPermanentWidget(QLabel(VERSION_LABEL))
     app.setStatusBar(app.status_bar)
+    app.execution = ExecutionPanel()
+    app.execution.set_status_bar(app.status_bar)
+    root.addWidget(app.execution)
+    app.status_bar.addPermanentWidget(QLabel(VERSION_LABEL))
 
 
 def _bind_sidebar(app: Any) -> None:

@@ -12,8 +12,12 @@ from .worker import ExecutionWorker
 
 def start_execution(app: Any, plan: Any) -> None:
     if getattr(app, "_thread", None) and app._thread.isRunning():
+        app.execution.set_state("busy")
+        app.execution.add_log("Une exécution est déjà en cours.")
         return
-    app.status_bar.showMessage("Statut : Ex?cution en cours")
+    cleanup_execution(app)
+    app.execution.reset()
+    app.execution.add_log("Lancement de l'exécution...")
     snapshot = _snapshot(app.workspace)
     thread = QThread(app)
     worker = ExecutionWorker(plan, snapshot, app.data_path.parent / "exports")
@@ -21,29 +25,40 @@ def start_execution(app: Any, plan: Any) -> None:
     thread.started.connect(worker.run)
     worker.progress.connect(app.execution.set_progress)
     worker.log.connect(app.execution.add_log)
-    app.execution.pause_btn.clicked.connect(worker.pause)
-    app.execution.resume_btn.clicked.connect(worker.resume)
-    app.execution.cancel_btn.clicked.connect(worker.cancel)
-    app.execution.pause_btn.clicked.connect(lambda: _set_paused(app, True))
-    app.execution.resume_btn.clicked.connect(lambda: _set_paused(app, False))
-    app.execution.cancel_btn.clicked.connect(
-        lambda: app.execution.cancel_btn.setEnabled(False)
-    )
+    _connect_controls(app, worker)
     app._worker = worker
     app._thread = thread
     worker.finished.connect(
         app._on_execution_finished, Qt.ConnectionType.QueuedConnection
     )
-    thread.finished.connect(thread.deleteLater)
-    app.execution.reset()
     thread.start()
 
 
+def _connect_controls(app: Any, worker: ExecutionWorker) -> None:
+    connections = [
+        (app.execution.pause_btn, worker.pause),
+        (app.execution.resume_btn, worker.resume),
+        (app.execution.cancel_btn, worker.cancel),
+        (app.execution.pause_btn, lambda: _set_paused(app, True)),
+        (app.execution.resume_btn, lambda: _set_paused(app, False)),
+        (app.execution.cancel_btn, lambda: app.execution.cancel_btn.setEnabled(False)),
+    ]
+    for button, slot in connections:
+        button.clicked.connect(slot)
+    app._control_connections = connections
+
+
+def _disconnect_controls(app: Any) -> None:
+    for button, slot in getattr(app, "_control_connections", []):
+        try:
+            button.clicked.disconnect(slot)
+        except (RuntimeError, TypeError):
+            pass
+    app._control_connections = []
+
+
 def _set_paused(app: Any, paused: bool) -> None:
-    app.execution.pause_btn.setEnabled(not paused)
-    app.execution.resume_btn.setEnabled(paused)
-    state = "Pause" if paused else "Ex?cution en cours"
-    app.status_bar.showMessage(f"Statut : {state}")
+    app.execution.set_state("paused" if paused else "running")
 
 
 class _Snapshot:
@@ -71,14 +86,21 @@ def _group(items: list[dict[str, Any]], key: str) -> dict[str, list[dict[str, An
     return out
 
 
-def cleanup_execution(app: Any) -> None:
+def cleanup_execution(app: Any, *, stop: bool = True) -> None:
+    """Disconnect controls, stop the worker thread and release Qt objects."""
     thread = getattr(app, "_thread", None)
     worker = getattr(app, "_worker", None)
-    if thread and thread.isRunning():
-        thread.quit()
-        thread.wait(1500)
-    if worker:
-        worker.deleteLater()
+    _disconnect_controls(app)
+    if stop and worker is not None:
+        worker.cancel()
+    if thread is not None:
+        try:
+            if thread.isRunning():
+                thread.quit()
+                thread.wait(2000)
+            thread.deleteLater()
+        except RuntimeError:
+            pass
     app._worker = None
     app._thread = None
 
@@ -88,15 +110,15 @@ def handle_finished(app: Any, result: object) -> None:
     if thread:
         thread.quit()
     result_dict = cast(dict[str, Any], result) if isinstance(result, dict) else None
-    if result_dict is not None and result_dict.get("ok"):
-        apply_result(app.workspace, result_dict)
-    elif result_dict is not None and result_dict.get("cancelled"):
+    if result_dict is not None and (
+        result_dict.get("ok") or result_dict.get("cancelled")
+    ):
         apply_result(app.workspace, result_dict)
     app.refresh()
-    app.execution.pause_btn.setEnabled(False)
-    app.execution.resume_btn.setEnabled(False)
-    app.execution.cancel_btn.setEnabled(False)
     if result_dict and result_dict.get("cancelled"):
-        app.status_bar.showMessage("Statut : Annul?")
+        app.execution.set_state("cancelled")
+    elif result_dict and result_dict.get("ok"):
+        app.execution.set_state("done")
     else:
-        app.status_bar.showMessage("Statut : Pr?t")
+        app.execution.set_state("error")
+    cleanup_execution(app, stop=False)

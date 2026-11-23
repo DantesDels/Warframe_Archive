@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any, cast
 
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QApplication, QMessageBox
+
 from ...collect.http import HttpClient
 from ...use_cases.discover_universe import discover_universe
 from ..dialogs.preflight_dialog import open_preflight
@@ -21,9 +22,14 @@ def apply_discovery(app: Any, universe: dict[str, Any]) -> int:
         if str(s.get("location", "")).strip()
     ]
     settings = replace(settings, discovery_seeds=tuple(seeds))
-    new_candidates = discover_universe(
-        app.workspace, universe, settings, client=HttpClient()
-    )
+    active = bool(getattr(app, "_thread", None) and app._thread.isRunning())
+    state = "busy" if active else "running"
+    app.execution.set_state(state, "Découverte en cours...")
+    QApplication.processEvents()
+    client = HttpClient(timeout=4.0, max_retries=1, min_sleep=0.0)
+    new_candidates = discover_universe(app.workspace, universe, settings, client=client)
+    if not active:
+        app.execution.set_state("idle", "Découverte terminée.")
     return len(new_candidates)
 
 

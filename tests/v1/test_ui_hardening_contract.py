@@ -1,0 +1,176 @@
+"""Regression contracts for UTF-8 text, icons and execution lifecycle."""
+
+from __future__ import annotations
+
+import os
+import tempfile
+import unittest
+from pathlib import Path
+from types import SimpleNamespace
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+from PySide6.QtCore import QThread  # noqa: E402
+from PySide6.QtWidgets import (  # noqa: E402
+    QApplication,
+    QPushButton,
+    QStatusBar,
+)
+
+from warframe_lore.v1.scraper.UI import AtelierApp, WorkshopWorkspace  # noqa: E402
+from warframe_lore.v1.scraper.UI.execution_panel import ExecutionPanel  # noqa: E402
+from warframe_lore.v1.scraper.UI.runner_ui import (  # noqa: E402
+    cleanup_execution,
+)
+from warframe_lore.v1.scraper.UI.style import app_stylesheet  # noqa: E402
+from warframe_lore.v1.scraper.UI.worker import ExecutionWorker  # noqa: E402
+
+ROOT = Path(__file__).resolve().parents[2]
+MANGLED_TOKENS = (
+    "Ex?cution",
+    "Param?tres",
+    "S?curit?",
+    "D?couverte",
+    "S?lectionnez",
+    "t?l?chargement",
+    "actualit?s",
+    "configur?e",
+    "v?rifi?e",
+    "autoris?.",
+    "H?te",
+    "Sch?ma",
+    "donn?es",
+    "Annul?",
+    "Pr?t",
+    "Termin?",
+)
+
+
+def _qt_app() -> QApplication:
+    app = QApplication.instance()
+    if isinstance(app, QApplication):
+        return app
+    return QApplication([])
+
+
+def _make_app(tmp: str) -> AtelierApp:
+    path = Path(tmp) / "workspace.json"
+    return AtelierApp(WorkshopWorkspace(path=path), path)
+
+
+class EncodingContractTests(unittest.TestCase):
+    def test_sources_are_utf8_without_mangled_accents(self) -> None:
+        offenders: list[str] = []
+        for folder in ("warframe_lore/v1", "tests/v1"):
+            for path in (ROOT / folder).rglob("*.py"):
+                if path.name == Path(__file__).name:
+                    continue  # this module lists the forbidden tokens on purpose
+                text = path.read_text(encoding="utf-8")
+                offenders.extend(
+                    f"{path.relative_to(ROOT)}:{token}"
+                    for token in MANGLED_TOKENS
+                    if token in text
+                )
+        self.assertEqual(offenders, [])
+
+
+class FeedbackContractTests(unittest.TestCase):
+    def test_stylesheet_defines_pressed_feedback(self) -> None:
+        stylesheet = app_stylesheet()
+        self.assertIn("QPushButton:pressed", stylesheet)
+        self.assertIn("QPushButton#SidebarIconButton:pressed", stylesheet)
+        self.assertIn("QPushButton:disabled", stylesheet)
+
+    def test_standard_icons_replace_font_glyphs(self) -> None:
+        _qt_app()
+        with tempfile.TemporaryDirectory() as tmp:
+            app = _make_app(tmp)
+            buttons = [
+                button
+                for button in app.sidebar.findChildren(QPushButton)
+                if button.objectName() == "SidebarIconButton"
+            ]
+            self.assertTrue(buttons)
+            self.assertTrue(all(not button.icon().isNull() for button in buttons))
+            self.assertTrue(all(not button.text() for button in buttons))
+            app.close()
+            app.deleteLater()
+
+
+class LifecycleContractTests(unittest.TestCase):
+    def test_cleanup_disconnects_control_slots(self) -> None:
+        calls: list[int] = []
+        slot = lambda: calls.append(1)  # noqa: E731
+        button = QPushButton("x")
+        button.clicked.connect(slot)
+        app = SimpleNamespace(_control_connections=[(button, slot)])
+        cleanup_execution(app)
+        button.click()
+        self.assertEqual(calls, [])
+        self.assertIsNone(app._thread)
+        self.assertIsNone(app._worker)
+
+    def test_launch_while_running_keeps_the_current_thread(self) -> None:
+        _qt_app()
+        with tempfile.TemporaryDirectory() as tmp:
+            app = _make_app(tmp)
+            thread = QThread()
+            thread.start()
+            app._thread = thread
+            app.start_execution(object())
+            self.assertEqual(
+                app.status_bar.currentMessage(),
+                "Statut : Exécution déjà en cours",
+            )
+            thread.quit()
+            thread.wait(1000)
+            app.close()
+            app.deleteLater()
+
+    def test_worker_http_calls_are_time_bounded(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            worker = ExecutionWorker(
+                SimpleNamespace(settings=None, universe_ids=()),
+                SimpleNamespace(),
+                Path(tmp) / "exports",
+            )
+            self.assertEqual(worker.client.timeout, 10.0)
+            self.assertEqual(worker.client.max_retries, 2)
+
+
+class ExecutionStateContractTests(unittest.TestCase):
+    def test_label_progress_and_status_bar_share_one_state_handler(self) -> None:
+        _qt_app()
+        panel = ExecutionPanel()
+        status_bar = QStatusBar()
+        panel.set_status_bar(status_bar)
+
+        panel.set_state("running")
+        self.assertNotIn("Aucune exécution en cours.", panel.step_label.text())
+        self.assertEqual(status_bar.currentMessage(), "Statut : Exécution en cours")
+        self.assertTrue(panel.cancel_btn.isEnabled())
+
+        panel.set_state("idle")
+        self.assertEqual(panel.step_label.text(), "Aucune exécution en cours.")
+        self.assertEqual(panel.progress.value(), 0)
+        self.assertEqual(status_bar.currentMessage(), "Statut : Prêt")
+
+    def test_app_never_shows_idle_label_during_a_run(self) -> None:
+        _qt_app()
+        with tempfile.TemporaryDirectory() as tmp:
+            app = _make_app(tmp)
+            self.assertEqual(
+                app.execution.step_label.text(), "Aucune exécution en cours."
+            )
+            app.execution.set_state("running", "Préparation de l'exécution...")
+            self.assertNotEqual(
+                app.execution.step_label.text(), "Aucune exécution en cours."
+            )
+            self.assertEqual(
+                app.status_bar.currentMessage(), "Statut : Exécution en cours"
+            )
+            app.close()
+            app.deleteLater()
+
+
+if __name__ == "__main__":
+    unittest.main()

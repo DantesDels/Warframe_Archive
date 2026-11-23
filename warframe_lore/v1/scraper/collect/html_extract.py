@@ -6,25 +6,15 @@ import re
 from html import unescape
 from urllib.parse import urljoin, urlparse
 
-_SKIP = r"script|style|noscript|svg|iframe|canvas|template"
+from .html_text import html_to_text
+
+__all__ = ["extract_links", "html_title", "html_to_text"]
+
 _LINK_RE = re.compile(r"href=[\"']([^\"'#]+)[\"']", re.IGNORECASE)
 _ASSET_RE = re.compile(
     r"\.(?:css|js|png|jpe?g|gif|svg|webp|ico|json|webmanifest|woff2?|pdf|zip|mp4|mp3)$",
     re.IGNORECASE,
 )
-
-
-def html_to_text(html: str) -> str:
-    cleaned = re.sub(rf"(?is)<({_SKIP})[^>]*>.*?</\1>", " ", html)
-    cleaned = re.sub(r"(?is)<!--.*?-->", " ", cleaned)
-    cleaned = re.sub(r"(?is)<br\s*/?>", "\n", cleaned)
-    cleaned = re.sub(
-        r"(?is)</(p|div|li|h[1-6]|tr|section|article|main)>", "\n", cleaned
-    )
-    text = re.sub(r"(?is)<[^>]+>", " ", cleaned)
-    text = unescape(text.replace("\xa0", " "))
-    lines = [" ".join(line.split()) for line in text.splitlines()]
-    return "\n".join(line for line in lines if line)
 
 
 def html_title(html: str) -> str:

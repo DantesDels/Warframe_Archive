@@ -53,13 +53,12 @@ def run_universe(
 
     reporter.info("Écriture des artefacts en cours...")
     run["manifest"] = emit_artifacts(
-        out_dir,
-        universe,
-        docs,
-        formats,
+        out_dir, universe, docs, formats,
         rag_coupling=bool(limits.get("rag_coupling")),
         graph_enabled=bool(limits.get("graph_enabled", True)),
         graph_rag_config=caps.get("graph_rag"),
+        fact_check_config=caps.get("fact_check"),
+        sources=sources,
         reporter=reporter,
     )
     if pending_children:

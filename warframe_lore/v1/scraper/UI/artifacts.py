@@ -104,6 +104,18 @@ def emit_artifacts(
             docs, str(universe.get("id", "")), llm_budget=graph_rag_cfg
         )
         files.extend(export_graphrag_bundle(out_dir / "graphrag", universe, bundle))
+    fc_cfg = kwargs.get("fact_check_config")
+    if bool(kwargs.get("fact_check_enabled")) or (
+        isinstance(fc_cfg, dict) and bool(fc_cfg.get("enabled"))
+    ):
+        from ..truth.export import export_truth_report
+        from ..truth.pipeline import analyze_docs_truth
+
+        report = analyze_docs_truth(
+            docs, list(kwargs.get("sources") or []),
+            str(universe.get("id", "")), llm_budget=fc_cfg,
+        )
+        files.extend(export_truth_report(out_dir / "truth", universe, report))
     manifest = _manifest(out_dir, universe, docs, files)
     _write_json(out_dir / "manifest.json", manifest)
     return manifest

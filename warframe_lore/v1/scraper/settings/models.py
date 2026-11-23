@@ -29,12 +29,19 @@ class Settings:
     discovery_wiki: bool = True
     discovery_seeds: tuple[str, ...] = ()
     discovery_max_candidates: int = 30
+    discovery_web_search_headers: tuple[tuple[str, str], ...] = ()
+    discovery_git_token: str = ""
+    discovery_wiki_api_urls: tuple[str, ...] = ()
     review_child_pages: bool = True
     use_playwright: bool = False
     max_concurrency: int = 4
     per_host_concurrency: int = 2
     per_host_delay: float = 0.2
     max_retries: int = 2
+    graph_enabled: bool = True
+    graph_api_enabled: bool = False
+    graph_api_host: str = "127.0.0.1"
+    graph_api_port: int = 8765
 
     def __post_init__(self) -> None:
         if not 0 <= self.min_relevance <= 100:
@@ -60,6 +67,10 @@ class Settings:
             raise ValueError("per_host_delay must be >= 0")
         if self.max_retries < 0:
             raise ValueError("max_retries must be >= 0")
+        if not 1 <= self.graph_api_port <= 65535:
+            raise ValueError("graph_api_port must be between 1 and 65535")
+        if not self.graph_api_host.strip():
+            raise ValueError("graph_api_host must not be empty")
 
 
 @dataclass(frozen=True, slots=True)

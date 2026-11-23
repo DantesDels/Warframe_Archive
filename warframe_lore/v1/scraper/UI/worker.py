@@ -140,4 +140,5 @@ def _limits(settings: Settings) -> dict[str, Any]:
         "per_host_concurrency": settings.per_host_concurrency,
         "per_host_delay": settings.per_host_delay,
         "max_retries": settings.max_retries,
+        "graph_enabled": settings.graph_enabled,
     }

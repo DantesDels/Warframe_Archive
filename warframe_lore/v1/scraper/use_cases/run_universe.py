@@ -34,7 +34,12 @@ def run_universe(
     from ..UI.artifacts import emit_artifacts
 
     run["manifest"] = emit_artifacts(
-        out_dir, universe, docs, formats, rag_coupling=bool(limits.get("rag_coupling"))
+        out_dir,
+        universe,
+        docs,
+        formats,
+        rag_coupling=bool(limits.get("rag_coupling")),
+        graph_enabled=bool(limits.get("graph_enabled", True)),
     )
     if pending_children:
         msg = f"{len(pending_children)} page(s) enfant(s) en attente de revue."

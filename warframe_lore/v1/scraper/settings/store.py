@@ -37,12 +37,25 @@ class SettingsStore:
                 str(x) for x in payload.get("discovery_seeds", []) if str(x).strip()
             ),
             discovery_max_candidates=int(payload.get("discovery_max_candidates", 30)),
+            discovery_web_search_headers=_pairs(
+                payload.get("discovery_web_search_headers")
+            ),
+            discovery_git_token=str(payload.get("discovery_git_token", "")),
+            discovery_wiki_api_urls=tuple(
+                str(url)
+                for url in payload.get("discovery_wiki_api_urls", [])
+                if str(url).strip()
+            ),
             review_child_pages=bool(payload.get("review_child_pages", True)),
             use_playwright=bool(payload.get("use_playwright", False)),
             max_concurrency=int(payload.get("max_concurrency", 4)),
             per_host_concurrency=int(payload.get("per_host_concurrency", 2)),
             per_host_delay=float(payload.get("per_host_delay", 0.2)),
             max_retries=int(payload.get("max_retries", 2)),
+            graph_enabled=bool(payload.get("graph_enabled", True)),
+            graph_api_enabled=bool(payload.get("graph_api_enabled", False)),
+            graph_api_host=str(payload.get("graph_api_host", "127.0.0.1")),
+            graph_api_port=int(payload.get("graph_api_port", 8765)),
         )
 
     def save(self, settings: Settings) -> None:
@@ -67,11 +80,37 @@ class SettingsStore:
                 "discovery_wiki": settings.discovery_wiki,
                 "discovery_seeds": list(settings.discovery_seeds),
                 "discovery_max_candidates": settings.discovery_max_candidates,
+                "discovery_web_search_headers": [
+                    list(pair) for pair in settings.discovery_web_search_headers
+                ],
+                "discovery_git_token": settings.discovery_git_token,
+                "discovery_wiki_api_urls": list(settings.discovery_wiki_api_urls),
                 "review_child_pages": settings.review_child_pages,
                 "use_playwright": settings.use_playwright,
                 "max_concurrency": settings.max_concurrency,
                 "per_host_concurrency": settings.per_host_concurrency,
                 "per_host_delay": settings.per_host_delay,
                 "max_retries": settings.max_retries,
+                "graph_enabled": settings.graph_enabled,
+                "graph_api_enabled": settings.graph_api_enabled,
+                "graph_api_host": settings.graph_api_host,
+                "graph_api_port": settings.graph_api_port,
             },
         )
+
+
+def _pairs(value: object) -> tuple[tuple[str, str], ...]:
+    if not isinstance(value, list):
+        return ()
+    out: list[tuple[str, str]] = []
+    for item in value:
+        if isinstance(item, (list, tuple)) and len(item) == 2:
+            key, value = str(item[0]).strip(), str(item[1]).strip()
+            if key:
+                out.append((key, value))
+        elif isinstance(item, dict):
+            key = str(item.get("key", "")).strip()
+            value = str(item.get("value", "")).strip()
+            if key:
+                out.append((key, value))
+    return tuple(out)

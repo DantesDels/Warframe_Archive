@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 
 from ...settings.models import OUTPUT_FORMATS, Settings
 from ...settings.store import SettingsStore
+from .settings_advanced import AdvancedFields
 
 FORMAT_LABELS = {
     "json": "JSON",
@@ -115,6 +116,7 @@ class SettingsDialog(QDialog):
         self.discovery_seeds = QLineEdit(", ".join(settings.discovery_seeds))
         self.discovery_seeds.setPlaceholderText("https://seed1, https://seed2")
         form2.addRow("Seeds discovery", self.discovery_seeds)
+        self.advanced = AdvancedFields.build(form2, settings)
         layout.addLayout(form2)
 
         box = QGroupBox("Formats de sortie")
@@ -154,30 +156,31 @@ class SettingsDialog(QDialog):
             s.strip() for s in self.discovery_seeds.text().split(",") if s.strip()
         )
         return Settings(
-            self.relevance.value(),
-            formats,
-            self.rag.isChecked(),
-            self.max_pages.value(),
-            self.max_depth.value(),
-            self.same_host.isChecked(),
-            self.use_cache.isChecked(),
-            self.incremental.isChecked(),
-            self.expand_manifests.isChecked(),
-            self.max_manifest.value(),
-            self.discovery_sitemaps.isChecked(),
-            self.discovery_feeds.isChecked(),
-            self.discovery_web.isChecked(),
-            self.web_search_url.text().strip(),
-            self.discovery_git.isChecked(),
-            self.discovery_wiki.isChecked(),
-            seeds,
-            self.discovery_max.value(),
-            self.review_children.isChecked(),
-            base.use_playwright,
-            self.max_conc.value(),
-            self.host_conc.value(),
-            base.per_host_delay,
-            self.retries.value(),
+            min_relevance=self.relevance.value(),
+            output_formats=formats,
+            rag_coupling=self.rag.isChecked(),
+            max_pages_per_source=self.max_pages.value(),
+            max_depth=self.max_depth.value(),
+            same_host_only=self.same_host.isChecked(),
+            use_cache=self.use_cache.isChecked(),
+            incremental=self.incremental.isChecked(),
+            expand_manifests=self.expand_manifests.isChecked(),
+            max_manifest_urls=self.max_manifest.value(),
+            discovery_sitemaps=self.discovery_sitemaps.isChecked(),
+            discovery_feeds=self.discovery_feeds.isChecked(),
+            discovery_web_search=self.discovery_web.isChecked(),
+            discovery_web_search_url=self.web_search_url.text().strip(),
+            discovery_git=self.discovery_git.isChecked(),
+            discovery_wiki=self.discovery_wiki.isChecked(),
+            discovery_seeds=seeds,
+            discovery_max_candidates=self.discovery_max.value(),
+            review_child_pages=self.review_children.isChecked(),
+            use_playwright=base.use_playwright,
+            max_concurrency=self.max_conc.value(),
+            per_host_concurrency=self.host_conc.value(),
+            per_host_delay=base.per_host_delay,
+            max_retries=self.retries.value(),
+            **self.advanced.values(),
         )
 
     def _save(self) -> None:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 
 from .base import PipelineContext, PipelineItem
+from .readability import readable_text
 
 _BOILERPLATE = re.compile(
     r"(cookie|consent|subscribe|newsletter|sign in|log in|privacy policy|"
@@ -22,7 +23,7 @@ class CleanStage:
         for item in items:
             if not item.accepted:
                 continue
-            text = item.page.content
+            text = readable_text(item.page)
             text = _strip_boilerplate(text)
             text = "\n".join(line.rstrip() for line in text.splitlines())
             text = re.sub(r"\n{3,}", "\n\n", text)

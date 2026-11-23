@@ -14,6 +14,7 @@ from ..models import Candidate
 @dataclass(frozen=True, slots=True)
 class WikiProvider:
     name: str = "wiki"
+    api_urls: tuple[str, ...] = ()
 
     def search(
         self, keywords: list[str], universe_id: str, **kwargs: Any
@@ -23,7 +24,8 @@ class WikiProvider:
             return []
         client = kwargs.get("client")
         out: list[Candidate] = []
-        for api in _wiki_apis(term):
+        apis = list(self.api_urls) or _wiki_apis(term)
+        for api in apis:
             if client is not None:
                 try:
                     resp = client.get(

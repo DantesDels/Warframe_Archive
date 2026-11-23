@@ -15,6 +15,7 @@ from ..models import Candidate
 class GitProvider:
     name: str = "git"
     api_base: str = "https://api.github.com/search/repositories"
+    token: str = ""
 
     def search(
         self, keywords: list[str], universe_id: str, **kwargs: Any
@@ -26,11 +27,10 @@ class GitProvider:
         if client is not None:
             try:
                 url = f"{self.api_base}?q={quote_plus(term)}&per_page=5"
-                resp = client.get(
-                    url,
-                    headers={"Accept": "application/vnd.github+json"},
-                    use_cache=True,
-                )
+                headers = {"Accept": "application/vnd.github+json"}
+                if self.token.strip():
+                    headers["Authorization"] = f"Bearer {self.token.strip()}"
+                resp = client.get(url, headers=headers, use_cache=True)
                 body = bytes(getattr(resp, "content", b""))
                 parsed = _parse(body, universe_id, term)
                 if parsed:

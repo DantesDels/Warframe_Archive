@@ -116,7 +116,8 @@ class DesktopWindowTests(unittest.TestCase):
         tabs = app.details.findChild(QTabWidget)
         self.assertIsNotNone(tabs)
         assert tabs is not None
-        self.assertEqual(tabs.count(), 5)
+        self.assertEqual(tabs.count(), 6)
+        self.assertEqual(tabs.tabText(5), "Graphe")
         app.sidebar.select(None)
         app.on_select(None)
         self.assertEqual(app.details.title.text(), "Aucun Univers sélectionné")

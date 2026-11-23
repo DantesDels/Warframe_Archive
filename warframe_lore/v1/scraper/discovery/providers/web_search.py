@@ -16,6 +16,7 @@ class WebSearchProvider:
     """Config-driven web search hook; no hardcoded external API key."""
 
     endpoint: str = ""
+    headers: dict[str, str] | None = None
     name: str = "web_search"
 
     def search(
@@ -28,7 +29,8 @@ class WebSearchProvider:
         q = quote_plus(term)
         url = self.endpoint.replace("{query}", slug).replace("{q}", q)
         client = kwargs.get("client")
-        headers = kwargs.get("headers") or {}
+        headers = dict(self.headers or {})
+        headers.update(kwargs.get("headers") or {})
         if client is not None:
             try:
                 resp = client.get(url, headers=headers, use_cache=True)

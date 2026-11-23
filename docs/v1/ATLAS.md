@@ -306,3 +306,66 @@ P1 implemente dans `warframe_lore/v1/` avec gates verts (`ruff`, `compileall`, `
 - REST/GraphQL/MediaWiki: couverture pragmatique patterns courants; pas exhaustif (tous cursors/schemas/auth flows/sync MediaWiki avancee).
 - Playwright/Parquet optionnels selon dependances installees.
 - Pas d'editeur UI dedie capabilities Univers (reporte).
+
+---
+
+## Etat P2 (durcissement P1 + graphe/GraphQL)
+
+P2 livre sur `feat/v1-ui` apres cadrage : durcissement P1, adapters de
+decouverte configurables, NLP/RAG optionnel avec fallback, UI minimale de
+configuration, et API GraphQL + visualisation du graphe des relations.
+
+### Decisions de cadrage
+- Objectif : durcir P1 plutot que demarrer S4/S5.
+- Discovery : adapters pluggables pilotes par configuration (endpoints,
+  headers, tokens via `Settings`), sans hardcoding de domaine/fournisseur.
+- NLP/RAG : dependances optionnelles (`langdetect`, `trafilatura`) avec
+  repli heuristique ; `strawberry-graphql` pour l'API GraphQL.
+- UI : editeur minimal des capabilities/budgets par Univers + champs
+  avances dans les parametres globaux.
+- Donnees : exposition GraphQL locale + export/visualisation du graphe
+  des relations source/document/candidat.
+
+### Configuration et adapters
+- `Settings` persiste `discovery_web_search_headers`, `discovery_git_token`,
+  `discovery_wiki_api_urls`, `graph_enabled`, `graph_api_enabled`,
+  `graph_api_host`, `graph_api_port` (validation des bornes et de l'hote).
+- `build_default_providers` injecte headers/token/endpoints wiki dans les
+  providers web/git/wiki.
+- Correctif P1 : `discover_universe` transmet tout le `Settings` via
+  `dataclasses.asdict` (avec `slots=True`, l'ancien `__dict__` etait vide :
+  aucun reglage de discovery n'atteignait les providers).
+- `apply_discovery` utilise `dataclasses.replace` au lieu d'une
+  reconstruction positionnelle fragile.
+
+### NLP optionnel
+- `readable_text` tente `trafilatura` sur le HTML brut (`page.raw`) quand
+  le paquet est present, sinon conserve le texte normalise.
+- Detection de langue : `langdetect` si disponible, sinon heuristique
+  URL/stopwords.
+
+### Graphe et GraphQL
+- `graph/model.py` construit le graphe Univers -> Source/Document/Candidat
+  avec aretes `HAS_SOURCE`, `HAS_DOCUMENT`, `PRODUCED`, `HAS_CANDIDATE`.
+- `graph/schema.py` expose un schema Strawberry (`graph`, `universes`) ;
+  `graph/server.py` demarre un endpoint local `/graphql` quand
+  `graph_api_enabled` est actif (arret a la fermeture de l'application).
+- Chaque run ecrit `graph.json` + `graph.html` (visualisation autonome,
+  sans service) dans le dossier d'export.
+- Onglet *Graphe* dans l'UI : dessin des relations via `QPainter`, sans
+  moteur web ni dependance supplementaire.
+
+### UI
+- Bouton *Capabilities...* dans le panneau de detail : budgets de crawl
+  et toggles RAG/Watch/GraphRAG, persistes par Univers.
+- Parametres globaux : headers web search, token Git, APIs wiki, et
+  activation/hote/port de l'API GraphQL.
+
+### Dependances optionnelles
+- `pip install strawberry-graphql` (API GraphQL), `pip install langdetect`
+  (langue), `pip install trafilatura` (readability). Sans ces paquets, les
+  repli heuristiques restent actifs.
+
+### Gates
+- `ruff check warframe_lore/v1 tests/v1`, `python -m compileall -q
+  warframe_lore`, `pytest -q tests/v1` : verts.

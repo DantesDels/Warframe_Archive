@@ -2,24 +2,35 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict, is_dataclass
 from typing import Any, cast
 
 from ..discovery import discover
 
 
 def discover_universe(
-    workspace: Any, universe: dict[str, Any], settings: Any, *,
-        client: Any | None = None
+    workspace: Any,
+    universe: dict[str, Any],
+    settings: Any,
+    *,
+    client: Any | None = None,
 ) -> list[dict[str, Any]]:
-    cfg = settings.__dict__.copy() if hasattr(settings, "__dict__") else {}
+    """Discover and persist new candidates for one universe."""
+    if is_dataclass(settings) and not isinstance(settings, type):
+        cfg = cast(dict[str, Any], asdict(settings))
+    elif isinstance(settings, dict):
+        cfg = dict(settings)
+    else:
+        cfg = {}
     if client is not None:
         cfg["http_client"] = client
     threshold = int(getattr(settings, "min_relevance", 60))
     candidates = discover(universe, threshold, settings=cfg)
     existing = {
-        str(c.get("location", "")).rstrip("/").lower()
-        for c in cast(list[dict[str, Any]],
-            workspace.candidates_for(str(universe["id"])))
+        str(candidate.get("location", "")).rstrip("/").lower()
+        for candidate in cast(
+            list[dict[str, Any]], workspace.candidates_for(str(universe["id"]))
+        )
     }
     new_payloads: list[dict[str, Any]] = []
     for item in candidates:
@@ -29,8 +40,11 @@ def discover_universe(
         existing.add(key)
         new_payloads.append(_payload(item))
     merged = [
-        c for c in cast(list[dict[str, Any]], workspace.data.get("candidates", []))
-        if str(c.get("universeId")) != str(universe["id"])
+        candidate
+        for candidate in cast(
+            list[dict[str, Any]], workspace.data.get("candidates", [])
+        )
+        if str(candidate.get("universeId")) != str(universe["id"])
     ]
     merged.extend(workspace.candidates_for(str(universe["id"])))
     merged.extend(new_payloads)

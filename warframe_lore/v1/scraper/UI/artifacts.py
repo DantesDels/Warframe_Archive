@@ -16,6 +16,7 @@ def emit_artifacts(
     formats: list[str],
     *,
     rag_coupling: bool = False,
+    **kwargs: Any,
 ) -> dict[str, Any]:
     out_dir.mkdir(parents=True, exist_ok=True)
     rows = [{k: v for k, v in d.items() if k != "content"} for d in docs]
@@ -45,6 +46,10 @@ def emit_artifacts(
         parquet = _write_parquet(out_dir / "chunks.parquet", universe, docs)
         if parquet:
             files.append(parquet)
+    if bool(kwargs.get("graph_enabled", True)):
+        from ..graph.run_graph import write_run_graph
+
+        files.extend(write_run_graph(out_dir, universe, docs))
     manifest = _manifest(out_dir, universe, docs, files)
     _write_json(out_dir / "manifest.json", manifest)
     return manifest

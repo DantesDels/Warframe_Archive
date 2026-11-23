@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, cast
 
 from PySide6.QtWidgets import QMessageBox
 
 from ...collect.http import HttpClient
-from ...settings.models import Settings
 from ...use_cases.discover_universe import discover_universe
 from ..dialogs.preflight_dialog import open_preflight
 from ..dialogs.settings_io import open_settings
@@ -21,32 +21,7 @@ def apply_discovery(app: Any, universe: dict[str, Any]) -> int:
         for s in app.workspace.sources_for(str(universe.get("id", "")))
         if str(s.get("location", "")).strip()
     ]
-    settings = Settings(
-        settings.min_relevance,
-        settings.output_formats,
-        settings.rag_coupling,
-        settings.max_pages_per_source,
-        settings.max_depth,
-        settings.same_host_only,
-        settings.use_cache,
-        settings.incremental,
-        settings.expand_manifests,
-        settings.max_manifest_urls,
-        settings.discovery_sitemaps,
-        settings.discovery_feeds,
-        settings.discovery_web_search,
-        settings.discovery_web_search_url,
-        settings.discovery_git,
-        settings.discovery_wiki,
-        tuple(seeds),
-        settings.discovery_max_candidates,
-        settings.review_child_pages,
-        settings.use_playwright,
-        settings.max_concurrency,
-        settings.per_host_concurrency,
-        settings.per_host_delay,
-        settings.max_retries,
-    )
+    settings = replace(settings, discovery_seeds=tuple(seeds))
     new_candidates = discover_universe(
         app.workspace, universe, settings, client=HttpClient()
     )

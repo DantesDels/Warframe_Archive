@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtGui import QCloseEvent, QKeySequence, QShortcut
 from PySide6.QtWidgets import QMainWindow, QMessageBox, QStatusBar
 
 if TYPE_CHECKING:
@@ -42,12 +42,34 @@ class AtelierApp(QMainWindow):
         self.last_plan: Any = None
         self._thread: Any = None
         self._worker: Any = None
+        self._graphql_handle: Any = None
         self.setWindowTitle("Atelier v1 — Univers")
         self.resize(1200, 760)
         self.setStyleSheet(app_stylesheet())
         self._build_ui()
         self._bind_shortcuts()
         self.refresh()
+        self._start_graphql_if_enabled()
+
+    def _start_graphql_if_enabled(self) -> None:
+        settings = self.settings_store.load()
+        if not settings.graph_api_enabled:
+            return
+        try:
+            from ..graph.server import start_graphql_server
+
+            self._graphql_handle = start_graphql_server(
+                self.workspace,
+                host=settings.graph_api_host,
+                port=settings.graph_api_port,
+            )
+        except Exception as error:  # noqa: BLE001
+            self.status_bar.showMessage(f"GraphQL indisponible : {error}")
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        if self._graphql_handle is not None:
+            self._graphql_handle.stop()
+        super().closeEvent(event)
 
     def _build_ui(self) -> None:
         from .app_ui import build_ui

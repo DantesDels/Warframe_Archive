@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-import time
 from typing import Any, cast
-from urllib.parse import urlparse
 
+from ..observability.progress import current_reporter
 from .collect_source import collect_source
+from .retry_collect import retry_collect as _retry_collect
+from .scheduler_helpers import host_key, new_deadline, rate_wait, store_updates
 
 
 async def collect_sources_async(
@@ -27,37 +28,34 @@ async def collect_sources_async(
     state_map = cast(dict[str, Any], ctx.state)
     state_dict = cast(dict[str, Any], state_map.setdefault(uid, {}))
     control = getattr(ctx, "control", None)
+    reporter = current_reporter(limits)
     lock = asyncio.Lock()
 
     async def run_one(idx: int, source: dict[str, Any]):
         sid = str(source.get("id") or source.get("location") or idx)
         if sid in done_ids:
+            reporter.skip("Déjà collecté, ignoré", str(source.get("location", "")))
             return idx, sid, [], [], [], False
-        if control and control.is_cancelled():
-            return idx, sid, [], [], [], True
         if control and not control.wait_if_paused():
             return idx, sid, [], [], [], True
-        host = urlparse(str(source.get("location", ""))).netloc.lower() or "_local"
+        host = host_key(str(source.get("location", "")))
         hsem = host_sems.setdefault(host, asyncio.Semaphore(per_host))
         async with sem, hsem:
-            await _rate_wait(
-                host, host_next, float(limits.get("per_host_delay", 0.2))
-            )
+            delay = rate_wait(host, host_next, float(limits.get("per_host_delay", 0.2)))
+            await asyncio.sleep(delay)
             if control and not control.wait_if_paused():
                 return idx, sid, [], [], [], True
             progress_cb(idx, source)
+            reporter.source(idx, len(sources), str(source.get("location", "")))
+            src_limits = {**limits, "deadline": new_deadline(limits)}
             async with lock:
                 src_state = dict(state_dict)
             d, e, p, updates = await _retry_collect(
-                source, uid, ctx, limits, src_state, retries
+                source, uid, ctx, src_limits, src_state, retries,
+                src_limits["deadline"], control, collect=collect_source,
             )
             async with lock:
-                for item in updates:
-                    if str(item.get("hash")):
-                        state_dict[str(item["url"])] = {
-                            "hash": item["hash"],
-                            "title": item["title"],
-                        }
+                store_updates(state_dict, updates)
             return idx, sid, d, e, p, False
 
     tasks = [asyncio.create_task(run_one(i, s)) for i, s in enumerate(sources, start=1)]
@@ -77,43 +75,3 @@ async def collect_sources_async(
     status = "cancelled" if cancelled else "done"
     checkpoint_cb(set(done_ids), list(docs), list(errors), list(pending), status)
     return docs, errors, pending, cancelled
-
-
-async def _rate_wait(host: str, host_next: dict[str, float], delay: float) -> None:
-    now = time.monotonic()
-    wait = max(0.0, host_next.get(host, 0.0) - now)
-    host_next[host] = max(now, host_next.get(host, 0.0)) + delay
-    if wait > 0:
-        await asyncio.sleep(wait)
-
-
-async def _retry_collect(source, uid, ctx, limits, state_dict, retries):
-    last_err: Exception | None = None
-    for attempt in range(retries + 1):
-        try:
-            src_limits = dict(limits)
-            src_limits["pending_child_urls"] = []
-            res = await asyncio.to_thread(
-                collect_source, source, uid, ctx.client, src_limits, state_dict
-            )
-            d, e, updates = res
-            p = cast(list[dict[str, str]], src_limits.get("pending_child_urls", []))
-            return d, e, p, updates
-        except Exception as exc:  # noqa: BLE001
-            last_err = exc
-            if attempt < retries:
-                delay = _retry_delay(exc, attempt)
-                await asyncio.sleep(delay)
-    loc = str(source.get("location", ""))
-    return [], [f"{loc}: {last_err}"], [], []
-
-
-def _retry_delay(exc: Exception, attempt: int) -> float:
-    msg = str(exc)
-    # simple Retry-After/429 hint
-    for token in msg.replace(":", " ").split():
-        if token.isdigit() and 1 <= int(token) <= 120 and "429" in msg:
-            return float(int(token))
-    if "429" in msg or "rate limit" in msg.lower():
-        return float(min(2 ** attempt + 2, 15))
-    return float(min(2 ** attempt, 5))

@@ -24,6 +24,13 @@ def discover_universe(
         cfg = {}
     if client is not None:
         cfg["http_client"] = client
+    cfg["existing_sources"] = [
+        str(src.get("location", "")).strip()
+        for src in cast(
+            list[dict[str, Any]], workspace.sources_for(str(universe["id"]))
+        )
+        if str(src.get("location", "")).strip()
+    ]
     threshold = int(getattr(settings, "min_relevance", 60))
     candidates = discover(universe, threshold, settings=cfg)
     existing = {

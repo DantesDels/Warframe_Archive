@@ -46,8 +46,8 @@ def _strip_boilerplate(text: str) -> str:
             continue
         if len(line) < 120 and _BOILERPLATE.search(line):
             continue
-        # drop very short menu-like lines only
-        if len(line) <= 1:
+        # drop lone punctuation-only lines, keep digits/letters
+        if len(line) <= 1 and not line.isalnum():
             continue
         lines.append(line)
     # remove long common footer tails

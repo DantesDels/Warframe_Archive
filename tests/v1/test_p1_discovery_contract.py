@@ -136,6 +136,47 @@ class P1DiscoveryTests(unittest.TestCase):
         self.assertTrue(out[0].metadata.get("homonym_risk"))
         self.assertIn("homonym_reason", out[0].metadata)
 
+    def test_sitemap_provider_probes_real_universe_hosts_via_robots(self):
+        robots = b"User-agent: *\nSitemap: https://lore.example/custom-sitemap.xml\n"
+        xml = (
+            b"<urlset><url><loc>https://lore.example/ch1</loc></url></urlset>"
+        )
+        client = _Client({
+            "https://lore.example/robots.txt": (200, robots),
+            "https://lore.example/custom-sitemap.xml": (200, xml),
+        })
+        universe = {
+            "id": "u1", "name": "Dune",
+            "_discovery_cfg": {"existing_sources": ["https://lore.example/en"]},
+        }
+        items = SitemapProvider(client=client).search(["Dune"], "u1", universe=universe)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].location, "https://lore.example/custom-sitemap.xml")
+        self.assertEqual(items[0].kind, "sitemap")
+
+    def test_wiki_provider_discovers_official_wiki_and_multilingual_wikipedia(self):
+        from warframe_lore.v1.scraper.discovery.providers.wiki import WikiProvider
+
+        wiki_ok = b'{"query":{"general":{"mainpage":"Main Page"}}}'
+        wp_en = b'{"query":{"search":[{"title":"Dune (franchise)"}]}}'
+        wp_fr = b'{"query":{"search":[{"title":"Dune (univers)"}]}}'
+
+        class WikiTestClient:
+            def get(self, url: str, **_kw):
+                if "dune.wiki.gg/api.php" in url:
+                    return _Resp(200, wiki_ok)
+                if "en.wikipedia.org/w/api.php" in url:
+                    return _Resp(200, wp_en)
+                if "fr.wikipedia.org/w/api.php" in url:
+                    return _Resp(200, wp_fr)
+                return _Resp(404, b"")
+
+        items = WikiProvider().search(["Dune"], "u1", client=WikiTestClient())
+        locs = [item.location for item in items]
+        self.assertIn("https://dune.wiki.gg/", locs)
+        self.assertIn("https://en.wikipedia.org/wiki/Dune_%28franchise%29", locs)
+        self.assertIn("https://fr.wikipedia.org/wiki/Dune_%28univers%29", locs)
+
 
 if __name__ == "__main__":
     unittest.main()

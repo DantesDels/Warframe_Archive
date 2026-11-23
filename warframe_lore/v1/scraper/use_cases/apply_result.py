@@ -1,23 +1,26 @@
-"""Use case: apply execution results with document versioning."""
+"""Use case: apply execution results with compact versioning and blob offloading."""
 
 from __future__ import annotations
 
-from copy import deepcopy
 from datetime import UTC, datetime
 from typing import Any, cast
 
+from .blob_store import blobs_dir, compact_doc
+
 
 def apply_result(workspace: Any, result: dict[str, Any]) -> None:
+    target_dir = blobs_dir(workspace)
     for entry in cast(list[dict[str, Any]], result.get("runs", [])):
         uid = str(entry.get("universeId", "") or "")
         docs = cast(list[dict[str, Any]], entry.get("docs", []))
         run = cast(dict[str, Any] | None, entry.get("run"))
         if not uid or not run:
             continue
+        slim_docs = [compact_doc(d, target_dir) for d in docs]
         all_docs = cast(list[dict[str, Any]], workspace.data.get("documents", []))
         unchanged = [d for d in all_docs if str(d.get("universeId")) != uid]
         current = [d for d in all_docs if str(d.get("universeId")) == uid]
-        merged, versions = _upsert_docs(current, docs, str(run.get("id", "")), run)
+        merged, versions = _upsert_docs(current, slim_docs, str(run.get("id", "")))
         workspace.data["documents"] = unchanged + merged
         workspace.data.setdefault("document_versions", []).extend(versions)
         workspace.data.setdefault("runs", []).insert(0, run)
@@ -29,7 +32,6 @@ def _upsert_docs(
     existing: list[dict[str, Any]],
     incoming: list[dict[str, Any]],
     run_id: str,
-    _run: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     by_key: dict[str, dict[str, Any]] = {}
     order: list[str] = []
@@ -41,7 +43,6 @@ def _upsert_docs(
     for doc in incoming:
         key = _doc_key(doc)
         prev = by_key.get(key)
-        next_doc: dict[str, Any]
         if prev is not None:
             versions.append(_snapshot(prev, doc, run_id))
             next_doc = {
@@ -54,11 +55,6 @@ def _upsert_docs(
             order.append(key)
             next_doc = {**doc, "version": 1, "lastSeenRunId": run_id, "stale": False}
         by_key[key] = next_doc
-    seen = {_doc_key(d) for d in incoming}
-    for key in seen:
-        if key in by_key:
-            by_key[key]["stale"] = False
-            by_key[key]["lastSeenRunId"] = run_id
     return [by_key[key] for key in order], versions
 
 
@@ -68,6 +64,8 @@ def _snapshot(
     now = datetime.now(UTC).isoformat()
     doc_id = prev.get("id", "doc")
     ts = int(datetime.now(UTC).timestamp() * 1000)
+    keys = ("id", "url", "title", "contentHash", "version", "excerpt", "blobRef")
+    slim_prev = {k: prev[k] for k in keys if k in prev}
     return {
         "id": f"ver-{doc_id}-{ts}",
         "documentId": prev.get("id"),
@@ -77,41 +75,42 @@ def _snapshot(
         "previousHash": prev.get("contentHash"),
         "newHash": new.get("contentHash"),
         "changed": prev.get("contentHash") != new.get("contentHash"),
-        "snapshot": deepcopy(prev),
+        "snapshot": slim_prev,
     }
 
 
-def _upsert_pending_children(workspace: Any, uid: str, entry: dict[str, Any]) -> None:
+def _upsert_pending_children(
+    workspace: Any, uid: str, entry: dict[str, Any]
+) -> None:
     pending = cast(list[dict[str, str]], entry.get("pending_children", []))
     if not pending:
         return
+    cands = cast(list[dict[str, Any]], workspace.data.setdefault("candidates", []))
     existing = {
         str(c.get("location", "")).rstrip("/").lower()
-        for c in cast(list[dict[str, Any]], workspace.data.get("candidates", []))
-        if str(c.get("universeId")) == uid
+        for c in cands if str(c.get("universeId")) == uid
     }
-    out = cast(list[dict[str, Any]], workspace.data.setdefault("candidates", []))
     for idx, child in enumerate(pending):
         url = str(child.get("url", "")).strip()
         key = url.rstrip("/").lower()
         if not url or key in existing:
             continue
         existing.add(key)
-        out.append({
-            "id": f"child-{uid}-{abs(hash((uid, key, idx))) % 1000000}",
-            "universeId": uid,
-            "kind": "website",
-            "location": url,
-            "title": f"Page enfant: {url.rsplit('/', 1)[-1] or url}",
-            "score": 0.5,
-            "proof": f"Page enfant détectée depuis {child.get('parent', '')}",
-            "discoveredBy": "manifest_review",
-            "status": "proposed",
-            "forceUpdate": False,
-            "scoreBreakdown": {"confidence": 0.5},
-            "metadata": {"parent_location": child.get("parent", ""),
-                "needs_review": True},
-        })
+        cands.append(_child_candidate(uid, url, key, idx, child.get("parent", "")))
+
+
+def _child_candidate(
+    uid: str, url: str, key: str, idx: int, parent: str
+) -> dict[str, Any]:
+    return {
+        "id": f"child-{uid}-{abs(hash((uid, key, idx))) % 1000000}",
+        "universeId": uid, "kind": "website", "location": url,
+        "title": f"Page enfant: {url.rsplit('/', 1)[-1] or url}",
+        "score": 0.5, "proof": f"Page enfant détectée depuis {parent}",
+        "discoveredBy": "manifest_review", "status": "proposed",
+        "forceUpdate": False, "scoreBreakdown": {"confidence": 0.5},
+        "metadata": {"parent_location": parent, "needs_review": True},
+    }
 
 
 def _doc_key(doc: dict[str, Any]) -> str:

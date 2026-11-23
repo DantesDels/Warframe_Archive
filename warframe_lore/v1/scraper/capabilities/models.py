@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from typing import Any
 
 
@@ -16,6 +16,9 @@ class CrawlBudget:
     per_host_concurrency: int = 2
     per_host_delay: float = 0.2
     max_retries: int = 2
+    source_timeout_seconds: int = 120
+    mode: str = "custom"
+    topic_tags: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -71,16 +74,28 @@ class UniverseCapabilities:
     @classmethod
     def from_dict(cls, payload: dict[str, Any] | None) -> UniverseCapabilities:
         data = payload or {}
+        crawl_raw = _pick(CrawlBudget, data.get("crawl"))
+        if "topic_tags" in crawl_raw and not isinstance(crawl_raw["topic_tags"], list):
+            crawl_raw["topic_tags"] = []
         return cls(
-            crawl=CrawlBudget(**data.get("crawl", {})),
-            rag=RagBudget(**data.get("rag", {})),
-            watch=WatchBudget(**data.get("watch", {})),
-            active_learning=LlmBudget(**data.get("active_learning", {})),
-            graph_rag=LlmBudget(**data.get("graph_rag", {})),
-            fact_check=LlmBudget(**data.get("fact_check", {})),
-            multimodal=MultimodalBudget(**data.get("multimodal", {})),
-            self_heal=LlmBudget(**data.get("self_heal", {})),
+            crawl=CrawlBudget(**crawl_raw),
+            rag=RagBudget(**_pick(RagBudget, data.get("rag"))),
+            watch=WatchBudget(**_pick(WatchBudget, data.get("watch"))),
+            active_learning=LlmBudget(**_pick(LlmBudget, data.get("active_learning"))),
+            graph_rag=LlmBudget(**_pick(LlmBudget, data.get("graph_rag"))),
+            fact_check=LlmBudget(**_pick(LlmBudget, data.get("fact_check"))),
+            multimodal=MultimodalBudget(
+                **_pick(MultimodalBudget, data.get("multimodal"))
+            ),
+            self_heal=LlmBudget(**_pick(LlmBudget, data.get("self_heal"))),
         )
+
+
+def _pick(dc: Any, raw: Any) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        return {}
+    allowed = {item.name for item in fields(dc)}
+    return {k: v for k, v in raw.items() if k in allowed}
 
 
 def default_capabilities() -> dict[str, Any]:

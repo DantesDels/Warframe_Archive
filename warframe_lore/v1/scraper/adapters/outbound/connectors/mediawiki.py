@@ -1,163 +1,123 @@
-"""MediaWiki API connector with generic discovery fallback."""
+"""Generic MediaWiki API connector with auto-API, batching and category crawl."""
 
 from __future__ import annotations
 
-import json
-from typing import Any, cast
-from urllib.parse import ParseResult, parse_qs, urlparse
+from typing import Any
+from urllib.parse import ParseResult, parse_qs, unquote, urlparse
 
-from ....collect.html_extract import html_title, html_to_text
-from ....collect.http import bot_headers, browser_headers
+from ....observability.progress import current_reporter, stop_requested
 from ....ports.outbound.sources import CollectedPage, ConnectorContext
+from .html import collect_html
+from .mediawiki_api import all_pages, extract_page
+from .wiki.batch import BATCH_SIZE, extract_pages_batch, filter_changed_titles
+from .wiki.endpoints import resolve_api
+from .wiki.listing import is_category_title, mainpage_links
+from .wiki.search import titles_for_categories, titles_for_tags
+
+_ROOT_TITLES = frozenset({
+    "",
+    "main page",
+    "accueil",
+    "home",
+    "index",
+    "wiki",
+    "w",
+})
 
 
 class MediaWikiConnector:
     name = "mediawiki"
-    kinds = ("wiki", "website")
+    kinds = ("wiki", "website", "api")
 
     def can_handle(self, source: dict[str, Any], _ctx: ConnectorContext) -> bool:
-        loc = str(source.get("location", ""))
-        host = urlparse(loc).netloc.lower()
-        return "wiki" in host and "/api.php" not in urlparse(loc).path
+        parsed = urlparse(str(source.get("location", "")))
+        return (
+            str(source.get("kind", "")).lower() == "wiki"
+            or "wiki" in parsed.netloc.lower()
+            or parsed.path.rstrip("/").endswith("/api.php")
+        )
 
     def collect(
         self, source: dict[str, Any], ctx: ConnectorContext
     ) -> list[CollectedPage]:
         url = str(source.get("location", "")).strip()
-        parsed = urlparse(url)
-        api = f"{parsed.scheme}://{parsed.netloc}/api.php"
+        api, main_page = resolve_api(ctx, url)
         max_pages = max(1, int(ctx.limits.get("max_pages_per_source", 1)))
-        title = _title_from_url(parsed)
-        pages = _extract(ctx, api, title)
-        if pages:
-            return pages[:max_pages]
-        if max_pages <= 1:
-            return [_single_html(ctx, url)]
-        titles = _all_pages(ctx, api, max_pages)
-        out: list[CollectedPage] = []
-        for page_title in titles[:max_pages]:
-            out.extend(_extract(ctx, api, page_title))
-        return out or [_single_html(ctx, url)]
+        target = _title_from_url(urlparse(url))
+        if _is_specific_article(target, main_page) and not source.get("categories"):
+            pages = extract_page(ctx, api, target)
+            return pages[:max_pages] if pages else _fallback(ctx, url)
+        titles = _discover_titles(ctx, api, source, target, main_page, max_pages)
+        if not titles:
+            return _fallback(ctx, url)
+        return _fetch_in_batches(ctx, api, titles[:max_pages]) or _fallback(ctx, url)
+
+
+def _discover_titles(
+    ctx: ConnectorContext, api: str, source: dict[str, Any],
+    target: str, main_page: str, max_pages: int,
+) -> list[str]:
+    cats = [str(c) for c in (source.get("categories") or []) if str(c).strip()]
+    if is_category_title(target) and target not in cats:
+        cats.insert(0, target)
+    depth = max(0, int(ctx.limits.get("max_depth", 2)))
+    if cats:
+        return titles_for_categories(ctx, api, cats, max_pages, depth)
+    raw_tags = ctx.limits.get("topic_tags") or []
+    tags = [str(t).strip() for t in raw_tags if str(t).strip()]
+    if tags:
+        return titles_for_tags(ctx, api, tags, max_pages, depth)
+    prefix = str(source.get("prefix") or "")
+    titles: list[str] = []
+    if not prefix:
+        titles.extend(mainpage_links(ctx, api, main_page, min(max_pages, 200)))
+    if len(titles) < max_pages:
+        seen = set(titles)
+        for name in all_pages(ctx, api, max_pages, prefix=prefix):
+            if name not in seen:
+                seen.add(name)
+                titles.append(name)
+                if len(titles) >= max_pages:
+                    break
+    return titles
+
+
+def _fetch_in_batches(
+    ctx: ConnectorContext, api: str, titles: list[str]
+) -> list[CollectedPage]:
+    to_fetch = filter_changed_titles(ctx, api, titles)
+    reporter = current_reporter(ctx.limits)
+    collected: list[CollectedPage] = []
+    total = len(to_fetch)
+    for offset in range(0, total, BATCH_SIZE):
+        if stop_requested(ctx.limits):
+            break
+        batch = to_fetch[offset : offset + BATCH_SIZE]
+        collected.extend(extract_pages_batch(ctx, api, batch))
+        reporter.page(min(offset + len(batch), total), total, batch[-1])
+    return collected
 
 
 def _title_from_url(parsed: ParseResult) -> str:
     title_values = parse_qs(parsed.query).get("title", [])
     if title_values:
-        return str(title_values[0])
-    tail = parsed.path.rsplit("/", 1)[-1].replace("_", " ").strip()
-    return tail or "Main Page"
+        return unquote(str(title_values[0])).replace("_", " ").strip()
+    path = parsed.path.rstrip("/")
+    if not path or path.endswith("/api.php"):
+        return ""
+    return unquote(path.rsplit("/", 1)[-1]).replace("_", " ").strip()
 
 
-def _single_html(ctx: ConnectorContext, url: str) -> CollectedPage:
-    resp = ctx.client.get(url, headers=browser_headers(), use_cache=_cache(ctx))
-    body = resp.content.decode(resp.encoding or "utf-8", errors="replace")
-    return CollectedPage(
-        html_title(body) or url,
-        resp.url,
-        html_to_text(body),
-        from_cache=resp.from_cache,
-        raw=resp.content,
+def _is_specific_article(target: str, main_page: str) -> bool:
+    low = target.strip().lower()
+    if low in _ROOT_TITLES or low == main_page.strip().lower():
+        return False
+    return not is_category_title(target)
+
+
+def _fallback(ctx: ConnectorContext, url: str) -> list[CollectedPage]:
+    limits = {**ctx.limits, "max_pages_per_source": 1}
+    single = ConnectorContext(
+        client=ctx.client, limits=limits, capabilities=ctx.capabilities
     )
-
-
-def _extract(ctx: ConnectorContext, api: str, title: str) -> list[CollectedPage]:
-    params: dict[str, str | int] = {
-        "action": "query",
-        "prop": "extracts|info|revisions",
-        "explaintext": 1,
-        "inprop": "url",
-        "rvprop": "ids|timestamp",
-        "redirects": 1,
-        "titles": title,
-        "format": "json",
-    }
-    resp = _get(ctx, api, params)
-    data = _json(resp.content)
-    query = cast(dict[str, Any], data.get("query", {}))
-    pages = cast(dict[str, Any], query.get("pages", {}))
-    page = cast(dict[str, Any], next(iter(pages.values()), cast(dict[str, Any], {})))
-    text = str(page.get("extract", "") or "").strip()
-    revid = str(page.get("lastrevid") or "")
-    touched = str(page.get("touched") or "")
-    revs = page.get("revisions")
-    if isinstance(revs, list) and revs and isinstance(revs[0], dict):
-        revid = str(revs[0].get("revid") or revid)
-        touched = str(revs[0].get("timestamp") or touched)
-    marker = f"{revid}:{touched}" if (revid or touched) else ""
-    state = _mw_state(ctx, api)
-    incremental = bool(ctx.limits.get("incremental", True))
-    page_key = str(page.get("pageid") or title)
-    if incremental and marker and state.get(page_key) == marker:
-        return []
-    if marker:
-        state[page_key] = marker
-    if not text:
-        return []
-    return [
-        CollectedPage(
-            str(page.get("title", title)),
-            str(page.get("fullurl", title)),
-            text,
-            from_cache=bool(resp.from_cache),
-            raw=cast(bytes | None, resp.content),
-            content_type=str(resp.content_type),
-            metadata={"touched": touched, "revid": str(page.get("lastrevid", ""))},
-        )
-    ]
-
-
-def _all_pages(ctx: ConnectorContext, api: str, max_pages: int) -> list[str]:
-    titles: list[str] = []
-    cont: str | None = None
-    while len(titles) < max_pages:
-        params: dict[str, str | int] = {
-            "action": "query",
-            "list": "allpages",
-            "apnamespace": "0",
-            "aplimit": str(min(50, max_pages - len(titles))),
-            "format": "json",
-        }
-        if cont:
-            params["apcontinue"] = cont
-        data = _json(_get(ctx, api, params).content)
-        query = cast(dict[str, Any], data.get("query", {}))
-        allpages = cast(list[dict[str, Any]], query.get("allpages", []))
-        for item in allpages:
-            name = str(item.get("title", "") or "").strip()
-            if name:
-                titles.append(name)
-        continue_info = cast(dict[str, Any], data.get("continue", {}))
-        cont_val = continue_info.get("apcontinue")
-        cont = str(cont_val) if cont_val else None
-        if not cont:
-            break
-    return titles
-
-
-def _get(ctx: ConnectorContext, api: str, params: dict[str, str | int]) -> Any:
-    try:
-        return ctx.client.get(
-            api, headers=bot_headers(), params=params, use_cache=_cache(ctx)
-        )
-    except Exception:
-        return ctx.client.get(
-            api, headers=browser_headers(), params=params, use_cache=_cache(ctx)
-        )
-
-
-def _cache(ctx: ConnectorContext) -> bool:
-    return bool(ctx.limits.get("use_cache", True))
-
-
-def _mw_state(ctx: ConnectorContext, url: str) -> dict[str, str]:
-    root = ctx.limits.setdefault("connector_state", {})
-    bucket = root.setdefault("mediawiki", {})
-    item = bucket.setdefault(url, {})
-    return item  # type: ignore[return-value]
-
-
-def _json(data: bytes) -> dict[str, Any]:
-    parsed = json.loads(data.decode("utf-8", errors="replace"))
-    if isinstance(parsed, dict):
-        return cast(dict[str, Any], parsed)
-    return {}
+    return collect_html(url, single)

@@ -5,11 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from ....collect.binary_text import decode_lzma
 from ....ports.outbound.sources import CollectedPage, ConnectorContext
 
 
 def _extract_text(path: Path, raw: bytes) -> str:
     suffix = path.suffix.lower()
+    if suffix == '.lzma':
+        return decode_lzma(raw)
     if suffix in {'.txt', '.md', '.markdown', '.json', '.xml', '.html', '.htm', '.csv'}:
         return raw.decode('utf-8', errors='replace')
     if suffix == '.pdf':

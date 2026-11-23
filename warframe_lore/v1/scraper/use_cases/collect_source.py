@@ -7,6 +7,9 @@ import time
 from typing import Any, cast
 
 from ..collect.adapters import collect_pages
+from ..collect.language import detect_language
+from ..collect.wikitext import normalize_sections
+from ..observability.progress import current_reporter
 from ..ports.outbound.sources import CollectedPage
 from .pipeline.base import PipelineContext, PipelineItem
 from .pipeline.default import default_pipeline
@@ -22,10 +25,12 @@ def collect_source(
     state: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[str], list[dict[str, str]]]:
     loc = str(source.get("location", "")).strip()
+    reporter = current_reporter(limits)
     limits.setdefault("connector_state", state.setdefault("_connector_state", {}))
     try:
         pages = cast(list[CollectedPage], collect_pages(source, client, limits))
     except Exception as exc:  # noqa: BLE001
+        reporter.skip("Source ignorée", loc)
         return [], [f"{loc}: {exc}"], []
     ctx = PipelineContext(source=source, universe_id=uid, settings=limits)
     raw: list[PipelineItem] = [PipelineItem(page=p) for p in pages]
@@ -37,6 +42,7 @@ def collect_source(
     for item in rejected:
         if item.reason and item.reason != "duplicate_url":
             errors.append(f"{item.page.url}: {item.reason}")
+            reporter.skip(item.reason, item.page.url)
     for item in accepted:
         page = item.page
         text = str(page.content)[:MAX_TEXT]
@@ -51,6 +57,7 @@ def collect_source(
             else ""
         )
         if prev_hash == digest and prev_hash:
+            reporter.skip("Contenu inchangé, ignoré", page.url)
             continue
         docs.append(_doc(source, uid, page, text, digest))
         updates.append({"url": str(page.url), "hash": digest, "title": str(page.title)})
@@ -84,9 +91,24 @@ def _doc(
         "isDuplicate": False,
         "excerpt": text[:320],
         "content": text,
+        "content_markdown": str(
+            metadata.get("content_markdown") or text
+        ),
+        "sections": _structured(metadata.get("sections")),
+        "category": str(metadata.get("category") or ""),
+        "last_updated": str(metadata.get("last_updated") or ""),
+        "canon_status": str(metadata.get("canon_status") or "canon"),
+        "page_title": str(metadata.get("page_title") or str(page.title)[:180]),
+        "page_url": str(metadata.get("page_url") or page.url),
+        "source_api": str(metadata.get("source_api") or ""),
         "contentHash": digest,
         "fromCache": bool(getattr(page, "from_cache", False)),
     }
+
+
+def _structured(value: Any) -> list[dict[str, str]]:
+    """Normalize section metadata into typed RAG records."""
+    return normalize_sections(value)
 
 
 def _doc_id(source: dict[str, Any]) -> str:
@@ -95,9 +117,4 @@ def _doc_id(source: dict[str, Any]) -> str:
 
 
 def _guess_lang(url: str, text: str) -> str:
-    low = url.lower()
-    if "/fr" in low or "fr.wiki" in low or ".fr/" in low:
-        return "fr"
-    if "/en" in low or "wiki.warframe.com" in low:
-        return "en"
-    return "fr" if any(ch in text[:2000] for ch in "àâçéèêëîïôûùüÿœæ") else "en"
+    return detect_language(url, text)

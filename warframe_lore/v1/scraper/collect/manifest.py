@@ -9,22 +9,31 @@ from urllib.parse import urljoin
 
 _URL_RE = re.compile(r"https?://[^\s\"'<>]+")
 _REL_RE = re.compile(r"(?:^|\s)(/[A-Za-z0-9_./\-]+)")
+_FILE_RE = re.compile(
+    r"^[A-Za-z0-9_.\-/]+\.(?:json|jsonl|xml|txt|md|lzma)(?:![A-Za-z0-9_.\-]+)?$",
+    re.IGNORECASE,
+)
 
 
-def extract_manifest_urls(text: str, base_url: str, *, limit: int = 50) -> list[str]:
+def extract_manifest_urls(
+    text: str, base_url: str, *, limit: int = 50, manifest_base: str = ""
+) -> list[str]:
     """Extract likely child resource URLs from index/manifest text."""
+    root = manifest_base.strip() or base_url
     candidates: list[str] = []
     seen: set[str] = set()
     for line in text.splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        for url in _from_json(line, base_url):
+        for url in _from_json(line, root):
             _add(candidates, seen, url, limit)
         for match in _URL_RE.findall(line):
             _add(candidates, seen, match.rstrip("),."), limit)
         for match in _REL_RE.findall(line):
-            _add(candidates, seen, urljoin(base_url, match.strip()), limit)
+            _add(candidates, seen, urljoin(root, match.strip()), limit)
+        if _FILE_RE.match(line):
+            _add(candidates, seen, urljoin(root, line), limit)
         if len(candidates) >= limit:
             break
     return candidates[:limit]

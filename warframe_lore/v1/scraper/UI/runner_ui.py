@@ -7,7 +7,14 @@ from typing import Any, cast
 from PySide6.QtCore import Qt, QThread
 
 from ..use_cases.apply_result import apply_result
+from .runtime.execution_events import format_event
+from .runtime.main_thread_bridge import MainThreadBridge
+from .runtime.snapshot import Snapshot
+from .runtime.snapshot import snapshot as _snapshot
+from .runtime.work_launcher import WorkLauncher
 from .worker import ExecutionWorker
+
+_Snapshot = Snapshot
 
 
 def start_execution(app: Any, plan: Any) -> None:
@@ -15,30 +22,52 @@ def start_execution(app: Any, plan: Any) -> None:
         app.execution.set_state("busy")
         app.execution.add_log("Une exécution est déjà en cours.")
         return
+    discovery = getattr(app, "_discovery_thread", None)
+    if discovery is not None and discovery.isRunning():
+        app.execution.set_state("busy")
+        app.execution.add_log("Une découverte est déjà en cours.")
+        return
     cleanup_execution(app)
     app.execution.reset()
-    app.execution.add_log("Lancement de l'exécution...")
+    app.execution.set_state("running", "Lancement de l'exécution...")
     snapshot = _snapshot(app.workspace)
     thread = QThread(app)
     worker = ExecutionWorker(plan, snapshot, app.data_path.parent / "exports")
+    launcher = WorkLauncher()
     worker.moveToThread(thread)
-    thread.started.connect(worker.run)
+    launcher.requested.connect(worker.run, Qt.ConnectionType.QueuedConnection)
+    thread.started.connect(launcher.launch)
+    thread.finished.connect(launcher.deleteLater)
     worker.progress.connect(app.execution.set_progress)
     worker.log.connect(app.execution.add_log)
+    event_bridge = MainThreadBridge(
+        lambda event_type, payload: _log_event(app, event_type, payload)
+    )
+    worker.events_log.connect(
+        event_bridge.on_event, Qt.ConnectionType.QueuedConnection
+    )
     _connect_controls(app, worker)
     app._worker = worker
     app._thread = thread
+    app._launcher = launcher
+    app._execution_event_bridge = event_bridge
     worker.finished.connect(
         app._on_execution_finished, Qt.ConnectionType.QueuedConnection
     )
     thread.start()
 
 
+def _log_event(app: Any, event_type: str, payload: Any) -> None:
+    message = format_event(event_type, payload)
+    if message:
+        app.execution.add_log(message)
+
+
 def _connect_controls(app: Any, worker: ExecutionWorker) -> None:
     connections = [
-        (app.execution.pause_btn, worker.pause),
-        (app.execution.resume_btn, worker.resume),
-        (app.execution.cancel_btn, worker.cancel),
+        (app.execution.pause_btn, worker.control.pause),
+        (app.execution.resume_btn, worker.control.resume),
+        (app.execution.cancel_btn, worker.control.cancel),
         (app.execution.pause_btn, lambda: _set_paused(app, True)),
         (app.execution.resume_btn, lambda: _set_paused(app, False)),
         (app.execution.cancel_btn, lambda: app.execution.cancel_btn.setEnabled(False)),
@@ -61,38 +90,13 @@ def _set_paused(app: Any, paused: bool) -> None:
     app.execution.set_state("paused" if paused else "running")
 
 
-class _Snapshot:
-    def __init__(self, data: dict[str, Any]) -> None:
-        self.universes = {u["id"]: dict(u) for u in data.get("universes", [])}
-        self.sources_by_uid = _group(data.get("sources", []), "universeId")
-        self.candidates_by_uid = _group(data.get("candidates", []), "universeId")
-        caps = data.get("capabilities", {})
-        self.capabilities_by_uid = {k: dict(v) for k, v in caps.items()}
-
-    def get(self, uid: str) -> dict[str, Any] | None:
-        return self.universes.get(uid)
-
-
-def _snapshot(workspace: Any) -> _Snapshot:
-    return _Snapshot(workspace.data)
-
-
-def _group(items: list[dict[str, Any]], key: str) -> dict[str, list[dict[str, Any]]]:
-    out: dict[str, list[dict[str, Any]]] = {}
-    for item in items:
-        uid = str(item.get(key, ""))
-        if uid:
-            out.setdefault(uid, []).append(dict(item))
-    return out
-
-
 def cleanup_execution(app: Any, *, stop: bool = True) -> None:
     """Disconnect controls, stop the worker thread and release Qt objects."""
     thread = getattr(app, "_thread", None)
     worker = getattr(app, "_worker", None)
     _disconnect_controls(app)
     if stop and worker is not None:
-        worker.cancel()
+        worker.control.cancel()
     if thread is not None:
         try:
             if thread.isRunning():
@@ -103,6 +107,8 @@ def cleanup_execution(app: Any, *, stop: bool = True) -> None:
             pass
     app._worker = None
     app._thread = None
+    app._launcher = None
+    app._execution_event_bridge = None
 
 
 def handle_finished(app: Any, result: object) -> None:

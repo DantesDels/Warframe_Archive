@@ -27,8 +27,9 @@ class UniverseWorkspace:
 
     def __init__(self, data: dict[str, Any] | None = None) -> None:
         self.data: dict[str, Any] = deepcopy(data) if data is not None else empty_data()
-        for key in empty_data():
-            self.data.setdefault(key, [])
+        for key, default in empty_data().items():
+            if not isinstance(self.data.get(key), type(default)):
+                self.data[key] = deepcopy(default)
 
     def save(self) -> None:
         """Persist state when a backing store is configured."""
@@ -37,21 +38,27 @@ class UniverseWorkspace:
         return self.data.setdefault("universes", [])
 
     def get(self, universe_id: str) -> dict[str, Any] | None:
-        return next((i for i in self.universes() if i["id"] == universe_id), None)
+        return next((i for i in self.universes() if i.get("id") == universe_id), None)
 
     def capabilities_for(self, universe_id: str) -> dict[str, Any]:
         from ..capabilities import default_capabilities
         caps = self.data.setdefault("capabilities", {})
-        if universe_id not in caps:
-            caps[universe_id] = default_capabilities()
-        return caps[universe_id]
+        value = caps.get(universe_id)
+        if not isinstance(value, dict):
+            value = default_capabilities()
+            caps[universe_id] = value
+        return value
 
     def set_capabilities(self, universe_id: str, caps: dict[str, Any]) -> None:
         self.data.setdefault("capabilities", {})[universe_id] = caps
         self.save()
 
     def names(self, *, exclude: str = "") -> set[str]:
-        return {i["name"].casefold() for i in self.universes() if i["id"] != exclude}
+        return {
+            str(i.get("name", "")).casefold()
+            for i in self.universes()
+            if i.get("id") != exclude
+        }
 
     def create(self, name: str, description: str = "") -> dict[str, Any]:
         clean_name = name.strip()
@@ -82,13 +89,15 @@ class UniverseWorkspace:
         return universe
 
     def sources_for(self, universe_id: str) -> list[dict[str, Any]]:
-        return [s for s in self.data["sources"] if s["universeId"] == universe_id]
+        return [s for s in self.data["sources"] if s.get("universeId") == universe_id]
 
     def documents_for(self, universe_id: str) -> list[dict[str, Any]]:
-        return [d for d in self.data["documents"] if d["universeId"] == universe_id]
+        return [d for d in self.data["documents"] if d.get("universeId") == universe_id]
 
     def runs_for(self, universe_id: str) -> list[dict[str, Any]]:
-        return [r for r in self.data["runs"] if universe_id in r["universeIds"]]
+        return [
+            r for r in self.data["runs"] if universe_id in (r.get("universeIds") or [])
+        ]
 
     def _unique_id(self, base: str) -> str:
         existing = {item["id"] for item in self.universes()}

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 KIND_LABELS = {
     "website": "Site web",
     "api": "API",
@@ -50,6 +52,14 @@ def display_universe_status(value: str) -> str:
 
 def display_run_status(value: str) -> str:
     return label(RUN_STATUS_LABELS, value)
+
+
+def coerce_score(value: Any) -> float:
+    """Return a bounded 0..1 score, tolerating legacy malformed values."""
+    try:
+        return max(0.0, min(1.0, float(value or 0)))
+    except (TypeError, ValueError, OverflowError):
+        return 0.0
 
 
 def display_percent(score: float | int) -> str:

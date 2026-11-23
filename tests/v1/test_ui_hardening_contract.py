@@ -136,7 +136,7 @@ class LifecycleContractTests(unittest.TestCase):
                 SimpleNamespace(),
                 Path(tmp) / "exports",
             )
-            self.assertEqual(worker.client.timeout, 10.0)
+            self.assertEqual(worker.client.timeout, (5.0, 15.0))
             self.assertEqual(worker.client.max_retries, 2)
 
 

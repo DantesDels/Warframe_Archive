@@ -2,56 +2,68 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Any, cast
 
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
-from ...collect.http import HttpClient
-from ...use_cases.discover_universe import discover_universe
+from ..dialogs import prompt_universe_name
 from ..dialogs.preflight_dialog import open_preflight
 from ..dialogs.settings_io import open_settings
+from .discovery_actions import (
+    apply_discovery,
+    discover_selected,
+    sync_all,
+    sync_selected,
+)
 
-
-def apply_discovery(app: Any, universe: dict[str, Any]) -> int:
-    settings = app.settings_store.load()
-    # seed discovery from existing source locations (generic, universe-driven)
-    seeds = [
-        str(s.get("location", "")).strip()
-        for s in app.workspace.sources_for(str(universe.get("id", "")))
-        if str(s.get("location", "")).strip()
-    ]
-    settings = replace(settings, discovery_seeds=tuple(seeds))
-    active = bool(getattr(app, "_thread", None) and app._thread.isRunning())
-    state = "busy" if active else "running"
-    app.execution.set_state(state, "Découverte en cours...")
-    QApplication.processEvents()
-    client = HttpClient(timeout=4.0, max_retries=1, min_sleep=0.0)
-    new_candidates = discover_universe(app.workspace, universe, settings, client=client)
-    if not active:
-        app.execution.set_state("idle", "Découverte terminée.")
-    return len(new_candidates)
+__all__ = [
+    "apply_discovery",
+    "create_universe",
+    "delete_selected",
+    "discover_selected",
+    "open_app_settings",
+    "prepare_launch",
+    "rename_universe",
+    "sync_all",
+    "sync_selected",
+]
 
 
 def open_app_settings(app: Any) -> None:
     open_settings(app, app.settings_store)
 
 
-def discover_selected(app: Any) -> None:
-    uid = cast(str | None, app.selected_id())
-    universe = cast(dict[str, Any] | None, app.workspace.get(uid or ""))
+def create_universe(app: Any) -> None:
+    name = prompt_universe_name(
+        app,
+        title="Nouvel Univers",
+        used_names=set(cast(list[str], app.workspace.names())),
+    )
+    if name:
+        universe = cast(dict[str, Any], app.workspace.create(name))
+        apply_discovery(app, universe)
+        app.refresh(str(universe["id"]))
+
+
+def rename_universe(app: Any) -> None:
+    universe = cast(dict[str, Any] | None, app.workspace.get(app.selected_id() or ""))
     if universe is None:
         QMessageBox.information(
-            app, "Découverte", "Sélectionnez d'abord un Univers."
+            app, "Renommer", "Sélectionnez d'abord un Univers."
         )
         return
-    count = apply_discovery(app, universe)
-    app.refresh(uid)
-    threshold = app.settings_store.load().min_relevance
-    QMessageBox.information(
-        app, "Découverte",
-        f"{count} nouveau(x) candidat(s) à partir de {threshold} % de pertinence.",
+    name = prompt_universe_name(
+        app,
+        title="Renommer l'Univers",
+        used_names=set(
+            cast(list[str], app.workspace.names(exclude=str(universe["id"])))
+        ),
+        initial=str(universe.get("name", "")),
     )
+    if name:
+        app.workspace.rename(str(universe["id"]), name)
+        apply_discovery(app, universe)
+        app.refresh(str(universe["id"]))
 
 
 def delete_selected(app: Any) -> None:
@@ -62,9 +74,7 @@ def delete_selected(app: Any) -> None:
             app, "Suppression", "Sélectionnez d'abord un Univers."
         )
         return
-    question = (
-        f"Supprimer l'Univers « {universe['name']} » et toutes ses données ?"
-    )
+    question = f"Supprimer l'Univers « {universe['name']} » et toutes ses données ?"
     if (
         QMessageBox.question(app, "Suppression", question)
         == QMessageBox.StandardButton.Yes
@@ -90,37 +100,3 @@ def prepare_launch(app: Any) -> None:
     if plan:
         app.last_plan = plan
         app.start_execution(plan)
-
-
-def sync_selected(app: Any, universe_id: str | None = None) -> None:
-    uid = universe_id or cast(str | None, app.selected_id())
-    universe = cast(dict[str, Any] | None, app.workspace.get(uid or ""))
-    if universe is None:
-        QMessageBox.information(
-            app, "Synchronisation", "Sélectionnez d'abord un Univers."
-        )
-        return
-    count = apply_discovery(app, universe)
-    app.refresh(uid)
-    QMessageBox.information(
-        app, "Synchronisation",
-        (
-            f"Synchronisation terminée pour {universe['name']} "
-            f"({count} nouveaux candidats)."
-        ),
-    )
-
-
-def sync_all(app: Any) -> None:
-    universes = app.workspace.universes()
-    total = 0
-    for universe in universes:
-        total += apply_discovery(app, universe)
-    app.refresh(app.selected_id())
-    QMessageBox.information(
-        app, "Synchronisation",
-        (
-            f"Synchronisation terminée pour {len(universes)} Univers "
-            f"({total} nouveaux candidats)."
-        ),
-    )

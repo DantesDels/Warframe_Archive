@@ -11,26 +11,15 @@ from ..adapters.outbound.persistence.quarantine import QuarantineStore
 from ..collect.cache import FetchCache
 from ..collect.http import HttpClient
 from ..events.log import EventLog
+from ..observability.network import HTTP_TIMEOUT
+from ..observability.progress import ProgressEvent, ProgressReporter
 from ..security.fetch_policy import FetchPolicy
 from ..settings import Settings
 from ..storage import read_json, write_json
 from ..use_cases.ports import UniverseRunContext
 from ..use_cases.run_controls import RunControl
 from ..use_cases.run_universe import run_universe
-
-
-class _WorkerObserver:
-    def __init__(self, worker: ExecutionWorker) -> None:
-        self.worker = worker
-
-    def progress(self, percent: int, step: str) -> None:
-        self.worker.progress.emit(percent, step)
-
-    def log(self, message: str) -> None:
-        self.worker.log.emit(message)
-
-    def event(self, event_type: str, **payload: Any) -> None:
-        self.worker.events_log.emit(event_type, payload)
+from .runtime.worker_support import _WorkerObserver, worker_limits
 
 
 class ExecutionWorker(QObject):
@@ -60,15 +49,31 @@ class ExecutionWorker(QObject):
         self.events = EventLog(base / "events.jsonl")
         self.quarantine = QuarantineStore(base / "quarantine")
         self.control = RunControl()
+        self.reporter = ProgressReporter(self._on_progress_event)
         self.client = HttpClient(
-            timeout=10.0,
+            timeout=HTTP_TIMEOUT,
             max_retries=2,
             cache=self.cache,
             policy=FetchPolicy(max_bytes=5_000_000),
             event_log=self.events,
             quarantine=self.quarantine,
+            reporter=self.reporter,
+            control=self.control,
         )
         self.observer = _WorkerObserver(self)
+
+    def _on_progress_event(self, event: ProgressEvent) -> None:
+        self.log.emit(event.message)
+        if event.percent > 0:
+            self.progress.emit(event.percent, event.message)
+        elif event.stage in {"http", "retry", "manifest"}:
+            self.progress.emit(-1, event.message)
+        if event.stage in {"source", "page", "export"}:
+            self.events_log.emit(event.stage, {
+                "message": event.message,
+                "current": event.current,
+                "total": event.total,
+            })
 
     def pause(self) -> None:
         self.control.pause()
@@ -82,7 +87,7 @@ class ExecutionWorker(QObject):
 
     def cancel(self) -> None:
         self.control.cancel()
-        self.log.emit("Annulation demandée.")
+        self.log.emit("Exécution annulée par l'utilisateur.")
         self.events.emit("run_cancel_requested", outcome="cancelling")
 
     def run(self) -> None:
@@ -95,8 +100,8 @@ class ExecutionWorker(QObject):
 
     def _run(self) -> dict[str, Any]:
         settings = cast(Settings, self.plan.settings)
-        limits = _limits(settings)
-        formats = [str(f).lower() for f in settings.output_formats]
+        limits = worker_limits(settings, self.reporter, self.control)
+        formats = [str(fmt).lower() for fmt in settings.output_formats]
         runs: list[dict[str, Any]] = []
         self.events.emit(
             "run_started", universes=list(self.plan.universe_ids), actor="user"
@@ -113,34 +118,12 @@ class ExecutionWorker(QObject):
                 )
         write_json(self.state_path, self.state)
         cancelled = self.control.is_cancelled() or any(
-            bool(cast(dict[str, Any], r).get("cancelled")) for r in runs
+            bool(cast(dict[str, Any], run).get("cancelled")) for run in runs
         )
         if cancelled:
             self.progress.emit(100, "Annulé")
-            self.log.emit("Exécution annulée.")
             self.events.emit("run_cancelled", runs=len(runs), outcome="cancelled")
             return {"ok": False, "cancelled": True, "runs": runs}
         self.progress.emit(100, "Terminé")
-        self.log.emit("Exécution terminée.")
         self.events.emit("run_finished", runs=len(runs), outcome="ok")
         return {"ok": True, "runs": runs}
-
-
-def _limits(settings: Settings) -> dict[str, Any]:
-    return {
-        "max_pages_per_source": settings.max_pages_per_source,
-        "max_depth": settings.max_depth,
-        "same_host_only": settings.same_host_only,
-        "use_cache": settings.use_cache,
-        "incremental": settings.incremental,
-        "expand_manifests": settings.expand_manifests,
-        "max_manifest_urls": settings.max_manifest_urls,
-        "review_child_pages": settings.review_child_pages,
-        "use_playwright": settings.use_playwright,
-        "rag_coupling": settings.rag_coupling,
-        "max_concurrency": settings.max_concurrency,
-        "per_host_concurrency": settings.per_host_concurrency,
-        "per_host_delay": settings.per_host_delay,
-        "max_retries": settings.max_retries,
-        "graph_enabled": settings.graph_enabled,
-    }

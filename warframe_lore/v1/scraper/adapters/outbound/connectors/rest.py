@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, cast
+from urllib.parse import urlparse
 
 from ....observability.network import HTTP_TIMEOUT
 from ....observability.progress import stop_requested
@@ -51,11 +53,14 @@ class RestConnector:
             response = _request(ctx, next_link, headers, method=method, body=body)
             data = _json(bytes(getattr(response, "content", b"")))
             items = _items(data) or [data]
+            res_name = Path(urlparse(next_link).path).name or "resource"
             for index, item in enumerate(items):
                 if len(pages) >= max_pages:
                     break
-                title = str(item.get("title") or item.get("name")
-                            or item.get("id") or f"item-{index}")
+                fallback = res_name if len(items) == 1 else f"{res_name} #{index + 1}"
+                title = str(
+                    item.get("title") or item.get("name") or item.get("id") or fallback
+                )
                 link = str(item.get("url") or item.get("link")
                            or item.get("html_url") or next_link)
                 pages.append(CollectedPage(

@@ -65,8 +65,17 @@ def collect_html(
         if norm in seen:
             continue
         seen.add(norm)
-        resp = _fetch_html(ctx, current, use_cache)
+        resp, err = _fetch_html(ctx, current, use_cache)
         if resp is None:
+            if depth == 0 and not pages and err is not None:
+                raise err
+            if err is not None:
+                reporter.skip(f"Erreur HTTP ({type(err).__name__})", current)
+            continue
+        final_url = str(getattr(resp, "url", "") or current)
+        if depth > 0 and not keep_crawl_url(
+            final_url, url, prefix=prefix, extra_excludes=extra_excludes
+        ):
             continue
         page, html_body = _build_page(resp, content_selector=content_selector)
         ok_tag = matches_topic_tags(tags, page.url, page.title, page.content[:2000])
@@ -84,11 +93,13 @@ def collect_html(
     return pages
 
 
-def _fetch_html(ctx: ConnectorContext, url: str, use_cache: bool) -> Any | None:
+def _fetch_html(
+    ctx: ConnectorContext, url: str, use_cache: bool
+) -> tuple[Any | None, Exception | None]:
     try:
-        return ctx.client.get(url, headers=browser_headers(), use_cache=use_cache)
-    except Exception:
-        return None
+        return ctx.client.get(url, headers=browser_headers(), use_cache=use_cache), None
+    except Exception as exc:  # noqa: BLE001
+        return None, exc
 
 
 def _build_page(
@@ -101,22 +112,20 @@ def _build_page(
     from_cache = bool(getattr(resp, "from_cache", False))
     if "html" not in ctype and "<html" not in body.lower():
         parsed = urlparse(resp_url)
-        title = Path(parsed.path).name or parsed.netloc
         return CollectedPage(
-            title=title, url=resp_url, content=body,
-            from_cache=from_cache, raw=raw, content_type=ctype,
+            title=Path(parsed.path).name or parsed.netloc, url=resp_url,
+            content=body, from_cache=from_cache, raw=raw, content_type=ctype,
         ), ""
     title = html_title(body) or urlparse(resp_url).netloc
     markdown = _extract_markdown(body, content_selector)
-    language = detect_language(resp_url, markdown, html_language(body))
-    sections = split_sections(title, markdown)
+    meta = {
+        "language": detect_language(resp_url, markdown, html_language(body)),
+        "content_markdown": markdown, "sections": split_sections(title, markdown),
+        "page_title": title, "page_url": resp_url,
+    }
     page = CollectedPage(
         title=title, url=resp_url, content=markdown,
-        from_cache=from_cache, raw=raw, content_type=ctype,
-        metadata={
-            "language": language, "content_markdown": markdown,
-            "sections": sections, "page_title": title, "page_url": resp_url,
-        },
+        from_cache=from_cache, raw=raw, content_type=ctype, metadata=meta,
     )
     return page, body
 
@@ -125,7 +134,5 @@ def _extract_markdown(html_body: str, selector: str) -> str:
     if selector:
         from ....self_heal.sandbox import extract_with_selector
 
-        selected = extract_with_selector(html_body, selector)
-        if selected:
-            return selected
+        return extract_with_selector(html_body, selector) or markdown_to_text(html_body)
     return markdown_to_text(html_body)

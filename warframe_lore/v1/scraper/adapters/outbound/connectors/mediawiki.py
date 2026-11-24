@@ -12,7 +12,7 @@ from .mediawiki_api import all_pages, extract_page
 from .wiki.batch import BATCH_SIZE, extract_pages_batch, filter_changed_titles
 from .wiki.endpoints import resolve_api
 from .wiki.listing import is_category_title, mainpage_links
-from .wiki.search import titles_for_categories, titles_for_tags
+from .wiki.search import search_titles, titles_for_categories, titles_for_tags
 
 _ROOT_TITLES = frozenset({
     "",
@@ -25,16 +25,21 @@ _ROOT_TITLES = frozenset({
 })
 
 
+_CDN_HOST_HINTS = ("nocookie.net", "images.", "img.", "static.", "vignette.")
+
+
 class MediaWikiConnector:
     name = "mediawiki"
     kinds = ("wiki", "website", "api")
 
     def can_handle(self, source: dict[str, Any], _ctx: ConnectorContext) -> bool:
         parsed = urlparse(str(source.get("location", "")))
+        host = parsed.netloc.lower()
+        if any(cdn in host for cdn in _CDN_HOST_HINTS):
+            return False
         return (
             str(source.get("kind", "")).lower() == "wiki"
-            or "wiki" in parsed.netloc.lower()
-            or parsed.path.rstrip("/").endswith("/api.php")
+            or "wiki" in host or parsed.path.rstrip("/").endswith("/api.php")
         )
 
     def collect(
@@ -57,6 +62,10 @@ def _discover_titles(
     ctx: ConnectorContext, api: str, source: dict[str, Any],
     target: str, main_page: str, max_pages: int,
 ) -> list[str]:
+    query = parse_qs(urlparse(str(source.get("location", ""))).query)
+    srsearch = str((query.get("srsearch") or [""])[0]).strip()
+    if srsearch:
+        return search_titles(ctx, api, srsearch, max_pages)
     cats = [str(c) for c in (source.get("categories") or []) if str(c).strip()]
     if is_category_title(target) and target not in cats:
         cats.insert(0, target)

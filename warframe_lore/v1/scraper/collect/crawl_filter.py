@@ -8,6 +8,9 @@ from urllib.parse import urljoin, urlparse
 _LOCALE_SEGMENTS = frozenset({
     "en", "fr", "de", "es", "it", "pt", "ru", "ja", "ko", "zh", "pl", "nl",
 })
+_CDN_ASSET_HOSTS = (
+    "nocookie.net", "images.wikia.com", "static.wikia.com",
+)
 NOISE_PATH_SEGMENTS = (
     "/login", "/signin", "/sign-in", "/signup", "/sign-up", "/register",
     "/logout", "/cart", "/checkout", "/shop", "/store", "/account",
@@ -42,7 +45,11 @@ def keep_crawl_url(
     extra_excludes: tuple[str, ...] = (),
 ) -> bool:
     """Return True when ``url`` is within prefix and not a transactional route."""
-    path = urlparse(url).path.lower().rstrip("/") or "/"
+    parsed = urlparse(url)
+    host = parsed.netloc.lower()
+    if any(cdn in host for cdn in _CDN_ASSET_HOSTS):
+        return False
+    path = parsed.path.lower().rstrip("/") or "/"
     seed_path = urlparse(seed_url).path.lower().rstrip("/") or "/"
     if prefix and not (path == prefix or path.startswith(f"{prefix}/")):
         return False

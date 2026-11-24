@@ -60,7 +60,7 @@ def all_pages(
             "list": "allpages",
             "apnamespace": "0",
             "apfilterredir": "nonredirects",
-            "aplimit": str(min(500, max_pages - len(titles))),
+            "aplimit": str(min(500, max(25, max_pages - len(titles)))),
             "format": "json",
         }
         if prefix:
@@ -70,6 +70,8 @@ def all_pages(
         data = parse_json(get_json(ctx, api, params).content)
         query = cast(dict[str, Any], data.get("query", {}))
         entries = cast(list[dict[str, Any]], query.get("allpages", []))
+        if not entries:
+            break
         titles.extend(
             name for entry in entries
             if (name := str(entry.get("title", "") or "").strip())

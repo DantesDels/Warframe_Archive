@@ -11,40 +11,39 @@ from .ports import UniverseRunContext
 def active_sources(ctx: UniverseRunContext, uid: str) -> list[dict[str, Any]]:
     allowed = {"approved", "active"}
     sources = cast(list[dict[str, Any]], ctx.snapshot.sources_by_uid.get(uid, []))
-    return [
-        source for source in sources
-        if str(source.get("status")) in allowed or bool(source.get("selected"))
-    ]
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for src in sources:
+        if str(src.get("status")) not in allowed and not bool(src.get("selected")):
+            continue
+        key = str(src.get("location", "")).strip().rstrip("/").casefold()
+        if key and key in seen:
+            continue
+        seen.add(key)
+        out.append(src)
+    return out
 
 
 def build_run(
-    ctx: UniverseRunContext,
-    universe: dict[str, Any],
-    docs: list[dict[str, Any]],
-    formats: list[str],
-    errors: list[str],
+    ctx: UniverseRunContext, universe: dict[str, Any],
+    docs: list[dict[str, Any]], formats: list[str], errors: list[str],
 ) -> dict[str, Any]:
     now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     uid = str(universe["id"])
     counts = {
         "discovered": len(cast(list[Any], ctx.snapshot.candidates_by_uid.get(uid, []))),
         "approved": len(cast(list[Any], ctx.snapshot.sources_by_uid.get(uid, []))),
-        "fetched": len(docs),
-        "sorted": len(docs),
-        "emitted": len(docs),
+        "fetched": len(docs), "sorted": len(docs), "emitted": len(docs),
     }
     return {
         "id": f"run-{uid}-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}",
-        "universeIds": [uid],
-        "startedAt": now,
+        "universeIds": [uid], "startedAt": now,
         "status": "done" if docs or not errors else "failed",
-        "counts": counts,
-        "formats": formats,
+        "counts": counts, "formats": formats, "errors": errors,
         "sinks": [
             {"name": fmt.upper(), "count": len(docs), "status": "done"}
             for fmt in formats
         ],
-        "errors": errors,
     }
 
 

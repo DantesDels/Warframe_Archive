@@ -14,6 +14,7 @@ from .scheduler_helpers import host_key, new_deadline, rate_wait, store_updates
 async def collect_sources_async(
     ctx: Any, sources: list[dict[str, Any]], uid: str, limits: dict[str, Any],
     *, resume_completed: set[str], checkpoint_cb, progress_cb,
+    on_source_done=None,
 ) -> tuple[list[dict[str, Any]], list[str], list[dict[str, str]], bool]:
     max_workers = max(1, int(limits.get("max_concurrency", 4)))
     per_host = max(1, int(limits.get("per_host_concurrency", 2)))
@@ -35,19 +36,24 @@ async def collect_sources_async(
         sid = str(source.get("id") or source.get("location") or idx)
         if sid in done_ids:
             reporter.skip("Déjà collecté, ignoré", str(source.get("location", "")))
-            return idx, sid, [], [], [], False
+            return source, sid, [], [], [], False
         if control and not control.wait_if_paused():
-            return idx, sid, [], [], [], True
+            return source, sid, [], [], [], True
         host = host_key(str(source.get("location", "")))
         hsem = host_sems.setdefault(host, asyncio.Semaphore(per_host))
         async with sem, hsem:
+            if control and (control.is_cancelled() or not control.wait_if_paused()):
+                return source, sid, [], [], [], True
             delay = rate_wait(host, host_next, float(limits.get("per_host_delay", 0.2)))
-            await asyncio.sleep(delay)
-            if control and not control.wait_if_paused():
-                return idx, sid, [], [], [], True
-            progress_cb(idx, source)
+            if delay > 0:
+                await asyncio.sleep(delay)
+            if control and (control.is_cancelled() or not control.wait_if_paused()):
+                return source, sid, [], [], [], True
             reporter.source(idx, len(sources), str(source.get("location", "")))
             src_limits = {**limits, "deadline": new_deadline(limits)}
+            if str(source.get("discoveredBy", "")) in {"child_page", "manifest_review"}:
+                src_limits["max_pages_per_source"] = 1
+                src_limits["max_depth"] = 0
             async with lock:
                 src_state = dict(state_dict)
             d, e, p, updates = await _retry_collect(
@@ -56,20 +62,29 @@ async def collect_sources_async(
             )
             async with lock:
                 store_updates(state_dict, updates)
-            return idx, sid, d, e, p, False
+            return source, sid, d, e, p, False
 
     tasks = [asyncio.create_task(run_one(i, s)) for i, s in enumerate(sources, start=1)]
     cancelled = False
+    completed = 0
+    ckpt_step = 10 if len(sources) > 50 else 1
     for fut in asyncio.as_completed(tasks):
-        idx, sid, d, e, p, was_cancelled = await fut
+        source, sid, d, e, p, was_cancelled = await fut
         if was_cancelled:
             cancelled = True
             continue
+        completed += 1
         docs.extend(d)
         errors.extend(e)
         pending.extend(p)
         done_ids.add(sid)
-        checkpoint_cb(set(done_ids), list(docs), list(errors), list(pending), "running")
+        progress_cb(completed, source)
+        if on_source_done is not None:
+            on_source_done(source, d, e)
+        if completed % ckpt_step == 0:
+            checkpoint_cb(
+                set(done_ids), list(docs), list(errors), list(pending), "running"
+            )
     if control and control.is_cancelled():
         cancelled = True
     status = "cancelled" if cancelled else "done"

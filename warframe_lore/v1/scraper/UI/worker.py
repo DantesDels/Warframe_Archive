@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import Any, cast
 
@@ -51,23 +52,27 @@ class ExecutionWorker(QObject):
         self.control = RunControl()
         self.reporter = ProgressReporter(self._on_progress_event)
         self.client = HttpClient(
-            timeout=HTTP_TIMEOUT,
-            max_retries=2,
-            cache=self.cache,
-            policy=FetchPolicy(max_bytes=5_000_000),
-            event_log=self.events,
-            quarantine=self.quarantine,
-            reporter=self.reporter,
-            control=self.control,
+            timeout=HTTP_TIMEOUT, max_retries=2, cache=self.cache,
+            policy=FetchPolicy(max_bytes=5_000_000), event_log=self.events,
+            quarantine=self.quarantine, reporter=self.reporter, control=self.control,
         )
         self.observer = _WorkerObserver(self)
+        self._progress_lock = threading.Lock()
+        self._max_progress = 0
+
+    def emit_progress(self, percent: int, message: str) -> None:
+        if percent > 0:
+            with self._progress_lock:
+                self._max_progress = max(self._max_progress, percent)
+                percent = self._max_progress
+        self.progress.emit(percent, message)
 
     def _on_progress_event(self, event: ProgressEvent) -> None:
         self.log.emit(event.message)
         if event.percent > 0:
-            self.progress.emit(event.percent, event.message)
+            self.emit_progress(event.percent, event.message)
         elif event.stage in {"http", "retry", "manifest"}:
-            self.progress.emit(-1, event.message)
+            self.emit_progress(-1, event.message)
         if event.stage in {"source", "page", "export"}:
             self.events_log.emit(event.stage, {
                 "message": event.message,

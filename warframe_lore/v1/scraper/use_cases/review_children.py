@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 
 from ..collect.crawl_filter import infer_path_prefix, keep_crawl_url
 from ..collect.html_extract import extract_links
-from ..collect.http import HttpClient
+from ..collect.http import HttpClient, browser_headers
 from ..collect.manifest import extract_manifest_urls
 from ..collect.spa import looks_like_spa, playwright_available, render_spa_page
 from ..discovery.models import Candidate
@@ -25,7 +25,7 @@ def preview_child_candidates(
 ) -> list[dict[str, Any]]:
     """Discover child links (static HTML, manifest or SPA/JS) with parent authority."""
     http = client or HttpClient()
-    resp = http.get(location, use_cache=True)
+    resp = http.get(location, headers=browser_headers(), use_cache=True)
     body = bytes(getattr(resp, "content", b""))
     text = body.decode(getattr(resp, "encoding", None) or "utf-8", errors="replace")
     final_url = str(getattr(resp, "url", location) or location)

@@ -16,7 +16,7 @@ class _WorkerObserver:
         self.worker = worker
 
     def progress(self, percent: int, step: str) -> None:
-        self.worker.progress.emit(percent, step)
+        self.worker.emit_progress(percent, step)
 
     def log(self, message: str) -> None:
         self.worker.log.emit(message)

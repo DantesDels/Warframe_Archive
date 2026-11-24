@@ -100,31 +100,32 @@ def _collect_sources(
     resume_ids = _resume_completed(checkpoint, uid, sources)
     reporter = current_reporter(limits)
 
-    def progress_cb(idx: int, source: dict[str, Any]) -> None:
-        percent = min(90, int(idx / max(len(sources), 1) * 80))
-        location = str(source.get("location", ""))[:40]
-        ctx.observer.progress(percent, f"Collecte : {location}")
+    def progress_cb(done_count: int, source: dict[str, Any]) -> None:
+        percent = min(90, 5 + int(done_count / max(len(sources), 1) * 85))
+        loc = str(source.get("location", ""))[:48]
+        ctx.observer.progress(percent, f"{done_count}/{len(sources)} — {loc}")
+
+    def on_source_done(_src: Any, s_docs: list[Any], s_errs: list[str]) -> None:
+        for doc in s_docs:
+            suffix = " (cache)" if doc.get("fromCache") else ""
+            reporter.info(f"Collecté{suffix} : {doc.get('title', '')}")
+        for error in s_errs:
+            ctx.observer.event(
+                "source_warning", universe_id=uid, message=error, outcome="warning"
+            )
 
     def checkpoint_cb(done_ids, d, e, p, status):
         _save_checkpoint_v2(control, checkpoint, uid, done_ids, d, e, p, status)
 
-    result = asyncio.run(
+    docs, errors, pending, cancelled = asyncio.run(
         collect_sources_async(
             ctx, sources, uid, limits,
             resume_completed=resume_ids,
             checkpoint_cb=checkpoint_cb,
             progress_cb=progress_cb,
+            on_source_done=on_source_done,
         )
     )
-    docs, errors, pending, cancelled = result
-    for doc in docs:
-        suffix = " (cache)" if doc.get("fromCache") else ""
-        reporter.info(f"Collecté{suffix} : {doc.get('title', '')}")
-    for error in errors:
-        reporter.skip("Avertissement", error)
-        ctx.observer.event(
-            "source_warning", universe_id=uid, message=error, outcome="warning"
-        )
     if stop_requested(limits, control) and not cancelled:
         cancelled = True
     return docs, errors, pending, cancelled

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -33,20 +34,23 @@ class ProgressReporter:
 
     def __init__(self, sink: EventSink | None = None) -> None:
         self._sink = sink
+        self._lock = threading.Lock()
+        self._max_percent = 0
         self.source_index = 0
         self.source_total = 0
         self.page_index = 0
         self.page_total = 0
 
     def emit(
-        self,
-        stage: str,
-        message: str,
-        *,
-        current: int = 0,
-        total: int = 0,
-        percent: int = 0,
+        self, stage: str, message: str, *,
+        current: int = 0, total: int = 0, percent: int = 0,
     ) -> None:
+        if percent > 0:
+            with self._lock:
+                if percent < self._max_percent:
+                    percent = self._max_percent
+                else:
+                    self._max_percent = percent
         if self._sink is not None:
             self._sink(ProgressEvent(stage, message, current, total, percent))
 

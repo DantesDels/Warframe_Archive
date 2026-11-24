@@ -47,7 +47,7 @@ async def retry_collect(
             return docs, errors, pending, updates
         except Exception as exc:  # noqa: BLE001
             last_exc = exc
-            if attempt >= retries or deadline.expired:
+            if _is_permanent(exc) or attempt >= retries or deadline.expired:
                 break
             delay = deadline.sleep_budget(retry_delay(exc, attempt))
             reporter.retry(attempt + 2, retries + 1, delay, str(exc))
@@ -56,3 +56,13 @@ async def retry_collect(
         reporter.skip("Source échouée", location)
         return [], [f"{location}: {last_exc}"], [], []
     return [], [], [], []
+
+
+def _is_permanent(exc: Exception) -> bool:
+    if isinstance(exc, (FileNotFoundError, TypeError, ValueError)):
+        return True
+    msg = str(exc).lower()
+    return any(
+        tok in msg
+        for tok in ("403 ", "404 ", "410 ", "err_name_not_resolved", "nameresolution")
+    )

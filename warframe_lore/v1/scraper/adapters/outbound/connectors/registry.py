@@ -24,6 +24,7 @@ class ConnectorRegistry:
 
 
 def default_registry() -> ConnectorRegistry:
+    from ....json_collection.connector import GithubDirectoryConnector
     from .document import DocumentConnector
     from .feed import FeedConnector
     from .html import HtmlConnector
@@ -38,6 +39,7 @@ def default_registry() -> ConnectorRegistry:
     registry = ConnectorRegistry()
     connectors = (
         LocalDirectoryConnector(),
+        GithubDirectoryConnector(),
         MultimodalConnector(),
         DocumentConnector(),
         LzmaConnector(),

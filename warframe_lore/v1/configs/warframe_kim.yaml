@@ -1,0 +1,26 @@
+# Declarative preset for Warframe KIM Dialogues collection & localization lookup
+name: warframe_kim_dialogues
+
+discovery:
+  type: github_directory
+  repo: Sainan/warframe-kim-dialogues
+  path: data
+  ref: senpai
+  pattern: "*.dialogue.json"
+  mirror_url_template: "https://kim.browse.wf/data/{filename}"
+  token_env: GITHUB_TOKEN
+
+filter:
+  min_items: 5
+
+dict_lookup:
+  source_field: Content
+  target_field: resolved
+  prefix: "/Lotus/Language/"
+  dictionaries:
+    en: "https://browse.wf/warframe-public-export-plus/dict.en.json"
+    fr: "https://browse.wf/warframe-public-export-plus/dict.fr.json"
+
+metadata:
+  category: Lore_Dialogues_KIM
+  docType: dialogue

@@ -1,0 +1,86 @@
+# Generic declarative blueprint for the downstream pipeline
+# (GraphEngine + ObsidianSynthesizer).
+#
+# This file is the SINGLE source of truth for the target structure:
+# entity types, relation types, note sections, rendering styles and vault
+# layout. Copy it, rename the labels/folders to fit your universe, and
+# pass it with --blueprint. No universe-specific value belongs in code.
+#
+# Syntax note: keyed mappings and block scalar lists are used so the file
+# parses with PyYAML AND with the repository's stdlib fallback parser.
+
+name: "Generic narrative blueprint"
+
+# Declared entity types: each maps to a numbered vault folder and a label.
+entity_types:
+  character:
+    label: "Personnages"
+    folder: "01_Personnages"
+  faction:
+    label: "Factions"
+    folder: "02_Factions"
+  location:
+    label: "Lieux"
+    folder: "03_Lieux"
+  event:
+    label: "Événements"
+    folder: "04_Evenements"
+  concept:
+    label: "Concepts"
+    folder: "05_Concepts"
+
+# Declared relation types: labels feed Mermaid edges, relation tables and
+# canvas edge captions. Extraction rejects any type not declared here.
+relation_types:
+  BELONGS_TO:
+    label: "membre de"
+  LOCATED_IN:
+    label: "situé à"
+  ALLIED_WITH:
+    label: "allié de"
+  OPPOSES:
+    label: "opposé à"
+  CREATED_BY:
+    label: "créé par"
+  PART_OF:
+    label: "fait partie de"
+  OCCURRED_IN:
+    label: "a eu lieu dans"
+  RELATED_TO:
+    label: "lié à"
+
+# Note section titles per level. Keys are semantic roles used by the
+# renderers; values are the displayed headings (free, user-facing).
+sections:
+  micro:
+    identity: "Identité"
+    facts: "Faits établis"
+    relations: "Relations"
+    sources: "Sources"
+  meso:
+    members: "Membres"
+    interactions: "Interactions internes"
+    stakes: "Enjeux"
+    sources: "Sources"
+  macro:
+    overview: "Vue d’ensemble"
+    balance: "Grands équilibres"
+    timeline: "Chronologie maîtresse"
+    bridges: "Ponts entre arcs"
+
+# Rendering styles (all optional keys have sane fallbacks in code, but
+# declaring them here keeps the structure fully declarative).
+styles:
+  mermaid_direction: "LR"
+  canvas_node_width: 260
+  canvas_node_height: 120
+  canvas_columns: 4
+  # Optional: entity type whose notes feed the master chronology.
+  timeline_entity_type: "event"
+
+# Vault layout: arcs folder, macro note and root MOC filenames.
+vault:
+  arcs_folder: "06_Arcs"
+  macro_note: "00_Vue_Globale.md"
+  macro_title: "Vue globale"
+  root_index: "00_Index.md"

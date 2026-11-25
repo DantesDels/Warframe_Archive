@@ -4,6 +4,8 @@ Deux étages aval **indépendants** du Scraper v1, ajoutés sans modifier son
 cœur. Toute la structure cible est pilotée par un fichier `blueprint.yaml`
 (aucune référence à un univers spécifique dans le code métier).
 
+→ Guide détaillé du fonctionnement : [`AVAL_ARCHITECTURE.md`](AVAL_ARCHITECTURE.md).
+
 ```
 Scraper v1 (existant)
   └─ exports/<univers>/run-*/            chunks.jsonl · documents.jsonl · manifest.json (1.1)

@@ -45,11 +45,11 @@ class AtelierApp(QMainWindow):
         self._worker: Any = None
         self._graphql_handle: Any = None
         self.setWindowTitle("Atelier v1 — Univers")
-        self.setMinimumSize(720, 500)
+        self.setMinimumSize(960, 620)
         from .dialogs.responsive import fit_to_screen
 
-        fit_to_screen(self, ideal_width=1200, ideal_height=760,
-                      width_ratio=0.92, height_ratio=0.88)
+        fit_to_screen(self, ideal_width=1360, ideal_height=840,
+                      width_ratio=0.94, height_ratio=0.90)
         apply_theme(self)
         self._build_ui()
         self._bind_shortcuts()

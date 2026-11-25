@@ -42,19 +42,20 @@ def request_with_retries(
                 verify=verify,
                 allow_redirects=allow_redirects,
             )
-            if response.status_code in {429, 500, 502, 503, 504}:
+            if response.status_code in {408, 429, 500, 502, 503, 504}:
                 last_exc = requests.HTTPError(response=response)
                 raw_retry_after = str(
                     response.headers.get("Retry-After", "")
                 ).strip()
+                long_429 = (
+                    response.status_code == 429
+                    and raw_retry_after.isdigit()
+                    and int(raw_retry_after) > 10
+                )
+                if attempt + 1 >= max_retries or long_429:
+                    suf = f" retry-after={raw_retry_after}" if raw_retry_after else ""
+                    raise RuntimeError(f"HTTP {response.status_code} {url}{suf}")
                 wait = _retry_after(raw_retry_after, backoff, attempt)
-                if attempt + 1 >= max_retries:
-                    suffix = ""
-                    if raw_retry_after:
-                        suffix = f" retry-after={raw_retry_after}"
-                    raise RuntimeError(
-                        f"HTTP {response.status_code} {url}{suffix}"
-                    )
                 reporter.retry(attempt + 2, max_retries, wait,
                                f"HTTP {response.status_code}")
                 _sleep(wait)
@@ -70,11 +71,13 @@ def request_with_retries(
                 {str(key): str(value) for key, value in response.headers.items()},
                 response.encoding,
             )
+        except requests.HTTPError:
+            raise
         except requests.RequestException as exc:
             last_exc = exc
             if attempt + 1 >= max_retries:
                 raise
-            wait = min(float(backoff**attempt), 30.0)
+            wait = min(float(backoff**attempt), 5.0)
             reporter.retry(attempt + 2, max_retries, wait, str(exc))
             _sleep(wait)
     raise RuntimeError(f"GET failed: {last_exc}")
@@ -82,7 +85,7 @@ def request_with_retries(
 
 def _retry_after(raw: str, backoff: float, attempt: int) -> float:
     delay = int(raw) if raw.isdigit() else backoff**attempt
-    return min(float(delay), 30.0)
+    return min(float(delay), 5.0)
 
 
 def _sleep(seconds: float) -> None:

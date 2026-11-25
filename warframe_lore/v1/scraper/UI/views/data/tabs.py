@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QSizePolicy,
     QSplitter,
     QTreeView,
     QVBoxLayout,
@@ -40,6 +41,7 @@ def data_view(
     bar = QHBoxLayout()
     roots_label = QLabel("Dossiers : " + " | ".join(map(str, roots)))
     roots_label.setToolTip("\n".join(map(str, roots)))
+    roots_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
     roots_label.setMinimumWidth(0)
     open_btn = QPushButton("Ouvrir le dossier")
     open_btn.setObjectName("DataOpenFolderButton")

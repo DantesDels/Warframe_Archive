@@ -64,7 +64,7 @@ _STYLES = (
     "QListWidget::item:selected { background: %(selection)s; color: %(selection_text)s; }",
     "QTabWidget::pane { border: 1px solid %(border_soft)s; background: %(surface)s; }",
     "QTabBar::tab { background: %(bar_bg)s; color: %(text)s;"
-    " border: 1px solid %(border_soft)s; border-bottom: none; padding: 6px 14px;"
+    " border: 1px solid %(border_soft)s; border-bottom: none; padding: 6px 9px;"
     " margin-right: 2px; border-top-left-radius: 4px; border-top-right-radius: 4px; }",
     "QTabBar::tab:selected { background: %(surface)s; color: %(accent)s;"
     " font-weight: 700; border-bottom: 2px solid %(accent)s; }",

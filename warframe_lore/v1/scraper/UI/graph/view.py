@@ -9,8 +9,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from ...graph.model import build_graph
+from .ego import apply_scene_focus, focus_search_query
 from .graphics_view import GraphGraphicsView
-from .items import GraphNodeItem, full_location
+from .items import GraphNodeItem
 from .scene import build_scene, filter_graph
 from .semantic_worker import (
     SemanticExtractionController,
@@ -26,7 +27,7 @@ from .toolbar import (
 
 
 class GraphCanvas(QWidget):
-    """Full-height Graphify-style canvas with zoom, filters, search and GraphRAG."""
+    """Full-height Graphify-style canvas with zoom, Top-N, ego-graph and GraphRAG."""
 
     def __init__(
         self, graph: dict[str, Any], parent: QWidget | None = None, *,
@@ -38,6 +39,7 @@ class GraphCanvas(QWidget):
         self._sources_graph, self._knowledge_graph = graph, knowledge_graph
         self._graph, self._export_dir = graph, export_dir
         self._node_items: list[GraphNodeItem] = []
+        self._selected_id = self._hovered_id = None
         self.setMinimumHeight(300)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
@@ -56,9 +58,10 @@ class GraphCanvas(QWidget):
         )
         layout.addLayout(bar)
         self.view = GraphGraphicsView(self)
+        self.view.background_clicked.connect(self.clear_focus)
         self.sidebar = GraphSidebar(
             graph, on_filter=self._rebuild_scene,
-            on_search=self._focus_search, parent=self,
+            on_search=lambda q: focus_search_query(self, q), parent=self,
         )
         self.detail = self.sidebar.detail
         layout.addWidget(make_graph_splitter(self.view, self.sidebar), 1)
@@ -71,16 +74,13 @@ class GraphCanvas(QWidget):
             self.mode_combo.setCurrentIndex(idx)
             return
         empty_kg = {"nodes": [], "edges": [], "meta": {"mode": "knowledge"}}
-        self._graph = (
-            (self._knowledge_graph or empty_kg)
-            if mode == "knowledge"
-            else self._sources_graph
-        )
+        kg = self._knowledge_graph or empty_kg
+        self._graph = kg if mode == "knowledge" else self._sources_graph
+        self._selected_id = self._hovered_id = None
         self.sidebar.set_graph(self._graph)
         self._rebuild_scene(self.sidebar.enabled_kinds())
 
     def extract_knowledge(self) -> None:
-        """Launch asynchronous semantic extraction for the current universe."""
         self._extractor.start()
 
     def _on_extract_done(self, graph: dict[str, Any], summary: str) -> None:
@@ -91,42 +91,53 @@ class GraphCanvas(QWidget):
     def _on_extract_error(self, message: str) -> None:
         self.sidebar.detail.setPlainText(f"Erreur d'extraction : {message}")
 
+    def _sync_focus(self) -> None:
+        apply_scene_focus(
+            self.scene, self._node_items,
+            selected_id=self._selected_id, hovered_id=self._hovered_id,
+        )
+
     def _rebuild_scene(self, kinds: set[str]) -> None:
-        self.scene, self._node_items = build_scene(filter_graph(self._graph, kinds))
+        sub = filter_graph(
+            self._graph, kinds, max_nodes=self.sidebar.max_nodes(),
+            min_degree=self.sidebar.min_degree(), focus_id=self._selected_id,
+        )
+        self.scene, self._node_items = build_scene(sub)
         self.view.setScene(self.scene)
         for item in self._node_items:
             item.node_clicked.connect(self.show_node)
+            item.node_hovered.connect(self._on_node_hovered)
+        s_n, s_e = len(sub.get("nodes", [])), len(sub.get("edges", []))
+        t_n, t_e = len(self._graph.get("nodes", [])), len(self._graph.get("edges", []))
+        self.sidebar.update_visible_stats(s_n, s_e, t_n, t_e)
+        self._sync_focus()
         self.fit_graph()
 
-    def _focus_search(self, query: str) -> None:
-        needle = query.strip().casefold()
-        for item in self._node_items:
-            hay = f"{item.node.get('label', '')} {full_location(item.node)}".casefold()
-            if needle and needle in hay:
-                self.view.centerOn(item)
-                self.show_node(item.node)
-                return
+    def _on_node_hovered(self, node: dict[str, Any], entered: bool) -> None:
+        self._hovered_id = str(node.get("id", "")) if entered else None
+        self._sync_focus()
+
+    def clear_focus(self) -> None:
+        self._selected_id = None
+        self._sync_focus()
 
     def fit_graph(self) -> None:
-        """Fit the visible graph cleanly in the viewport."""
         self.view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
     def show_node(self, node: dict[str, Any]) -> None:
-        """Show full node metadata in the right-hand inspector."""
+        self._selected_id = str(node.get("id", "")) or None
+        self._sync_focus()
         self.sidebar.show_node(node)
 
     def open_fullscreen(self) -> None:
-        """Open a dedicated large window displaying this graph."""
         show_fullscreen_graph(
-            self,
-            lambda dlg: GraphCanvas(
-                self._graph, dlg, allow_popout=False,
+            self, lambda d: GraphCanvas(
+                self._graph, d, allow_popout=False,
                 export_dir=self._export_dir, knowledge_graph=self._knowledge_graph,
             ),
         )
 
     def open_html_graph(self) -> Path:
-        """Export the interactive Graphify-style HTML graph and open it."""
         return export_and_open_html(self._graph, self._export_dir)
 
 
@@ -136,9 +147,7 @@ def graph_view(workspace: Any, universe: dict[str, Any]) -> QWidget:
     ws_path = getattr(workspace, "path", None)
     base = ws_path.parent if isinstance(ws_path, Path) else Path("data/v1")
     return GraphCanvas(
-        build_graph(workspace, universe_id=uid),
-        export_dir=base / "exports" / uid,
+        build_graph(workspace, universe_id=uid), export_dir=base / "exports" / uid,
         knowledge_graph=load_saved_knowledge_graph(workspace, universe),
-        workspace=workspace,
-        universe=universe,
+        workspace=workspace, universe=universe,
     )

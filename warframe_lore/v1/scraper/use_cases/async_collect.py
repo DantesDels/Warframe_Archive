@@ -7,6 +7,10 @@ from typing import Any, cast
 
 from ..observability.progress import current_reporter
 from .collect_source import collect_source
+from .pending_children_store import (
+    MAX_PENDING_CHILDREN_PER_SOURCE,
+    cap_and_dedupe_pending,
+)
 from .retry_collect import retry_collect as _retry_collect
 from .scheduler_helpers import host_key, new_deadline, rate_wait, store_updates
 
@@ -25,6 +29,12 @@ async def collect_sources_async(
     docs: list[dict[str, Any]] = []
     errors: list[str] = []
     pending: list[dict[str, str]] = []
+    seen_pending: set[str] = set()
+    raw_per_src = limits.get(
+        "max_pending_children_per_source", MAX_PENDING_CHILDREN_PER_SOURCE
+    )
+    per_src_pending = max(1, int(raw_per_src))
+    allowed_langs = limits.get("allowed_languages") or ("en",)
     done_ids: set[str] = set(resume_completed)
     state_map = cast(dict[str, Any], ctx.state)
     state_dict = cast(dict[str, Any], state_map.setdefault(uid, {}))
@@ -76,8 +86,14 @@ async def collect_sources_async(
         completed += 1
         docs.extend(d)
         errors.extend(e)
-        pending.extend(p)
-        done_ids.add(sid)
+        pending.extend(
+            cap_and_dedupe_pending(
+                p, seen=seen_pending, limit=per_src_pending,
+                allowed_languages=allowed_langs,
+            )
+        )
+        if d or not e:
+            done_ids.add(sid)
         progress_cb(completed, source)
         if on_source_done is not None:
             on_source_done(source, d, e)

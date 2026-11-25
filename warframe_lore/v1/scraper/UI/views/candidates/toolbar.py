@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 
+from ....collect.language import DEFAULT_ALLOWED_LANGUAGES, is_url_language_allowed
 from ..simple_table import SimpleTable
 from .actions import add_manual, apply_status, preview_children, remove_candidate
 
@@ -38,8 +39,16 @@ class CandidateFilterProxy(QSortFilterProxyModel):
         super().__init__(parent)
         self._query = ""
         self._status = ""
+        self._allowed_languages: tuple[str, ...] = DEFAULT_ALLOWED_LANGUAGES
         self.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.setSortCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+
+    def set_allowed_languages(self, languages: tuple[str, ...]) -> int:
+        """Filter candidates live by allowed URL language codes."""
+        self.beginFilterChange()
+        self._allowed_languages = languages or DEFAULT_ALLOWED_LANGUAGES
+        self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
+        return self.rowCount()
 
     def set_filters(self, query: str, status: str) -> int:
         """Update text + status filter and return visible row count."""
@@ -53,6 +62,9 @@ class CandidateFilterProxy(QSortFilterProxyModel):
         model = self.sourceModel()
         if model is None:
             return True
+        loc = str(model.index(source_row, 0, source_parent).data() or "")
+        if not is_url_language_allowed(loc, self._allowed_languages):
+            return False
         if self._status:
             state = str(model.index(source_row, 4, source_parent).data() or "")
             if state.casefold() != self._status:
@@ -67,26 +79,24 @@ class CandidateFilterProxy(QSortFilterProxyModel):
 
 
 def build_filter_and_select_bar(
-    table: SimpleTable,
-    proxy: CandidateFilterProxy,
-    on_state: Callable[[], None],
+    table: SimpleTable, proxy: CandidateFilterProxy, on_state: Callable[[], None],
 ) -> tuple[QHBoxLayout, QLineEdit, QComboBox]:
     """Build search input, status dropdown and Select All / Clear buttons."""
-    bar = QHBoxLayout()
-    bar.setSpacing(6)
-    search = QLineEdit()
-    search.setObjectName("TableFilterInput")
-    search.setClearButtonEnabled(True)
-    search.setPlaceholderText("Filtrer par URL, titre, type ou preuve...")
-    status_box = QComboBox()
-    status_box.setObjectName("CandidateStatusFilter")
+    bar = QHBoxLayout(spacing=6)
+    search = QLineEdit(
+        objectName="TableFilterInput", clearButtonEnabled=True,
+        placeholderText="Filtrer par URL, titre, type ou preuve...",
+    )
+    status_box = QComboBox(objectName="CandidateStatusFilter")
     for label, value in STATUS_FILTERS:
         status_box.addItem(label, value)
-    select_all = QPushButton("Tout sélectionner")
-    select_all.setObjectName("CandidatesSelectAllButton")
+    select_all = QPushButton(
+        "Tout sélectionner", objectName="CandidatesSelectAllButton"
+    )
     select_all.clicked.connect(table.selectAll)
-    clear_sel = QPushButton("Désélectionner")
-    clear_sel.setObjectName("CandidatesClearSelectionButton")
+    clear_sel = QPushButton(
+        "Désélectionner", objectName="CandidatesClearSelectionButton"
+    )
     clear_sel.clicked.connect(table.clearSelection)
 
     def _apply() -> None:
@@ -95,34 +105,26 @@ def build_filter_and_select_bar(
 
     search.textChanged.connect(lambda _t: _apply())
     status_box.currentIndexChanged.connect(lambda _i: _apply())
-    bar.addWidget(search, 1)
-    bar.addWidget(status_box)
-    bar.addWidget(select_all)
-    bar.addWidget(clear_sel)
+    for w in (search, status_box, select_all, clear_sel):
+        bar.addWidget(w, 1 if w is search else 0)
     return bar, search, status_box
 
 
 def build_actions_bar(
-    table: SimpleTable,
-    workspace: Any,
-    universe: dict[str, Any],
+    table: SimpleTable, workspace: Any, universe: dict[str, Any],
     on_change: Callable[[], None],
 ) -> tuple[QHBoxLayout, list[QPushButton], QLabel]:
     """Build bulk curation buttons and live selection counter."""
-    bar = QHBoxLayout()
-    bar.setSpacing(6)
+    bar = QHBoxLayout(spacing=6)
     bulk_buttons: list[QPushButton] = []
     for label, status, obj_name in STATUS_ACTIONS:
-        btn = QPushButton(label)
-        if obj_name:
-            btn.setObjectName(obj_name)
+        btn = QPushButton(label, objectName=obj_name or "")
         btn.clicked.connect(
             lambda _c=False, v=status: apply_status(table, workspace, on_change, v)
         )
         bar.addWidget(btn)
         bulk_buttons.append(btn)
-    del_btn = QPushButton("Supprimer")
-    del_btn.setObjectName("DangerButton")
+    del_btn = QPushButton("Supprimer", objectName="DangerButton")
     del_btn.clicked.connect(
         lambda _c=False: remove_candidate(table, workspace, universe, on_change)
     )
@@ -136,10 +138,9 @@ def build_actions_bar(
     add_btn.clicked.connect(
         lambda _c=False: add_manual(table, workspace, universe, on_change)
     )
-    count_label = QLabel()
-    count_label.setObjectName("MutedHint")
-    bar.addWidget(preview_btn)
-    bar.addWidget(add_btn)
+    count_label = QLabel(objectName="MutedHint")
+    for w in (preview_btn, add_btn):
+        bar.addWidget(w)
     bar.addStretch(1)
     bar.addWidget(count_label)
     return bar, bulk_buttons, count_label

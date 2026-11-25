@@ -8,6 +8,7 @@ from typing import Any
 
 from PySide6.QtWidgets import QMessageBox
 
+from ...collect.language_purge import universe_allowed_languages
 from ..runtime.discovery_runner import start_discovery
 
 
@@ -16,13 +17,18 @@ def apply_discovery(
 ) -> int:
     """Start discovery off the main thread; completion is reported via callback."""
     settings = app.settings_store.load()
+    uid = str(universe.get("id", ""))
+    langs = universe_allowed_languages(app.workspace, uid)
     seeds = [
         str(source.get("location", "")).strip()
-        for source in app.workspace.sources_for(str(universe.get("id", "")))
+        for source in app.workspace.sources_for(uid)
         if str(source.get("location", "")).strip()
     ]
-    settings = replace(settings, discovery_seeds=tuple(seeds))
-    start_discovery(app, universe, on_done, settings)
+    settings = replace(
+        settings, discovery_seeds=tuple(seeds), allowed_languages=langs
+    )
+    u_with_langs = {**universe, "allowed_languages": langs}
+    start_discovery(app, u_with_langs, on_done, settings)
     return 0
 
 

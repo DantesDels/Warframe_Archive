@@ -73,6 +73,7 @@ class DetailPane(QWidget):
             item = self.body_layout.takeAt(0)
             old_widget = item.widget() if item is not None else None
             if old_widget is not None:
+                old_widget.setParent(None)
                 old_widget.deleteLater()
         self.body_layout.addWidget(widget)
 
@@ -93,6 +94,8 @@ class DetailPane(QWidget):
         status = display_universe_status(str(universe.get("status", "")))
         self.subtitle.setText(f"{universe.get('description', '')} • {status}")
         tabs = QTabWidget()
+        tabs.setUsesScrollButtons(True)
+        tabs.tabBar().setExpanding(False)
         sources = cast(list[dict[str, Any]], workspace.sources_for(uid))
         docs = cast(list[dict[str, Any]], workspace.documents_for(uid))
         runs = cast(list[dict[str, Any]], workspace.runs_for(uid))

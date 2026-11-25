@@ -19,11 +19,12 @@ class UniverseItem(QWidget):
     def __init__(self, uid: str, name: str, count: int, sidebar: Any) -> None:
         super().__init__()
         self.uid = uid
+        self.setMinimumHeight(52)
         row = QHBoxLayout(self)
-        row.setContentsMargins(8, 6, 4, 6)
-        row.setSpacing(2)
+        row.setContentsMargins(8, 6, 6, 6)
+        row.setSpacing(4)
         self.label = QLabel(f"{name}\n({count} sources)")
-        self.label.setWordWrap(True)
+        self.label.setWordWrap(False)
         self.label.setStyleSheet("background: transparent; color: #1e293b;")
         row.addWidget(self.label, 1)
         self.actions_widget = QWidget()

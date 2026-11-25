@@ -119,12 +119,16 @@ def handle_finished(app: Any, result: object) -> None:
     if result_dict is not None and (
         result_dict.get("ok") or result_dict.get("cancelled")
     ):
-        apply_result(app.workspace, result_dict)
-    app.refresh()
+        merged_data = result_dict.get("merged_workspace_data")
+        if isinstance(merged_data, dict):
+            app.workspace.data = merged_data
+        else:
+            apply_result(app.workspace, result_dict)
     if result_dict and result_dict.get("cancelled"):
         app.execution.set_state("cancelled")
     elif result_dict and result_dict.get("ok"):
         app.execution.set_state("done")
     else:
         app.execution.set_state("error")
+    app.refresh()
     cleanup_execution(app, stop=False)

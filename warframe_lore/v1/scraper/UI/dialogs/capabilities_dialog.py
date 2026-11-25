@@ -22,7 +22,7 @@ from ...capabilities.models import UniverseCapabilities
 from ...capabilities.modes import CRAWL_MODES, MODES_BY_KEY
 from .llm_budget_box import LlmBudgetBox
 from .multimodal_budget_box import MultimodalBudgetBox
-from .responsive import fit_to_screen, scrollable_dialog_body
+from .responsive import build_language_checks, fit_to_screen, scrollable_dialog_body
 from .tag_editor import TagEditor
 
 _BUDGET_FIELDS = (
@@ -68,10 +68,8 @@ class CapabilitiesDialog(QDialog):
         body.addWidget(self.multimodal_box)
         buttons = QDialogButtonBox()
         role = QDialogButtonBox.ButtonRole
-        btn_specs = (("Enregistrer", role.AcceptRole), ("Annuler", role.RejectRole))
-        for label, r in btn_specs:
-            btn = buttons.addButton(label, r)
-            if isinstance(btn, QPushButton):
+        for lbl, r in (("Enregistrer", role.AcceptRole), ("Annuler", role.RejectRole)):
+            if isinstance(btn := buttons.addButton(lbl, r), QPushButton):
                 btn.setAutoDefault(False)
                 btn.setDefault(False)
         buttons.accepted.connect(self._save)
@@ -82,58 +80,60 @@ class CapabilitiesDialog(QDialog):
     def _build_mode_box(self, body: QVBoxLayout, cfg: UniverseCapabilities) -> None:
         box = QGroupBox("Mode de recherche guidé")
         lay = QVBoxLayout(box)
-        combo = QComboBox()
-        self.mode_combo = combo
+        self.mode_combo = QComboBox()
         for preset in CRAWL_MODES:
-            combo.addItem(preset.label, preset.key)
-        combo.setCurrentIndex(max(0, combo.findData(cfg.crawl.mode)))
-        lay.addWidget(combo)
-        self.mode_help = QLabel()
-        self.mode_help.setWordWrap(True)
-        lay.addWidget(self.mode_help)
-        lay.addWidget(QLabel("Tags / thèmes (cliquer sur un tag pour le supprimer) :"))
+            self.mode_combo.addItem(preset.label, preset.key)
+        idx = max(0, self.mode_combo.findData(cfg.crawl.mode))
+        self.mode_combo.setCurrentIndex(idx)
+        self.mode_help = QLabel(wordWrap=True)
         self.tag_editor = TagEditor(cfg.crawl.topic_tags, self)
         self.tags_input = self.tag_editor.input
-        lay.addWidget(self.tag_editor)
+        for w in (
+            self.mode_combo, self.mode_help,
+            QLabel("Tags / thèmes (cliquer sur un tag pour le supprimer) :"),
+            self.tag_editor,
+            QLabel("Langues autorisées (filtrage des URLs et candidats) :"),
+        ):
+            lay.addWidget(w)
+        lang_row, self._lang_checks = build_language_checks(
+            set(cfg.allowed_languages or ["en"]), "CapLang"
+        )
+        lay.addLayout(lang_row)
         self.mode_combo.currentIndexChanged.connect(self._on_mode_changed)
         body.addWidget(box)
 
     def _build_budget_box(self, body: QVBoxLayout, cfg: UniverseCapabilities) -> None:
         box = QGroupBox("Budgets de collecte")
         form = QFormLayout(box)
-        self._spinboxes: dict[str, QSpinBox] = {}
-        for name, label, minimum, maximum in _BUDGET_FIELDS:
-            spin = QSpinBox()
-            spin.setRange(minimum, maximum)
-            spin.setValue(int(getattr(cfg.crawl, name)))
-            form.addRow(label, spin)
-            self._spinboxes[name] = spin
+        self._spinboxes = {
+            n: QSpinBox(minimum=lo, maximum=hi, value=int(getattr(cfg.crawl, n)))
+            for n, _, lo, hi in _BUDGET_FIELDS
+        }
+        for (n, label, _, _) in _BUDGET_FIELDS:
+            form.addRow(label, self._spinboxes[n])
         body.addWidget(box)
         self._refresh_mode_help()
 
     def _build_toggles(self, body: QVBoxLayout, cfg: UniverseCapabilities) -> None:
         box = QGroupBox("Modules optionnels")
         lay = QVBoxLayout(box)
-        self._toggles = {}
-        for key, label in _TOGGLE_SPECS:
-            self._toggles[key] = QCheckBox(label)
-            self._toggles[key].setChecked(bool(getattr(cfg, key).enabled))
-            lay.addWidget(self._toggles[key])
+        self._toggles = {
+            k: QCheckBox(lbl, checked=bool(getattr(cfg, k).enabled))
+            for k, lbl in _TOGGLE_SPECS
+        }
+        for cb in self._toggles.values():
+            lay.addWidget(cb)
         body.addWidget(box)
 
     def _on_mode_changed(self, _index: int) -> None:
-        preset = MODES_BY_KEY.get(str(self.mode_combo.currentData() or "custom"))
-        if preset is None:
-            return
-        self.mode_help.setText(preset.description)
-        for name, spin in self._spinboxes.items():
-            value = getattr(preset, name, None)
-            if value is not None:
-                spin.setValue(int(value))
+        if preset := MODES_BY_KEY.get(str(self.mode_combo.currentData() or "custom")):
+            self.mode_help.setText(preset.description)
+            for name, spin in self._spinboxes.items():
+                if (val := getattr(preset, name, None)) is not None:
+                    spin.setValue(int(val))
 
     def _refresh_mode_help(self) -> None:
-        preset = MODES_BY_KEY.get(str(self.mode_combo.currentData() or "custom"))
-        if preset is not None:
+        if preset := MODES_BY_KEY.get(str(self.mode_combo.currentData() or "custom")):
             self.mode_help.setText(preset.description)
 
     def _sync_llm_box(self) -> None:
@@ -144,6 +144,8 @@ class CapabilitiesDialog(QDialog):
         config = UniverseCapabilities.from_dict(self._base_caps)
         config.crawl.mode = str(self.mode_combo.currentData() or "custom")
         config.crawl.topic_tags = self.tag_editor.tags()
+        langs = [c for c, cb in self._lang_checks.items() if cb.isChecked()]
+        config.allowed_languages = langs or ["en"]
         for name, spinbox in self._spinboxes.items():
             setattr(config.crawl, name, spinbox.value())
         for key, cb in self._toggles.items():

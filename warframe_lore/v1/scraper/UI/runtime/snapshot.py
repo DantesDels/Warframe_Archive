@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
 
 class Snapshot:
     """Detached copy of the data needed by one execution run."""
 
-    def __init__(self, data: dict[str, Any]) -> None:
+    def __init__(self, data: dict[str, Any], path: Path | None = None) -> None:
+        self.raw_data: dict[str, Any] = deepcopy(data)
+        self.workspace_path: Path | None = Path(path) if path else None
         self.universes = {str(u["id"]): dict(u) for u in data.get("universes", [])}
         self.sources_by_uid = group(data.get("sources", []), "universeId")
         self.candidates_by_uid = group(data.get("candidates", []), "universeId")
@@ -22,7 +26,7 @@ class Snapshot:
 
 
 def snapshot(workspace: Any) -> Snapshot:
-    return Snapshot(workspace.data)
+    return Snapshot(workspace.data, getattr(workspace, "path", None))
 
 
 def group(items: list[dict[str, Any]], key: str) -> dict[str, list[dict[str, Any]]]:

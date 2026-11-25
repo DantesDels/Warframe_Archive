@@ -8,6 +8,8 @@ from urllib.parse import urlparse
 from ..collect.crawl_filter import infer_path_prefix, keep_crawl_url
 from ..collect.html_extract import extract_links
 from ..collect.http import HttpClient, browser_headers
+from ..collect.language import canonical_locale_url_key, is_url_language_allowed
+from ..collect.language_purge import universe_allowed_languages
 from ..collect.manifest import extract_manifest_urls
 from ..collect.spa import looks_like_spa, playwright_available, render_spa_page
 from ..discovery.models import Candidate
@@ -35,17 +37,20 @@ def preview_child_candidates(
         text, final_url, is_html=is_html, limit=limit, use_playwright=use_playwright
     )
     uid = str(universe["id"])
+    langs = universe_allowed_languages(workspace, uid)
     existing = {
-        str(c.get("location", "")).rstrip("/").lower()
+        canonical_locale_url_key(str(c.get("location", "")))
         for c in cast(list[dict[str, Any]], workspace.candidates_for(uid))
     }
     out: list[dict[str, Any]] = []
     for idx, url in enumerate(urls):
-        key = url.rstrip("/").lower()
-        if key in existing:
+        key = canonical_locale_url_key(url)
+        if not is_url_language_allowed(url, langs) or key in existing:
+            continue
+        score, breakdown = child_authority_score(workspace, uid, final_url, url)
+        if score < 0.60:
             continue
         existing.add(key)
-        score, breakdown = child_authority_score(workspace, uid, final_url, url)
         cand = Candidate(
             id=f"child-{abs(hash((uid, key, idx))) % 1000000}",
             universe_id=uid, kind="website", location=url,

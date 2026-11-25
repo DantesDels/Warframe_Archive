@@ -7,6 +7,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from ..graph.run_graph import write_run_graph
+from ..semantic.export import export_graphrag_bundle
+from ..semantic.pipeline import extract_docs_semantics
+from ..truth.export import export_truth_report
+from ..truth.pipeline import analyze_docs_truth
 from .exports.buckets import write_buckets
 from .exports.markdown import write_corpora
 from .runtime.artifact_formats import (
@@ -89,17 +94,12 @@ def emit_artifacts(
         if parquet:
             files.append(parquet)
     if bool(kwargs.get("graph_enabled", True)):
-        from ..graph.run_graph import write_run_graph
-
         files.extend(write_run_graph(out_dir, universe, docs))
     graph_rag_cfg = kwargs.get("graph_rag_config")
     graph_rag_on = bool(kwargs.get("graph_rag_enabled")) or (
         isinstance(graph_rag_cfg, dict) and bool(graph_rag_cfg.get("enabled"))
     )
     if graph_rag_on:
-        from ..semantic.export import export_graphrag_bundle
-        from ..semantic.pipeline import extract_docs_semantics
-
         bundle = extract_docs_semantics(
             docs, str(universe.get("id", "")), llm_budget=graph_rag_cfg
         )
@@ -108,9 +108,6 @@ def emit_artifacts(
     if bool(kwargs.get("fact_check_enabled")) or (
         isinstance(fc_cfg, dict) and bool(fc_cfg.get("enabled"))
     ):
-        from ..truth.export import export_truth_report
-        from ..truth.pipeline import analyze_docs_truth
-
         report = analyze_docs_truth(
             docs, list(kwargs.get("sources") or []),
             str(universe.get("id", "")), llm_budget=fc_cfg,

@@ -15,6 +15,13 @@ _CATEGORY_PREFIXES = (
     "kategorie:",
     "categoría:",
 )
+_SKIP_SUBCAT_TOKENS = (
+    "mods", "skins", "cosmetics", "glyphs", "sigils", "emotes", "palettes",
+    "bundles", "patch history", "update ", "stubs", "disambiguation",
+    "templates", "files", "images", "videos", "audio", "users", "blog",
+    "quest items", "quest rewards", "weapons",
+)
+_SKIP_TITLE_SUFFIXES = ("/patch history", "/media", "/main", "/sectionlist")
 
 
 def is_category_title(title: str) -> bool:
@@ -104,12 +111,20 @@ def _walk_category(
         for item in members:
             ns = int(item.get("ns", 0) or 0)
             name = str(item.get("title", "") or "").strip()
-            if ns == 0 and name and name not in seen:
+            low = name.lower()
+            if ns == 0 and name and name not in seen and not low.endswith(
+                _SKIP_TITLE_SUFFIXES
+            ):
                 seen.add(name)
                 titles.append(name)
                 if len(titles) >= max_pages:
                     return
-            elif ns == 14 and depth < max_depth and name:
+            elif (
+                ns == 14
+                and depth < min(max_depth, 2)
+                and name
+                and not any(tok in low for tok in _SKIP_SUBCAT_TOKENS)
+            ):
                 queue.append((name, depth + 1))
         cont_map = cast(dict[str, Any], data.get("continue", {}))
         cont = str(cont_map.get("cmcontinue") or "") or None

@@ -49,7 +49,8 @@ class MediaWikiConnector:
         api, main_page = resolve_api(ctx, url)
         max_pages = max(1, int(ctx.limits.get("max_pages_per_source", 1)))
         target = _title_from_url(urlparse(url))
-        if _is_specific_article(target, main_page) and not source.get("categories"):
+        has_scope = bool(source.get("categories") or source.get("prefix"))
+        if _is_specific_article(target, main_page) and not has_scope:
             pages = extract_page(ctx, api, target)
             return pages[:max_pages] if pages else _fallback(ctx, url)
         titles = _discover_titles(ctx, api, source, target, main_page, max_pages)
@@ -58,13 +59,22 @@ class MediaWikiConnector:
         return _fetch_in_batches(ctx, api, titles[:max_pages]) or _fallback(ctx, url)
 
 
+_DEFAULT_LORE_CATEGORIES = [
+    "Lore",
+    "Quest",
+    "Quests",
+    "Characters",
+    "Factions",
+    "Quotes",
+]
+
+
 def _discover_titles(
     ctx: ConnectorContext, api: str, source: dict[str, Any],
     target: str, main_page: str, max_pages: int,
 ) -> list[str]:
     query = parse_qs(urlparse(str(source.get("location", ""))).query)
-    srsearch = str((query.get("srsearch") or [""])[0]).strip()
-    if srsearch:
+    if srsearch := str((query.get("srsearch") or [""])[0]).strip():
         return search_titles(ctx, api, srsearch, max_pages)
     cats = [str(c) for c in (source.get("categories") or []) if str(c).strip()]
     if is_category_title(target) and target not in cats:
@@ -72,22 +82,24 @@ def _discover_titles(
     depth = max(0, int(ctx.limits.get("max_depth", 2)))
     if cats:
         return titles_for_categories(ctx, api, cats, max_pages, depth)
-    raw_tags = ctx.limits.get("topic_tags") or []
-    tags = [str(t).strip() for t in raw_tags if str(t).strip()]
-    if tags:
+    raw_t = ctx.limits.get("topic_tags") or []
+    if tags := [str(t).strip() for t in raw_t if str(t).strip()]:
         return titles_for_tags(ctx, api, tags, max_pages, depth)
     prefix = str(source.get("prefix") or "")
     titles: list[str] = []
     if not prefix:
-        titles.extend(mainpage_links(ctx, api, main_page, min(max_pages, 200)))
+        lore = _DEFAULT_LORE_CATEGORIES
+        if titles := titles_for_categories(ctx, api, lore, max_pages, 1):
+            return titles[:max_pages]
+        for link in mainpage_links(ctx, api, main_page, min(max_pages, 200)):
+            if link not in titles:
+                titles.append(link)
     if len(titles) < max_pages:
         seen = set(titles)
         for name in all_pages(ctx, api, max_pages, prefix=prefix):
-            if name not in seen:
+            if name not in seen and len(titles) < max_pages:
                 seen.add(name)
                 titles.append(name)
-                if len(titles) >= max_pages:
-                    break
     return titles
 
 
@@ -125,6 +137,8 @@ def _is_specific_article(target: str, main_page: str) -> bool:
 
 
 def _fallback(ctx: ConnectorContext, url: str) -> list[CollectedPage]:
+    if "/api.php" in url.lower():
+        return []
     limits = {**ctx.limits, "max_pages_per_source": 1}
     single = ConnectorContext(
         client=ctx.client, limits=limits, capabilities=ctx.capabilities

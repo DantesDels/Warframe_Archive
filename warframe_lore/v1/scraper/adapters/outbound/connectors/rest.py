@@ -34,6 +34,7 @@ class RestConnector:
             kind in {"api", "rest", "graphql"}
             or "/graphql" in location
             or location.endswith(".json")
+            or ".json!" in location
         )
 
     def collect(self, source: dict[str, Any],
@@ -54,19 +55,32 @@ class RestConnector:
             data = _json(bytes(getattr(response, "content", b"")))
             items = _items(data) or [data]
             res_name = Path(urlparse(next_link).path).name or "resource"
+            cat = res_name.split("!", 1)[0].split("_", 1)[0].split(".", 1)[0]
+            is_exp = cat.startswith("Export")
             for index, item in enumerate(items):
                 if len(pages) >= max_pages:
                     break
+                if is_exp and not (item.get("name") and item.get("description")):
+                    continue
+                text_body = _text(item)
+                if not text_body:
+                    continue
                 fallback = res_name if len(items) == 1 else f"{res_name} #{index + 1}"
                 title = str(
-                    item.get("title") or item.get("name") or item.get("id") or fallback
+                    item.get("title") or item.get("name")
+                    or item.get("uniqueName") or item.get("id") or fallback
                 )
-                link = str(item.get("url") or item.get("link")
-                           or item.get("html_url") or next_link)
-                pages.append(CollectedPage(
-                    title=title, url=link, content=_text(item),
-                    metadata={"source_api": next_link, "connector": "rest"},
-                ))
+                if title.startswith("/Lotus/"):
+                    continue
+                raw_link = item.get("url") or item.get("link") or item.get("html_url")
+                anchor = item.get("uniqueName") or item.get("id") or (index + 1)
+                default_link = next_link if len(items) == 1 else f"{next_link}#{anchor}"
+                link = str(raw_link or default_link)
+                meta = {"source_api": next_link, "connector": "rest", "category": cat}
+                page = CollectedPage(
+                    title=title, url=link, content=text_body, metadata=meta
+                )
+                pages.append(page)
             next_link = _next(data, next_link, getattr(response, "headers", {}) or {})
             method, body = "GET", None
         return pages

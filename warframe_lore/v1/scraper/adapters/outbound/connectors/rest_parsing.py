@@ -39,6 +39,9 @@ def extract_items(data: dict[str, Any]) -> list[dict[str, Any]]:
                     items.append(cast(dict[str, Any], item))
             if items:
                 return items
+    for val in data.values():
+        if isinstance(val, list) and val and isinstance(val[0], dict):
+            return [cast(dict[str, Any], x) for x in val if isinstance(x, dict)]
     return []
 
 
@@ -76,6 +79,10 @@ def next_url(
 
 
 def item_text(item: dict[str, Any]) -> str:
+    name = str(item.get("name") or item.get("title") or "").strip()
+    desc = str(item.get("description") or item.get("codexSecret") or "").strip()
+    if name and desc:
+        return f"**{name}**\n\n{desc}"
     for key in ("content", "text", "body", "summary", "description", "extract"):
         value = item.get(key)
         if isinstance(value, str) and value.strip():

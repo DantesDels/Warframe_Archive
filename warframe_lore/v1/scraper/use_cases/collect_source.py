@@ -29,12 +29,12 @@ def collect_source(
     limits.setdefault("connector_state", state.setdefault("_connector_state", {}))
     try:
         pages = cast(list[CollectedPage], collect_pages(source, client, limits))
+        ctx = PipelineContext(source=source, universe_id=uid, settings=limits)
+        raw: list[PipelineItem] = [PipelineItem(page=p) for p in pages]
+        accepted = default_pipeline().run(list(raw), ctx)
     except Exception as exc:  # noqa: BLE001
         reporter.skip("Source ignorée", loc)
         return [], [f"{loc}: {exc}"], []
-    ctx = PipelineContext(source=source, universe_id=uid, settings=limits)
-    raw: list[PipelineItem] = [PipelineItem(page=p) for p in pages]
-    accepted = default_pipeline().run(list(raw), ctx)
     rejected = [i for i in raw if not i.accepted]
     docs: list[dict[str, Any]] = []
     errors: list[str] = []

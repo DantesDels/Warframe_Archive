@@ -20,7 +20,11 @@ from ..storage import read_json, write_json
 from ..use_cases.ports import UniverseRunContext
 from ..use_cases.run_controls import RunControl
 from ..use_cases.run_universe import run_universe
-from .runtime.worker_support import _WorkerObserver, worker_limits
+from .runtime.worker_support import (
+    _WorkerObserver,
+    merge_result_in_worker,
+    worker_limits,
+)
 
 
 class ExecutionWorker(QObject):
@@ -39,6 +43,8 @@ class ExecutionWorker(QObject):
 
     def __init__(self, plan: Any, workspace_snapshot: Any, export_root: Path) -> None:
         super().__init__()
+        from . import artifacts as _preload_artifacts  # noqa: F401
+
         self.plan = plan
         self.snapshot = workspace_snapshot
         self.export_root = Path(export_root)
@@ -116,19 +122,20 @@ class ExecutionWorker(QObject):
                 break
             universe = cast(dict[str, Any] | None, self.snapshot.get(str(uid)))
             if universe:
-                runs.append(
-                    run_universe(
-                        cast(UniverseRunContext, self), universe, formats, limits
-                    )
-                )
+                ctx = cast(UniverseRunContext, self)
+                runs.append(run_universe(ctx, universe, formats, limits))
         write_json(self.state_path, self.state)
         cancelled = self.control.is_cancelled() or any(
             bool(cast(dict[str, Any], run).get("cancelled")) for run in runs
         )
-        if cancelled:
-            self.progress.emit(100, "Annulé")
-            self.events.emit("run_cancelled", runs=len(runs), outcome="cancelled")
-            return {"ok": False, "cancelled": True, "runs": runs}
-        self.progress.emit(100, "Terminé")
-        self.events.emit("run_finished", runs=len(runs), outcome="ok")
-        return {"ok": True, "runs": runs}
+        result: dict[str, Any] = (
+            {"ok": False, "cancelled": True, "runs": runs}
+            if cancelled
+            else {"ok": True, "runs": runs}
+        )
+        merge_result_in_worker(self.snapshot, result)
+        self.progress.emit(100, "Annulé" if cancelled else "Terminé")
+        evt = "run_cancelled" if cancelled else "run_finished"
+        outcome = "cancelled" if cancelled else "ok"
+        self.events.emit(evt, runs=len(runs), outcome=outcome)
+        return result

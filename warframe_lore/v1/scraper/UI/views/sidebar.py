@@ -41,11 +41,10 @@ class Sidebar(QFrame):
         layout.setContentsMargins(8, 8, 8, 8)
         self.title = QLabel("Univers (0)")
         self.title.setStyleSheet("font-weight: 600; color: #1e293b;")
-        self.filter_input = QLineEdit()
-        self.filter_input.setPlaceholderText("Filtrer les univers...")
-        self.filter_input.setClearButtonEnabled(True)
-        self.list = QListWidget()
-        self.list.setSpacing(2)
+        self.filter_input = QLineEdit(
+            placeholderText="Filtrer les univers...", clearButtonEnabled=True
+        )
+        self.list = QListWidget(spacing=2)
         layout.addWidget(self.title)
         layout.addLayout(self._actions_row())
         layout.addWidget(self.filter_input)
@@ -55,8 +54,7 @@ class Sidebar(QFrame):
         self.list.currentItemChanged.connect(self._emit_selection)
 
     def _actions_row(self) -> QHBoxLayout:
-        row = QHBoxLayout()
-        row.setSpacing(4)
+        row = QHBoxLayout(spacing=4)
         for icon, tip, slot in (
             ("rename", "Renommer (F2)", self.rename_requested.emit),
             ("settings", "Paramètres globaux", self.settings_requested.emit),
@@ -73,35 +71,32 @@ class Sidebar(QFrame):
         return row
 
     def set_universes(self, universes: list[dict[str, Any]], workspace: Any) -> None:
-        self._universes = universes
-        self._workspace = workspace
+        self._universes, self._workspace = universes, workspace
         self._apply_filter()
 
     def _apply_filter(self, _text: str = "") -> None:
-        query = self.filter_input.text().strip().casefold()
-        selected = self.selected_id()
+        q, selected = self.filter_input.text().strip().casefold(), self.selected_id()
+        self.list.blockSignals(True)
         self.list.clear()
         visible = 0
         for universe in self._universes:
             name = str(universe.get("name", ""))
-            if query and query not in name.casefold():
+            if q and q not in name.casefold():
                 continue
             uid = str(universe.get("id", ""))
-            count = (
-                len(cast(list[Any], self._workspace.sources_for(uid)))
-                if self._workspace is not None
-                else 0
-            )
+            srcs = self._workspace.sources_for(uid) if self._workspace else []
             item = QListWidgetItem(self.list)
             item.setData(int(Qt.ItemDataRole.UserRole), uid)
-            widget = UniverseItem(uid, name, count, self)
-            item.setSizeHint(widget.sizeHint())
+            widget = UniverseItem(uid, name, len(cast(list[Any], srcs)), self)
             widget.set_selected(uid == selected)
+            item.setSizeHint(widget.sizeHint())
             self.list.setItemWidget(item, widget)
             visible += 1
         self.title.setText(f"Univers ({visible})")
         if selected:
             self.select(selected)
+        self.list.blockSignals(False)
+        self._emit_selection(self.list.currentItem(), None)
 
     def select(self, universe_id: str | None) -> None:
         if not universe_id:
@@ -110,8 +105,7 @@ class Sidebar(QFrame):
             return
         for index in range(self.list.count()):
             item = self.list.item(index)
-            uid = item.data(int(Qt.ItemDataRole.UserRole)) if item else None
-            if item is not None and uid == universe_id:
+            if item and item.data(int(Qt.ItemDataRole.UserRole)) == universe_id:
                 self.list.setCurrentItem(item)
                 self._sync_item_actions(universe_id)
                 return
@@ -119,27 +113,20 @@ class Sidebar(QFrame):
 
     def selected_id(self) -> str | None:
         item = self.list.currentItem()
-        if item is None:
-            return None
-        value = item.data(int(Qt.ItemDataRole.UserRole))
-        return str(value) if value is not None else None
+        val = item.data(int(Qt.ItemDataRole.UserRole)) if item else None
+        return str(val) if val is not None else None
 
     def _emit_selection(
         self, current: QListWidgetItem | None, _previous: QListWidgetItem | None
     ) -> None:
-        uid = (
-            str(current.data(int(Qt.ItemDataRole.UserRole)))
-            if current is not None
-            else None
-        )
+        uid = str(current.data(int(Qt.ItemDataRole.UserRole))) if current else None
         self._sync_item_actions(uid)
         self.selection_changed.emit(uid)
 
     def _sync_item_actions(self, uid: str | None) -> None:
         for index in range(self.list.count()):
             item = self.list.item(index)
-            if item is None:
-                continue
-            widget = self.list.itemWidget(item)
-            if isinstance(widget, UniverseItem):
+            widget = self.list.itemWidget(item) if item else None
+            if isinstance(widget, UniverseItem) and item is not None:
                 widget.set_selected(item.data(int(Qt.ItemDataRole.UserRole)) == uid)
+                item.setSizeHint(widget.sizeHint())

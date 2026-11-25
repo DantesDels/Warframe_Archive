@@ -20,13 +20,16 @@ def build_graph(
     return {"nodes": _unique_nodes(nodes), "edges": _unique_edges(edges)}
 
 
+_MAX_GRAPH_ITEMS_PER_KIND = 120
+
+
 def _add_children(
     nodes: list[dict[str, Any]],
     edges: list[dict[str, Any]],
     uid: str,
     workspace: Any,
 ) -> None:
-    for src in workspace.sources_for(uid):
+    for src in workspace.sources_for(uid)[:_MAX_GRAPH_ITEMS_PER_KIND]:
         sid = str(src.get("id", ""))
         attrs = {
             "location": src.get("location", ""), "kind": src.get("kind", ""),
@@ -35,14 +38,14 @@ def _add_children(
         title = src.get("title") or src.get("location", "")
         nodes.append(_node("Source", sid, title, attrs))
         edges.append(_edge(f"Universe:{uid}", f"Source:{sid}", "HAS_SOURCE"))
-    for doc in workspace.documents_for(uid):
+    for doc in workspace.documents_for(uid)[:_MAX_GRAPH_ITEMS_PER_KIND]:
         did, sid = str(doc.get("id", "")), str(doc.get("sourceId", ""))
         attrs = {"url": doc.get("url", ""), "sourceId": sid}
         nodes.append(_node("Document", did, doc.get("title", did), attrs))
         edges.append(_edge(f"Universe:{uid}", f"Document:{did}", "HAS_DOCUMENT"))
         if sid:
             edges.append(_edge(f"Source:{sid}", f"Document:{did}", "PRODUCED"))
-    for cand in workspace.candidates_for(uid):
+    for cand in workspace.candidates_for(uid)[:_MAX_GRAPH_ITEMS_PER_KIND]:
         cid = str(cand.get("id", ""))
         attrs = {"status": cand.get("status", ""), "score": cand.get("score", 0)}
         label = cand.get("title") or cand.get("location", "")

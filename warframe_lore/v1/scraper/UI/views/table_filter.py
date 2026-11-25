@@ -14,8 +14,12 @@ _NUM_RE = re.compile(r"^\s*(-?\d+(?:\.\d+)?)\s*%?\s*$")
 
 def sort_key(text: str) -> float | str:
     """Return a numeric sort value for numbers/percentages, else casefolded text."""
-    match = _NUM_RE.match(text)
-    return float(match.group(1)) if match else text.casefold()
+    stripped = text.strip()
+    if stripped and (stripped[0].isdigit() or stripped[0] == "-"):
+        match = _NUM_RE.match(stripped)
+        if match:
+            return float(match.group(1))
+    return text.casefold()
 
 
 def configure_header(
@@ -45,8 +49,9 @@ def apply_column_sizing(
     elide_first: bool,
 ) -> None:
     """Apply explicit widths, hidden columns and clamped auto-widths."""
-    table.resizeColumnsToContents()
     header = table.horizontalHeader()
+    model = table.model()
+    row_count = model.rowCount() if model is not None else 0
     for col in range(count):
         if col in hidden_columns:
             table.setColumnHidden(col, True)
@@ -54,7 +59,12 @@ def apply_column_sizing(
         if col in column_widths:
             table.setColumnWidth(col, column_widths[col])
         elif header.sectionResizeMode(col) != QHeaderView.ResizeMode.Stretch:
-            table.setColumnWidth(col, max(76, min(260, table.columnWidth(col) + 16)))
+            if row_count <= 80:
+                table.resizeColumnToContents(col)
+                w = max(76, min(260, table.columnWidth(col) + 16))
+                table.setColumnWidth(col, w)
+            else:
+                table.setColumnWidth(col, 120)
     if elide_first:
         table.horizontalScrollBar().setValue(0)
 

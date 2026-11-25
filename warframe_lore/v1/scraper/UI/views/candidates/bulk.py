@@ -5,6 +5,8 @@ from __future__ import annotations
 from contextlib import nullcontext
 from typing import Any, cast
 
+from ....collect.language import canonical_locale_url_key
+
 
 def batch_context(workspace: Any) -> Any:
     """Return workspace.batch_save() when available, else a no-op context."""
@@ -21,7 +23,10 @@ def apply_bulk_status(
     }
     sources = cast(list[dict[str, Any]], workspace.data.setdefault("sources", []))
     src_by_key = {
-        (str(s.get("universeId", "")), str(s.get("location", "")).strip()): s
+        (
+            str(s.get("universeId", "")),
+            canonical_locale_url_key(str(s.get("location", ""))),
+        ): s
         for s in sources
     }
     src_ids = {str(s.get("id", "")) for s in sources}
@@ -64,7 +69,8 @@ def _activate_one(
 ) -> None:
     uid = str(cand.get("universeId", ""))
     loc = str(cand.get("location", "")).strip()
-    existing = src_by_key.get((uid, loc))
+    ckey = canonical_locale_url_key(loc)
+    existing = src_by_key.get((uid, ckey))
     if existing is not None:
         existing["status"] = "approved"
         existing["selected"] = True
@@ -84,5 +90,5 @@ def _activate_one(
         "proof": cand.get("proof", ""),
     }
     sources.append(source)
-    src_by_key[(uid, loc)] = source
+    src_by_key[(uid, ckey)] = source
     cand["status"] = "active"

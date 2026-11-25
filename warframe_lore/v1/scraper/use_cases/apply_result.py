@@ -3,10 +3,22 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, cast
 
+from ..collect.crawl_filter import is_generalist_domain
+from ..collect.language import (
+    canonical_locale_url_key,
+    is_url_language_allowed,
+)
+from ..collect.language_purge import universe_allowed_languages
 from .blob_store import blobs_dir, compact_doc
-from .child_scoring import child_authority_score
+from .child_scoring import _host, child_authority_score
+from .pending_children_store import (
+    MAX_PENDING_CHILDREN_PER_RUN,
+    build_child_candidate,
+    offload_pending_children,
+)
 
 
 def apply_result(workspace: Any, result: dict[str, Any]) -> None:
@@ -58,56 +70,61 @@ def _snapshot(
     doc_id = prev.get("id", "doc")
     ts = int(datetime.now(UTC).timestamp() * 1000)
     keys = ("id", "url", "title", "contentHash", "version", "excerpt", "blobRef")
-    slim_prev = {k: prev[k] for k in keys if k in prev}
     return {
-        "id": f"ver-{doc_id}-{ts}",
-        "documentId": prev.get("id"),
-        "url": prev.get("url"),
-        "runId": run_id,
-        "archivedAt": now,
-        "previousHash": prev.get("contentHash"),
-        "newHash": new.get("contentHash"),
+        "id": f"ver-{doc_id}-{ts}", "documentId": prev.get("id"),
+        "url": prev.get("url"), "runId": run_id, "archivedAt": now,
+        "previousHash": prev.get("contentHash"), "newHash": new.get("contentHash"),
         "changed": prev.get("contentHash") != new.get("contentHash"),
-        "snapshot": slim_prev,
+        "snapshot": {k: prev[k] for k in keys if k in prev},
     }
 
 
 def _upsert_pending_children(
     workspace: Any, uid: str, entry: dict[str, Any]
 ) -> None:
-    pending = cast(list[dict[str, str]], entry.get("pending_children", []))
-    if not pending:
+    raw_pending = cast(list[dict[str, str]], entry.get("pending_children", []))
+    if not raw_pending:
         return
+    raw_cap = entry.get("max_pending_children_per_run", MAX_PENDING_CHILDREN_PER_RUN)
+    max_p = max(1, int(raw_cap))
+    langs = universe_allowed_languages(workspace, uid)
+    ws_path = getattr(workspace, "path", None)
+    base_dir = Path(ws_path).parent if ws_path else None
+    pending, _, _ = offload_pending_children(
+        base_dir, uid, raw_pending, max_in_memory=max_p, allowed_languages=langs
+    )
     cands = cast(list[dict[str, Any]], workspace.data.setdefault("candidates", []))
     existing = {
-        str(c.get("location", "")).rstrip("/").lower()
+        canonical_locale_url_key(str(c.get("location", "")))
         for c in cands if str(c.get("universeId")) == uid
     }
+    rev_n = sum(
+        1 for c in cands
+        if str(c.get("universeId")) == uid
+        and str(c.get("discoveredBy")) == "manifest_review"
+        and str(c.get("status")) == "proposed"
+    )
+    scores: dict[tuple[str, str], tuple[float, dict[str, float]]] = {}
     for idx, child in enumerate(pending):
+        if rev_n >= max_p:
+            break
         url = str(child.get("url", "")).strip()
-        key = url.rstrip("/").lower()
-        if not url or key in existing:
+        key = canonical_locale_url_key(url)
+        if not url or not is_url_language_allowed(url, langs) or key in existing:
+            continue
+        parent = str(child.get("parent", ""))
+        if is_generalist_domain(parent) or is_generalist_domain(url):
+            score, bd = child_authority_score(workspace, uid, parent, url)
+        else:
+            ckey = (parent, _host(url))
+            if ckey not in scores:
+                scores[ckey] = child_authority_score(workspace, uid, parent, url)
+            score, bd = scores[ckey]
+        if score < 0.60:
             continue
         existing.add(key)
-        parent = str(child.get("parent", ""))
-        score, bd = child_authority_score(workspace, uid, parent, url)
-        cands.append(_child_candidate(uid, url, key, idx, parent, score, bd))
-
-
-def _child_candidate(
-    uid: str, url: str, key: str, idx: int, parent: str,
-    score: float = 0.5, breakdown: dict[str, float] | None = None,
-) -> dict[str, Any]:
-    return {
-        "id": f"child-{uid}-{abs(hash((uid, key, idx))) % 1000000}",
-        "universeId": uid, "kind": "website", "location": url,
-        "title": f"Page enfant: {url.rsplit('/', 1)[-1] or url}",
-        "score": score, "proof": f"Page enfant détectée depuis {parent}",
-        "discoveredBy": "manifest_review", "status": "proposed",
-        "forceUpdate": False,
-        "scoreBreakdown": breakdown or {"confidence": score},
-        "metadata": {"parent_location": parent, "needs_review": True},
-    }
+        cands.append(build_child_candidate(uid, url, key, idx, parent, score, bd))
+        rev_n += 1
 
 
 def _doc_key(doc: dict[str, Any]) -> str:

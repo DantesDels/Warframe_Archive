@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..collect.crawl_filter import is_generalist_domain, matches_universe_topic
+from ..collect.language import is_url_language_allowed
 from .models import Candidate
 from .providers import build_default_providers
 from .scoring import score_candidate
@@ -37,6 +39,16 @@ def discover(
     found: list[Candidate] = list(_seed_candidates(u2, cfg))
     for prov in active:
         found.extend(_search(prov, keywords, str(universe.get("id", "")), u2))
+    allowed_langs = cfg.get("allowed_languages") or universe.get("allowed_languages")
+    if allowed_langs:
+        found = [
+            c for c in found if is_url_language_allowed(c.location, allowed_langs)
+        ]
+    found = [
+        c for c in found
+        if not is_generalist_domain(c.location)
+        or matches_universe_topic(c.location, c.title, keywords)
+    ]
     scored = [score_candidate(item, universe, keywords) for item in found]
     kept = [item for item in scored if item.score * 100 >= min_relevance]
     deduped = _dedupe(kept)

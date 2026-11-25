@@ -13,7 +13,7 @@ def browser_headers() -> dict[str, str]:
     return {
         "User-Agent": BROWSER_UA,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept-Language": "en-US,en;q=0.9,fr-FR;q=0.7",
     }
 
 

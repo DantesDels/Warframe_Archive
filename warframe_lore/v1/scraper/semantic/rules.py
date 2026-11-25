@@ -2,20 +2,26 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from .models import Entity, Mention, Relation, canonical_key, stable_id
+from .noise import clean_entity_surface, is_noisy_entity
 from .patterns import (
     ALIAS_RE,
     KIND_CLUES,
-    NOISE_TOKEN_RE,
     PROPER_NOUN_RE,
-    STOP_ENTITIES,
     TIMELINE_RE,
 )
 from .relations import extract_relations
 
 _MAX_ENTITIES_PER_CHUNK = 18
+_CLUE_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
+    kind: tuple(
+        re.compile(rf"\b{re.escape(clue)}\b", re.IGNORECASE) for clue in clues
+    )
+    for kind, clues in KIND_CLUES.items()
+}
 
 
 def extract_chunk_rules(
@@ -34,9 +40,9 @@ def extract_chunk_rules(
     mentions: list[Mention] = []
 
     def _add(surface: str, kind: str, excerpt: str, conf: float = 0.72) -> None:
-        clean = " ".join(surface.split()).strip(" -:,;()[]\"'")
+        clean = clean_entity_surface(surface)
         key = canonical_key(clean)
-        if _is_noise(clean, key, kind):
+        if is_noisy_entity(clean, key, kind):
             return
         if key not in entities_by_key:
             if len(entities_by_key) >= _MAX_ENTITIES_PER_CHUNK:
@@ -62,13 +68,13 @@ def extract_chunk_rules(
         )
 
     if doc_title:
-        _add(doc_title, _classify(doc_title, chunk_text[:300]), doc_title, conf=0.88)
+        _add(doc_title, _classify(doc_title, chunk_text[:160]), doc_title, conf=0.88)
     for match in TIMELINE_RE.finditer(chunk_text):
         win = _window(chunk_text, match.start(), match.end())
         _add(match.group(1), "timeline", win, conf=0.8)
     for match in PROPER_NOUN_RE.finditer(chunk_text):
         surface = match.group(1)
-        win = _window(chunk_text, match.start(), match.end())
+        win = _window(chunk_text, match.start(), match.end(), pad=42)
         _add(surface, _classify(surface, win), win, conf=0.72)
 
     ents = list(entities_by_key.values())
@@ -79,8 +85,8 @@ def extract_chunk_rules(
 def _extract_aliases(text: str) -> dict[str, list[str]]:
     aliases: dict[str, list[str]] = {}
     for match in ALIAS_RE.finditer(text):
-        primary = " ".join(match.group(1).split()).strip()
-        alt = " ".join((match.group(2) or match.group(3) or "").split()).strip()
+        primary = clean_entity_surface(match.group(1))
+        alt = clean_entity_surface(match.group(2) or match.group(3) or "")
         pkey = canonical_key(primary)
         if pkey and alt and canonical_key(alt) != pkey:
             bucket = aliases.setdefault(pkey, [])
@@ -90,22 +96,14 @@ def _extract_aliases(text: str) -> dict[str, list[str]]:
 
 
 def _classify(surface: str, context: str) -> str:
-    low = f"{surface} {context}".casefold()
     best_kind, best_hits = "concept", 0
-    for kind, clues in KIND_CLUES.items():
-        hits = sum(1 for clue in clues if clue in low)
+    for kind, patterns in _CLUE_PATTERNS.items():
+        surface_hits = sum(3 for pat in patterns if pat.search(surface))
+        ctx_hits = sum(1 for pat in patterns if pat.search(context))
+        hits = surface_hits + ctx_hits
         if hits > best_hits:
             best_kind, best_hits = kind, hits
     return best_kind
-
-
-def _is_noise(clean: str, key: str, kind: str) -> bool:
-    if not key or len(key) < 2 or key in STOP_ENTITIES:
-        return True
-    if kind != "timeline" and NOISE_TOKEN_RE.match(clean):
-        return True
-    words = key.split()
-    return bool(words) and all(w in STOP_ENTITIES for w in words)
 
 
 def _window(text: str, start: int, end: int, pad: int = 70) -> str:

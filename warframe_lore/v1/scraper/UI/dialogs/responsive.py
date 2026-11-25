@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QDialog,
+    QGridLayout,
     QScrollArea,
     QVBoxLayout,
     QWidget,
 )
 
+from ...collect.language import SUPPORTED_LANGUAGES
 from ..style import apply_theme
 
 
@@ -55,3 +58,18 @@ def scrollable_dialog_body(dialog: QDialog) -> tuple[QVBoxLayout, QVBoxLayout]:
     scroll.setWidget(content)
     outer.addWidget(scroll, 1)
     return outer, body
+
+
+def build_language_checks(
+    active_codes: set[str], prefix: str
+) -> tuple[QGridLayout, dict[str, QCheckBox]]:
+    """Build a responsive 2-row grid of allowed-language checkboxes for dialogs."""
+    grid = QGridLayout()
+    grid.setHorizontalSpacing(10)
+    grid.setVerticalSpacing(4)
+    checks: dict[str, QCheckBox] = {}
+    for idx, (c, lbl) in enumerate(SUPPORTED_LANGUAGES):
+        cb = QCheckBox(lbl, objectName=f"{prefix}_{c}", checked=c in active_codes)
+        checks[c] = cb
+        grid.addWidget(cb, idx // 6, idx % 6)
+    return grid, checks

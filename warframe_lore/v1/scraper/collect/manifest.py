@@ -15,11 +15,18 @@ _FILE_RE = re.compile(
 )
 
 
+_PUBLIC_EXPORT_MANIFEST = "http://content.warframe.com/PublicExport/Manifest/"
+
+
 def extract_manifest_urls(
     text: str, base_url: str, *, limit: int = 50, manifest_base: str = ""
 ) -> list[str]:
     """Extract likely child resource URLs from index/manifest text."""
-    root = manifest_base.strip() or base_url
+    root = manifest_base.strip() or (
+        _PUBLIC_EXPORT_MANIFEST
+        if "origin.warframe.com/publicexport/index_" in base_url.lower()
+        else base_url
+    )
     candidates: list[str] = []
     seen: set[str] = set()
     for line in text.splitlines():

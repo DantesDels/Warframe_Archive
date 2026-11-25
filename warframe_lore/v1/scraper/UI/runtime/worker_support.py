@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from ...observability.deadline import DEFAULT_SOURCE_TIMEOUT
 from ...settings import Settings
+from ...use_cases.apply_result import apply_result
+from ...use_cases.pending_children_store import (
+    MAX_PENDING_CHILDREN_PER_RUN,
+    MAX_PENDING_CHILDREN_PER_SOURCE,
+)
+from ..workspace import WorkshopWorkspace
 
 if TYPE_CHECKING:
     from ..worker import ExecutionWorker
@@ -37,6 +44,13 @@ def worker_limits(
         "incremental": settings.incremental,
         "expand_manifests": settings.expand_manifests,
         "max_manifest_urls": settings.max_manifest_urls,
+        "max_pending_children_per_source": getattr(
+            settings, "max_pending_children_per_source", MAX_PENDING_CHILDREN_PER_SOURCE
+        ),
+        "max_pending_children_per_run": getattr(
+            settings, "max_pending_children_per_run", MAX_PENDING_CHILDREN_PER_RUN
+        ),
+        "allowed_languages": getattr(settings, "allowed_languages", ("en",)),
         "review_child_pages": settings.review_child_pages,
         "use_playwright": settings.use_playwright,
         "rag_coupling": settings.rag_coupling,
@@ -49,3 +63,16 @@ def worker_limits(
         "reporter": reporter,
         "control": control,
     }
+
+
+def merge_result_in_worker(snapshot: Any, result: dict[str, Any]) -> None:
+    """Merge and persist execution results off the Qt main thread."""
+    raw = getattr(snapshot, "raw_data", None)
+    if not isinstance(raw, dict):
+        return
+    if not (result.get("ok") or result.get("cancelled")):
+        return
+    ws_path = getattr(snapshot, "workspace_path", None)
+    worker_ws = WorkshopWorkspace(data=deepcopy(raw), path=ws_path)
+    apply_result(worker_ws, result)
+    result["merged_workspace_data"] = worker_ws.data

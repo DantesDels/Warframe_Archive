@@ -12,6 +12,7 @@ from ..UI.runtime.rag_chunks import iter_doc_chunks
 from .aliases import resolve_aliases
 from .llm_extract import enrich_chunk_with_llm
 from .models import Entity, Mention, Relation, SemanticBundle
+from .noise import prune_corpus_entities
 from .rules import doc_taxonomy, extract_chunk_rules
 from .runtime_helpers import can_call_llm, hydrate_doc, resolve_llm_adapter
 
@@ -67,6 +68,9 @@ def extract_docs_semantics(
                 all_mens.extend(l_mens)
 
     entities, relations, mentions = resolve_aliases(all_ents, all_rels, all_mens)
+    entities, relations, mentions = prune_corpus_entities(
+        entities, relations, mentions, len(selected)
+    )
     stats = {
         "document_count": len(selected),
         "chunk_count": chunk_count,

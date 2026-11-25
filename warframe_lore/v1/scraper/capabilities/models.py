@@ -67,6 +67,7 @@ class UniverseCapabilities:
     fact_check: LlmBudget = field(default_factory=lambda: LlmBudget(enabled=False))
     multimodal: MultimodalBudget = field(default_factory=MultimodalBudget)
     self_heal: LlmBudget = field(default_factory=lambda: LlmBudget(enabled=False))
+    allowed_languages: list[str] = field(default_factory=lambda: ["en"])
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -77,6 +78,12 @@ class UniverseCapabilities:
         crawl_raw = _pick(CrawlBudget, data.get("crawl"))
         if "topic_tags" in crawl_raw and not isinstance(crawl_raw["topic_tags"], list):
             crawl_raw["topic_tags"] = []
+        raw_langs = data.get("allowed_languages")
+        langs = (
+            [str(c).strip().lower()[:2] for c in raw_langs if str(c).strip()]
+            if isinstance(raw_langs, (list, tuple))
+            else []
+        ) or ["en"]
         return cls(
             crawl=CrawlBudget(**crawl_raw),
             rag=RagBudget(**_pick(RagBudget, data.get("rag"))),
@@ -88,6 +95,7 @@ class UniverseCapabilities:
                 **_pick(MultimodalBudget, data.get("multimodal"))
             ),
             self_heal=LlmBudget(**_pick(LlmBudget, data.get("self_heal"))),
+            allowed_languages=list(dict.fromkeys(langs)),
         )
 
 

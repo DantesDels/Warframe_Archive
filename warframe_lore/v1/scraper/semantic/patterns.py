@@ -5,15 +5,17 @@ from __future__ import annotations
 import re
 
 PROPER_NOUN_RE = re.compile(
-    r"\b([A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ0-9'-]{2,}(?:\s+(?:of|the|de|du|des|la|le|d'|l')?"
-    r"\s*[A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ0-9'-]{1,}){0,3})\b"
+    r"\b([A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ0-9'-]{2,}(?:[ \t]+(?:of|the|de|du|des|la|le|d'|l')?"
+    r"[ \t]*[A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ0-9'-]{1,}){0,3})\b"
 )
 TIMELINE_RE = re.compile(
     r"\b("
-    r"(?:Era|Age|Epoch|Cycle|War|Millennium|Century|Year|Ère|Âge|Époque|Guerre|Siècle|An)"
-    r"\s+(?:of\s+(?:the\s+)?|de\s+(?:la\s+|l')?|du\s+|des\s+)?"
+    r"(?:Era|Age|Epoch|Cycle|Millennium|Century|Year|Ère|Âge|Époque|Guerre|Siècle)"
+    r"[ \t]+(?:of[ \t]+(?:the[ \t]+)?|de[ \t]+(?:la[ \t]+|l')?|du[ \t]+|des[ \t]+)?"
     r"[A-ZÀ-ÖØ-Þ0-9][A-Za-zÀ-ÖØ-öø-ÿ0-9'-]{1,28}"
-    r"|\d{1,4}\s*(?:BBY|ABY|BC|AD|BCE|CE|av\.\s*J\.-C\.|ap\.\s*J\.-C\.)"
+    r"|(?:Old|New|Great|First|Second|Third)[ \t]+War"
+    r"|An[ \t]+\d{1,4}"
+    r"|\d{1,4}[ \t]*(?:BBY|ABY|BC|AD|BCE|CE|av\.[ \t]*J\.-C\.|ap\.[ \t]*J\.-C\.)"
     r"|(?:19[0-9]{2}|20[0-2][0-9])"
     r")\b"
 )

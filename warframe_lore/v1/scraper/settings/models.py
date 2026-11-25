@@ -21,6 +21,9 @@ class Settings:
     incremental: bool = True
     expand_manifests: bool = True
     max_manifest_urls: int = 50
+    max_pending_children_per_source: int = 100
+    max_pending_children_per_run: int = 1000
+    allowed_languages: tuple[str, ...] = ("en",)
     discovery_sitemaps: bool = True
     discovery_feeds: bool = True
     discovery_web_search: bool = False
